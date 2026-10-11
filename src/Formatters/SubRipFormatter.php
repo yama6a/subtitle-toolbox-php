@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\MarkupColors;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -68,7 +69,7 @@ final class SubRipFormatter extends SubtitleFormatter
 
         $lines = $options->stripTags
             ? Markup::stripAllTags($lines)
-            : Markup::keepTags(Markup::webVttColorsToFont($lines), ["b", "u", "i", "s", "font"]);
+            : Markup::keepTags(MarkupColors::webVttColorsToFont($lines), ["b", "u", "i", "s", "font"]);
         $lines = Markup::decodeEntities($lines);
 
         // A line that holds only a tag becomes empty, and an empty line ends the cue in SubRip.

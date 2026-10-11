@@ -9,6 +9,7 @@ use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\MarkupColors;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -49,7 +50,7 @@ final class MicroDvdFormatter extends SubtitleFormatter
     private function formatText(SubtitleCue $cue, bool $stripTags): string
     {
         $storedLines = $cue->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["lines"] ?? [];
-        $lines       = array_map(fn (string $line): array => $this->readLine(Markup::webVttColorsToFont($line)), array_map(Markup::rubyAsText(...), $cue->getLines()));
+        $lines       = array_map(fn (string $line): array => $this->readLine(MarkupColors::webVttColorsToFont($line)), array_map(Markup::rubyAsText(...), $cue->getLines()));
 
         $keepStoredCodes = !$stripTags && count($storedLines) === count($lines);
         foreach ($lines as $index => $line) {
@@ -67,7 +68,7 @@ final class MicroDvdFormatter extends SubtitleFormatter
 
             $codes = "";
             if (!$stripTags) {
-                $codes .= $line["color"] === null ? "" : "{c:$" . strtoupper(Markup::rgbToBgr(substr($line["color"], 1))) . "}";
+                $codes .= $line["color"] === null ? "" : "{c:$" . strtoupper(MarkupColors::rgbToBgr(substr($line["color"], 1))) . "}";
                 $codes .= implode("", array_map(fn (string $tag): string => "{y:$tag}", $line["tags"]));
             }
             $texts[] = $codes . ($storedLines[$index]["otherCodes"] ?? "") . $line["text"];
@@ -92,7 +93,7 @@ final class MicroDvdFormatter extends SubtitleFormatter
                 $line   = $matches[2];
             } elseif ($color === null &&
                       preg_match('/^<font\b([^>]*)>(.*)<\/font>$/si', $line, $matches) &&
-                      preg_match('/^#[0-9a-fA-F]{6}$/', trim(Markup::fontColor($matches[1]) ?? ""), $hex) &&
+                      preg_match('/^#[0-9a-fA-F]{6}$/', trim(MarkupColors::fontColor($matches[1]) ?? ""), $hex) &&
                       !preg_match('/<\/?font\b/i', $matches[2])) {
                 $color = strtolower($hex[0]);
                 $line  = $matches[2];

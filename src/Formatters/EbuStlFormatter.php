@@ -13,6 +13,7 @@ use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\MarkupColors;
 use SubtitleToolbox\Parsers\EbuStl;
 use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Subtitle;
@@ -285,7 +286,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             $italic = 0;
             $under  = 0;
             $colors = [];
-            foreach (Markup::splitTags(Markup::webVttColorsToFont($line)) as $index => $token) {
+            foreach (Markup::splitTags(MarkupColors::webVttColorsToFont($line)) as $index => $token) {
                 if ($index % 2 === 0) {
                     $bytes .= $this->encodeCharacters($context, Markup::decodeEntities($token));
                     continue;
@@ -297,7 +298,7 @@ final class EbuStlFormatter extends SubtitleFormatter
 
                 $tag = strtolower($token);
                 if (preg_match('/^<font\b[^>]*>$/', $tag)) {
-                    $color    = array_search(trim(Markup::fontColor($tag) ?? ""), EbuStl::COLORS, true);
+                    $color    = array_search(trim(MarkupColors::fontColor($tag) ?? ""), EbuStl::COLORS, true);
                     $colors[] = $color === false ? end($colors) : $color;
                     $bytes    .= $color === false ? "" : chr($color);
                     continue;

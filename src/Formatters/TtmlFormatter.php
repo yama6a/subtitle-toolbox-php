@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\MarkupColors;
 use SubtitleToolbox\Parsers\TtmlNamespaces;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\TtmlStyles;
@@ -360,13 +361,13 @@ final class TtmlFormatter extends SubtitleFormatter
         }
 
         if ($tag === "font") {
-            $color = Markup::decodeEntities(trim(Markup::fontColor($rest) ?? ""));
+            $color = Markup::decodeEntities(trim(MarkupColors::fontColor($rest) ?? ""));
 
             return $color === "" ? "" : "<span" . $this->formatAttribute("$context->tts:color", $color) . ">";
         }
 
         if ($tag === "c") {
-            $colors     = Markup::webVttClassColors(preg_replace('/\s.*$/s', "", $rest));
+            $colors     = MarkupColors::webVttClassColors(preg_replace('/\s.*$/s', "", $rest));
             $attributes = ($colors["color"] === null ? "" : $this->formatAttribute("$context->tts:color", $colors["color"]))
                 . ($colors["background"] === null ? "" : $this->formatAttribute("$context->tts:backgroundColor", $colors["background"]));
 

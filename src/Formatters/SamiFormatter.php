@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\MarkupColors;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -64,7 +65,7 @@ final class SamiFormatter extends SubtitleFormatter
         }
 
         $lines = array_map(
-            fn (string $line): string => $this->writeNbsp($stripTags ? Markup::stripAllTags($line) : Markup::keepTags(Markup::webVttColorsToFont($line), Markup::STYLE_TAGS)),
+            fn (string $line): string => $this->writeNbsp($stripTags ? Markup::stripAllTags($line) : Markup::keepTags(MarkupColors::webVttColorsToFont($line), Markup::STYLE_TAGS)),
             array_map(Markup::rubyAsText(...), $cue->getLines())
         );
 

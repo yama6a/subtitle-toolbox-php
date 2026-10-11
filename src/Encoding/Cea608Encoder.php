@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Encoding;
 
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\MarkupColors;
 
 /**
  * Encodes lines of core markup as CEA-608 cells and byte pairs.
@@ -33,7 +34,7 @@ final class Cea608Encoder
     {
         $style      = ["italic" => 0, "underline" => 0, "colors" => []];
         $characters = [];
-        foreach (Markup::splitTags(Markup::webVttColorsToFont($line)) as $index => $part) {
+        foreach (Markup::splitTags(MarkupColors::webVttColorsToFont($line)) as $index => $part) {
             $isTag = $index % 2 === 1;
             if ($isTag && preg_match("/^<\s*(\/?)\s*([a-z]+)\b([^>]*)>$/i", $part, $tag)) {
                 self::applyTag($style, strtolower($tag[2]), $tag[1] === "/", $tag[3]);
@@ -92,7 +93,7 @@ final class Cea608Encoder
 
     private static function fontColor(string $attributes): ?int
     {
-        $color = Markup::fontColor($attributes);
+        $color = MarkupColors::fontColor($attributes);
         if ($color === null) {
             return null;
         }

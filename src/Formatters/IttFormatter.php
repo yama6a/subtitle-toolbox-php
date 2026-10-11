@@ -10,6 +10,7 @@ use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\MarkupColors;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\TtmlNamespaces;
 use SubtitleToolbox\Parsers\TtmlParser;
@@ -149,12 +150,12 @@ final class IttFormatter extends SubtitleFormatter
 
     private function keepSupportedMarkup(string $line): string
     {
-        $line = Markup::keepTags(Markup::webVttColorsToFont(Markup::rubyAsText($line)), ["b", "i", "u", "font"]);
+        $line = Markup::keepTags(MarkupColors::webVttColorsToFont(Markup::rubyAsText($line)), ["b", "i", "u", "font"]);
 
         return preg_replace_callback(
             "/<font\b([^>]*)>/i",
             function (array $matches): string {
-                $color = Markup::fontColor($matches[1]);
+                $color = MarkupColors::fontColor($matches[1]);
                 if ($color === null) {
                     return "<font>";
                 }
