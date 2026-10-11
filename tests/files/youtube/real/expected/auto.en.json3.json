@@ -1,0 +1,147 @@
+{
+    "warnings": [],
+    "subtitle": {
+        "version": 1,
+        "metadata": {},
+        "comments": [],
+        "formatData": {
+            "youtube": {
+                "format": "json3",
+                "wireMagic": "pb3",
+                "pens": [
+                    []
+                ],
+                "wsWinStyles": [
+                    [],
+                    {
+                        "mhModeHint": 2,
+                        "juJustifCode": 0,
+                        "sdScrollDir": 3
+                    }
+                ],
+                "wpWinPositions": [
+                    [],
+                    {
+                        "apPoint": 6,
+                        "ahHorPos": 20,
+                        "avVerPos": 100,
+                        "rcRows": 2,
+                        "ccCols": 40
+                    }
+                ],
+                "windows": [
+                    {
+                        "tStartMs": 0,
+                        "dDurationMs": 14560,
+                        "id": 1,
+                        "wpWinPosId": 1,
+                        "wsWinStyleId": 1
+                    }
+                ]
+            }
+        },
+        "cues": [
+            {
+                "start": 0.16,
+                "end": 2.96,
+                "lines": [
+                    "<00:00:00.160>hello <00:00:00.560>everyone <00:00:01.120>and <00:00:01.360>welcome <00:00:01.840>back"
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {
+                    "youtube": {
+                        "wWinId": 1,
+                        "segments": [
+                            {
+                                "acAsrConf": 0
+                            },
+                            {
+                                "acAsrConf": 0
+                            },
+                            {
+                                "acAsrConf": 0
+                            },
+                            {
+                                "acAsrConf": 0
+                            },
+                            {
+                                "acAsrConf": 0
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "start": 2.96,
+                "end": 4.56,
+                "lines": [
+                    "<00:00:02.960>today <00:00:03.280>we <00:00:03.440>plant <00:00:03.760>tomatoes"
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {
+                    "youtube": {
+                        "wWinId": 1,
+                        "segments": [
+                            {
+                                "acAsrConf": 0
+                            },
+                            {
+                                "acAsrConf": 0
+                            },
+                            {
+                                "acAsrConf": 0
+                            },
+                            {
+                                "acAsrConf": 0
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "start": 4.56,
+                "end": 7.44,
+                "lines": [
+                    "<00:00:04.560>in <00:00:04.720>the <00:00:04.840>garden <00:00:05.280>bed"
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {
+                    "youtube": {
+                        "wWinId": 1,
+                        "segments": [
+                            {
+                                "acAsrConf": 0
+                            },
+                            {
+                                "acAsrConf": 0
+                            },
+                            {
+                                "acAsrConf": 0
+                            },
+                            {
+                                "acAsrConf": 0
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "start": 7.44,
+                "end": 10.44,
+                "lines": [
+                    "[Music]"
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {
+                    "youtube": {
+                        "wWinId": 1
+                    }
+                }
+            }
+        ]
+    }
+}

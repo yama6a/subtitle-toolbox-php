@@ -1,0 +1,65 @@
+{
+    "warnings": [],
+    "subtitle": {
+        "version": 1,
+        "metadata": {},
+        "comments": [],
+        "formatData": {
+            "youtube": {
+                "format": "srv1"
+            }
+        },
+        "cues": [
+            {
+                "start": 0.16,
+                "end": 4.56,
+                "lines": [
+                    "hello everyone and welcome back"
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            },
+            {
+                "start": 2.96,
+                "end": 7.44,
+                "lines": [
+                    "today we're planting tomatoes"
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            },
+            {
+                "start": 4.56,
+                "end": 9.68,
+                "lines": [
+                    "in the garden bed &amp; the pots"
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            },
+            {
+                "start": 7.44,
+                "end": 10.44,
+                "lines": [
+                    "[Music]"
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            },
+            {
+                "start": 10.5,
+                "end": 14.12,
+                "lines": [
+                    "water them twice a week"
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            }
+        ]
+    }
+}
