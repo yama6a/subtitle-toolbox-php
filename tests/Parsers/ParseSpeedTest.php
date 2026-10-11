@@ -25,7 +25,7 @@ class ParseSpeedTest extends TestCase
             "WebVTT"   => [Format::WebVtt, new WriteOptions()],
             "SBV"      => [Format::Sbv, new WriteOptions()],
             "ASS"      => [Format::Ass, new WriteOptions()],
-            "MicroDVD" => [Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25, writeFrameRateLine: true))],
+            "MicroDVD" => [Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25, writeFrameRateLine: true)])],
             "TTML"     => [Format::Ttml, new WriteOptions()],
             "EBU STL"  => [Format::EbuStl, new WriteOptions()],
         ];

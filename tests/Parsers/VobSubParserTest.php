@@ -37,11 +37,11 @@ class VobSubParserTest extends TestCase
 
     private function parseFixture(string $name, int|string|null $track = null): Subtitle
     {
-        $options = new ReadOptions(format: new VobSubReadOptions(
+        $options = new ReadOptions(formats: [new VobSubReadOptions(
             file_get_contents(self::DIR . "$name.idx"),
             track: is_int($track) ? $track : null,
             language: is_string($track) ? $track : null,
-        ));
+        )]);
 
         return (new VobSubParser())->parse(file_get_contents(self::DIR . "$name.sub"), $options);
     }
@@ -256,7 +256,7 @@ class VobSubParserTest extends TestCase
                sprintf("timestamp: 00:00:10:000, filepos: %09x\n", $fileposes[0]) .
                sprintf("timestamp: 00:00:11:200, filepos: %09x\n", $fileposes[1]);
 
-        $subtitle = (new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx)));
+        $subtitle = (new VobSubParser())->parse($sub, new ReadOptions(formats: [new VobSubReadOptions($idx)]));
 
         $this->assertCount(1, $subtitle->getCues());
         $this->assertSame([10.0, 11.2, 100, 200, 2, 2, 720, 576, false], $this->describeImageCue($subtitle->getCues()[0]));
@@ -271,7 +271,7 @@ class VobSubParserTest extends TestCase
         $idx               = self::IDX_HEADER . "id: en, index: 0\n" . sprintf("timestamp: 00:00:01:000, filepos: %09x\n", $fileposes[0]);
 
         $this->assertSame([1.0, 6.0, 100, 200, 2, 2, 720, 576, false],
-                          $this->describeImageCue((new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx)))->getCues()[0]));
+                          $this->describeImageCue((new VobSubParser())->parse($sub, new ReadOptions(formats: [new VobSubReadOptions($idx)]))->getCues()[0]));
     }
 
 
@@ -281,7 +281,7 @@ class VobSubParserTest extends TestCase
         $idx = self::IDX_HEADER . "delay: 00:00:05:000\nid: en, index: 0\ndelay: 00:00:01:000\ndelay: -00:00:00:250\n" .
                sprintf("timestamp: 00:00:10:000, filepos: %09x\n", $fileposes[0]);
 
-        $this->assertSame(10.75, (new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx)))->getCues()[0]->getStart());
+        $this->assertSame(10.75, (new VobSubParser())->parse($sub, new ReadOptions(formats: [new VobSubReadOptions($idx)]))->getCues()[0]->getStart());
     }
 
 
@@ -293,7 +293,7 @@ class VobSubParserTest extends TestCase
         $idx               = self::IDX_HEADER . "id: en, index: 0\n" . sprintf("timestamp: 00:00:01:000, filepos: %09x\n", $fileposes[0]);
 
         $this->assertSame([1.0, 6.0, 100, 200, 2, 2, 720, 576, false],
-                          $this->describeImageCue((new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx)))->getCues()[0]));
+                          $this->describeImageCue((new VobSubParser())->parse($sub, new ReadOptions(formats: [new VobSubReadOptions($idx)]))->getCues()[0]));
     }
 
 
@@ -328,7 +328,7 @@ class VobSubParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage($message);
 
-        (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions($idx, language: $language)));
+        (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions($idx, language: $language)]));
     }
 
 
@@ -337,12 +337,12 @@ class VobSubParserTest extends TestCase
         $idx = file_get_contents(self::DIR . "two-tracks-pal.idx");
         $sub = file_get_contents(self::DIR . "two-tracks-pal.sub");
 
-        $byIndex = (new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx, track: 1)));
+        $byIndex = (new VobSubParser())->parse($sub, new ReadOptions(formats: [new VobSubReadOptions($idx, track: 1)]));
         $this->assertSame("de", $byIndex->findMetadata(Subtitle::METADATA_LANGUAGE));
 
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The .idx content has no track with index 1 and language \"en\".");
-        (new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx, 1, "en")));
+        (new VobSubParser())->parse($sub, new ReadOptions(formats: [new VobSubReadOptions($idx, 1, "en")]));
     }
 
 
@@ -363,7 +363,7 @@ class VobSubParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The filepos 000002000 of timestamp 11.000 is outside the .sub content of 8192 bytes.");
 
-        (new VobSubParser())->parse(substr($sub, 0, 0x2000), new ReadOptions(format: new VobSubReadOptions($idx)));
+        (new VobSubParser())->parse(substr($sub, 0, 0x2000), new ReadOptions(formats: [new VobSubReadOptions($idx)]));
     }
 
 
@@ -376,7 +376,7 @@ class VobSubParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The .sub packet at byte 16 is longer than the content.");
 
-        (new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx)));
+        (new VobSubParser())->parse($sub, new ReadOptions(formats: [new VobSubReadOptions($idx)]));
     }
 
 
@@ -387,6 +387,6 @@ class VobSubParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The .sub content has no complete subtitle packet at filepos 000000000.");
 
-        (new VobSubParser())->parse("1\n00:00:01,000 --> 00:00:02,000\nText\n", new ReadOptions(format: new VobSubReadOptions($idx)));
+        (new VobSubParser())->parse("1\n00:00:01,000 --> 00:00:02,000\nText\n", new ReadOptions(formats: [new VobSubReadOptions($idx)]));
     }
 }

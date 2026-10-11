@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\Parsers\EbuStl;
@@ -55,7 +56,7 @@ class EbuStlFormatterTest extends TestCase
     public function testWritesThirtyFramesPerSecond(): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.5, 2.967, "Hello"));
-        $stl      = $subtitle->toString(Format::EbuStl, new WriteOptions(format: new EbuStlWriteOptions(frameRate: 30)));
+        $stl      = $subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 30)]));
 
         $this->assertSame("STL30.01", substr($stl, 3, 8));
         $this->assertSame("\x00\x00\x01\x0F\x00\x00\x02\x1D", substr(self::ttiBlocks($stl)[0], 5, 8));
@@ -67,7 +68,7 @@ class EbuStlFormatterTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("25 or 30 fps");
 
-        (new Subtitle())->toString(Format::EbuStl, new WriteOptions(format: new EbuStlWriteOptions(frameRate: 24)));
+        (new Subtitle())->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 24)]));
     }
 
 
@@ -140,16 +141,16 @@ class EbuStlFormatterTest extends TestCase
     public static function alignments(): array
     {
         return [
-            "default"       => [null, 23, 2],
-            "bottom left"   => [1, 23, 1],
-            "middle centre" => [5, 12, 2],
-            "top right"     => [9, 1, 3],
+            "default"       => [Alignment::BottomCenter, 23, 2],
+            "bottom left"   => [Alignment::BottomLeft, 23, 1],
+            "middle centre" => [Alignment::MiddleCenter, 12, 2],
+            "top right"     => [Alignment::TopRight, 1, 3],
         ];
     }
 
 
     #[DataProvider("alignments")]
-    public function testWritesPositionAndJustificationForTheAlignment(?int $alignment, int $vertical, int $justification): void
+    public function testWritesPositionAndJustificationForTheAlignment(Alignment $alignment, int $vertical, int $justification): void
     {
         $subtitle = (new Subtitle())->addCue((new SubtitleCue(1, 2, "One row"))->setAlignment($alignment));
         $block    = self::ttiBlocks($subtitle->toString(Format::EbuStl))[0];
@@ -163,7 +164,7 @@ class EbuStlFormatterTest extends TestCase
         $raw      = file_get_contents(self::DIR . "bakery_teletext_25fps.stl");
         $subtitle = Subtitle::fromString($raw, Format::EbuStl);
         $subtitle->shift(1);
-        $subtitle->getCues()[1]->setAlignment(8);
+        $subtitle->getCues()[1]->setAlignment(Alignment::TopCenter);
 
         $original = self::ttiBlocks($raw);
         $written  = self::ttiBlocks($subtitle->toString(Format::EbuStl));

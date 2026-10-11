@@ -10,12 +10,13 @@ use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Mp4\Mp4Reader;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
+use SubtitleToolbox\Exceptions\UnsupportedFormatException;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 
 class LoadSaveTest extends TestCase
@@ -139,12 +140,12 @@ class LoadSaveTest extends TestCase
         try {
             Subtitle::loadAutoDetectFormat($mkv);
             $this->fail("6 tracks must throw.");
-        } catch (InvalidParserException $exception) {
+        } catch (UnsupportedFormatException $exception) {
             $this->assertStringContainsString("has 6 subtitle tracks. Call loadTrack() with one of them:\n  3: S_TEXT/UTF8, de", $exception->getMessage());
             $this->assertStringContainsString("\n  8: S_TEXT/UTF8, eng", $exception->getMessage());
         }
 
-        $this->expectException(InvalidParserException::class);
+        $this->expectException(UnsupportedFormatException::class);
         $this->expectExceptionMessage("Call loadTrack()");
         Subtitle::load($mkv, Format::SubRip);
     }
@@ -213,18 +214,18 @@ class LoadSaveTest extends TestCase
         try {
             Subtitle::loadAutoDetectFormat($mp4);
             $this->fail("4 tracks must throw.");
-        } catch (InvalidParserException $exception) {
-            $this->assertStringStartsWith("InvalidParserException (Error #102): The MP4 file has 4 subtitle tracks. Call loadTrack() with one of them:\n" .
+        } catch (UnsupportedFormatException $exception) {
+            $this->assertStringStartsWith("UnsupportedFormatException (Error #102): The MP4 file has 4 subtitle tracks. Call loadTrack() with one of them:\n" .
                                           "  2: tx3g, eng, \"English\", default\n", $exception->getMessage());
         }
         try {
             Subtitle::fromString(file_get_contents($mp4), Format::SubRip);
             $this->fail("MP4 content must throw.");
-        } catch (InvalidParserException $exception) {
+        } catch (UnsupportedFormatException $exception) {
             $this->assertStringEndsWith("The content is an MP4 file. Call loadTrack() with a track number.", $exception->getMessage());
         }
 
-        $this->expectException(InvalidParserException::class);
+        $this->expectException(UnsupportedFormatException::class);
         $this->expectExceptionMessage("$mp4 is an MP4 file. Call loadTrack() with a track number.");
         Subtitle::load($mp4, Format::SubRip);
     }
@@ -247,7 +248,7 @@ class LoadSaveTest extends TestCase
         $this->assertNotSame([], $subtitle->getCues());
         $this->assertTrue(Image\CueImage::isImageCue($subtitle->getCues()[0]));
 
-        $this->expectException(InvalidParserException::class);
+        $this->expectException(UnsupportedFormatException::class);
         $this->expectExceptionMessage("has 2 subtitle tracks. Call loadTrack() with one of them:\n  3: S_HDMV/PGS, ger, default\n  4: S_HDMV/PGS, eng");
         Subtitle::loadAutoDetectFormat(self::FILES . "mkv/pgs.mkv");
     }
@@ -263,7 +264,7 @@ class LoadSaveTest extends TestCase
 
     public function testMicroDvdWithTheFrameRateOfTheOptions(): void
     {
-        $subtitle = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
+        $subtitle = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
 
         $this->assertSame(Format::MicroDvd, $subtitle->getFormat());
         $this->assertSame(1.0, $subtitle->getCues()[0]->getStart());
@@ -276,7 +277,7 @@ class LoadSaveTest extends TestCase
         $idx = file_get_contents(self::FILES . "vobsub/text-pal.idx");
         $sub = file_get_contents(self::FILES . "vobsub/text-pal.sub");
 
-        $expected = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx)))->toArray();
+        $expected = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions($idx)]))->toArray();
 
         $this->assertSame($expected, Subtitle::load(self::FILES . "vobsub/text-pal.idx", Format::VobSub)->toArray());
         $this->assertSame($expected, Subtitle::load(self::FILES . "vobsub/text-pal.sub", Format::VobSub)->toArray());
@@ -293,22 +294,12 @@ class LoadSaveTest extends TestCase
         file_put_contents("$this->dir/other", $sub);
 
         $this->assertSame(
-            Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx)))->toArray(),
+            Subtitle::fromString($sub, Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions($idx)]))->toArray(),
             Subtitle::load("$this->dir/movie", Format::VobSub)->toArray()
         );
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("VobSub needs the .idx file next to $this->dir/other, but $this->dir/other.idx does not exist.");
         Subtitle::load("$this->dir/other", Format::VobSub);
-    }
-
-
-    public function testVobSubReportsTheOptionsOfAnotherFormatBeforeTheMissingSubFile(): void
-    {
-        file_put_contents("$this->dir/lone.idx", file_get_contents(self::FILES . "vobsub/text-pal.idx"));
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("VobSubParser takes VobSubReadOptions, got CsvReadOptions.");
-        Subtitle::load("$this->dir/lone.idx", Format::VobSub, new ReadOptions(format: new CsvReadOptions()));
     }
 
 
@@ -318,15 +309,15 @@ class LoadSaveTest extends TestCase
         $sub  = file_get_contents(self::FILES . "vobsub/two-tracks-pal.sub");
         $path = self::FILES . "vobsub/two-tracks-pal.idx";
 
-        $second = Subtitle::load($path, Format::VobSub, new ReadOptions(format: new VobSubReadOptions(track: 1)));
+        $second = Subtitle::load($path, Format::VobSub, new ReadOptions(formats: [new CsvReadOptions(), new VobSubReadOptions(track: 1), new SccReadOptions()]));
         $this->assertSame(
-            Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx, track: 1)))->toArray(),
+            Subtitle::fromString($sub, Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions($idx, track: 1)]))->toArray(),
             $second->toArray()
         );
         $this->assertNotSame(Subtitle::load($path, Format::VobSub)->toArray(), $second->toArray());
 
         $language = $second->findMetadata(Subtitle::METADATA_LANGUAGE);
-        $this->assertSame($second->toArray(), Subtitle::load($path, Format::VobSub, new ReadOptions(format: new VobSubReadOptions(language: $language)))->toArray());
+        $this->assertSame($second->toArray(), Subtitle::load($path, Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions(language: $language)]))->toArray());
     }
 
 
@@ -342,7 +333,7 @@ class LoadSaveTest extends TestCase
         $this->assertStringContainsString("\t", strtok(file_get_contents("$this->dir/x.tsv"), "\n"));
         $this->assertSame(
             file_get_contents("$this->dir/x.csv"),
-            $subtitle->toString(Format::Csv, new WriteOptions(format: new CsvWriteOptions(delimiter: ",")))
+            $subtitle->toString(Format::Csv, new WriteOptions(formats: [new CsvWriteOptions(delimiter: ",")]))
         );
 
         $semicolons = Subtitle::loadAutoDetectFormat(self::FILES . "csv/real/excel_de_semicolon.csv");
@@ -365,13 +356,13 @@ class LoadSaveTest extends TestCase
 
     public function testSaveMicroDvdTakesTheFrameRateFromTheOptionsThenFromTheFormatData(): void
     {
-        $withFrameRate = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
+        $withFrameRate = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
         $withFrameRate->save("$this->dir/x.sub");
         $this->assertSame(
-            $withFrameRate->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(25))),
+            $withFrameRate->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(25)])),
             file_get_contents("$this->dir/x.sub")
         );
-        $withFrameRate->save("$this->dir/y.sub", options: new WriteOptions(format: new MicroDvdWriteOptions(50)));
+        $withFrameRate->save("$this->dir/y.sub", options: new WriteOptions(formats: [new MicroDvdWriteOptions(50)]));
         $this->assertStringStartsWith("{50}{150}", file_get_contents("$this->dir/y.sub"));
 
         $this->expectException(InvalidArgumentException::class);

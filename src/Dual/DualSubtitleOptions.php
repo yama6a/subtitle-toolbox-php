@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Dual;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\OptionChecks;
-use SubtitleToolbox\SubtitleCue;
 
 final class DualSubtitleOptions
 {
@@ -15,23 +15,19 @@ final class DualSubtitleOptions
      * @param DualSubtitleMode $mode               how the secondary cues join the primary cues
      * @param float            $snapTolerance      the seconds within which a secondary time moves to the closest primary time in TopBottom mode
      * @param ?string          $secondaryStyle     a core markup tag around each secondary line, for example "i" or "font color=\"#ffff00\""
-     * @param int              $secondaryAlignment the numpad alignment of the secondary cues in TopBottom mode
+     * @param Alignment        $secondaryAlignment the alignment of the secondary cues in TopBottom mode
      */
     public function __construct(
         public readonly DualSubtitleMode $mode = DualSubtitleMode::Stack,
         public readonly float $snapTolerance = 0.25,
         public readonly ?string $secondaryStyle = null,
-        public readonly int $secondaryAlignment = SubtitleCue::TOP_CENTER_ALIGNMENT,
+        public readonly Alignment $secondaryAlignment = Alignment::TopCenter,
     ) {
         OptionChecks::nonNegativeFinite($snapTolerance, "The snap tolerance %s must not be negative.");
 
         if ($secondaryStyle !== null && !in_array($this->getSecondaryTagName(), Markup::CORE_TAGS, true)) {
             throw new InvalidArgumentException("The secondary style $secondaryStyle must be a core markup tag " .
                                                "such as i or font color=\"#ffff00\".");
-        }
-
-        if (!OptionChecks::isAlignment($secondaryAlignment)) {
-            throw new InvalidArgumentException("The secondary alignment must be a number from 1 to 9, got $secondaryAlignment.");
         }
     }
 

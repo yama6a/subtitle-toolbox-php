@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ReadOptions;
@@ -36,29 +37,29 @@ class TtmlRealFileTest extends TestCase
     public static function realFileProvider(): array
     {
         return [
-            "astisub_breaklines"         => ["astisub_breaklines.ttml", 4, 0.0, 1.0, "First line\nSecond line", null, 3.0, 4.0, "Seventh line\nEighth middle line", null],
-            "astisub_merging_style"      => ["astisub_merging_style.ttml", 4, 0.0, 60.0, "<font color=\"#ffff00\">text1.0 </font>text1.1", 8, 120.0, 180.0, "text3", 8],
-            "astisub_smpte"              => ["astisub_smpte.ttml", 6, 99.0, 101.04, "(light rain)", 8, 151.4, 153.44, "<font color=\"#ffff00\"><i>(music for the</i></font>\ntraffic news)", null],
-            "bbc_ebu_tt_d"               => ["bbc_ebu_tt_d.ttml", 20, 10.0, 13.0, "<v Anna>Good morning from the harbour.", 2, 76.12, 79.52, "<i>(music)</i>", 8],
-            "blank_lines_before_xml"     => ["blank_lines_before_xml.ttml", 2, 1.0, 3.0, "The market opens at eight.", null, 3.5, 6.0, "<i>Fresh bread</i> is sold first.", null],
-            "flash_ttaf1_2006_04"        => ["flash_ttaf1_2006_04.xml", 4, 0.5, 3.0, "Welcome to the second lesson.", null, 8.4, 11.0, "<b>Save</b> your work before you go on.", null],
-            "mantas_dfxp_br"             => ["mantas_dfxp_br.dfxp", 1, 0.0, 1.0, "one\ntwo\nthree", 2, 0.0, 1.0, "one\ntwo\nthree", 2],
-            "mantas_duplicated_ids"      => ["mantas_duplicated_ids.ttml", 3, 0.0, 1.0, "First line.", null, 2.0, 3.0, "Third line.", null],
-            "mantas_fps_multiplier"      => ["mantas_fps_multiplier.ttml", 1, 15.015, 17.684, "First line.", null, 15.015, 17.684, "First line.", null],
-            "mantas_netflix_ticks"       => ["mantas_netflix_ticks.dfxp", 2, 137.4, 140.4, "The bakery's first bread\nis ready at six o'clock.", null, 3740.5, 3742.5, "The last train leaves at midnight.", null],
-            "mantas_ttml2"               => ["mantas_ttml2.ttml", 5, 0.0, 2.0, "Hello I am your first line.", null, 8.0, 10.0, "<font color=\"#ff0000\">I am the last caption displayed in red and centered.</font>", 8],
-            "pysubs2_regions"            => ["pysubs2_regions.ttml", 10, 1.375, 5.75, "TOP SAMPLE TEXT", 8, 45.325, 50.041, "for the weekend market.", 2],
-            "w3c_dfxp_timing"            => ["w3c_dfxp_timing.dfxp", 4, 0.0, 2.0, "<font color=\"#ff0000\"><b>Text 1</b></font>", 8, 1.0, 3.0, "<font color=\"#ff0000\"><b>Text 4</b></font>", 8],
-            "w3c_imsc11_frames"          => ["w3c_imsc11_frames.ttml", 3, 1.01, 3.0, "This should appear on frame 25.", null, 7.33, 9.0, "This should appear on frame 176.", null],
-            "w3c_imsc11_line_gaps"       => ["w3c_imsc11_line_gaps.ttml", 1, 0.0, 30.0, "##Line gaps##\nThe quick brown fox\njumps over the <font color=\"#000000\">lazy </font>dog\n##Line gaps##", 2, 0.0, 30.0, "##Line gaps##\nThe quick brown fox\njumps over the <font color=\"#000000\">lazy </font>dog\n##Line gaps##", 2],
-            "w3c_imsc11_paragraphs"      => ["w3c_imsc11_paragraphs.ttml", 4, 0.0, 30.0, "Paragraph 1", 2, 0.0, 30.0, "Paragraph 2", 8],
-            "w3c_imsc11_regions"         => ["w3c_imsc11_regions.ttml", 3, 0.0, 6.0, "This region is within the editorial area.", 8, 0.0, 6.0, "<font color=\"#ffff00\">This region is not.</font>", 2],
-            "w3c_ttml1_cells"            => ["w3c_ttml1_cells.ttml", 5, 0.0, 8.0, "Lorem ipsum dolor sit", null, 18.0, 29.0, "Ut enim ad minim veniam quis, nostrud", null],
-            "w3c_ttml1_timed_spans"      => ["w3c_ttml1_timed_spans.ttml", 5, 0.0, 25.0, "Lorem <00:00:01.000>ipsum <00:00:02.000>dolor <00:00:03.000>sit", null, 0.0, 25.0, "<00:00:18.000>Ut <00:00:19.000>enim <00:00:20.000>ad <00:00:21.000>minim <00:00:22.000>veniam <00:00:23.000>quis, <00:00:24.000>nostrud", null],
-            "w3c_ttml1_timing"           => ["w3c_ttml1_timing.ttml", 4, 0.0, 2.0, "<font color=\"#ff0000\"><b>Text 1</b></font>", 8, 1.0, 3.0, "<font color=\"#ff0000\"><b>Text 4</b></font>", 8],
-            "style_inheritance"          => ["style_inheritance.ttml", 5, 1.0, 2.0, "<i>The ferry leaves at noon.</i>", null, 9.0, 10.0, "<font color=\"#00ffff\"><i>Next stop </i></font>harbour", null],
-            "word_timed_spans"           => ["word_timed_spans.ttml", 3, 1.0, 4.5, "The <00:00:02.000>tide <00:00:03.000>turns", null, 10.0, 13.0, "Boats <00:00:11.000>return <00:00:12.000>home", null],
-            "smpte_drop_ntsc"            => ["smpte_drop_ntsc.ttml", 5, 57.391, 60.027, "The morning train leaves platform two.", 2, 3599.996, 3602.999, "The evening train runs on time.", 2],
+            "astisub_breaklines"         => ["astisub_breaklines.ttml", 4, 0.0, 1.0, "First line\nSecond line", Alignment::BottomCenter, 3.0, 4.0, "Seventh line\nEighth middle line", Alignment::BottomCenter],
+            "astisub_merging_style"      => ["astisub_merging_style.ttml", 4, 0.0, 60.0, "<font color=\"#ffff00\">text1.0 </font>text1.1", Alignment::TopCenter, 120.0, 180.0, "text3", Alignment::TopCenter],
+            "astisub_smpte"              => ["astisub_smpte.ttml", 6, 99.0, 101.04, "(light rain)", Alignment::TopCenter, 151.4, 153.44, "<font color=\"#ffff00\"><i>(music for the</i></font>\ntraffic news)", Alignment::BottomCenter],
+            "bbc_ebu_tt_d"               => ["bbc_ebu_tt_d.ttml", 20, 10.0, 13.0, "<v Anna>Good morning from the harbour.", Alignment::BottomCenter, 76.12, 79.52, "<i>(music)</i>", Alignment::TopCenter],
+            "blank_lines_before_xml"     => ["blank_lines_before_xml.ttml", 2, 1.0, 3.0, "The market opens at eight.", Alignment::BottomCenter, 3.5, 6.0, "<i>Fresh bread</i> is sold first.", Alignment::BottomCenter],
+            "flash_ttaf1_2006_04"        => ["flash_ttaf1_2006_04.xml", 4, 0.5, 3.0, "Welcome to the second lesson.", Alignment::BottomCenter, 8.4, 11.0, "<b>Save</b> your work before you go on.", Alignment::BottomCenter],
+            "mantas_dfxp_br"             => ["mantas_dfxp_br.dfxp", 1, 0.0, 1.0, "one\ntwo\nthree", Alignment::BottomCenter, 0.0, 1.0, "one\ntwo\nthree", Alignment::BottomCenter],
+            "mantas_duplicated_ids"      => ["mantas_duplicated_ids.ttml", 3, 0.0, 1.0, "First line.", Alignment::BottomCenter, 2.0, 3.0, "Third line.", Alignment::BottomCenter],
+            "mantas_fps_multiplier"      => ["mantas_fps_multiplier.ttml", 1, 15.015, 17.684, "First line.", Alignment::BottomCenter, 15.015, 17.684, "First line.", Alignment::BottomCenter],
+            "mantas_netflix_ticks"       => ["mantas_netflix_ticks.dfxp", 2, 137.4, 140.4, "The bakery's first bread\nis ready at six o'clock.", Alignment::BottomCenter, 3740.5, 3742.5, "The last train leaves at midnight.", Alignment::BottomCenter],
+            "mantas_ttml2"               => ["mantas_ttml2.ttml", 5, 0.0, 2.0, "Hello I am your first line.", Alignment::BottomCenter, 8.0, 10.0, "<font color=\"#ff0000\">I am the last caption displayed in red and centered.</font>", Alignment::TopCenter],
+            "pysubs2_regions"            => ["pysubs2_regions.ttml", 10, 1.375, 5.75, "TOP SAMPLE TEXT", Alignment::TopCenter, 45.325, 50.041, "for the weekend market.", Alignment::BottomCenter],
+            "w3c_dfxp_timing"            => ["w3c_dfxp_timing.dfxp", 4, 0.0, 2.0, "<font color=\"#ff0000\"><b>Text 1</b></font>", Alignment::TopCenter, 1.0, 3.0, "<font color=\"#ff0000\"><b>Text 4</b></font>", Alignment::TopCenter],
+            "w3c_imsc11_frames"          => ["w3c_imsc11_frames.ttml", 3, 1.01, 3.0, "This should appear on frame 25.", Alignment::BottomCenter, 7.33, 9.0, "This should appear on frame 176.", Alignment::BottomCenter],
+            "w3c_imsc11_line_gaps"       => ["w3c_imsc11_line_gaps.ttml", 1, 0.0, 30.0, "##Line gaps##\nThe quick brown fox\njumps over the <font color=\"#000000\">lazy </font>dog\n##Line gaps##", Alignment::BottomCenter, 0.0, 30.0, "##Line gaps##\nThe quick brown fox\njumps over the <font color=\"#000000\">lazy </font>dog\n##Line gaps##", Alignment::BottomCenter],
+            "w3c_imsc11_paragraphs"      => ["w3c_imsc11_paragraphs.ttml", 4, 0.0, 30.0, "Paragraph 1", Alignment::BottomCenter, 0.0, 30.0, "Paragraph 2", Alignment::TopCenter],
+            "w3c_imsc11_regions"         => ["w3c_imsc11_regions.ttml", 3, 0.0, 6.0, "This region is within the editorial area.", Alignment::TopCenter, 0.0, 6.0, "<font color=\"#ffff00\">This region is not.</font>", Alignment::BottomCenter],
+            "w3c_ttml1_cells"            => ["w3c_ttml1_cells.ttml", 5, 0.0, 8.0, "Lorem ipsum dolor sit", Alignment::BottomCenter, 18.0, 29.0, "Ut enim ad minim veniam quis, nostrud", Alignment::BottomCenter],
+            "w3c_ttml1_timed_spans"      => ["w3c_ttml1_timed_spans.ttml", 5, 0.0, 25.0, "Lorem <00:00:01.000>ipsum <00:00:02.000>dolor <00:00:03.000>sit", Alignment::BottomCenter, 0.0, 25.0, "<00:00:18.000>Ut <00:00:19.000>enim <00:00:20.000>ad <00:00:21.000>minim <00:00:22.000>veniam <00:00:23.000>quis, <00:00:24.000>nostrud", Alignment::BottomCenter],
+            "w3c_ttml1_timing"           => ["w3c_ttml1_timing.ttml", 4, 0.0, 2.0, "<font color=\"#ff0000\"><b>Text 1</b></font>", Alignment::TopCenter, 1.0, 3.0, "<font color=\"#ff0000\"><b>Text 4</b></font>", Alignment::TopCenter],
+            "style_inheritance"          => ["style_inheritance.ttml", 5, 1.0, 2.0, "<i>The ferry leaves at noon.</i>", Alignment::BottomCenter, 9.0, 10.0, "<font color=\"#00ffff\"><i>Next stop </i></font>harbour", Alignment::BottomCenter],
+            "word_timed_spans"           => ["word_timed_spans.ttml", 3, 1.0, 4.5, "The <00:00:02.000>tide <00:00:03.000>turns", Alignment::BottomCenter, 10.0, 13.0, "Boats <00:00:11.000>return <00:00:12.000>home", Alignment::BottomCenter],
+            "smpte_drop_ntsc"            => ["smpte_drop_ntsc.ttml", 5, 57.391, 60.027, "The morning train leaves platform two.", Alignment::BottomCenter, 3599.996, 3602.999, "The evening train runs on time.", Alignment::BottomCenter],
         ];
     }
 
@@ -70,11 +71,11 @@ class TtmlRealFileTest extends TestCase
         float $firstStart,
         float $firstEnd,
         string $firstText,
-        ?int $firstAlignment,
+        Alignment $firstAlignment,
         float $lastStart,
         float $lastEnd,
         string $lastText,
-        ?int $lastAlignment
+        Alignment $lastAlignment
     ): void {
         $cues = array_values($this->parseFile($file)->getCues());
 
@@ -167,9 +168,9 @@ class TtmlRealFileTest extends TestCase
 
             $this->assertSame(
                 [
-                    [1.0, 4.5, "The <00:00:02.000>tide <00:00:03.000>turns", null],
-                    [5.5, 8.0, "at <00:00:06.500><i>dusk</i>", null],
-                    [10.0, 13.0, "Boats <00:00:11.000>return <00:00:12.000>home", null],
+                    [1.0, 4.5, "The <00:00:02.000>tide <00:00:03.000>turns", Alignment::BottomCenter],
+                    [5.5, 8.0, "at <00:00:06.500><i>dusk</i>", Alignment::BottomCenter],
+                    [10.0, 13.0, "Boats <00:00:11.000>return <00:00:12.000>home", Alignment::BottomCenter],
                 ],
                 array_map($this->describeCue(...), $subtitle->getCues())
             );

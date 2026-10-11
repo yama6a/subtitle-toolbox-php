@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
@@ -24,33 +25,33 @@ class SccRealFileTest extends TestCase
         return [
             "popon_broadcast_df"    => [
                 "popon_broadcast_df.scc", 10,
-                3501.131, 3503.3, ["THE NEXT TRAIN TO LAKESIDE", "LEAVES AT NINE."], null,
-                3604.868, 3607.003, ["\u{A1}HASTA MAÑANA, ZÜRICH!"], 8,
+                3501.131, 3503.3, ["THE NEXT TRAIN TO LAKESIDE", "LEAVES AT NINE."], Alignment::BottomCenter,
+                3604.868, 3607.003, ["\u{A1}HASTA MAÑANA, ZÜRICH!"], Alignment::TopCenter,
             ],
             "rollup_news_ndf"       => [
                 "rollup_news_ndf.scc", 7,
-                0.2, 1.335, ["&gt;&gt; GOOD MORNING."], null,
-                8.008, 10.01, ["&gt;&gt; NOW THE TRAFFIC.", "THE BRIDGE IS OPEN."], null,
+                0.2, 1.335, ["&gt;&gt; GOOD MORNING."], Alignment::BottomCenter,
+                8.008, 10.01, ["&gt;&gt; NOW THE TRAFFIC.", "THE BRIDGE IS OPEN."], Alignment::BottomCenter,
             ],
             "painton_corrections"   => [
                 "painton_corrections.scc", 4,
-                10.143, 11.144, ["BAKERY NEWS"], null,
-                15.148, 17.017, ["<font color=\"#00ffff\">SEE YOU TOMORROW.</font>"], null,
+                10.143, 11.144, ["BAKERY NEWS"], Alignment::BottomCenter,
+                15.148, 17.017, ["<font color=\"#00ffff\">SEE YOU TOMORROW.</font>"], Alignment::BottomCenter,
             ],
             "interleaved_pac_tab"   => [
                 "interleaved_pac_tab.scc", 2,
-                30.998, 33.2, ["<i>[Station announcer]</i>", "<i>The ferry to the island</i>", "<i>leaves from pier four,</i>"], null,
-                33.267, 35.035, ["<i>not from pier two</i>", "<i>as printed in the guide.</i>"], null,
+                30.998, 33.2, ["<i>[Station announcer]</i>", "<i>The ferry to the island</i>", "<i>leaves from pier four,</i>"], Alignment::BottomCenter,
+                33.267, 35.035, ["<i>not from pier two</i>", "<i>as printed in the guide.</i>"], Alignment::BottomCenter,
             ],
             "out_of_order_lines"    => [
                 "out_of_order_lines.scc", 4,
-                2.269, 2.436, ["the bus was late again today."], null,
-                5.138, 5.506, ["oh"], null,
+                2.269, 2.436, ["the bus was late again today."], Alignment::BottomCenter,
+                5.138, 5.506, ["oh"], Alignment::BottomCenter,
             ],
             "raw_data_row"          => [
                 "raw_data_row.scc", 3,
-                0.234, 4.004, ["OK"], null,
-                31.665, 34.034, ["THE NEXT CAPTION IS FINE."], null,
+                0.234, 4.004, ["OK"], Alignment::BottomCenter,
+                31.665, 34.034, ["THE NEXT CAPTION IS FINE."], Alignment::BottomCenter,
             ],
         ];
     }
@@ -63,11 +64,11 @@ class SccRealFileTest extends TestCase
         float $firstStart,
         float $firstEnd,
         array $firstLines,
-        ?int $firstAlignment,
+        Alignment $firstAlignment,
         float $lastStart,
         float $lastEnd,
         array $lastLines,
-        ?int $lastAlignment
+        Alignment $lastAlignment
     ): void {
         $cues = array_values(Subtitle::fromString(file_get_contents(self::DIR . $file), Format::Scc)->getCues());
 
@@ -155,7 +156,7 @@ class SccRealFileTest extends TestCase
 
     public function testRollUpFileReadByLinesGivesEachSpokenLineOnce(): void
     {
-        $options = new ReadOptions(format: new SccReadOptions(rollUp: SccRollUp::Lines));
+        $options = new ReadOptions(formats: [new SccReadOptions(rollUp: SccRollUp::Lines)]);
         $cues    = Subtitle::fromString(file_get_contents(self::DIR . "rollup_news_ndf.scc"), Format::Scc, $options)->getCues();
 
         $this->assertSame([
@@ -192,7 +193,7 @@ class SccRealFileTest extends TestCase
     {
         return array_map(
             fn (SubtitleCue $cue): array => [
-                $cue->getStart(), $cue->getEnd(), $cue->getLines(), $cue->getAlignment(),
+                $cue->getStart(), $cue->getEnd(), $cue->getLines(), $cue->getAlignment()->value,
                 $cue->findFormatData(SccParser::FORMAT_DATA_KEY)["rows"], $cue->findFormatData(SccParser::FORMAT_DATA_KEY)["columns"],
             ],
             $subtitle->getCues()

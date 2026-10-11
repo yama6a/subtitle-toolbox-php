@@ -43,7 +43,7 @@ final class DiffCommand extends ReportCommand
     {
         return "The diff pairs cues by time and text, not by cue number. So one added cue does not shift the rest. Cue numbers start at 1. " .
                "The exit code is 1 when the files differ, as with the Unix diff command. The files can have different formats. " .
-               "--from and --track apply to the old file, --from2 and --track2 to the new file.";
+               "--from, --track and --encoding apply to both files. --new-from and --new-track replace --from and --track for the new file.";
     }
 
 
@@ -67,6 +67,18 @@ final class DiffCommand extends ReportCommand
     protected function takesManyInputs(): bool
     {
         return false;
+    }
+
+
+    protected function fileOptionNames(): array
+    {
+        return ["from" => "from", "track" => "track", "secondFrom" => "new-from", "secondTrack" => "new-track"];
+    }
+
+
+    protected function secondFileInherits(): bool
+    {
+        return true;
     }
 
 

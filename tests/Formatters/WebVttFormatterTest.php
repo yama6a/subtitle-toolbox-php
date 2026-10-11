@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -98,7 +99,7 @@ class WebVttFormatterTest extends TestCase
 
 
     #[DataProvider("alignmentProvider")]
-    public function testAlignmentBecomesCueSettings(?int $alignment, string $timingLine): void
+    public function testAlignmentBecomesCueSettings(Alignment $alignment, string $timingLine): void
     {
         $subtitle = (new Subtitle())->addCue((new SubtitleCue(1, 2, "One"))->setAlignment($alignment));
 
@@ -112,14 +113,13 @@ class WebVttFormatterTest extends TestCase
     public static function alignmentProvider(): array
     {
         return [
-            "default"       => [null, "00:00:01.000 --> 00:00:02.000"],
-            "bottom left"   => [1, "00:00:01.000 --> 00:00:02.000 align:left"],
-            "bottom center" => [2, "00:00:01.000 --> 00:00:02.000"],
-            "bottom right"  => [3, "00:00:01.000 --> 00:00:02.000 align:right"],
-            "middle left"   => [4, "00:00:01.000 --> 00:00:02.000 line:50%,center align:left"],
-            "middle center" => [5, "00:00:01.000 --> 00:00:02.000 line:50%,center"],
-            "top center"    => [8, "00:00:01.000 --> 00:00:02.000 line:0"],
-            "top right"     => [9, "00:00:01.000 --> 00:00:02.000 line:0 align:right"],
+            "bottom left"   => [Alignment::BottomLeft, "00:00:01.000 --> 00:00:02.000 align:left"],
+            "bottom center" => [Alignment::BottomCenter, "00:00:01.000 --> 00:00:02.000"],
+            "bottom right"  => [Alignment::BottomRight, "00:00:01.000 --> 00:00:02.000 align:right"],
+            "middle left"   => [Alignment::MiddleLeft, "00:00:01.000 --> 00:00:02.000 line:50%,center align:left"],
+            "middle center" => [Alignment::MiddleCenter, "00:00:01.000 --> 00:00:02.000 line:50%,center"],
+            "top center"    => [Alignment::TopCenter, "00:00:01.000 --> 00:00:02.000 line:0"],
+            "top right"     => [Alignment::TopRight, "00:00:01.000 --> 00:00:02.000 line:0 align:right"],
         ];
     }
 
@@ -127,29 +127,65 @@ class WebVttFormatterTest extends TestCase
     public function testAlignmentRoundTripsThroughCueSettings(): void
     {
         $subtitle = new Subtitle();
-        foreach (range(1, 9) as $alignment) {
-            $subtitle->addCue((new SubtitleCue($alignment, $alignment + 1, "Cue"))->setAlignment($alignment));
+        foreach (Alignment::cases() as $alignment) {
+            $subtitle->addCue((new SubtitleCue($alignment->value, $alignment->value + 1, "Cue"))->setAlignment($alignment));
         }
 
         $parsed = Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
 
-        $this->assertSame(
-            [1, null, 3, 4, 5, 6, 7, 8, 9],
-            array_map(fn (SubtitleCue $cue): ?int => $cue->getAlignment(), $parsed->getCues())
-        );
+        $this->assertSame(Alignment::cases(), array_map(fn (SubtitleCue $cue): Alignment => $cue->getAlignment(), $parsed->getCues()));
     }
 
 
-    public function testCueSettingsFromFormatDataWinOverAlignment(): void
+    public function testCueSettingsFromFormatDataStayWhileTheAlignmentIsUnchanged(): void
     {
-        $cue = (new SubtitleCue(1, 2, "One"))
-            ->setAlignment(8)
-            ->setFormatData("vtt", ["size" => "50%", "unknown" => "x", "align" => "start"]);
+        $cue = (new SubtitleCue(1, 2, "One"))->setFormatData("vtt", ["size" => "50%", "unknown" => "x", "align" => "start"]);
 
         $this->assertSame(
             "\xEF\xBB\xBFWEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000 size:50% align:start\nOne\n",
             (new Subtitle())->addCue($cue)->toString(Format::WebVtt)
         );
+    }
+
+
+    public function testChangedAlignmentReplacesTheStoredPosition(): void
+    {
+        $path     = __DIR__ . "/../files/vtt/real/w3c_cue_settings.vtt";
+        $subtitle = Subtitle::load($path, Format::WebVtt);
+        $subtitle->getCues()[0]->setAlignment(Alignment::TopCenter);
+        $subtitle->getCues()[1]->setAlignment(Alignment::BottomCenter);
+
+        $this->assertSame(
+            str_replace(
+                [" position:10%,line-left align:left size:35%", " position:90% align:right size:35%"],
+                [" size:35% line:0", " size:35%"],
+                Subtitle::load($path, Format::WebVtt)->toString(Format::WebVtt)
+            ),
+            $subtitle->toString(Format::WebVtt)
+        );
+    }
+
+
+    public function testIssueExampleMovesTheCueToTheBottom(): void
+    {
+        $subtitle = Subtitle::fromString("WEBVTT\n\n00:00:01.000 --> 00:00:02.000 line:0\nHello\n", Format::WebVtt);
+        $subtitle->getCues()[0]->setAlignment(Alignment::BottomCenter);
+
+        $this->assertSame(
+            "WEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000\nHello\n",
+            $subtitle->toString(Format::WebVtt, new WriteOptions(bom: false))
+        );
+    }
+
+
+    public function testSubRipCueSettingsStayWhileTheAlignmentIsUnchanged(): void
+    {
+        $subtitle = Subtitle::fromString("1\n00:00:01,000 --> 00:00:02,000 position:10%\n{\\an8}Hello\n", Format::SubRip);
+
+        $this->assertStringContainsString("00:00:01.000 --> 00:00:02.000 position:10%\n", $subtitle->toString(Format::WebVtt));
+
+        $subtitle->getCues()[0]->setAlignment(Alignment::TopLeft);
+        $this->assertStringContainsString("00:00:01.000 --> 00:00:02.000 line:0 align:left\n", $subtitle->toString(Format::WebVtt));
     }
 
 

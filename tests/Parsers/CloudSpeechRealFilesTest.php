@@ -98,7 +98,7 @@ class CloudSpeechRealFilesTest extends TestCase
 
     private static function parse(string $parserClass, string $file, bool $wordTimestamps = false): Subtitle
     {
-        return (new $parserClass())->parse(file_get_contents(self::DIR . $file), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: $wordTimestamps, speakerVoices: true)));
+        return (new $parserClass())->parse(file_get_contents(self::DIR . $file), new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: $wordTimestamps, speakerVoices: true)]));
     }
 
 

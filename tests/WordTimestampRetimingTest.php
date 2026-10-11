@@ -11,6 +11,7 @@ use SubtitleToolbox\Profanity\ProfanityFilter;
 use SubtitleToolbox\Profanity\ProfanityOptions;
 use SubtitleToolbox\Sync\ReferenceSync;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
+use SubtitleToolbox\SyncPoint;
 
 class WordTimestampRetimingTest extends TestCase
 {
@@ -92,9 +93,9 @@ class WordTimestampRetimingTest extends TestCase
     }
 
 
-    public function testSyncByTwoPointsMovesWordTimestamps(): void
+    public function testSyncByPointsMovesWordTimestamps(): void
     {
-        $subtitle = self::load("profanity/radio.vtt", Format::WebVtt)->syncByTwoPoints(1, 2, 7.5, 15);
+        $subtitle = self::load("profanity/radio.vtt", Format::WebVtt)->syncByPoints([new SyncPoint(1, 2), new SyncPoint(7.5, 15)]);
 
         $this->assertSame(["<00:00:02.000>Turn <00:00:02.800>the <00:00:03.200>damn <00:00:04.000>radio <00:00:05.000>off."],
                           $subtitle->getCues()[0]->getLines());

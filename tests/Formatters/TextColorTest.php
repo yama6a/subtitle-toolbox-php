@@ -43,11 +43,11 @@ class TextColorTest extends TestCase
     public static function otherColorFormats(): array
     {
         return [
-            "itt"      => [Format::Itt, new WriteOptions(format: new IttWriteOptions(frameRate: 25)), new ReadOptions()],
+            "itt"      => [Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 25)]), new ReadOptions()],
             "microdvd" => [
                 Format::MicroDvd,
-                new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)),
-                new ReadOptions(format: new MicroDvdReadOptions(25)),
+                new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25)]),
+                new ReadOptions(formats: [new MicroDvdReadOptions(25)]),
             ],
             "sami"     => [Format::Sami, new WriteOptions(), new ReadOptions()],
             "ebu stl"  => [Format::EbuStl, new WriteOptions(), new ReadOptions()],

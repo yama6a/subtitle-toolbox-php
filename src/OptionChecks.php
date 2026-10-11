@@ -77,12 +77,6 @@ final class OptionChecks
     }
 
 
-    public static function isAlignment(int $alignment): bool
-    {
-        return $alignment >= 1 && $alignment <= 9;
-    }
-
-
     // PHP 8.5 warns when a string holds NAN.
     public static function text(float $value): string
     {

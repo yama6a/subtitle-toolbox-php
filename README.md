@@ -7,6 +7,8 @@ A PHP library and command line tool that reads, edits and writes subtitles, tran
 
 Upgrading from 2.x? The package has a new name. See the [upgrade guide](docs/upgrade-3.0.md).
 
+Upgrading from 3.x? See the [4.0 upgrade guide](docs/upgrade-4.0.md).
+
 ## Install
 ```sh
 composer require yama6a/subtitle-toolbox-php
@@ -110,7 +112,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $latin1   = Subtitle::load('latin1.srt', Format::SubRip, new ReadOptions(encoding: 'Windows-1252'));
-$microDvd = Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(frameRate: 23.976)));
+$microDvd = Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 23.976)]));
 ```
 
 See [read-options.md](docs/read-options.md) for the options of each format.

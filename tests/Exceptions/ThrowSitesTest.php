@@ -124,8 +124,7 @@ class ThrowSitesTest extends TestCase
 
     private const CODES = [
         ParsingException::class             => 100,
-        InvalidFormatterException::class    => 101,
-        InvalidParserException::class       => 102,
+        UnsupportedFormatException::class   => 102,
         ImageCueWithoutTextException::class => 103,
         InvalidArgumentException::class     => 104,
         CueNotFoundException::class         => 105,
@@ -134,6 +133,9 @@ class ThrowSitesTest extends TestCase
         UnwritableContentException::class   => 108,
         TranslationException::class         => 109,
     ];
+
+    // 101 belonged to InvalidFormatterException in 3.x. Do not give it to a new class.
+    private const RETIRED_CODES = [101];
 
     // The CLI catches its own exceptions, so they need no error code.
     private const CLI_CODES = [FileFailure::class => 0];
@@ -274,7 +276,9 @@ class ThrowSitesTest extends TestCase
         $parsing     = [ParsingException::class, ParsingException::class];
         $ocr         = [\RuntimeException::class, OcrException::class];
         $translation = [\RuntimeException::class, TranslationException::class];
-        $unwritable = [\InvalidArgumentException::class, UnwritableContentException::class];
+        $unwritable  = [\RuntimeException::class, UnwritableContentException::class];
+        $unsupported = [\RuntimeException::class, UnsupportedFormatException::class];
+        $unknown     = [UnsupportedFormatException::class, UnknownFormatException::class];
         $imageCue   = (new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2));
 
         $cue = ["start" => 1, "end" => 2, "lines" => ["text"]];
@@ -360,18 +364,20 @@ class ThrowSitesTest extends TestCase
             "CueEditing.php: slice start after end"         => [fn () => self::subtitle()->withSlice(5, 1), ...$invalid],
             "CueEditing.php: split time outside the cue"    => [fn () => self::subtitle()->splitCue(0, 9, 1), ...$invalid],
             "CueEditing.php: split line out of range"       => [fn () => self::subtitle()->splitCue(0, 1.5, 5), ...$invalid],
-            "CueEditing.php: join in the wrong order"       => [fn () => self::subtitle()->joinCues(1, 0), ...$invalid],
-            "CueEditing.php: edit a missing cue"            => [fn () => self::subtitle()->splitCue(9, 1.5, 1), ...$invalid],
+            "CueEditing.php: join in the wrong order"       => [fn () => self::subtitle()->joinCues(0, 0), ...$invalid],
+            "CueEditing.php: split a missing cue"           => [fn () => self::subtitle()->splitCue(9, 1.5, 1),
+                                                                \RuntimeException::class, CueNotFoundException::class],
             "CueLookup.php: range start after end"          => [fn () => self::subtitle()->findCuesBetween(10, 5), ...$invalid],
             "Dependency.php: missing"                       => [fn () => Dependency::check("gzuncompress_missing", "Cannot decode a PNG - PHP has no ext-zlib."),
                                                                 ...$invalid],
             "Dual/DualSubtitleOptions.php: unknown style"        => [fn () => new DualSubtitleOptions(secondaryStyle: "blink"), ...$invalid],
-            "Dual/DualSubtitleOptions.php: alignment 0"          => [fn () => new DualSubtitleOptions(secondaryAlignment: 0), ...$invalid],
             "Encoding/Cea608.php: row 16"                   => [fn () => Cea608::encodePac(16, 0), ...$invalid],
             "Fixes.php: maximum characters 0"               => [fn () => self::subtitle()->wrapLines(0), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid regex"      => [fn () => new OcrReplaceList(regularExpressions: ["/(/" => ""]), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid XML"        => [fn () => OcrReplaceList::fromSubtitleEditXml("<ReplaceList>"), ...$parsing],
             "FormatDataSchema.php: field type"              => [fn () => (new Subtitle())->setFormatData("scc", ["dropFrame" => "x"]), ...$invalid],
+            "FormatOptionsList.php: not a format class"     => [fn () => new ReadOptions(formats: [new CsvWriteOptions()]), ...$invalid],
+            "FormatOptionsList.php: 2 objects of one class" => [fn () => new WriteOptions(formats: [new CsvWriteOptions(), new CsvWriteOptions()]), ...$invalid],
             "Formatters/JsonOutput.php: invalid UTF-8" => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip, new ReadOptions(encoding: "UTF-8"))->toString(Format::Json),
                 ...$unwritable],
             "Formatters/AssStyleOverride.php: no equals sign" => [fn () => new AssWriteOptions(style: "Fontsize"), ...$invalid],
@@ -379,9 +385,9 @@ class ThrowSitesTest extends TestCase
             "Formatters/AssStyleOverride.php: field not in the SSA styles" => [fn () => Subtitle::fromString(
                 "[V4 Styles]\nFormat: Name, Fontname\n\n[Events]\nDialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hi\n",
                 Format::Ass
-            )->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(style: "Underline=1"))), ...$unwritable],
+            )->toString(Format::Ass, new WriteOptions(formats: [new AssWriteOptions(style: "Underline=1")])), ...$unwritable],
             "Formatters/CsvFormatter.php: frames without rate" => [fn () => self::subtitle()->toString(Format::Csv,
-                new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames))), ...$invalid],
+                new WriteOptions(formats: [new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames)])), ...$invalid],
             "Formatters/EbuStlFormatter.php: code table 09" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
                 ["gsi" => ["CCT" => "09"]])->toString(Format::EbuStl), ...$invalid],
             "Formatters/EbuStlFormatter.php: subtitle number 65536" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
@@ -407,8 +413,6 @@ class ThrowSitesTest extends TestCase
                 ->toString(Format::Scc), ...$unwritable],
             "Formatters/SccFormatter.php: no CEA-608 character" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, "\u{20AC}"))
                 ->toString(Format::Scc), ...$unwritable],
-            "Formatters/SubtitleFormatter.php: options of another format" => [fn () => self::subtitle()->toString(Format::SubRip,
-                new WriteOptions(format: new CsvWriteOptions())), ...$invalid],
             "Formatters/XmlOutput.php: invalid UTF-8"       => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip, new ReadOptions(encoding: "UTF-8"))->toString(Format::Ttml),
                                                                 ...$unwritable],
             "Formatters/XmlOutput.php: not well-formed"     => [fn () => XmlOutput::load("<p>"), ...$unwritable],
@@ -546,7 +550,7 @@ class ThrowSitesTest extends TestCase
             "Parsers/SamiParser.php: no Start attribute"    => [fn () => (new SamiParser())->parse("<SAMI><BODY><SYNC>text</BODY></SAMI>", new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/SamiParser.php: unknown class"         => [fn () => (new SamiParser())->parse(
-                "<SAMI><BODY><SYNC Start=0><P Class=ENCC>text</BODY></SAMI>", new ReadOptions(format: new SamiReadOptions("FRCC"))), ...$parsing],
+                "<SAMI><BODY><SYNC Start=0><P Class=ENCC>text</BODY></SAMI>", new ReadOptions(formats: [new SamiReadOptions("FRCC")])), ...$parsing],
             "Parsers/SbvParser.php: no timestamps"          => [fn () => (new SbvParser())->parse("text\nmore", new ReadOptions()), ...$parsing],
             "Parsers/SbvParser.php: invalid time"           => [fn () => (new SbvParser())->parse("soon,0:00:02.000\ntext", new ReadOptions()), ...$parsing],
             "Parsers/SccParser.php: other header"           => [fn () => (new SccParser())->parse("Scenarist_SCC V2.0\n", new ReadOptions()), ...$parsing],
@@ -565,8 +569,6 @@ class ThrowSitesTest extends TestCase
             "Parsers/SubtitleParser.php: invalid UTF-8"    => [fn () => (new SamiParser())->parse("<SAMI>\xFF</SAMI>", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: no JSON"           => [fn () => (new JsonParser())->parse("{", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: JSON root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]", new ReadOptions()), ...$parsing],
-            "Parsers/SubtitleParser.php: options of another format" => [fn () => (new SubRipParser())->parse("", new ReadOptions(format: new CsvReadOptions())),
-                                                                ...$invalid],
             "Parsers/SubtitleParser.php: JSON field of 100000 hours" => [fn () => (new JsonParser())->parse('{"version": 1, "cues": [{"start": 360000000, "end": 360000001, "lines": []}]}', new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/SubtitleParser.php: NUL in a text file" => [fn () => (new SubRipParser())->parse("1\n00:00:01,000 --> 00:00:02,000\nte\0xt\n", new ReadOptions()), ...$parsing],
@@ -587,38 +589,38 @@ class ThrowSitesTest extends TestCase
             "Parsers/TtmlParser.php: no end time"           => [fn () => (new TtmlParser())->parse(sprintf(self::TTML,
                 '<p begin="1s">text</p>'), new ReadOptions()), ...$parsing],
             "Parsers/VobSubParser.php: no VobSubReadOptions" => [fn () => (new VobSubParser())->parse("", new ReadOptions()), ...$invalid],
-            "Parsers/VobSubParser.php: no track"            => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX))), ...$parsing],
-            "Parsers/VobSubParser.php: filepos outside"     => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
-            "Parsers/VobSubParser.php: no header line"      => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions("size: 720x576\n"))), ...$parsing],
-            "Parsers/VobSubParser.php: invalid size"        => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "size: 0x0\n"))), ...$parsing],
-            "Parsers/VobSubParser.php: invalid custom colors" => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "custom colors: yes\n"))), ...$parsing],
-            "Parsers/VobSubParser.php: invalid id"          => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "id: en, index: 99\n"))), ...$parsing],
-            "Parsers/VobSubParser.php: timestamp before id" => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "timestamp: 00:00:01:000, filepos: 0\n"))),
+            "Parsers/VobSubParser.php: no track"            => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(self::IDX)])), ...$parsing],
+            "Parsers/VobSubParser.php: filepos outside"     => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
+            "Parsers/VobSubParser.php: no header line"      => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions("size: 720x576\n")])), ...$parsing],
+            "Parsers/VobSubParser.php: invalid size"        => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(self::IDX . "size: 0x0\n")])), ...$parsing],
+            "Parsers/VobSubParser.php: invalid custom colors" => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(self::IDX . "custom colors: yes\n")])), ...$parsing],
+            "Parsers/VobSubParser.php: invalid id"          => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(self::IDX . "id: en, index: 99\n")])), ...$parsing],
+            "Parsers/VobSubParser.php: timestamp before id" => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(self::IDX . "timestamp: 00:00:01:000, filepos: 0\n")])),
                                                                 ...$parsing],
-            "Parsers/VobSubParser.php: invalid timestamp"   => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "id: en, index: 0\ntimestamp: soon\n"))),
+            "Parsers/VobSubParser.php: invalid timestamp"   => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(self::IDX . "id: en, index: 0\ntimestamp: soon\n")])),
                                                                 ...$parsing],
-            "Parsers/VobSubParser.php: no size"             => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions("# VobSub index file\nid: en, index: 0\n"))),
+            "Parsers/VobSubParser.php: no size"             => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions("# VobSub index file\nid: en, index: 0\n")])),
                                                                 ...$parsing],
-            "Parsers/VobSubParser.php: no palette"          => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions("# VobSub index file\nsize: 720x576\n"))),
+            "Parsers/VobSubParser.php: no palette"          => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions("# VobSub index file\nsize: 720x576\n")])),
                                                                 ...$parsing],
-            "Parsers/VobSubParser.php: short palette"       => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "palette: 000000\n"))), ...$parsing],
-            "Parsers/VobSubParser.php: invalid time"        => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "delay: soon\n"))), ...$parsing],
-            "Parsers/VobSubParser.php: no start code"       => [fn () => (new VobSubParser())->parse("text", new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
-            "Parsers/VobSubParser.php: cut off pack header" => [fn () => (new VobSubParser())->parse("\0\0\1\xBA\x44\0", new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))),
+            "Parsers/VobSubParser.php: short palette"       => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(self::IDX . "palette: 000000\n")])), ...$parsing],
+            "Parsers/VobSubParser.php: invalid time"        => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(self::IDX . "delay: soon\n")])), ...$parsing],
+            "Parsers/VobSubParser.php: no start code"       => [fn () => (new VobSubParser())->parse("text", new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
+            "Parsers/VobSubParser.php: cut off pack header" => [fn () => (new VobSubParser())->parse("\0\0\1\xBA\x44\0", new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])),
                                                                 ...$parsing],
-            "Parsers/VobSubParser.php: program end code"    => [fn () => (new VobSubParser())->parse("\0\0\1\xB9\0\0", new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))),
+            "Parsers/VobSubParser.php: program end code"    => [fn () => (new VobSubParser())->parse("\0\0\1\xB9\0\0", new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])),
                                                                 ...$parsing],
             "Parsers/VobSubParser.php: packet too long"     => [fn () => (new VobSubParser())->parse(
-                substr(self::vobSubPacket("\0\4\0\4"), 0, -1), new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
+                substr(self::vobSubPacket("\0\4\0\4"), 0, -1), new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
             "Parsers/VobSubParser.php: no control sequence" => [fn () => (new VobSubParser())->parse(
-                self::vobSubPacket("\0\2"), new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
+                self::vobSubPacket("\0\2"), new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
             "Parsers/VobSubParser.php: cut off command"     => [fn () => (new VobSubParser())->parse(
-                self::vobSubPacket("\0\x09\0\4\0\0\0\4\x05"), new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
+                self::vobSubPacket("\0\x09\0\4\0\0\0\4\x05"), new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
             "Parsers/VobSubParser.php: image too large"     => [fn () => (new VobSubParser())->parse(
                 self::vobSubPacket("\0\x15\0\4\0\0\0\4\x05\x00\x0F\xFF\x00\x0F\xFF\x06\0\0\0\0\xFF"),
-                new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
+                new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
             "Parsers/VobSubParser.php: cut off bitmap"      => [fn () => (new VobSubParser())->parse(
-                self::vobSubPacket("\0\x15\0\4\0\0\0\4\x05\0\0\1\0\0\1\x06\0\x15\0\x15\xFF"), new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
+                self::vobSubPacket("\0\x15\0\4\0\0\0\4\x05\0\0\1\0\0\1\x06\0\x15\0\x15\xFF"), new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
             "Parsers/Options/VobSubReadOptions.php: negative track" => [fn () => new VobSubReadOptions(track: -1), ...$invalid],
             "Parsers/WebVttParser.php: no WEBVTT"           => [fn () => (new WebVttParser())->parse("text", new ReadOptions()), ...$parsing],
             "Parsers/WebVttParser.php: no WEBVTT, lenient"  => [fn () => (new WebVttParser())->parse("text", new ReadOptions(lenient: true)), ...$parsing],
@@ -649,8 +651,6 @@ class ThrowSitesTest extends TestCase
             "Profanity/ProfanityOptions.php: no words"      => [fn () => new ProfanityOptions([]), ...$invalid],
             "ReadOptions.php: unknown encoding"             => [fn () => new ReadOptions(encoding: "NO-SUCH-ENCODING"), ...$invalid],
             "Retiming.php: shift range in reverse"          => [fn () => self::subtitle()->shift(1, 2, 1), ...$invalid],
-            "Retiming.php: same old times"                  => [fn () => self::subtitle()->syncByTwoPoints(1, 1, 1, 2), ...$invalid],
-            "Retiming.php: new times in reverse"            => [fn () => self::subtitle()->syncByTwoPoints(1, 2, 2, 1), ...$invalid],
             "Retiming.php: no sync points"                  => [fn () => self::subtitle()->syncByPoints([]), ...$invalid],
             "Retiming.php: sync point of another type"      => [fn () => self::subtitle()->syncByPoints([[1, 2]]), ...$invalid],
             "Retiming.php: sync points out of order"        => [fn () => self::subtitle()->syncByPoints([new SyncPoint(2, 2), new SyncPoint(1, 3)]), ...$invalid],
@@ -665,34 +665,26 @@ class ThrowSitesTest extends TestCase
             "StringHelpers.php: unknown encoding"           => [fn () => StringHelpers::convertToUtf8("text", "NO-SUCH-ENCODING"),
                                                                 ...$parsing],
             "Subtitle.php: addCues no cue"                 => [fn () => (new Subtitle())->addCues([5]), ...$invalid],
-            "Subtitle.php: unknown format"                  => [fn () => Subtitle::fromStringAutoDetectFormat("text"),
-                                                                InvalidParserException::class, UnknownFormatException::class],
+            "Subtitle.php: unknown format"                  => [fn () => Subtitle::fromStringAutoDetectFormat("text"), ...$unknown],
             "Subtitle.php: unknown format of a file"        => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "chapters/ffmetadata/real/m4b_audiobook.ffmeta"),
-                                                                InvalidParserException::class, UnknownFormatException::class],
-            "Subtitle.php: load() of an MKV file"           => [fn () => Subtitle::load(self::FILES . "mkv/pgs.mkv", Format::Pgs),
-                                                                InvalidParserException::class, InvalidParserException::class],
-            "Subtitle.php: fromString() of MKV content"     => [fn () => Subtitle::fromString(MatroskaReader::EBML_MAGIC, Format::SubRip),
-                                                                InvalidParserException::class, InvalidParserException::class],
-            "Subtitle.php: MKV with 2 subtitle tracks"      => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "mkv/pgs.mkv"),
-                                                                InvalidParserException::class, InvalidParserException::class],
+                                                                ...$unknown],
+            "Subtitle.php: load() of an MKV file"           => [fn () => Subtitle::load(self::FILES . "mkv/pgs.mkv", Format::Pgs), ...$unsupported],
+            "Subtitle.php: fromString() of MKV content"     => [fn () => Subtitle::fromString(MatroskaReader::EBML_MAGIC, Format::SubRip), ...$unsupported],
+            "Subtitle.php: MKV with 2 subtitle tracks"      => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "mkv/pgs.mkv"), ...$unsupported],
             "Subtitle.php: VobSub without its .sub file"    => [fn () => Subtitle::load(self::FILES . "vobsub/SOURCES.md", Format::VobSub), ...$invalid],
             "Subtitle.php: missing file"                    => [fn () => Subtitle::load(self::FILES . "missing.srt", Format::SubRip), ...$invalid],
             "Subtitle.php: unreadable file"                 => [fn () => Subtitle::load(self::unreadableFile(), Format::SubRip), ...$invalid],
-            "Subtitle.php: save() to an unknown extension"  => [fn () => self::subtitle()->save(self::FILES . "out.unknown"),
-                                                                InvalidFormatterException::class, InvalidFormatterException::class],
+            "Subtitle.php: save() to an unknown extension"  => [fn () => self::subtitle()->save(self::FILES . "out.unknown"), ...$unsupported],
             "Subtitle.php: save() into a missing directory" => [fn () => self::subtitle()->save(self::FILES . "missing/out.srt"), ...$invalid],
             "Subtitle.php: MicroDVD without a frame rate"   => [fn () => self::subtitle()->toString(Format::MicroDvd), ...$invalid],
             "Subtitle.php: iTT without a frame rate"        => [fn () => self::subtitle()->toString(Format::Itt), ...$invalid],
-            "Subtitle.php: format without a parser"         => [fn () => Subtitle::fromString("text", Format::PlainText),
-                                                                InvalidParserException::class, InvalidParserException::class],
-            "Subtitle.php: format without a formatter"      => [fn () => self::subtitle()->toString(Format::Whisper),
-                                                                InvalidFormatterException::class, InvalidFormatterException::class],
+            "Subtitle.php: format without a parser"         => [fn () => Subtitle::fromString("text", Format::PlainText), ...$unsupported],
+            "Subtitle.php: format without a formatter"      => [fn () => self::subtitle()->toString(Format::Whisper), ...$unsupported],
             "Subtitle.php: image cue without text"          => [fn () => (new Subtitle())->addCue($imageCue)->toString(Format::SubRip),
                                                                 ImageCueWithoutTextException::class, ImageCueWithoutTextException::class],
             "Subtitle.php: remove a missing cue"            => [fn () => self::subtitle()->removeCue(9),
                                                                 \RuntimeException::class, CueNotFoundException::class],
             "Subtitle.php: negative comment index"          => [fn () => self::subtitle()->addComment("note", -1), ...$invalid],
-            "SubtitleCue.php: alignment 10"                 => [fn () => (new SubtitleCue())->setAlignment(10), ...$invalid],
             "Sync/ReferenceSyncOptions.php: offset range too wide" => [fn () => new ReferenceSyncOptions(new Subtitle(), -5000, 5000), ...$invalid],
             "Sync/ReferenceSyncOptions.php: offsets in reverse" => [fn () => new ReferenceSyncOptions(new Subtitle(), 5, 1), ...$invalid],
             "Sync/ReferenceSyncOptions.php: negative split count" => [fn () => new ReferenceSyncOptions(new Subtitle(), maxSplits: -1), ...$invalid],
@@ -839,7 +831,7 @@ class ThrowSitesTest extends TestCase
     }
 
 
-    public function testErrorCodesStartAt100WithoutGapsOrClashes(): void
+    public function testErrorCodesStartAt100WithoutGapsOrClashesExceptTheRetiredCode(): void
     {
         $codes = [];
         foreach (glob(self::SRC . "Exceptions/*.php") as $path) {
@@ -852,7 +844,7 @@ class ThrowSitesTest extends TestCase
         asort($codes);
 
         $this->assertSame(self::CODES, $codes);
-        $this->assertSame(range(100, 99 + count($codes)), array_values($codes));
+        $this->assertSame(array_values(array_diff(range(100, 100 + count($codes)), self::RETIRED_CODES)), array_values($codes));
     }
 
 

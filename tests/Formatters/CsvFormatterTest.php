@@ -59,7 +59,7 @@ class CsvFormatterTest extends TestCase
         $this->assertSame(
             "start;end;speaker;text\r\n00:00:01.000;00:00:04.000;Anna;Where are you going?\r\n" .
             "00:00:04.500;00:00:06.000;Ben;\"Home.\nNow.\"\r\n",
-            self::english()->toString(Format::Csv, new WriteOptions(lineEnding: LineEnding::Crlf, bom: false, format: new CsvWriteOptions(delimiter: ";")))
+            self::english()->toString(Format::Csv, new WriteOptions(lineEnding: LineEnding::Crlf, bom: false, formats: [new CsvWriteOptions(delimiter: ";")]))
         );
     }
 
@@ -80,7 +80,7 @@ class CsvFormatterTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(62.48, 3599.99, "a"));
 
-        $this->assertSame("start,end,text\n$start,$end,a\n", $subtitle->toString(Format::Csv, new WriteOptions(bom: false, format: new CsvWriteOptions(timeFormat: $timeFormat, frameRate: 25))));
+        $this->assertSame("start,end,text\n$start,$end,a\n", $subtitle->toString(Format::Csv, new WriteOptions(bom: false, formats: [new CsvWriteOptions(timeFormat: $timeFormat, frameRate: 25)])));
     }
 
 
@@ -114,10 +114,10 @@ class CsvFormatterTest extends TestCase
     public function testFrameRateOptionWinsOverTheParsedFrameRate(): void
     {
         $file     = file_get_contents(__DIR__ . "/../files/csv/real/dubbing_script.csv");
-        $subtitle = (new CsvParser())->parse($file, new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character"), frameRate: 25)));
+        $subtitle = (new CsvParser())->parse($file, new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character"), frameRate: 25)]));
 
         $this->assertStringContainsString("\n10:00:05:19,BEN,- I have one.,\n",
-                                          $subtitle->toString(Format::Csv, new WriteOptions(format: new CsvWriteOptions(frameRate: 24))));
+                                          $subtitle->toString(Format::Csv, new WriteOptions(formats: [new CsvWriteOptions(frameRate: 24)])));
         $this->assertStringContainsString("\n10:00:05:20,BEN,- I have one.,\n", $subtitle->toString(Format::Csv));
     }
 
@@ -143,7 +143,7 @@ class CsvFormatterTest extends TestCase
     public function testWritesATableWithoutAHeaderRowBack(): void
     {
         $content  = "a\t1\t2\textra\nb\t3\t4\t\n";
-        $subtitle = (new CsvParser())->parse($content, new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: 1, end: 2, text: 0, header: false))));
+        $subtitle = (new CsvParser())->parse($content, new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(start: 1, end: 2, text: 0, header: false))]));
 
         $this->assertSame($content, $subtitle->toString(Format::Csv, new WriteOptions(bom: false)));
     }
@@ -170,7 +170,7 @@ class CsvFormatterTest extends TestCase
             "00:00:01.000,00:00:04.000,Anna,Where are you going?,Wohin gehst du?\n" .
             "00:00:04.500,00:00:06.000,Ben,\"Home.\nNow.\",Nach Hause. Jetzt.\n" .
             "00:00:06.500,00:00:08.000,,Right now.,\n",
-            $english->toString(Format::Csv, new WriteOptions(bom: false, format: new CsvWriteOptions(secondText: $german, secondTextHeader: "text (de)")))
+            $english->toString(Format::Csv, new WriteOptions(bom: false, formats: [new CsvWriteOptions(secondText: $german, secondTextHeader: "text (de)")]))
         );
     }
 
@@ -182,7 +182,7 @@ class CsvFormatterTest extends TestCase
 
         $this->assertSame(
             "start,end,text,text2\n0,2,a,x\n2,6,b,\n",
-            $primary->toString(Format::Csv, new WriteOptions(bom: false, format: new CsvWriteOptions(secondText: $second, timeFormat: CsvTimeFormat::Seconds)))
+            $primary->toString(Format::Csv, new WriteOptions(bom: false, formats: [new CsvWriteOptions(secondText: $second, timeFormat: CsvTimeFormat::Seconds)]))
         );
     }
 
@@ -193,7 +193,7 @@ class CsvFormatterTest extends TestCase
             ->addCue(new SubtitleCue(1, 2, ["- Hi.", "- Hello."]))
             ->addCue(new SubtitleCue(3, 4, "=SUM(A1)"))
             ->addCue(new SubtitleCue(5, 6, "+1 @home"));
-        $options = new WriteOptions(bom: false, format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Seconds));
+        $options = new WriteOptions(bom: false, formats: [new CsvWriteOptions(timeFormat: CsvTimeFormat::Seconds)]);
 
         $this->assertSame(
             "start,end,text\n1,2,\"- Hi.\n- Hello.\"\n3,4,=SUM(A1)\n5,6,+1 @home\n",
@@ -201,7 +201,7 @@ class CsvFormatterTest extends TestCase
         );
         $this->assertSame(
             "start,end,text\n1,2,\"'- Hi.\n- Hello.\"\n3,4,'=SUM(A1)\n5,6,'+1 @home\n",
-            $subtitle->toString(Format::Csv, new WriteOptions(bom: false, format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Seconds, escapeFormulas: true)))
+            $subtitle->toString(Format::Csv, new WriteOptions(bom: false, formats: [new CsvWriteOptions(timeFormat: CsvTimeFormat::Seconds, escapeFormulas: true)]))
         );
     }
 
@@ -227,6 +227,6 @@ class CsvFormatterTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The time format hh:mm:ss:ff needs a frame rate. Set CsvWriteOptions::\$frameRate.");
 
-        self::english()->toString(Format::Csv, new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames)));
+        self::english()->toString(Format::Csv, new WriteOptions(formats: [new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames)]));
     }
 }

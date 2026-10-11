@@ -10,7 +10,7 @@ use SubtitleToolbox\WriteOptions;
 
 $array = $subtitle->toArray();                     // toArray(false) leaves out the format data
 $copy  = Subtitle::fromArray($array);              // equal to $subtitle
-$json  = $subtitle->toString(Format::Json, new WriteOptions(format: new JsonWriteOptions(prettyPrint: true)));
+$json  = $subtitle->toString(Format::Json, new WriteOptions(formats: [new JsonWriteOptions(prettyPrint: true)]));
 $copy  = Subtitle::fromString($json, Format::Json);
 ```
 
@@ -41,7 +41,7 @@ $copy  = Subtitle::fromString($json, Format::Json);
 | `cues[].start`, `cues[].end` | number | yes | seconds, rounded to milliseconds |
 | `cues[].lines` | list of strings | yes | the lines with core markup and escaped `&lt;`, `&gt;` and `&amp;` |
 | `cues[].identifier` | string or null | no | the cue identifier |
-| `cues[].alignment` | integer or null | no | 1 to 9 in numeric keypad layout |
+| `cues[].alignment` | integer or null | no | the value of the `Alignment` case, 1 to 9. `null` and 2 read as `Alignment::BottomCenter`, which is written as `null` |
 | `cues[].forced` | boolean | no | written only for a forced cue |
 | `cues[].formatData` | object of objects | no | the format data of the cue by format key |
 

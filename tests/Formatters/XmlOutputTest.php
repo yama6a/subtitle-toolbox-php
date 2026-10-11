@@ -25,7 +25,7 @@ class XmlOutputTest extends TestCase
     {
         return [
             "TTML" => [Format::Ttml, new WriteOptions()],
-            "iTT"  => [Format::Itt, new WriteOptions(format: new IttWriteOptions(frameRate: 25))],
+            "iTT"  => [Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 25)])],
             "SAMI" => [Format::Sami, new WriteOptions()],
         ];
     }

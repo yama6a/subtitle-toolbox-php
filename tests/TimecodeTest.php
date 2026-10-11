@@ -135,18 +135,18 @@ class TimecodeTest extends TestCase
         return [
             "ass"                => ["ass", 0.01, new WriteOptions(), true],
             "csv"                => ["csv", 0.001, new WriteOptions(), true],
-            "csv frames"         => ["csv", 1 / 25, new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames, frameRate: 25)), true, new ReadOptions(format: new CsvReadOptions(frameRate: 25))],
+            "csv frames"         => ["csv", 1 / 25, new WriteOptions(formats: [new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames, frameRate: 25)]), true, new ReadOptions(formats: [new CsvReadOptions(frameRate: 25)])],
             "ffmeta-chapters"    => ["ffmeta-chapters", 0.001, new WriteOptions(), true],
             "html"               => ["html", 1, new WriteOptions(), false],
-            "itt"                => ["itt", 1 / 25, new WriteOptions(format: new IttWriteOptions(frameRate: 25)), true],
+            "itt"                => ["itt", 1 / 25, new WriteOptions(formats: [new IttWriteOptions(frameRate: 25)]), true],
             "json"               => ["json", 0.001, new WriteOptions(), true],
             "lrc"                => ["lrc", 0.01, new WriteOptions(), false],
-            "microdvd"           => ["microdvd", 1 / 25, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)), true, new ReadOptions(format: new MicroDvdReadOptions(25))],
+            "microdvd"           => ["microdvd", 1 / 25, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25)]), true, new ReadOptions(formats: [new MicroDvdReadOptions(25)])],
             "mpl2"               => ["mpl2", 0.1, new WriteOptions(), true],
             "mpsub"              => ["mpsub", 0.001, new WriteOptions(), true],
             "ogm-chapters"       => ["ogm-chapters", 0.001, new WriteOptions(), false],
             "podcast-chapters"   => ["podcast-chapters", 0.001, new WriteOptions(), true],
-            "podcast-transcript" => ["podcast-transcript", 0.001, new WriteOptions(), true, new ReadOptions(format: new TranscriptReadOptions(keepSegments: true))],
+            "podcast-transcript" => ["podcast-transcript", 0.001, new WriteOptions(), true, new ReadOptions(formats: [new TranscriptReadOptions(keepSegments: true)])],
             "sami"               => ["sami", 0.001, new WriteOptions(), true],
             "sbv"                => ["sbv", 0.001, new WriteOptions(), true],
             "scc"                => ["scc", 1001 / 30000, new WriteOptions(), true],
@@ -204,7 +204,7 @@ class TimecodeTest extends TestCase
     public function testParseReadsEachStartTimeOfAFixtureAsItsParserDoes(string $file, Format $format, string $startRegex, ?float $framesPerSecond): void
     {
         $path        = __DIR__ . "/files/$file";
-        $readOptions = $framesPerSecond === null ? null : new ReadOptions(format: new CsvReadOptions(frameRate: $framesPerSecond));
+        $readOptions = $framesPerSecond === null ? null : new ReadOptions(formats: [new CsvReadOptions(frameRate: $framesPerSecond)]);
         $starts      = array_map(fn (SubtitleCue $cue): float => $cue->getStart(), array_values(Subtitle::load($path, $format, $readOptions)->getCues()));
         preg_match_all($startRegex, file_get_contents($path), $matches);
         $frameRate = $framesPerSecond === null ? null : new FrameRate($framesPerSecond);

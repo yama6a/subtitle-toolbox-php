@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
@@ -104,12 +105,12 @@ class PgsParserTest extends TestCase
         }, $cues);
 
         $this->assertSame([
-            [1.0, 3.5, 640, 940, 640, 90, 1920, 1080, false, null, []],
-            [5.0, 7.0, 660, 60, 600, 970, 1920, 1080, false, null, []],
-            [8.0, 9.5, 560, 50, 800, 100, 1920, 1080, true, 8, []],
-            [9.5, 11.0, 560, 50, 800, 100, 1920, 1080, true, 8, []],
-            [12.0, 16.0, 860, 900, 200, 60, 1920, 1080, false, null, []],
-            [20.0, 25.0, 640, 940, 640, 90, 1920, 1080, false, null, []],
+            [1.0, 3.5, 640, 940, 640, 90, 1920, 1080, false, Alignment::BottomCenter, []],
+            [5.0, 7.0, 660, 60, 600, 970, 1920, 1080, false, Alignment::BottomCenter, []],
+            [8.0, 9.5, 560, 50, 800, 100, 1920, 1080, true, Alignment::TopCenter, []],
+            [9.5, 11.0, 560, 50, 800, 100, 1920, 1080, true, Alignment::TopCenter, []],
+            [12.0, 16.0, 860, 900, 200, 60, 1920, 1080, false, Alignment::BottomCenter, []],
+            [20.0, 25.0, 640, 940, 640, 90, 1920, 1080, false, Alignment::BottomCenter, []],
         ], $actual);
     }
 
@@ -243,7 +244,7 @@ class PgsParserTest extends TestCase
 
         $this->assertCount(1, $cues);
         $this->assertSame([1.0, 2.0], [$cues[0]->getStart(), $cues[0]->getEnd()]);
-        $this->assertSame(8, $cues[0]->getAlignment());
+        $this->assertSame(Alignment::TopCenter, $cues[0]->getAlignment());
     }
 
 

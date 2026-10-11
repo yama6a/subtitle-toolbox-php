@@ -6,8 +6,8 @@ namespace SubtitleToolbox\Parsers;
 
 use Generator;
 use JsonException;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\FormatOptionsList;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\OptionChecks;
@@ -27,7 +27,7 @@ use SubtitleToolbox\Timecode;
 abstract class SubtitleParser
 {
     /**
-     * The FormatReadOptions class that this parser reads from ReadOptions::$format, or null for none.
+     * The FormatReadOptions class that this parser reads from ReadOptions::$formats, or null for none.
      *
      * @var class-string<FormatReadOptions>|null
      */
@@ -265,7 +265,7 @@ abstract class SubtitleParser
 
 
     /**
-     * Returns ReadOptions::$format, or the defaults of FORMAT_OPTIONS when it is null.
+     * Returns the FORMAT_OPTIONS object of ReadOptions::$formats, or the defaults of FORMAT_OPTIONS when the list has none.
      * useOptions() builds the defaults once per read.
      */
     protected function formatOptions(): FormatReadOptions
@@ -282,16 +282,8 @@ abstract class SubtitleParser
     public function useOptions(ReadOptions $options): static
     {
         $class = static::FORMAT_OPTIONS;
-        if ($options->format !== null && ($class === null || !$options->format instanceof $class)) {
-            $parser = $this->shortName(static::class);
-            $given  = $this->shortName($options->format::class);
-            throw new InvalidArgumentException($class === null
-                ? "$parser takes no format options, got $given."
-                : "$parser takes " . $this->shortName($class) . ", got $given.");
-        }
-
         $this->options                  = $options;
-        $this->formatOptions            = $options->format ?? ($class === null ? null : new $class());
+        $this->formatOptions            = $class === null ? null : FormatOptionsList::find($options->formats, $class) ?? new $class();
         $this->warnings                 = [];
         $this->removedControlCharacters = false;
 
@@ -701,11 +693,5 @@ abstract class SubtitleParser
         }
 
         return $parts;
-    }
-
-
-    private function shortName(string $class): string
-    {
-        return substr(strrchr("\\" . $class, "\\"), 1);
     }
 }

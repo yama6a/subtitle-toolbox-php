@@ -13,6 +13,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Sync\ReferenceSync;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Sync\SpeechReference;
+use SubtitleToolbox\SyncPoint;
 use SubtitleToolbox\Tests\Support\BinaryTestCase;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChanges;
@@ -114,10 +115,10 @@ class BinaryTimingTest extends BinaryTestCase
     }
 
 
-    public function testRetimeSyncFirstAndLastEqualsSyncByTwoPoints(): void
+    public function testRetimeSyncFirstAndLastEqualsSyncByPoints(): void
     {
         copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");
-        $expected = Subtitle::load(self::FILES . "editing/own_ferry_drift.vtt", Format::WebVtt)->syncByTwoPoints(5, 12.5, 1500, 6065)->toString(Format::WebVtt);
+        $expected = Subtitle::load(self::FILES . "editing/own_ferry_drift.vtt", Format::WebVtt)->syncByPoints([new SyncPoint(5, 12.5), new SyncPoint(1500, 6065)])->toString(Format::WebVtt);
 
         $this->assertSame([0, $expected, ""], $this->runBinary(["retime", "ferry.vtt", "--sync", "first=00:00:12.5", "--sync", "last=01:41:05"]));
         $this->assertSame([0, $expected, ""], $this->runBinary(["retime", "ferry.vtt", "--sync=#1=12.5", "--sync", "#5=6065"]));
@@ -226,7 +227,7 @@ class BinaryTimingTest extends BinaryTestCase
 
     public function testRetimeChangesTheFrameRateAndTheFormat(): void
     {
-        $expected = Subtitle::fromString($this->file("frames.sub"), Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)))
+        $expected = Subtitle::fromString($this->file("frames.sub"), Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]))
             ->convertFrameRate(25, 23.976)
             ->toString(Format::WebVtt);
 
@@ -324,13 +325,13 @@ class BinaryTimingTest extends BinaryTestCase
         $garden = file_get_contents(self::FILES . "shot-changes/own_garden_24fps.srt");
         file_put_contents("$this->dir/garden.sub", Subtitle::fromString($garden, Format::SubRip)->toString(
             Format::MicroDvd,
-            new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)),
+            new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25)]),
         ));
         $shotChanges = ShotChanges::fromFfmpegLog($this->file("scenes.log"));
 
-        $expected = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
+        $expected = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
         ShotChangeTiming::apply($expected, new ShotChangeOptions(frameRate: 24, shotChanges: $shotChanges));
-        $readAt24 = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(24)));
+        $readAt24 = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(24)]));
         ShotChangeTiming::apply($readAt24, new ShotChangeOptions(frameRate: 24, shotChanges: $shotChanges));
 
         $this->assertNotSame($readAt24->toString(Format::SubRip), $expected->toString(Format::SubRip));

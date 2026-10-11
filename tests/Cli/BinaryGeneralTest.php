@@ -339,7 +339,7 @@ class BinaryGeneralTest extends BinaryTestCase
      */
     public static function libraryMessagesInCliWords(): array
     {
-        $tracks = "InvalidParserException (Error #102): The MKV or WebM file has 6 subtitle tracks. %s\n" .
+        $tracks = "UnsupportedFormatException (Error #102): The MKV or WebM file has 6 subtitle tracks. %s\n" .
                   "  3: S_TEXT/UTF8, de, \"Deutsch (Forced)\", forced\n";
         $format = "UnknownFormatException (Error #106): Format detection found no subtitle format. %s\n";
         $frames = "The frame rate is unknown. Pass --fps or --input-fps, start the file with {1}{1}<fps>, or pass --lenient for 23.976 fps.\n";
@@ -348,17 +348,17 @@ class BinaryGeneralTest extends BinaryTestCase
             "track"            => [["convert", "movie.mkv", "--to", "srt", "-o", "-"], "",
                                    "movie.mkv: " . sprintf($tracks, "Pass --track N with one of them:")],
             "track on stdin"   => [["convert", "-", "--from", "srt", "--to", "vtt", "-o", "-"], "movie.mkv",
-                                   "stdin: InvalidParserException (Error #102): The input is an MKV or WebM file. Pass --track N.\n"],
-            "track2"           => [["diff", "trip.srt", "movie.mkv"], "",
-                                   "movie.mkv: " . sprintf($tracks, "Pass --track2 N with one of them:")],
+                                   "stdin: UnsupportedFormatException (Error #102): The input is an MKV or WebM file. Pass --track N.\n"],
+            "new track"       => [["diff", "trip.srt", "movie.mkv"], "",
+                                   "movie.mkv: " . sprintf($tracks, "Pass --new-track N with one of them:")],
             "reference track"  => [["sync", "trip.srt", "--reference", "movie.mkv"], "",
                                    "Error: movie.mkv: " . sprintf($tracks, "Write one of them to a subtitle file with convert --track N first:")],
             "from"             => [["convert", "call.json", "--to", "srt", "-o", "-"], "",
                                    "call.json: " . sprintf($format, "Pass --from FORMAT. Chapters and cloud speech-to-text JSON always need it, " .
                                                                     "for example --from deepgram.")],
-            "from2"            => [["diff", "trip.srt", "call.json"], "",
-                                   "call.json: " . sprintf($format, "Pass --from2 FORMAT. Chapters and cloud speech-to-text JSON " .
-                                                                              "always need it, for example --from2 deepgram.")],
+            "new from"         => [["diff", "trip.srt", "call.json"], "",
+                                   "call.json: " . sprintf($format, "Pass --new-from FORMAT. Chapters and cloud speech-to-text JSON " .
+                                                                              "always need it, for example --new-from deepgram.")],
             "primary track"    => [["dual", "--primary", "movie.mkv", "--secondary", "trip.srt"], "",
                                    "movie.mkv: " . sprintf($tracks, "Pass --primary-track N with one of them:")],
             "secondary track"  => [["dual", "--primary", "trip.srt", "--secondary", "movie.mkv"], "",

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SubRipParser;
@@ -40,8 +41,6 @@ final class SubRipFormatter extends SubtitleFormatter
     {
         $block = $this->formatNumberedCue($cue, $cueIndex, $options);
 
-        $this->rejectForeignOptions($options);
-
         return $this->applyLineEnding($block, $options);
     }
 
@@ -76,8 +75,8 @@ final class SubRipFormatter extends SubtitleFormatter
         $lines = explode(LineEnding::Lf->value, $lines);
         $lines = implode(LineEnding::Lf->value, array_filter($lines, fn(string $line) => trim($line) !== ""));
 
-        if ($cue->getAlignment() !== null && $cue->getAlignment() !== SubtitleCue::DEFAULT_ALIGNMENT) {
-            $lines = "{\\an{$cue->getAlignment()}}" . $lines;
+        if ($cue->getAlignment() !== Alignment::BottomCenter) {
+            $lines = "{\\an{$cue->getAlignment()->value}}" . $lines;
         }
 
         return $lines === "" ? $time : $time . LineEnding::Lf->value . $lines;

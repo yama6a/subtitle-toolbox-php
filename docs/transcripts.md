@@ -12,7 +12,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString($openAiResponseBody, Format::Whisper);
-$subtitle = Subtitle::fromString(file_get_contents('lecture.json'), Format::Whisper, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
+$subtitle = Subtitle::fromString(file_get_contents('lecture.json'), Format::Whisper, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
 $subtitle->getCues()[0]->getText();                                          // '<00:00:00.000>The <00:00:00.240>beach <00:00:00.710>was <00:00:00.950>quiet.'
 $subtitle->getCues()[0]->findFormatData('whisper')['avg_logprob'];           // -0.25
 ```
@@ -42,7 +42,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString($transcribeJson, Format::AwsTranscribe);    // format detection does not find cloud speech-to-text JSON
-$subtitle = Subtitle::fromString($deepgramResponseBody, Format::Deepgram, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true, speakerVoices: true)));
+$subtitle = Subtitle::fromString($deepgramResponseBody, Format::Deepgram, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true, speakerVoices: true)]));
 $subtitle->getCues()[2]->getText();                                          // '<v 0><00:00:06.500>Thank <00:00:06.800>you.'
 $subtitle->getCues()[2]->findFormatData('deepgram')['confidence'];           // 0.9637655
 ```
@@ -75,7 +75,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('video.en.json3'), Format::YouTubeTimedText);
-$subtitle = Subtitle::fromString(file_get_contents('video.en.srv3'), Format::YouTubeTimedText, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
+$subtitle = Subtitle::fromString(file_get_contents('video.en.srv3'), Format::YouTubeTimedText, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
 $subtitle->getCues()[0]->getText();                                          // '<00:00:01.200>Hello <00:00:01.600>world'
 $subtitle->findFormatData('youtube')['format'];                              // 'srv3'
 ```
@@ -90,7 +90,7 @@ $subtitle->findFormatData('youtube')['format'];                              // 
 - **Automatic captions**: the parser skips the events that only add a line break. A cue in a window ends where the next cue of the same window starts, so the rolling cues do not stack.
 - **No duration**: a srv1 or srv2 `<text>` without `dur` or `d`, or a srv3 `<p>` without `d`, ends at the next later start. The last one lasts [`ReadOptions::$lastCueDuration`](read-options.md). A `dur` or `d` of 0 stays 0 s long.
 - **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each segment of a cue gets a word timestamp. This needs at least one segment of the cue with a time. srv1 and srv2 have no word times.
-- **Alignment**: from the anchor point of the window position of a cue. Anchor point 0 is top left and becomes alignment 7. A cue without its own window position, such as an automatic caption, has no alignment.
+- **Alignment**: from the anchor point of the window position of a cue. Anchor point 0 is top left and becomes `Alignment::TopLeft`. A cue without its own window position, such as an automatic caption, gets `Alignment::BottomCenter`.
 - **Pens**: the pen color becomes `<font color>`. Bold, italic and underline become `<b>`, `<i>` and `<u>`.
 - **Format data**: the subtitle keeps the `format` name, and the head elements and windows of the file. Each cue keeps the other fields of its event or `<p>`, and the other fields of its segments in `segments`.
 
@@ -118,11 +118,11 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
-$subtitle = Subtitle::fromString($whisperJson, Format::Whisper, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
-$json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptWriteOptions(wordSegments: true)));
+$subtitle = Subtitle::fromString($whisperJson, Format::Whisper, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
+$json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(formats: [new PodcastTranscriptWriteOptions(wordSegments: true)]));
 $html     = $subtitle->toString(Format::HtmlTranscript);
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('episode.json'));   // detects a Podcasting 2.0 transcript
-$subtitle = Subtitle::fromString($json, Format::PodcastTranscript, new ReadOptions(format: new TranscriptReadOptions(keepSegments: true)));
+$subtitle = Subtitle::fromString($json, Format::PodcastTranscript, new ReadOptions(formats: [new TranscriptReadOptions(keepSegments: true)]));
 ```
 
 | Class | Option | Effect |
@@ -157,7 +157,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\PlainTextWriteOptions;
 use SubtitleToolbox\WriteOptions;
 
-$text = $subtitle->toString(Format::PlainText, new WriteOptions(format: new PlainTextWriteOptions(withTimes: true)));
+$text = $subtitle->toString(Format::PlainText, new WriteOptions(formats: [new PlainTextWriteOptions(withTimes: true)]));
 ```
 
 | `PlainTextWriteOptions` field | Default | Effect |

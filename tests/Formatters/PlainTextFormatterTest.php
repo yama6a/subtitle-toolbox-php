@@ -36,14 +36,14 @@ class PlainTextFormatterTest extends TestCase
     {
         return [
             "defaults"           => [new WriteOptions(), "Hello world. Where are you going?\n\nHome & bed.\n\nFish <3\n"],
-            "lines kept"         => [new WriteOptions(format: new PlainTextWriteOptions(joinLines: false)), "Hello\nworld. Where are you going?\n\nHome & bed.\n\nFish <3\n"],
-            "one cue per line"   => [new WriteOptions(format: new PlainTextWriteOptions(joinCues: false)), "Hello world.\nWhere are you going?\n\nHome & bed.\n\nFish <3\n"],
-            "gap of 2.5 s"       => [new WriteOptions(format: new PlainTextWriteOptions(paragraphGap: 2.5)), "Hello world. Where are you going? Home & bed.\n\nFish <3\n"],
-            "gap of 0.5 s"       => [new WriteOptions(format: new PlainTextWriteOptions(paragraphGap: 0.5)), "Hello world.\n\nWhere are you going?\n\nHome & bed.\n\nFish <3\n"],
-            "no paragraphs"      => [new WriteOptions(format: new PlainTextWriteOptions(paragraphGap: INF)), "Hello world. Where are you going? Home & bed. Fish <3\n"],
-            "with times"         => [new WriteOptions(format: new PlainTextWriteOptions(withTimes: true)),
+            "lines kept"         => [new WriteOptions(formats: [new PlainTextWriteOptions(joinLines: false)]), "Hello\nworld. Where are you going?\n\nHome & bed.\n\nFish <3\n"],
+            "one cue per line"   => [new WriteOptions(formats: [new PlainTextWriteOptions(joinCues: false)]), "Hello world.\nWhere are you going?\n\nHome & bed.\n\nFish <3\n"],
+            "gap of 2.5 s"       => [new WriteOptions(formats: [new PlainTextWriteOptions(paragraphGap: 2.5)]), "Hello world. Where are you going? Home & bed.\n\nFish <3\n"],
+            "gap of 0.5 s"       => [new WriteOptions(formats: [new PlainTextWriteOptions(paragraphGap: 0.5)]), "Hello world.\n\nWhere are you going?\n\nHome & bed.\n\nFish <3\n"],
+            "no paragraphs"      => [new WriteOptions(formats: [new PlainTextWriteOptions(paragraphGap: INF)]), "Hello world. Where are you going? Home & bed. Fish <3\n"],
+            "with times"         => [new WriteOptions(formats: [new PlainTextWriteOptions(withTimes: true)]),
                                      "[00:00:01] Hello world. Where are you going?\n\n[00:00:06] Home & bed.\n\n[01:02:05] Fish <3\n"],
-            "CR LF"              => [new WriteOptions(lineEnding: LineEnding::Crlf, format: new PlainTextWriteOptions(paragraphGap: INF)),
+            "CR LF"              => [new WriteOptions(lineEnding: LineEnding::Crlf, formats: [new PlainTextWriteOptions(paragraphGap: INF)]),
                                      "Hello world. Where are you going? Home & bed. Fish <3\r\n"],
         ];
     }
@@ -91,7 +91,7 @@ class PlainTextFormatterTest extends TestCase
     {
         return [
             "defaults"   => ["youtube_studio_lf.txt", new WriteOptions()],
-            "with times" => ["youtube_studio_lf_with_times.txt", new WriteOptions(format: new PlainTextWriteOptions(withTimes: true, joinCues: false))],
+            "with times" => ["youtube_studio_lf_with_times.txt", new WriteOptions(formats: [new PlainTextWriteOptions(withTimes: true, joinCues: false)])],
         ];
     }
 

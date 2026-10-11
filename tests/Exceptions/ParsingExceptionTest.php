@@ -27,13 +27,13 @@ class ParsingExceptionTest extends TestCase
 
     public function testOtherExceptionsCarryTheirShortClassNameAndErrorCode(): void
     {
-        $parserException    = new InvalidParserException("broken");
-        $formatterException = new InvalidFormatterException("broken");
+        $unsupported = new UnsupportedFormatException("broken");
+        $unknown     = new UnknownFormatException("broken");
 
-        $this->assertSame("InvalidParserException (Error #102): broken", $parserException->getMessage());
-        $this->assertSame(102, $parserException->getCode());
-        $this->assertSame("InvalidFormatterException (Error #101): broken", $formatterException->getMessage());
-        $this->assertSame(101, $formatterException->getCode());
+        $this->assertSame("UnsupportedFormatException (Error #102): broken", $unsupported->getMessage());
+        $this->assertSame(102, $unsupported->getCode());
+        $this->assertSame("UnknownFormatException (Error #106): broken", $unknown->getMessage());
+        $this->assertSame(106, $unknown->getCode());
     }
 
 
@@ -55,7 +55,7 @@ class ParsingExceptionTest extends TestCase
     public static function parsersThatKnowTheLine(): array
     {
         return [
-            "MicroDVD line without frames" => [new MicroDvdParser(), "{0}{25}first\n\nsecond\n", 3, new ReadOptions(format: new MicroDvdReadOptions(25))],
+            "MicroDVD line without frames" => [new MicroDvdParser(), "{0}{25}first\n\nsecond\n", 3, new ReadOptions(formats: [new MicroDvdReadOptions(25)])],
             "ASS event with few fields"    => [new AssParser(), "[Events]\nFormat: Layer, Start, End, Text\n\nDialogue: 0\n", 4],
             "ASS event format without End" => [new AssParser(), "[Events]\nFormat: Start, Text\nDialogue: 0:00:01.00,text\n", 3],
             "MPSub unknown line"           => [new MpSubParser(), "FORMAT=TIME\n\n0 1\nfirst\n\nsecond\n", 6],

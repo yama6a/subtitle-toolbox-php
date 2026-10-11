@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Exceptions\CueNotFoundException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Image\CueImage;
 
@@ -127,10 +128,12 @@ trait CueEditing
 
     /**
      * Splits the cue at $index at $at seconds. The first cue keeps the lines up to line $splitAfterLine, counted from 1.
+     *
+     * @throws CueNotFoundException when no cue has the index $index.
      */
     public function splitCue(int $index, float $at, int $splitAfterLine): self
     {
-        $cue = $this->cueEditingCueAt($index);
+        $cue = $this->cueEditingCueAt($index, "split");
         if ($at <= $cue->getStart() || $at >= $cue->getEnd()) {
             throw new InvalidArgumentException("Cannot split cue $index at $at: the time must be after the cue " .
                                                "start {$cue->getStart()} and before the cue end {$cue->getEnd()}.");
@@ -163,15 +166,17 @@ trait CueEditing
     /**
      * Joins the cues from $first to $last into one cue that holds the lines of all of them.
      * The joined cue keeps the identifier, alignment and format data of cue $first.
+     *
+     * @throws CueNotFoundException when no cue has the index $first or $last.
      */
     public function joinCues(int $first, int $last): self
     {
+        $this->cueEditingCueAt($first, "join");
+        $this->cueEditingCueAt($last, "join");
         if ($first >= $last) {
             throw new InvalidArgumentException("Cannot join cues $first to $last: the first index must be " .
                                                "lower than the last index.");
         }
-        $this->cueEditingCueAt($first);
-        $this->cueEditingCueAt($last);
 
         $anchors = CommentAnchors::of($this->cues, $this->comments);
         $group   = array_filter(
@@ -250,7 +255,7 @@ trait CueEditing
             $first = $last === null ? null : $groups[$last][0];
             if ($first !== null && !CueImage::isImageCue($first) && !CueImage::isImageCue($cue)
                 && $first->isForced() === $cue->isForced()
-                && ($first->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT) === ($cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT)
+                && $first->getAlignment() === $cue->getAlignment()
                 && abs(Timecode::roundToMilliseconds($cue->getStart() - $first->getStart())) <= $tolerance
                 && abs(Timecode::roundToMilliseconds($cue->getEnd() - $first->getEnd())) <= $tolerance) {
                 $groups[$last][] = $cue;
@@ -293,10 +298,10 @@ trait CueEditing
     }
 
 
-    private function cueEditingCueAt(int $index): SubtitleCue
+    private function cueEditingCueAt(int $index, string $action): SubtitleCue
     {
         if (!array_key_exists($index, $this->cues)) {
-            throw new InvalidArgumentException("Cannot edit cue $index: the cue does not exist.");
+            throw new CueNotFoundException("Cannot $action cue $index: the cue does not exist.");
         }
 
         return $this->cues[$index];

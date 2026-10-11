@@ -63,24 +63,28 @@ class ApplicationTest extends TestCase
     }
 
 
-    public function testFormatOptionsReadTheInputOnce(): void
+    public function testFormatOptionsAddNoReadOfTheInput(): void
     {
         $rows = array_slice(file(__DIR__ . "/../files/csv/own_frame_times.csv"), 1);
         $csv  = tempnam(sys_get_temp_dir(), "counting-") . ".csv";
         file_put_contents($csv, "Start,End,Text\n" . str_repeat(implode("", $rows), 20000));
         $srt      = __DIR__ . "/../files/cli/trip.srt";
-        $expected = Subtitle::fromString((string) file_get_contents($csv), Format::Csv, new ReadOptions(format: new CsvReadOptions(frameRate: 25)));
+        $expected = Subtitle::fromString((string) file_get_contents($csv), Format::Csv, new ReadOptions(formats: [new CsvReadOptions(frameRate: 25)]));
 
         CountingFileStream::register();
         try {
+            $this->assertSame(0, self::runApplication(["convert", CountingFileStream::SCHEME . "://$srt", "--to", "vtt", "-o", "-"])[0]);
+            $opensWithoutFormatOptions = CountingFileStream::$opens;
+
+            CountingFileStream::reset();
             $this->assertSame([0, $expected->toString(Format::SubRip), ""],
                               self::runApplication(["convert", CountingFileStream::SCHEME . "://$csv", "--to", "srt", "-o", "-", "--input-fps", "25"]));
-            $this->assertSame(2, CountingFileStream::$opens);
+            $this->assertSame($opensWithoutFormatOptions, CountingFileStream::$opens);
             $this->assertLessThan(2 * filesize($csv), CountingFileStream::$bytesRead);
 
             CountingFileStream::reset();
             $this->assertSame(0, self::runApplication(["convert", CountingFileStream::SCHEME . "://$srt", "--to", "vtt", "-o", "-", "--word-timestamps"])[0]);
-            $this->assertSame(2, CountingFileStream::$opens);
+            $this->assertSame($opensWithoutFormatOptions, CountingFileStream::$opens);
         } finally {
             CountingFileStream::unregister();
             unlink($csv);

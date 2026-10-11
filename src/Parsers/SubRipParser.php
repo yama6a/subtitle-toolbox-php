@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use Generator;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
@@ -146,8 +147,8 @@ final class SubRipParser extends SubtitleParser
             $index,
             $rawLines
         );
-        $cue = new SubtitleCue($start, $end, array_map($this->escapeText(...), array_slice($rawLines, 2)));
-        $this->convertOverrideTags($cue);
+        $cue         = new SubtitleCue($start, $end, array_map($this->escapeText(...), array_slice($rawLines, 2)));
+        $alignment   = $this->convertOverrideTags($cue);
         $coordinates = $this->coordinates($rest);
         if ($coordinates !== null) {
             $cue->setFormatData(self::FORMAT_DATA_KEY, ["coordinates" => $coordinates]);
@@ -157,7 +158,7 @@ final class SubRipParser extends SubtitleParser
                 throw new ParsingException("The text \"" . implode(" ", $unknown) . "\" after the end time is not valid.", $lineNumber);
             }
             if ($settings !== []) {
-                $cue->setFormatData(WebVttParser::FORMAT_DATA_KEY, $settings);
+                $cue->setFormatData(WebVttParser::FORMAT_DATA_KEY, $alignment === null ? $settings : [...$settings, "alignment" => $alignment]);
             }
             if ($unknown !== []) {
                 $this->warn(
@@ -281,7 +282,10 @@ final class SubRipParser extends SubtitleParser
     }
 
 
-    private function convertOverrideTags(SubtitleCue $cue): void
+    /**
+     * @return ?int the alignment of the first \an or \a tag
+     */
+    private function convertOverrideTags(SubtitleCue $cue): ?int
     {
         $alignment = null;
         $openTags  = [];
@@ -312,7 +316,9 @@ final class SubRipParser extends SubtitleParser
         }
 
         $cue->setLines($text);
-        $cue->setAlignment($alignment);
+        $cue->setAlignment(Alignment::from($alignment ?? Alignment::BottomCenter->value));
+
+        return $alignment;
     }
 
 

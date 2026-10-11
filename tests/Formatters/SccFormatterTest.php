@@ -6,8 +6,8 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\CueLimits;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
@@ -84,7 +84,7 @@ class SccFormatterTest extends TestCase
     public function testWritesCoreMarkupAsMidRowCodesAndPacStyles(): void
     {
         $lines  = ["<i>Rain</i> and <font color=\"#ffff00\">sun <u>later</u></font>", "<font color=\"#ff0000\"><i>Red</i></font> sky"];
-        $cue    = (new SubtitleCue(2.0, 4.0, $lines))->setAlignment(1);
+        $cue    = (new SubtitleCue(2.0, 4.0, $lines))->setAlignment(Alignment::BottomLeft);
         $output = $this->subtitle($cue)->toString(Format::Scc);
 
         // Line 1 starts with the italics PAC 94ce. Line 2 starts with the red PAC 9468 and the italics mid-row code 91ae.
@@ -122,23 +122,23 @@ class SccFormatterTest extends TestCase
     public static function alignmentProvider(): array
     {
         return [
-            "default is bottom centre" => [null, [14, 15], [12, 13]],
-            "top left"                 => [7, [1, 2], [0, 0]],
-            "top centre"               => [8, [1, 2], [12, 13]],
-            "middle right"             => [6, [7, 8], [25, 27]],
-            "bottom left"              => [1, [14, 15], [0, 0]],
+            "default is bottom centre" => [Alignment::BottomCenter, [14, 15], [12, 13]],
+            "top left"                 => [Alignment::TopLeft, [1, 2], [0, 0]],
+            "top centre"               => [Alignment::TopCenter, [1, 2], [12, 13]],
+            "middle right"             => [Alignment::MiddleRight, [7, 8], [25, 27]],
+            "bottom left"              => [Alignment::BottomLeft, [14, 15], [0, 0]],
         ];
     }
 
 
     #[DataProvider("alignmentProvider")]
-    public function testAlignmentSetsRowsAndColumns(?int $alignment, array $rows, array $columns): void
+    public function testAlignmentSetsRowsAndColumns(Alignment $alignment, array $rows, array $columns): void
     {
         $cue    = (new SubtitleCue(2.0, 4.0, ["Weather", "today"]))->setAlignment($alignment);
         $parsed = Subtitle::fromString($this->subtitle($cue)->toString(Format::Scc), Format::Scc)->getCues()[0];
 
         $this->assertSame(["rows" => $rows, "columns" => $columns], array_diff_key($parsed->findFormatData(SccParser::FORMAT_DATA_KEY), ["mode" => 0]));
-        $this->assertSame(in_array($alignment, [7, 8], true) ? 8 : null, $parsed->getAlignment());
+        $this->assertSame(in_array($alignment, [Alignment::TopLeft, Alignment::TopCenter], true) ? Alignment::TopCenter : Alignment::BottomCenter, $parsed->getAlignment());
     }
 
 
@@ -204,7 +204,7 @@ class SccFormatterTest extends TestCase
         $this->assertStringContainsString("\n00:01:01;00\t942c 942c\n", $subtitle->toString(Format::Scc));
         $this->assertStringContainsString(
             "\n00:01:00:28\t942c 942c\n",
-            $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dropFrame: false)))
+            $subtitle->toString(Format::Scc, new WriteOptions(formats: [new SccWriteOptions(dropFrame: false)]))
         );
     }
 
@@ -214,13 +214,13 @@ class SccFormatterTest extends TestCase
         $subtitle = Subtitle::fromString(self::HEADER . "00:00:01:00\t9420 9420 9470 9470 c8e9 942f 942f\n\n00:00:03:00\t942c 942c\n", Format::Scc);
 
         $this->assertStringContainsString("\n00:00:03:00\t942c 942c\n", $subtitle->toString(Format::Scc));
-        $this->assertStringContainsString("\n00:00:03;00\t942c 942c\n", $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dropFrame: true))));
+        $this->assertStringContainsString("\n00:00:03;00\t942c 942c\n", $subtitle->toString(Format::Scc, new WriteOptions(formats: [new SccWriteOptions(dropFrame: true)])));
     }
 
 
     public function testThrowsForMoreThanFourLines(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(UnwritableContentException::class);
         $this->expectExceptionMessage("Cue #1 at 3 s has 5 lines, but SCC allows 4. Call wrapLines(32, 4) first.");
 
         $this->subtitle(new SubtitleCue(1.0, 2.0, "Hi"), new SubtitleCue(3.0, 4.0, ["1", "2", "3", "4", "5"]))->toString(Format::Scc);
@@ -229,7 +229,7 @@ class SccFormatterTest extends TestCase
 
     public function testThrowsForALineLongerThan32Characters(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(UnwritableContentException::class);
         $this->expectExceptionMessage("Cue #0 at 1 s has a line with 33 characters, but SCC allows 32. Call wrapLines(32, 4) first.");
 
         $this->subtitle(new SubtitleCue(1.0, 2.0, "<i>" . str_repeat("a", 33) . "</i>"))->toString(Format::Scc);
@@ -238,7 +238,7 @@ class SccFormatterTest extends TestCase
 
     public function testNamesTheSplitStepWhenWrappingCannotFitTheCue(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(UnwritableContentException::class);
         $this->expectExceptionMessage("Cue #0 at 1 s has a line with 139 characters, but SCC allows 32. " .
                                       "Call Resegmenter::apply() with ResegmentMode::SplitLong and new CueLimits(32, 4), then wrapLines(32, 4).");
 
@@ -268,7 +268,7 @@ class SccFormatterTest extends TestCase
 
     public function testThrowsForACharacterThatCea608Lacks(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(UnwritableContentException::class);
         $this->expectExceptionMessage("Cue #0 at 1 s has the character \"\u{65E5}\", which CEA-608 cannot show.");
 
         $this->subtitle(new SubtitleCue(1.0, 2.0, "\u{65E5}"))->toString(Format::Scc);
@@ -278,7 +278,7 @@ class SccFormatterTest extends TestCase
     public function testFitChangesWhatSccCannotHoldAndReportsEachChange(): void
     {
         $subtitle = Subtitle::load(self::FIT_FILES . "own_ferry.srt", Format::SubRip);
-        $options  = new WriteOptions(format: new SccWriteOptions(fit: true));
+        $options  = new WriteOptions(formats: [new SccWriteOptions(fit: true)]);
         $report   = (new SccFormatter())->formatWithReport($subtitle, $options);
 
         $this->assertSame(file_get_contents(self::FIT_FILES . "own_ferry.scc"), $report->content);
@@ -317,7 +317,7 @@ class SccFormatterTest extends TestCase
 
     public function testFitThrowsForTextThatDoesNotFitAndACharacterWithoutReplacement(): void
     {
-        $options = new WriteOptions(format: new SccWriteOptions(fit: true));
+        $options = new WriteOptions(formats: [new SccWriteOptions(fit: true)]);
         try {
             $this->subtitle(new SubtitleCue(1.0, 8.0, implode(" ", array_fill(0, 20, "bakery"))))->toString(Format::Scc, $options);
             $this->fail("No exception");
@@ -334,7 +334,7 @@ class SccFormatterTest extends TestCase
     public function testFitKeepsTagsAndTextThatSccHolds(): void
     {
         $subtitle = $this->subtitle(new SubtitleCue(1.0, 3.0, ["<i>Caf\u{E9} \u{201C}Zagreb\u{201D}</i>", "<font color=\"red\">&lt;\u{160}&gt;</font>"]));
-        $options  = new WriteOptions(format: new SccWriteOptions(fit: true));
+        $options  = new WriteOptions(formats: [new SccWriteOptions(fit: true)]);
         $report   = (new SccFormatter())->formatWithReport($subtitle, $options);
 
         $this->assertSame(["Cue #0 at 1 s: replaced \"\u{160}\" with \"S\"."], array_column($report->changes, "message"));

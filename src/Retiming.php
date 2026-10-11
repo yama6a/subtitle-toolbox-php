@@ -49,25 +49,6 @@ trait Retiming
 
 
     /**
-     * Moves time $oldA to $newA and time $oldB to $newB, and corrects all other times and the word timestamps linearly.
-     * A time that becomes negative becomes 0, and the cue stays.
-     */
-    public function syncByTwoPoints(float $oldA, float $newA, float $oldB, float $newB): self
-    {
-        if ($oldA === $oldB) {
-            throw new InvalidArgumentException("The two old times must differ, got $oldA twice.");
-        }
-
-        $factor = ($newB - $newA) / ($oldB - $oldA);
-        if ($factor <= 0) {
-            throw new InvalidArgumentException("The two new times must be in the same order as the two old times.");
-        }
-
-        return $this->retimingApplyLinearCorrection($factor, $newA - $oldA * $factor);
-    }
-
-
-    /**
      * Moves each old time of $points to its new time, and corrects all other times and the word timestamps between them linearly.
      * 1 point shifts all cues. Times before the first point and after the last point follow the nearest 2 points.
      * A time that becomes negative becomes 0, and the cue stays.

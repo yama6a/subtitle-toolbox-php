@@ -196,10 +196,4 @@ class OptionChecksTest extends TestCase
     {
         $this->assertSame(0.0, (new ChapterReadOptions(0))->mediaDuration);
     }
-
-
-    public function testAlignmentRangeIsOneToNine(): void
-    {
-        $this->assertSame([1, 2, 3, 4, 5, 6, 7, 8, 9], array_values(array_filter(range(-1, 11), OptionChecks::isAlignment(...))));
-    }
 }

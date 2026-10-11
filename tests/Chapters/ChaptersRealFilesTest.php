@@ -154,7 +154,7 @@ class ChaptersRealFilesTest extends TestCase
     public function testMediaDurationEndsTheLastChapter(): void
     {
         $content = file_get_contents(self::DIR . "youtube/real/long_stream_chapters.txt");
-        $cues    = (new YouTubeChaptersParser())->parse($content, new ReadOptions(format: new ChapterReadOptions(mediaDuration: 14400)))->getCues();
+        $cues    = (new YouTubeChaptersParser())->parse($content, new ReadOptions(formats: [new ChapterReadOptions(mediaDuration: 14400)]))->getCues();
 
         $this->assertSame([13870.0, 14400.0, "Goodbye"], $this->describe($cues[6]));
     }

@@ -169,7 +169,7 @@ movie.mkv
 - **Memory**: the tool reads an MKV, WebM or MP4 file the same way as `MatroskaReader` and `Mp4Reader`, see [mkv.md](mkv.md). Standard input is different. The tool reads the whole input into memory first.
 - **Track**: a file with one subtitle track needs no `--track`. For a file with more, the tool fails and lists the tracks.
 - **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT, `S_HDMV/PGS` is PGS and `S_VOBSUB` is VobSub. An MP4 `tx3g` track is SubRip. Without `--to`, `retime` and `sync` keep this format. `convert movie.mkv --to srt --track 3 --output-dir out` writes `out/movie.srt`.
-- **Second file**: `diff` reads the track of the new file with `--track2`, for example `diff old.mkv new.mkv --track 3 --track2 8`. `dual` takes `--primary-track` and `--secondary-track`.
+- **Second file**: `diff` applies `--track` to both files. `--new-track` sets the track of the new file, for example `diff old.mkv new.mkv --track 3 --new-track 8`. `dual` takes `--primary-track` and `--secondary-track`.
 - **Info**: without `--track`, `info` lists the tracks of a file whose extension names no subtitle format, such as `.mkv`, `.webm` and `.mp4`. The JSON object has `file`, `container` and `tracks`. Each track has `number`, `codecId`, `language`, `name`, `default` and `forced`. With `--track`, `info` prints the statistics of the track.
 - **Directories**: a directory argument skips MKV, WebM and MP4 files. Pass them by name or with a glob.
 - **Errors**: `S_DVBSUB` and `c608` tracks, encrypted tracks and tracks with bzlib or LZO compression fail, see [mkv.md](mkv.md).
@@ -194,7 +194,7 @@ vendor/bin/subtitle-toolbox retime movie.srt --sync first=00:00:12.5 --sync '#12
 
 - **Negative times**: a time that becomes negative becomes 0.
 - **Shift range**: the start time of a cue decides if it moves. `--shift 2 --shift-after 10:00 --shift-before 15:00` moves a cue from 14:59 to 15:03 as a whole.
-- **Sync points**: `OLD` is a [time](#times), `first` or `last` for the start of the first or last cue, or `#N` for the start of cue N, counted from 1. 1 point shifts all cues. 2 points give the result of `syncByTwoPoints()`.
+- **Sync points**: `OLD` is a [time](#times), `first` or `last` for the start of the first or last cue, or `#N` for the start of cue N, counted from 1. 1 point shifts all cues.
 - **Sync errors**: `--sync` with `--shift` or `--scale` is a usage error, exit code 2. So are points whose old or new times do not increase in the order of the options. A point that does not fit a file, such as `#120` in a file with 80 cues, fails that file with exit code 3.
 
 ## Convert
@@ -397,7 +397,7 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 |:--- |:--- |
 | `--time-tolerance SECONDS` | `timeTolerance`. The value is a [time](#times) |
 | `--ignore-formatting`, `--ignore-whitespace`, `--text-only` | `ignoreFormatting`, `ignoreWhitespace`, `textOnly` |
-| `--from2 FORMAT`, `--track2 NUMBER` | the format and the MKV or WebM track of the new file. `--from` and `--track` apply to the old file |
+| `--new-from FORMAT`, `--new-track NUMBER` | the format and the MKV or WebM track of the new file. Without them, `--from` and `--track` apply to the new file as well. `--track` is ignored for a new file that has no tracks, such as an SRT file. `--encoding` always applies to both files |
 | `--json` | prints JSON, see [JSON output](#json-output) |
 
 - **New file**: a new file that is missing or does not parse fails with exit code 3. The message names only the new file, for example `episode1_v2.srt: The file does not exist.`
@@ -447,7 +447,7 @@ vendor/bin/subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt
 | `--secondary FILE` | the subtitle in the second language. Required |
 | `--mode MODE` | `stack` or `top-bottom` |
 | `--secondary-style TAG` | `secondaryStyle`, for example `i` or `'font color="#ffff00"'` |
-| `--secondary-alignment 1-9` | `secondaryAlignment` for `top-bottom` |
+| `--secondary-alignment 1-9` | `secondaryAlignment` for `top-bottom`, as the value of the `Alignment` case, for example 8 for `Alignment::TopCenter` |
 | `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom`. The value is a [time](#times) |
 | `--primary-from FORMAT`, `--primary-track NUMBER` | the format and the MKV or WebM track of the primary file. `dual` has no `--from` and `--track` |
 | `--secondary-from FORMAT`, `--secondary-track NUMBER` | the format and the MKV or WebM track of the secondary file |

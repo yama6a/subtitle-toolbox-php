@@ -67,7 +67,7 @@ class SamiParserTest extends TestCase
 
     public function testLanguageClassOptionPicksTheClass(): void
     {
-        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(format: new SamiReadOptions("ENCC")));
+        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(formats: [new SamiReadOptions("ENCC")]));
         $cues     = $subtitle->getCues();
 
         $this->assertSame("en-US", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
@@ -83,7 +83,7 @@ class SamiParserTest extends TestCase
 
     public function testLanguageClassIsCaseInsensitive(): void
     {
-        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(format: new SamiReadOptions("frcc")));
+        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(formats: [new SamiReadOptions("frcc")]));
 
         $this->assertSame("fr-FR", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame("FRCC", $subtitle->findFormatData("sami")["class"]);
@@ -96,7 +96,7 @@ class SamiParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The SAMI file has no class DECC.");
 
-        (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(format: new SamiReadOptions("DECC")));
+        (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(formats: [new SamiReadOptions("DECC")]));
     }
 
 
@@ -163,8 +163,8 @@ class SamiParserTest extends TestCase
                "<SYNC Start=4000><P Class=ENCC>&nbsp;\n" .
                "</BODY></SAMI>";
 
-        $english = (new SamiParser())->parse($raw, new ReadOptions(lastCueDuration: 1, format: new SamiReadOptions("ENCC")))->getCues();
-        $french  = (new SamiParser())->parse($raw, new ReadOptions(lastCueDuration: 1, format: new SamiReadOptions("FRCC")))->getCues();
+        $english = (new SamiParser())->parse($raw, new ReadOptions(lastCueDuration: 1, formats: [new SamiReadOptions("ENCC")]))->getCues();
+        $french  = (new SamiParser())->parse($raw, new ReadOptions(lastCueDuration: 1, formats: [new SamiReadOptions("FRCC")]))->getCues();
 
         $this->assertSame([[1.0, 2.0], [3.0, 4.0]], array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd()], $english));
         $this->assertSame([[1.0, 2.0], [3.5, 4.5]], array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd()], $french));

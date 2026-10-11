@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Tests\Support;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -30,7 +31,7 @@ trait RealFiles
 
 
     /**
-     * @return array{float, float, string, ?int}
+     * @return array{float, float, string, Alignment}
      */
     private function describeCue(SubtitleCue $cue): array
     {

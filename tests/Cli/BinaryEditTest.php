@@ -400,7 +400,7 @@ class BinaryEditTest extends BinaryTestCase
     public function testWordTimestampsAndResegment(): void
     {
         copy(self::FILES . "resegmenting/own_whisper_long_segments.json", "$this->dir/lecture.json");
-        $withWords = fn (): Subtitle => (new WhisperJsonParser())->parse($this->file("lecture.json"), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
+        $withWords = fn (): Subtitle => (new WhisperJsonParser())->parse($this->file("lecture.json"), new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "lecture.json", "--structure-resegment", "--to", "srt", "-o", "lecture.srt"]);
         $this->assertSame([0, "lecture.json -> lecture.srt\n", ""], [$code, $stdout, $stderr]);

@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\SubRipParser;
@@ -142,7 +143,7 @@ class SubRipParserTest extends TestCase
 
         $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
-        $this->assertSame(8, $cue->getAlignment());
+        $this->assertSame(Alignment::TopCenter, $cue->getAlignment());
         $this->assertSame(["<i>The train leaves soon</i>"], $cue->getLines());
     }
 
@@ -153,7 +154,7 @@ class SubRipParserTest extends TestCase
 
         $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
-        $this->assertSame(4, $cue->getAlignment());
+        $this->assertSame(Alignment::MiddleLeft, $cue->getAlignment());
         $this->assertSame(["Middle and horizontally left"], $cue->getLines());
     }
 
@@ -166,7 +167,7 @@ class SubRipParserTest extends TestCase
 
             $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
-            $this->assertSame($alignment, $cue->getAlignment(), "Legacy code $legacy");
+            $this->assertSame($alignment, $cue->getAlignment()->value, "Legacy code $legacy");
             $this->assertSame(["Text"], $cue->getLines());
         }
     }
@@ -178,7 +179,7 @@ class SubRipParserTest extends TestCase
 
         $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
-        $this->assertNull($cue->getAlignment());
+        $this->assertSame(Alignment::BottomCenter, $cue->getAlignment());
         $this->assertSame(["{\\a4}Text"], $cue->getLines());
     }
 
@@ -199,7 +200,7 @@ class SubRipParserTest extends TestCase
 
         $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
-        $this->assertSame(8, $cue->getAlignment());
+        $this->assertSame(Alignment::TopCenter, $cue->getAlignment());
         $this->assertSame(["<i>one <b>two", "three</b></i>"], $cue->getLines());
     }
 
@@ -210,7 +211,7 @@ class SubRipParserTest extends TestCase
 
         $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
-        $this->assertSame(8, $cue->getAlignment());
+        $this->assertSame(Alignment::TopCenter, $cue->getAlignment());
         $this->assertSame(["{\\fad(200,200)}Sign {\\pos(10,20)}here {normal text}"], $cue->getLines());
     }
 

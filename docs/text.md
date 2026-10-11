@@ -89,7 +89,7 @@ use SubtitleToolbox\Speakers\SpeakerLabels;
 use SubtitleToolbox\Speakers\SpeakerStyle;
 use SubtitleToolbox\Subtitle;
 
-$subtitle = Subtitle::fromString($whisperXJson, Format::Whisper, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true)));
+$subtitle = Subtitle::fromString($whisperXJson, Format::Whisper, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]));
 SpeakerLabels::list($subtitle);                    // ['SPEAKER_00' => 14, 'SPEAKER_01' => 9], cues per speaker
 $report = SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(
     rename: ['SPEAKER_00' => 'Anna', 'SPEAKER_01' => 'Ben'],

@@ -27,7 +27,7 @@ class ChapterFormatsTest extends TestCase
                 '{"startTime": 0, "title": "Intro", "endTime": 150.5}, {"startTime": 168}]}';
 
         $this->assertSame([[0.0, 150.5, "Intro"], [168.0, 260.0, ""], [260.0, 4980.0, "Progress &lt;report&gt;"]],
-                          $this->describe((new PodcastChaptersParser())->parse($json, new ReadOptions(format: new ChapterReadOptions(mediaDuration: 4980)))));
+                          $this->describe((new PodcastChaptersParser())->parse($json, new ReadOptions(formats: [new ChapterReadOptions(mediaDuration: 4980)]))));
         $this->assertSame([260.0, 260.0, "Progress &lt;report&gt;"], $this->describe((new PodcastChaptersParser())->parse($json, new ReadOptions()))[2]);
     }
 
@@ -91,7 +91,7 @@ class ChapterFormatsTest extends TestCase
                    "[CHAPTER]\nTIMEBASE=1/1000\n;a comment\nEND=90000\ntitle=No start\n" .
                    "[CHAPTER]\nTIMEBASE=1/10\nSTART=1200\nno tag on this line\ntitle=No end\n" .
                    "[CHAPTER]\nTIMEBASE=1/1000\nSTART=130000\nEND=125000\ntitle=Ends early\n";
-        $subtitle = (new FfMetadataChaptersParser())->parse($content, new ReadOptions(format: new ChapterReadOptions(mediaDuration: 200)));
+        $subtitle = (new FfMetadataChaptersParser())->parse($content, new ReadOptions(formats: [new ChapterReadOptions(mediaDuration: 200)]));
 
         $this->assertSame([[0.0, 60.0, "Doors open"], [60.0, 90.0, "No start"], [120.0, 130.0, "No end"], [130.0, 125.0, "Ends early"]],
                           $this->describe($subtitle));

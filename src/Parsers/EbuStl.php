@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Encoding\CodePage;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Timecode;
@@ -115,7 +116,7 @@ final class EbuStl
      * Returns the cue alignment for a vertical position and a justification code.
      * The top, middle and bottom thirds of the rows from 0 to $maxRow give the row of the numeric keypad layout.
      */
-    public static function alignment(int $verticalPosition, int $justificationCode, int $maxRow): int
+    public static function alignment(int $verticalPosition, int $justificationCode, int $maxRow): Alignment
     {
         $column = match ($justificationCode) {
             self::JUSTIFY_LEFT  => 0,
@@ -129,7 +130,7 @@ final class EbuStl
             default                             => self::KEYPAD_BOTTOM_ROW,
         };
 
-        return 1 + $row + $column;
+        return Alignment::from(1 + $row + $column);
     }
 
 

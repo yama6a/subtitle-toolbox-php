@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Parsers\TtmlParser;
+use SubtitleToolbox\Parsers\WebVttParser;
 
 /**
  * @internal
@@ -26,7 +28,7 @@ trait ArrayConversion
                 "end"        => $cue->getEnd(),
                 "lines"      => array_values($cue->getLines()),
                 "identifier" => $cue->getIdentifier(),
-                "alignment"  => $cue->getAlignment(),
+                "alignment"  => $cue->getAlignment() === Alignment::BottomCenter ? null : $cue->getAlignment()->value,
             ];
             if ($cue->isForced()) {
                 $cueArray["forced"] = true;
@@ -212,8 +214,9 @@ trait ArrayConversion
         if (!is_string($identifier) && $identifier !== null) {
             throw new ParsingException("The field $path.identifier must be a string or null.");
         }
-        $alignment = $cueData["alignment"] ?? null;
-        if ($alignment !== null && (!is_int($alignment) || !OptionChecks::isAlignment($alignment))) {
+        $alignment = $cueData["alignment"] ?? Alignment::BottomCenter->value;
+        $alignment = is_int($alignment) ? Alignment::tryFrom($alignment) : null;
+        if ($alignment === null) {
             throw new ParsingException("The field $path.alignment must be an integer from 1 to 9 or null.");
         }
 
@@ -228,6 +231,11 @@ trait ArrayConversion
             ->setForced($forced);
         foreach (self::arrayConversionMap($cueData, "formatData", "$path.") as $format => $formatData) {
             self::arrayConversionCheckFormatData($format, $formatData, "$path.formatData.$format", true);
+            // JSON from 3.x has no stored alignment. Without it, the formatters would drop the stored position.
+            if (in_array($format, [WebVttParser::FORMAT_DATA_KEY, TtmlParser::FORMAT_DATA_KEY], true)
+                && $formatData !== [] && !array_key_exists("alignment", $formatData) && $alignment !== Alignment::BottomCenter) {
+                $formatData["alignment"] = $alignment->value;
+            }
             $cue->setFormatData($format, $formatData);
         }
 

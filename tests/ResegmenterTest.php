@@ -46,7 +46,7 @@ class ResegmenterTest extends TestCase
     private function parseWhisperFixture(): Subtitle
     {
         return (new WhisperJsonParser())
-            ->parse(file_get_contents(self::FILES . "own_whisper_long_segments.json"), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
+            ->parse(file_get_contents(self::FILES . "own_whisper_long_segments.json"), new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
     }
 
 
@@ -271,7 +271,7 @@ class ResegmenterTest extends TestCase
     public function testSplitKeepsIdentifierOnFirstPartAndCommentsBeforeIt(): void
     {
         $subtitle = TestSubtitles::fromCues([[0, 1, "Before."], [1, 11.05, self::ISSUE_EXAMPLE], [12, 13, "After."]]);
-        $subtitle->getCues()[1]->setIdentifier("long")->setAlignment(8)->setForced(true);
+        $subtitle->getCues()[1]->setIdentifier("long")->setAlignment(Alignment::TopCenter)->setForced(true);
         $subtitle->addComment("before long", 1)->addComment("before after", 2);
 
         Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong));
@@ -279,7 +279,7 @@ class ResegmenterTest extends TestCase
         $cues = array_values($subtitle->getCues());
         $this->assertCount(5, $cues);
         $this->assertSame(["long", null, null], [$cues[1]->getIdentifier(), $cues[2]->getIdentifier(), $cues[3]->getIdentifier()]);
-        $this->assertSame([8, 8, 8], [$cues[1]->getAlignment(), $cues[2]->getAlignment(), $cues[3]->getAlignment()]);
+        $this->assertSame([Alignment::TopCenter, Alignment::TopCenter, Alignment::TopCenter], [$cues[1]->getAlignment(), $cues[2]->getAlignment(), $cues[3]->getAlignment()]);
         $this->assertTrue($cues[3]->isForced());
         $this->assertEquals([new Comment("before long", 1), new Comment("before after", 4)],
                           $subtitle->getComments());

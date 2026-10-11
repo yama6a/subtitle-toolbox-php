@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
@@ -33,7 +34,7 @@ class IttParserTest extends TestCase
         $cue      = $subtitle->getCues()[0];
 
         $this->assertSame(1.502, $cue->getStart());
-        $this->assertSame([4.004, ["Hello", "<i>world</i>"], 2], [$cue->getEnd(), $cue->getLines(), $cue->getAlignment()]);
+        $this->assertSame([4.004, ["Hello", "<i>world</i>"], Alignment::BottomCenter], [$cue->getEnd(), $cue->getLines(), $cue->getAlignment()]);
         $this->assertSame(
             ["timeBase" => "smpte", "frameRate" => "24", "frameRateMultiplier" => "999 1000", "dropMode" => "nonDrop"],
             $subtitle->findFormatData(IttParser::FORMAT_DATA_KEY)

@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
@@ -234,21 +235,21 @@ class TtmlParserTest extends TestCase
     public static function alignmentProvider(): array
     {
         return [
-            "bottom center"              => ["tts:origin=\"10% 10%\" tts:extent=\"80% 80%\" tts:displayAlign=\"after\" tts:textAlign=\"center\"", 2],
-            "top left"                   => ["tts:displayAlign=\"before\" tts:textAlign=\"left\"", 7],
-            "middle right"               => ["tts:displayAlign=\"center\" tts:textAlign=\"right\"", 6],
-            "small region at the bottom" => ["tts:origin=\"10% 80%\" tts:extent=\"80% 10%\" tts:displayAlign=\"before\" tts:textAlign=\"center\"", 2],
-            "pixels"                     => ["tts:origin=\"0px 400px\" tts:extent=\"640px 80px\" tts:textAlign=\"center\"", 2],
-            "cells"                      => ["tts:origin=\"0c 13c\" tts:extent=\"32c 2c\" tts:textAlign=\"center\"", 2],
-            "start depends on direction" => ["tts:displayAlign=\"after\" tts:textAlign=\"start\"", null],
-            "no text alignment"          => ["tts:displayAlign=\"after\"", null],
-            "unknown unit"               => ["tts:origin=\"10em 10em\" tts:textAlign=\"center\"", null],
+            "bottom center"              => ["tts:origin=\"10% 10%\" tts:extent=\"80% 80%\" tts:displayAlign=\"after\" tts:textAlign=\"center\"", Alignment::BottomCenter],
+            "top left"                   => ["tts:displayAlign=\"before\" tts:textAlign=\"left\"", Alignment::TopLeft],
+            "middle right"               => ["tts:displayAlign=\"center\" tts:textAlign=\"right\"", Alignment::MiddleRight],
+            "small region at the bottom" => ["tts:origin=\"10% 80%\" tts:extent=\"80% 10%\" tts:displayAlign=\"before\" tts:textAlign=\"center\"", Alignment::BottomCenter],
+            "pixels"                     => ["tts:origin=\"0px 400px\" tts:extent=\"640px 80px\" tts:textAlign=\"center\"", Alignment::BottomCenter],
+            "cells"                      => ["tts:origin=\"0c 13c\" tts:extent=\"32c 2c\" tts:textAlign=\"center\"", Alignment::BottomCenter],
+            "start depends on direction" => ["tts:displayAlign=\"after\" tts:textAlign=\"start\"", Alignment::BottomCenter],
+            "no text alignment"          => ["tts:displayAlign=\"after\"", Alignment::BottomCenter],
+            "unknown unit"               => ["tts:origin=\"10em 10em\" tts:textAlign=\"center\"", Alignment::BottomCenter],
         ];
     }
 
 
     #[DataProvider("alignmentProvider")]
-    public function testRegionMapsToAlignment(string $regionAttributes, ?int $alignment): void
+    public function testRegionMapsToAlignment(string $regionAttributes, Alignment $alignment): void
     {
         $subtitle = $this->parse(
             "<div><p region=\"r1\" end=\"1s\">x</p></div>",
@@ -268,7 +269,7 @@ class TtmlParserTest extends TestCase
             "<layout><region xml:id=\"r1\"><style tts:displayAlign=\"after\"/><style tts:textAlign=\"center\"/></region></layout>"
         );
 
-        $this->assertSame(1, $subtitle->getCues()[0]->getAlignment());
+        $this->assertSame(Alignment::BottomLeft, $subtitle->getCues()[0]->getAlignment());
         $this->assertSame(["tts:textAlign" => "left", "region" => "r1"], $subtitle->getCues()[0]->findFormatData("ttml")["attributes"]);
     }
 
@@ -277,7 +278,7 @@ class TtmlParserTest extends TestCase
     {
         $subtitle = $this->parse("<div><p region=\"missing\" tts:textAlign=\"center\" end=\"1s\">x</p></div>");
 
-        $this->assertNull($subtitle->getCues()[0]->getAlignment());
+        $this->assertSame(Alignment::BottomCenter, $subtitle->getCues()[0]->getAlignment());
     }
 
 

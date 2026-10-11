@@ -42,9 +42,9 @@ use SubtitleToolbox\Subtitle;
 
 Subtitle::load('movie.srt', Format::SubRip)->save('movie.vtt');
 Subtitle::loadAutoDetectFormat('movie.srt')->save('movie.vtt');
-Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(encoding: 'Windows-1252', format: new MicroDvdReadOptions(frameRate: 23.976)))->save('movie.srt');
-Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(format: new VobSubReadOptions(language: 'de')));
-Subtitle::load('call.json', Format::Deepgram, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true)));
+Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(encoding: 'Windows-1252', formats: [new MicroDvdReadOptions(frameRate: 23.976)]))->save('movie.srt');
+Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions(language: 'de')]));
+Subtitle::load('call.json', Format::Deepgram, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]));
 Subtitle::loadTrack('/media/movie.mkv', 3);           // see mkv.md
 
 $subtitle = Subtitle::load('movie.srt', Format::SubRip);
@@ -63,7 +63,7 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 - **MKV, WebM and MP4**: `load()` throws for them. `loadAutoDetectFormat()` reads a file with exactly 1 subtitle track and throws with the track list for other files.
 - **`getFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV or MP4 track, it is the format of the codec, for example `Format::SubRip`.
 - **`findSourceEncoding()`**: the encoding that the load call read the text from, for example `Windows-1252`. See [encodings.md](encodings.md#order-of-the-checks).
-- **`save()`**: writes the format argument. Without it, `save()` writes the format of the extension. It throws `InvalidFormatterException` for an unknown extension.
+- **`save()`**: writes the format argument. Without it, `save()` writes the format of the extension. It throws `UnsupportedFormatException` for an unknown extension.
 - **Frame rate**: MicroDVD output takes the frame rate from `MicroDvdWriteOptions::$frameRate`. Without it, the frame rate comes from a MicroDVD input. iTT output takes it from `IttWriteOptions::$frameRate`. Without it, the frame rate comes from an iTT input. Without either, `toString()` and `save()` throw `InvalidArgumentException`.
 - **CSV and TSV**: TSV output has tabs. CSV output from a TSV input has commas. A `CsvWriteOptions::$delimiter` wins.
 
@@ -82,7 +82,7 @@ $subtitle->toString(Format::SubRip, new WriteOptions(
     stripTags: true,                 // no tags in the output
     skipImageCues: true,             // drops image cues without text
 ));
-$subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 23.976)));
+$subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 23.976)]));
 ```
 
 - **`lineEnding` and `bom`**: EBU STL and PGS ignore them.
@@ -112,7 +112,8 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWrite
 - **Negative times**: `new SubtitleCue(-0.5, 1)` and `setStart(-0.5)` keep a negative time. Every formatter except JSON writes it as 0.
 - **Precedence**: a field that you set wins over the format data of the subtitle. For example, `IttWriteOptions(frameRate: 25)` wins over the frame rate that `IttParser` stored. A field left at `null` takes the stored value, for example `MicroDvdWriteOptions(writeFrameRateLine: true)` with a MicroDVD input.
 - **Frame rate**: every `frameRate` field is a `float`. Each format checks the values it can write, for example 25 or 30 for EBU STL.
-- **Errors**: an options class of another format throws `InvalidArgumentException`, for example `CsvWriteOptions` for SubRip. Each options class checks its values when you create it, so `new CsvWriteOptions(delimiter: '|')` throws at once.
+- **Several formats**: `WriteOptions::$formats` takes at most one object per class. Each formatter uses the object of its own class and ignores the others. So `new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25), new CsvWriteOptions(delimiter: ';')])` works for every output format.
+- **Errors**: 2 objects of one class in `formats` throw `InvalidArgumentException`. Each options class checks its values when you create it, so `new CsvWriteOptions(delimiter: '|')` throws at once.
 
 ## ASS and SSA
 `AssParser` reads ASS v4.00+ and SSA v4.00. `AssFormatter` writes the version that the parser read, or ASS for cues from other formats.
@@ -128,16 +129,16 @@ $subtitle = Subtitle::fromString(file_get_contents('episode.ass'), Format::Ass);
 $subtitle->findFormatData('ass')['scriptInfo']['PlayResX'];     // '1920'
 $subtitle->getCues()[0]->findFormatData('ass')['fields'];       // ['Layer' => '0', 'Style' => 'Default', ...]
 $subtitle->toString(Format::Ass);
-$subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill)));   // \kf
-$subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(style: 'Fontname=Roboto,Fontsize=48')));
+$subtitle->toString(Format::Ass, new WriteOptions(formats: [new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill)]));   // \kf
+$subtitle->toString(Format::Ass, new WriteOptions(formats: [new AssWriteOptions(style: 'Fontname=Roboto,Fontsize=48')]));
 ```
 
 | Input | Parser result | Formatter output |
 |:--- |:--- |:--- |
 | `{\b1}`, `{\i1}`, `{\u1}`, `{\s1}`, their `0` forms and `\r` | `<b>`, `<i>`, `<u>`, `<s>` and their closing tags | the same override tags |
 | `{\c&H0000FF&}` or `{\1c&H0000FF&}`, color as BGR | `<font color="#ff0000">` | `{\c&H0000FF&}`, `{\c}` at `</font>` |
-| `{\an8}`, SSA `{\a6}` | alignment 8. The first tag wins. | `{\an8}` in ASS, `{\a6}` in SSA. Nothing when the style has the same alignment. |
-| Style `Thoughts` with `Italic` `-1` and `Alignment` 8 | `<i>` around the text, alignment 8 | no tag for what the style already sets. `{\i0}` or `{\an2}` where the cue differs from its style. |
+| `{\an8}`, SSA `{\a6}` | `Alignment::TopCenter`. The first tag wins. | `{\an8}` in ASS, `{\a6}` in SSA. Nothing when the style has the same alignment. |
+| Style `Thoughts` with `Italic` `-1` and `Alignment` 8 | `<i>` around the text, `Alignment::TopCenter` | no tag for what the style already sets. `{\i0}` or `{\an2}` where the cue differs from its style. |
 | Name field `Fred` | `<v Fred>` at the start of the first line | the Name field, only the first speaker of a cue |
 | `{\k50}`, `{\kf50}`, `{\K50}`, `{\ko50}` in centiseconds | a word timestamp at the start time of each syllable | `{\k}`, or the tag of `AssWriteOptions::$karaokeTag`. The last syllable lasts until the cue end. |
 | `\N`, `\h` | a new line, U+00A0 | `\N`, `\h` |
@@ -174,14 +175,14 @@ use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.csv'), Format::Csv);   // headers start, end, text, ...
 $columns  = new CsvColumns(start: 'Start TC', text: 'Text', speaker: 'Character');
-$subtitle = Subtitle::fromString(file_get_contents('dubbing-script.csv'), Format::Csv, new ReadOptions(format: new CsvReadOptions($columns, frameRate: 25)));
-$subtitle = Subtitle::fromString($tsv, Format::Tsv, new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: 0, end: 1, text: 2, header: false), "\t")));
+$subtitle = Subtitle::fromString(file_get_contents('dubbing-script.csv'), Format::Csv, new ReadOptions(formats: [new CsvReadOptions($columns, frameRate: 25)]));
+$subtitle = Subtitle::fromString($tsv, Format::Tsv, new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(start: 0, end: 1, text: 2, header: false), "\t")]));
 
-$csv = $english->toString(Format::Csv, new WriteOptions(format: new CsvWriteOptions(
+$csv = $english->toString(Format::Csv, new WriteOptions(formats: [new CsvWriteOptions(
     delimiter: ';',                  // Excel in German and French locales
     secondText: $german,             // a second text column, aligned by time
     secondTextHeader: 'text (de)',   // default 'text2'
-)));
+)]));
 ```
 
 | Column role | Parser | Formatter |
@@ -229,9 +230,9 @@ use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('news.stl'));  // detects EBU STL
 $subtitle = Subtitle::fromString(file_get_contents('news.stl'), Format::EbuStl,
-    new ReadOptions(format: new EbuStlReadOptions(subtractStartOfProgramme: true))); // cue times minus the start of programme
+    new ReadOptions(formats: [new EbuStlReadOptions(subtractStartOfProgramme: true)])); // cue times minus the start of programme
 $subtitle->findFormatData('stl')['gsi']['TCP'];                                   // '10000000'
-$subtitle->toString(Format::EbuStl, new WriteOptions(format: new EbuStlWriteOptions(frameRate: 30)));  // 25 or 30
+$subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 30)]));  // 25 or 30
 ```
 
 - **Times**: the disk format code `STL25.01` or `STL30.01` sets the frame rate. By default, the parser keeps the time codes of the file.
@@ -260,13 +261,13 @@ use SubtitleToolbox\WriteOptions;
 $subtitle = Subtitle::fromString(file_get_contents('movie.itt'), Format::Itt);
 $subtitle->findFormatData('itt');  // ['timeBase' => 'smpte', 'frameRate' => '24', 'frameRateMultiplier' => '999 1000', 'dropMode' => 'nonDrop']
 $subtitle->toString(Format::Itt);
-Subtitle::fromStringAutoDetectFormat($srt)->toString(Format::Itt, new WriteOptions(format: new IttWriteOptions(frameRate: 23.976)));
+Subtitle::fromStringAutoDetectFormat($srt)->toString(Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 23.976)]));
 ```
 
 - **Parser**: `IttParser` is `TtmlParser` plus the `itt` format data. Format detection returns `Format::Ttml` for an iTT file. Both read the same cues.
 - **Frame rate**: the formatter takes it from `IttWriteOptions::$frameRate`. Without it, the frame rate comes from the `itt` format data. `IttWriteOptions` accepts 23.976, 24, 25, 29.97 and 30. Without a frame rate, the formatter throws `InvalidArgumentException`.
 - **Times**: a time such as `00:00:01:12` is an SMPTE time code at the effective frame rate. So at 29.97 fps `01:00:00:00` is 3603.6 s. The formatter rounds each time to the nearest frame and gives each cue at least one frame. It always writes `ttp:dropMode="nonDrop"`.
-- **Apple limits**: one `div`, `sansSerif` as the only font family, and a fixed `<head>` with the `top` and `bottom` regions. Alignment 7, 8 and 9 go to `top`, all others to `bottom`. The formatter does not keep the `<head>` or the attributes of the input file.
+- **Apple limits**: one `div`, `sansSerif` as the only font family, and a fixed `<head>` with the `top` and `bottom` regions. `TopLeft`, `TopCenter` and `TopRight` go to `top`, all others to `bottom`. The formatter does not keep the `<head>` or the attributes of the input file.
 - **Markup**: the formatter writes `<b>`, `<i>`, `<u>` and `<font color>` as `tts:` attributes on `<span>`. It writes a color only as `#rrggbb` or a TTML color name, and drops an alpha channel. It strips `<s>`, `<v>` and word timestamps.
 - **Forced cues**: see [subtitle.md](subtitle.md#forced-cues).
 
@@ -303,14 +304,14 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
-$subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(frameRate: 23.976)));
+$subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 23.976)]));
 $subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDvd);   // reads {1}{1}23.976
 
-$subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(
+$subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(
     frameRate: 23.976,               // null (default) takes the frame rate that the parser stored
     writeFrameRateLine: true,        // writes {1}{1}23.976 first
-)));
-$subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(writeFrameRateLine: true)));
+)]));
+$subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(writeFrameRateLine: true)]));
 ```
 
 - **Frame rate**: `MicroDvdReadOptions::$frameRate` wins over a `{1}{1}<fps>` first line. The parser never reads that line as a cue. Without either, the parser throws `ParsingException` in strict mode. Lenient mode uses 23.976 fps, as pysubs2 and mantas-done/subtitles do, and adds a `ParseWarning`. The format data holds this `frameRate`.
@@ -354,7 +355,7 @@ use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.mpsub'), Format::MpSub);
 $subtitle->toString(Format::MpSub);                                               // FORMAT=TIME
-$subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubWriteOptions(frameRate: 25)));   // FORMAT=25 and frame counts
+$subtitle->toString(Format::MpSub, new WriteOptions(formats: [new MpSubWriteOptions(frameRate: 25)]));   // FORMAT=25 and frame counts
 ```
 
 - **Header lines**: the parser reads `TITLE` and `AUTHOR` into the metadata. It keeps all other header lines, such as `TYPE` and `NOTE`, in the `mpsub` format data. `FORMAT` only sets the time unit. The formatter writes these lines back, and writes empty `TITLE` and `AUTHOR` lines when the values are not set.
@@ -370,7 +371,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami);   // the first class of the STYLE block that a <P> uses
-$subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami, new ReadOptions(format: new SamiReadOptions(languageClass: 'FRCC')));   // the FRCC class
+$subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami, new ReadOptions(formats: [new SamiReadOptions(languageClass: 'FRCC')]));   // the FRCC class
 $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);                             // 'fr-FR', from the lang property of .FRCC
 $subtitle->findFormatData('sami');                                                // keys style, class and samiParam
 ```
@@ -405,13 +406,13 @@ use SubtitleToolbox\WriteOptions;
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('show.scc'));  // detects SCC
 $subtitle->findFormatData('scc');                                                 // ['dropFrame' => true]
 $subtitle->getCues()[0]->findFormatData('scc');                                   // ['mode' => 'pop-on', 'rows' => [14, 15], 'columns' => [4, 8]]
-Subtitle::fromString($content, Format::Scc, new ReadOptions(format: new SccReadOptions(channel: 2)));   // CC2 or CC4
-Subtitle::fromString($content, Format::Scc, new ReadOptions(format: new SccReadOptions(rollUp: SccRollUp::Lines)));   // one cue per row
+Subtitle::fromString($content, Format::Scc, new ReadOptions(formats: [new SccReadOptions(channel: 2)]));   // CC2 or CC4
+Subtitle::fromString($content, Format::Scc, new ReadOptions(formats: [new SccReadOptions(rollUp: SccRollUp::Lines)]));   // one cue per row
 
 $subtitle->wrapLines(32, 4)->toString(Format::Scc);
-$subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dropFrame: false)));
+$subtitle->toString(Format::Scc, new WriteOptions(formats: [new SccWriteOptions(dropFrame: false)]));
 
-$report = (new SccFormatter())->formatWithReport($subtitle, new WriteOptions(format: new SccWriteOptions(fit: true)));
+$report = (new SccFormatter())->formatWithReport($subtitle, new WriteOptions(formats: [new SccWriteOptions(fit: true)]));
 $report->content;                                                                 // the SCC file
 $report->changes[0]->message;                                                     // Cue #0 at 1 s: replaced "Š" with "S".
 ```
@@ -432,7 +433,7 @@ $report->changes[0]->message;                                                   
   Text that does not wrap into 4 lines of 32 characters, and a character without a replacement such as `日`, still throw. Split such cues first, as the exception message says.
 - **Times**: a semicolon before the frames marks drop-frame time code, a colon marks non-drop time code. A caption that no command erases lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **Damaged data**: the parser ignores the second copy of a doubled control code and drops a byte with a parity error. It skips data channel 2, XDS packets and text mode.
-- **Position**: rows 1 to 4 give alignment 8, and all other rows give `null`. The `scc` format data keeps the row and column of each line. The formatter writes them back when they still fit the cue. Otherwise it places the lines by the alignment, at the bottom and centered by default.
+- **Position**: rows 1 to 4 give `Alignment::TopCenter`, and all other rows give `Alignment::BottomCenter`. The `scc` format data keeps the row and column of each line. The formatter writes them back when they still fit the cue. Otherwise it places the lines by the alignment, at the bottom and centered by default.
 - **Timing of the formatter**: it loads each caption before the cue start. So the caption shows on the first frame of the cue. When the frames after the previous caption are too few for the load, the caption shows late. Of two overlapping cues, the later one replaces the earlier one.
 - **Markup**: styles become `<i>`, `<u>` and `<font color>` with `#ffffff`, `#00ff00`, `#0000ff`, `#00ffff`, `#ff0000`, `#ffff00` and `#ff00ff`, and back. The formatter writes other colors as white and strips all other tags. A style change inside a word adds a space.
 - **Limits**: the formatter throws `UnwritableContentException` for content that SCC cannot hold. This is more than 4 lines, more than 32 characters per line, or a character outside the CEA-608 character sets. The message names 1 of 2 fixes for too many or too long lines.
@@ -448,8 +449,8 @@ $report->changes[0]->message;                                                   
 | `00：00：01，000` | 1 s in lenient mode, with a warning. Lenient mode reads the full-width `：`, `，`, `．` and `。` in a timing line as `:`, `,` and `.`. Cue text keeps them. | `00:00:01,000` |
 | `00:00:01,000-->00:00:02,000` | 1 s to 2 s. Accepts any spaces or tabs around `-->`, or none. Lenient mode also reads an arrow with 1 or more dashes, such as `->`, and warns. | `00:00:01,000 --> 00:00:02,000` |
 | `X1:100 X2:600 Y1:40 Y2:80` after the end time | `findFormatData('srt')['coordinates']` | the same coordinates |
-| `align:start position:0%` after the end time | `findFormatData('vtt')`, for the WebVTT settings `vertical`, `line`, `position`, `size` and `align`. Other text after the end time throws. Lenient mode ignores it and warns. | nothing. The WebVTT formatter writes the settings. |
-| `{\an8}` anywhere in the cue | alignment 8. The first tag wins. SSA `{\a6}` also becomes 8. | `{\an8}` at the start of the first line, nothing for 2 or `null` |
+| `align:start position:0%` after the end time | `findFormatData('vtt')`, for the WebVTT settings `vertical`, `line`, `position`, `size` and `align`. The key `alignment` holds the value of the `{\an}` tag, when the cue has one. Other text after the end time throws. Lenient mode ignores it and warns. | nothing. The WebVTT formatter writes the settings. |
+| `{\an8}` anywhere in the cue | `Alignment::TopCenter`. The first tag wins. SSA `{\a6}` also becomes `TopCenter`. | `{\an8}` at the start of the first line, nothing for `Alignment::BottomCenter` |
 | `{\b1}`, `{\i1}`, `{\u1}`, `{\s1}` and their `0` forms | `<b>`, `<i>`, `<u>`, `<s>` and their closing tags. An open tag closes at the end of the cue. | the HTML-like tags |
 
 - A timing line without text gives a cue with no lines. The formatter writes such a cue as its number and its timing line.
@@ -472,7 +473,7 @@ use SubtitleToolbox\WriteOptions;
 $subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::SubViewer);
 $subtitle->findFormatData('subviewer');  // ['version' => 2, 'header' => ['DELAY' => '0', 'CD TRACK' => '0'], 'style' => '[COLF]&HFFFFFF,[STYLE]bd,[SIZE]18,[FONT]Arial']
 $subtitle->toString(Format::SubViewer);                                             // SubViewer 2
-$subtitle->toString(Format::SubViewer, new WriteOptions(format: new SubViewerWriteOptions(version: SubViewerVersion::V1)));  // SubViewer 1
+$subtitle->toString(Format::SubViewer, new WriteOptions(formats: [new SubViewerWriteOptions(version: SubViewerVersion::V1)]));  // SubViewer 1
 ```
 
 - **Version**: a `******** START SCRIPT ********` line makes a file SubViewer 1. All other files are SubViewer 2.
@@ -491,7 +492,7 @@ use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.ttml'), Format::Ttml);
 $subtitle->findFormatData('ttml')['head'];             // <head> without ttm:title, as XML
-$subtitle->getCues()[0]->findFormatData('ttml');       // ['attributes' => ['region' => 'bottom'], 'div' => [...]]
+$subtitle->getCues()[0]->findFormatData('ttml');       // ['attributes' => ['region' => 'bottom'], 'alignment' => 2, 'div' => [...]]
 $subtitle->toString(Format::Ttml);
 ```
 
@@ -501,8 +502,8 @@ $subtitle->toString(Format::Ttml);
 - **Styles**: the parser resolves the `style` references and the inline `tts:` attributes. Styles inherit in the order region, `<body>`, `<div>`, `<p>`, `<span>`. Bold, italic, oblique, underline, line-through and the text color become core markup. White text gives no `<font>` tag. The formatter writes each tag as a `<span>` with an inline style.
 - **Inherited styles in output**: the formatter keeps the stored styles of the region, `<body>`, `<div>` and `<p>`. Core markup cannot turn an inherited style off. So the formatter wraps text without that style in a `<span>` with the default value, such as `tts:color="white"` or `tts:fontStyle="normal"`.
 - **Speakers**: `ttm:agent` becomes `<v Name>`, with the name from the `ttm:name` of the agent. The formatter adds a `ttm:agent` element to the head for a new name.
-- **Alignment**: the parser maps the region to an alignment only for `tts:textAlign` `left`, `center` or `right`. A text anchor in the top third of the screen gives the top row, in the bottom third the bottom row.
-- **Regions from alignment**: a cue without a stored `region` gets a region such as `topCenter` that matches its alignment. A subtitle from another format gets `bottomCenter` for cues without alignment. The stored `region` wins over the alignment.
+- **Alignment**: the parser maps the region to an alignment only for `tts:textAlign` `left`, `center` or `right`. Other regions give `Alignment::BottomCenter`. A text anchor in the top third of the screen gives the top row, in the bottom third the bottom row. The `alignment` key of the `ttml` format data keeps the alignment that the parser read.
+- **Regions from alignment**: a cue without a stored `region` gets a region such as `topCenter` that matches its alignment. A cue with `Alignment::BottomCenter` gets `bottomCenter` only in a subtitle from another format. A cue keeps its stored `region` while it has the alignment that the parser read. After `setAlignment()` with another value, the formatter writes the region of the new alignment. It also writes `tts:textAlign` on the `<p>` when a style of the `<p>`, `<div>` or `<body>` sets another column.
 - **Metadata**: `xml:lang` of `<tt>` is the `language` and the first `ttm:title` is the `title`. The formatter writes the title as the first child of `<head>`.
 - **Kept as is**: the `<head>`, the namespace and the attributes of `<tt>`, `<body>`, `<div>` and `<p>`. So a DFXP file stays DFXP. The formatter drops `ttp:timeBase`, `ttp:clockMode`, `ttp:dropMode` and `ttp:markerMode`, because it writes media times.
 - **Limits**: the parser reads `seq` time containers as `par`. The formatter strips word timestamps. A cue identifier that is not a valid `xml:id` is not written.
@@ -519,11 +520,11 @@ $subtitle->toString(Format::Ttml);
 | Text after `WEBVTT`, lines up to the first empty line | `$subtitle->findFormatData('vtt')`, keys `header` and `headerLines` |
 | `STYLE` blocks, CSS not parsed | `$subtitle->findFormatData('vtt')['styles']` |
 | `REGION` blocks | `$subtitle->findFormatData('vtt')['regions']`, one `name => value` array per region |
-| Cue settings `vertical`, `line`, `position`, `size`, `align`, `region` | `$cue->findFormatData('vtt')`, exact values |
+| Cue settings `vertical`, `line`, `position`, `size`, `align`, `region` | `$cue->findFormatData('vtt')`, exact values. The key `alignment` holds the alignment that the parser read from them. |
 | `&nbsp;`, `&lrm;`, `&rlm;` | the characters U+00A0, U+200E, U+200F |
 
-- **Alignment from cue settings**: `line:0` is the top row, and `line:50%,center` is the middle row. No `line`, `line:-1` and `line:100%,end` are the bottom row. `align:left`, `center` and `right` set the column. Other values, `align:start`, `align:end` and `vertical` give no alignment.
-- **Cue settings from alignment**: a cue without `vtt` format data gets settings from its alignment. Alignment 8 becomes `line:0`, 7 becomes `line:0 align:left`. The `vtt` format data wins over the alignment.
+- **Alignment from cue settings**: `line:0` is the top row, and `line:50%,center` is the middle row. No `line`, `line:-1` and `line:100%,end` are the bottom row. `align:left`, `center` and `right` set the column. Other values, `align:start`, `align:end` and `vertical` give `Alignment::BottomCenter`.
+- **Cue settings from alignment**: a cue without `vtt` format data gets settings from its alignment. `Alignment::TopCenter` becomes `line:0`, `Alignment::TopLeft` becomes `line:0 align:left`. A cue keeps its stored settings while it has the alignment that the parser read. After `setAlignment()` with another value, the formatter drops the stored `line`, `position` and `align` and writes the settings of the new alignment. It keeps `size`, `vertical` and `region`.
 - **Cue settings without a space**: the parser also reads settings that follow the end time directly, as in `00:01.000line:40%`. The formatter writes a space before them.
 - **Hours**: the parser reads hours with any number of digits, such as `0:00:00.800` and `0010:00:40.750`, as the spec allows. The [time limit](#the-format-enum) applies. A time without hours has exactly 2 minute digits. The formatter writes at least 2 hour digits, so `0010` becomes `10`.
 - **Lines of white space**: only an empty line ends a cue. A line with only spaces or tabs inside a cue is an empty text line, and the parser drops it. YouTube automatic captions have such a line in each cue.

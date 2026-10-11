@@ -12,9 +12,8 @@ use SubtitleToolbox\Encoding\DecodedText;
 use SubtitleToolbox\Exceptions\CueNotFoundException;
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Exceptions\InvalidFormatterException;
-use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
+use SubtitleToolbox\Exceptions\UnsupportedFormatException;
 use SubtitleToolbox\Formatters\ImageFormatter;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
@@ -26,7 +25,6 @@ use SubtitleToolbox\Ocr\OcrRunner;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
-use SubtitleToolbox\Parsers\VobSubParser;
 
 
 final class Subtitle implements \IteratorAggregate, \Countable
@@ -94,21 +92,21 @@ final class Subtitle implements \IteratorAggregate, \Countable
     {
         $options ??= new ReadOptions();
         if (($container = self::containerOf($path)) !== null) {
-            throw new InvalidParserException("$path is an " . Containers::label($container) . " file. Call loadTrack() with a track number.");
+            throw new UnsupportedFormatException("$path is an " . Containers::label($container) . " file. Call loadTrack() with a track number.");
         }
         if ($format !== Format::VobSub) {
             return self::fromString(self::readFile($path), $format, $options);
         }
 
-        (new VobSubParser())->useOptions($options);
         $extension = pathinfo($path, PATHINFO_EXTENSION);
         $isIdx     = strtolower($extension) === "idx";
         $other     = self::pairedFile($path, $isIdx ? "sub" : "idx");
         [$idxPath, $subPath] = $isIdx ? [$path, $other] : [$other, $path];
 
-        $vobSubOptions = OptionsCopy::with($options, ["format" => OptionsCopy::with($options->format ?? new VobSubReadOptions(), [
+        $vobSub        = FormatOptionsList::find($options->formats, VobSubReadOptions::class) ?? new VobSubReadOptions();
+        $vobSubOptions = OptionsCopy::with($options, ["formats" => FormatOptionsList::with($options->formats, OptionsCopy::with($vobSub, [
             "idx" => StringHelpers::decode(self::readFile($idxPath), $options->encoding)->content,
-        ])]);
+        ]))]);
 
         return self::parseUtf8(self::readFile($subPath), Format::VobSub, $vobSubOptions);
     }
@@ -168,7 +166,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     public static function fromString(string $content, Format $format, ?ReadOptions $options = null): self
     {
         if (($container = Containers::detect($content)) !== null) {
-            throw new InvalidParserException("The content is an " . Containers::label($container) . " file. Call loadTrack() with a track number.");
+            throw new UnsupportedFormatException("The content is an " . Containers::label($container) . " file. Call loadTrack() with a track number.");
         }
         $options ??= new ReadOptions();
 
@@ -258,7 +256,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     private static function parseUtf8(string $content, Format $format, ReadOptions $options): self
     {
         $parserClass = FormatRegistry::parserClass($format)
-            ?? throw new InvalidParserException("The format {$format->value} can be written but not read.");
+            ?? throw new UnsupportedFormatException("The format {$format->value} can be written but not read.");
 
         $subtitle         = (new $parserClass())->parse($content, $options);
         $subtitle->format = $format;
@@ -278,7 +276,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         $tracks = $reader->getSubtitleTracks();
         $label  = Containers::label($container);
         if (count($tracks) !== 1) {
-            throw new InvalidParserException($tracks === [] ? "The $label file has no subtitle track." :
+            throw new UnsupportedFormatException($tracks === [] ? "The $label file has no subtitle track." :
                 "The $label file has " . count($tracks) . " subtitle tracks. Call loadTrack() with one of them:\n" .
                 implode("\n", array_map(fn (SubtitleTrack $track): string => "  $track->number: " . $track->describe(), $tracks)));
         }
@@ -410,7 +408,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     public function save(string $path, ?Format $format = null, ?WriteOptions $options = null): void
     {
         $format ??= Format::fromPath($path)
-            ?? throw new InvalidFormatterException("The extension of $path names no format. Pass a format to save().");
+            ?? throw new UnsupportedFormatException("The extension of $path names no format. Pass a format to save().");
         $content  = $this->toString($format, $options ?? new WriteOptions());
 
         if (@file_put_contents($path, $content) === false) {
@@ -429,7 +427,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         $options ??= new WriteOptions();
         $options = $this->withFormatDefaults($format, $options);
         $formatterClass = FormatRegistry::formatterClass($format)
-            ?? throw new InvalidFormatterException("The format {$format->value} can be read but not written.");
+            ?? throw new UnsupportedFormatException("The format {$format->value} can be read but not written.");
 
         $subtitle = $this;
         if (!is_subclass_of($formatterClass, ImageFormatter::class)) {
@@ -451,28 +449,29 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     private function withFormatDefaults(Format $format, WriteOptions $options): WriteOptions
     {
-        $formatOptions = $options->format;
+        $formats   = $options->formats;
         $delimiter = match (true) {
             $format === Format::Tsv                                   => "\t",
             $format === Format::Csv && $this->format === Format::Tsv => ",",
             default                                                   => null,
         };
-        $csv = $formatOptions ?? new CsvWriteOptions();
-        if ($delimiter !== null && $csv instanceof CsvWriteOptions && $csv->delimiter === null) {
-            $formatOptions = OptionsCopy::with($csv, ["delimiter" => $delimiter]);
+        $csv = FormatOptionsList::find($formats, CsvWriteOptions::class) ?? new CsvWriteOptions();
+        if ($delimiter !== null && $csv->delimiter === null) {
+            $formats = FormatOptionsList::with($formats, OptionsCopy::with($csv, ["delimiter" => $delimiter]));
         }
-        if ($format === Format::MicroDvd && ($formatOptions === null || ($formatOptions instanceof MicroDvdWriteOptions && $formatOptions->frameRate === null))) {
-            $formatOptions = OptionsCopy::with($formatOptions ?? new MicroDvdWriteOptions(), [
+        $microDvd = FormatOptionsList::find($formats, MicroDvdWriteOptions::class) ?? new MicroDvdWriteOptions();
+        if ($format === Format::MicroDvd && $microDvd->frameRate === null) {
+            $formats = FormatOptionsList::with($formats, OptionsCopy::with($microDvd, [
                 "frameRate" => $this->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
                     ?? throw new InvalidArgumentException("MicroDVD output needs the frame rate of the video. Set MicroDvdWriteOptions::\$frameRate."),
-            ]);
+            ]));
         }
-        if ($format === Format::Itt && ($formatOptions === null || ($formatOptions instanceof IttWriteOptions && $formatOptions->frameRate === null))
+        if ($format === Format::Itt && FormatOptionsList::find($formats, IttWriteOptions::class)?->frameRate === null
             && !isset($this->findFormatData(IttParser::FORMAT_DATA_KEY)["frameRate"])) {
             throw new InvalidArgumentException("iTT output needs the frame rate of the video. Set IttWriteOptions::\$frameRate.");
         }
 
-        return $formatOptions === $options->format ? $options : OptionsCopy::with($options, ["format" => $formatOptions]);
+        return $formats === $options->formats ? $options : OptionsCopy::with($options, ["formats" => $formats]);
     }
 
 
@@ -518,6 +517,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     /**
      * Removes the cue at $cueIndex and numbers the remaining cues from 0 again.
+     *
+     * @throws CueNotFoundException when no cue has the index $cueIndex.
      */
     public function removeCue(int $cueIndex): self
     {

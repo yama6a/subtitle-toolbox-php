@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\WebVttParser;
@@ -22,6 +23,7 @@ final class WebVttFormatter extends SubtitleFormatter
 
     private const ALIGNMENT_ROWS    = [0 => "", 1 => "line:50%,center", 2 => "line:0"];
     private const ALIGNMENT_COLUMNS = [1 => "align:left", 2 => "", 3 => "align:right"];
+    private const POSITION_SETTINGS = ["line", "position", "align"];
 
     /** @var list<WebVttDroppedColor> */
     private array $droppedColors = [];
@@ -86,8 +88,6 @@ final class WebVttFormatter extends SubtitleFormatter
     public function formatCueBlock(SubtitleCue $cue, int $cueIndex, WriteOptions $options = new WriteOptions()): string
     {
         $block = $this->formatIdentifiedCue($cue, $cueIndex, $options);
-
-        $this->rejectForeignOptions($options);
 
         return $this->applyLineEnding($block, $options);
     }
@@ -182,18 +182,21 @@ final class WebVttFormatter extends SubtitleFormatter
 
     private function formatSettings(SubtitleCue $cue): string
     {
-        $settings = [];
-        foreach ($cue->findFormatData(WebVttParser::FORMAT_DATA_KEY) as $name => $value) {
-            if (in_array($name, WebVttParser::CUE_SETTINGS, true)) {
+        $stored    = $cue->findFormatData(WebVttParser::FORMAT_DATA_KEY);
+        $unchanged = ($stored["alignment"] ?? Alignment::BottomCenter->value) === $cue->getAlignment()->value;
+        $names     = $unchanged ? WebVttParser::CUE_SETTINGS : array_diff(WebVttParser::CUE_SETTINGS, self::POSITION_SETTINGS);
+        $settings  = [];
+        foreach ($stored as $name => $value) {
+            if (in_array($name, $names, true)) {
                 $settings[] = "$name:$value";
             }
         }
-        if ($settings !== [] || $cue->getAlignment() === null) {
+        if ($unchanged && $settings !== [] || $cue->getAlignment() === Alignment::BottomCenter) {
             return implode(" ", $settings);
         }
 
-        $alignment = $cue->getAlignment() - 1;
-        $settings  = [self::ALIGNMENT_ROWS[intdiv($alignment, 3)], self::ALIGNMENT_COLUMNS[$alignment % 3 + 1]];
+        $alignment = $cue->getAlignment()->value - 1;
+        $settings  = [...$settings, self::ALIGNMENT_ROWS[intdiv($alignment, 3)], self::ALIGNMENT_COLUMNS[$alignment % 3 + 1]];
 
         return implode(" ", array_filter($settings, fn (string $setting): bool => $setting !== ""));
     }

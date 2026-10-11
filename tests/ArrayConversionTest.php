@@ -31,7 +31,7 @@ class ArrayConversionTest extends TestCase
             ->setMetadata(Subtitle::METADATA_TITLE, "Bakery")
             ->setMetadata(Subtitle::METADATA_LANGUAGE, "en")
             ->setFormatData("ass", ["styles" => [["Name" => "Default", "Fontsize" => "72"]]]);
-        $subtitle->addCue((new SubtitleCue(1.5, 4, ["Hello", "<i>world</i>"]))->setIdentifier("intro")->setAlignment(8));
+        $subtitle->addCue((new SubtitleCue(1.5, 4, ["Hello", "<i>world</i>"]))->setIdentifier("intro")->setAlignment(Alignment::TopCenter));
         $subtitle->addCue((new SubtitleCue(4.5, 6.25, "Fresh bread &amp; rolls"))->setFormatData("vtt", ["settings" => "line:0"]));
         $subtitle->addComment("Translated by Jane Doe", 0);
 
@@ -172,9 +172,9 @@ class ArrayConversionTest extends TestCase
         $content   = file_get_contents(self::DIR . $file);
         $directory = explode("/", $file)[0];
         $subtitle  = match (true) {
-            str_starts_with($file, "microdvd/")            => (new MicroDvdParser())->parse($content, new ReadOptions(format: new MicroDvdReadOptions(25))),
-            $file === "csv/real/dubbing_script.csv"        => (new CsvParser())->parse($content, new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: "Start TC", speaker: "Character"), frameRate: 25))),
-            $file === "csv/real/excel_de_semicolon.csv"    => (new CsvParser())->parse($content, new ReadOptions(format: new CsvReadOptions(new CsvColumns(end: "Ende", speaker: "Sprecher")))),
+            str_starts_with($file, "microdvd/")            => (new MicroDvdParser())->parse($content, new ReadOptions(formats: [new MicroDvdReadOptions(25)])),
+            $file === "csv/real/dubbing_script.csv"        => (new CsvParser())->parse($content, new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(start: "Start TC", speaker: "Character"), frameRate: 25)])),
+            $file === "csv/real/excel_de_semicolon.csv"    => (new CsvParser())->parse($content, new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(end: "Ende", speaker: "Sprecher"))])),
             str_starts_with($file, "csv/")                 => (new CsvParser())->parse($content, new ReadOptions()),
             in_array($directory, self::CLOUD_SPEECH, true) => Subtitle::fromString($content, Format::from($directory)),
             default                                        => Subtitle::fromStringAutoDetectFormat($content),

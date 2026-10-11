@@ -187,7 +187,7 @@ class BinaryInputTest extends BinaryTestCase
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "movie.mkv", "--to", "srt", "-o", "-"]);
         $this->assertSame([3, ""], [$code, $stdout]);
-        $this->assertStringStartsWith("movie.mkv: InvalidParserException (Error #102): The MKV or WebM file has 6 subtitle tracks. Pass --track N with one of them:\n" .
+        $this->assertStringStartsWith("movie.mkv: UnsupportedFormatException (Error #102): The MKV or WebM file has 6 subtitle tracks. Pass --track N with one of them:\n" .
                                       "  3: S_TEXT/UTF8, de, \"Deutsch (Forced)\", forced\n  4: S_TEXT/ASS, eng, \"English\", default\n", $stderr);
         $this->assertSame(3, $this->runBinary(["convert", "movie.mkv", "--to", "srt", "--track", "7", "-o", "-"])[0]);
         $this->assertSame([3, "", "trip.srt: ParsingException (Error #100): The file is not a Matroska or WebM file.\n"],
@@ -218,7 +218,7 @@ class BinaryInputTest extends BinaryTestCase
     public function testInputFpsReadsCsvTimesInFrames(): void
     {
         copy(self::FILES . "csv/own_frame_times.csv", "$this->dir/frames.csv");
-        $expected = Subtitle::fromString($this->file("frames.csv"), Format::Csv, new ReadOptions(format: new CsvReadOptions(frameRate: 25)));
+        $expected = Subtitle::fromString($this->file("frames.csv"), Format::Csv, new ReadOptions(formats: [new CsvReadOptions(frameRate: 25)]));
 
         $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary(["convert", "frames.csv", "--to", "srt", "-o", "-", "--input-fps", "25"]));
         $this->assertSame([0, str_replace("\r\n", "\n", $this->file("frames.csv")), ""],
@@ -229,7 +229,7 @@ class BinaryInputTest extends BinaryTestCase
     public function testSccRollUpLinesReadsEachRowOnce(): void
     {
         copy(self::FILES . "scc/real/rollup_news_ndf.scc", "$this->dir/news.scc");
-        $lines  = Subtitle::fromString($this->file("news.scc"), Format::Scc, new ReadOptions(format: new SccReadOptions(rollUp: SccRollUp::Lines)));
+        $lines  = Subtitle::fromString($this->file("news.scc"), Format::Scc, new ReadOptions(formats: [new SccReadOptions(rollUp: SccRollUp::Lines)]));
         $screen = Subtitle::fromString($this->file("news.scc"), Format::Scc);
 
         $this->assertSame([0, $lines->toString(Format::SubRip), ""], $this->runBinary(["convert", "news.scc", "--to", "srt", "-o", "-", "--scc-roll-up", "Lines"]));
@@ -293,7 +293,7 @@ class BinaryInputTest extends BinaryTestCase
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "movie.mp4", "--track", "5", "--to", "srt", "-o", "-"]);
         $this->assertSame([3, "", "movie.mp4: ParsingException (Error #100): Track 5 has the codec enct and is encrypted.\n"], [$code, $stdout, $stderr]);
         [$code, , $stderr] = $this->runBinary(["convert", "movie.mp4", "--from", "srt", "--to", "vtt", "-o", "-"]);
-        $this->assertSame([3, "movie.mp4: InvalidParserException (Error #102): The input is an MP4 file. Pass --track N.\n"],
+        $this->assertSame([3, "movie.mp4: UnsupportedFormatException (Error #102): The input is an MP4 file. Pass --track N.\n"],
                           [$code, $stderr]);
     }
 

@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
@@ -45,7 +46,7 @@ class YouTubeTimedTextParserTest extends TestCase
     {
         $parser = new YouTubeTimedTextParser();
 
-        $this->assertSame($expected, $parser->parse($content, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)))->getCues()[0]->getText());
+        $this->assertSame($expected, $parser->parse($content, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]))->getCues()[0]->getText());
     }
 
 
@@ -111,7 +112,7 @@ class YouTubeTimedTextParserTest extends TestCase
         $cues     = $subtitle->getCues();
 
         $this->assertSame(
-            [[7, '<font color="#ff0000"><b>red</b></font>'], [6, "<i><u>styled</u></i> plain"], [null, "no anchor"]],
+            [[Alignment::TopLeft, '<font color="#ff0000"><b>red</b></font>'], [Alignment::MiddleRight, "<i><u>styled</u></i> plain"], [Alignment::BottomCenter, "no anchor"]],
             array_map(fn ($cue) => [$cue->getAlignment(), $cue->getText()], $cues)
         );
         $this->assertSame(["wp" => "1", "p" => "1"], $cues[0]->findFormatData("youtube"));
@@ -129,7 +130,7 @@ class YouTubeTimedTextParserTest extends TestCase
         $subtitle = (new YouTubeTimedTextParser())->parse($json, new ReadOptions());
         $cue      = $subtitle->getCues()[0];
 
-        $this->assertSame(3, $cue->getAlignment());
+        $this->assertSame(Alignment::BottomRight, $cue->getAlignment());
         $this->assertSame('<font color="#00ff00"><b>green</b></font> text', $cue->getText());
         $this->assertSame(["wpWinPosId" => 1, "segments" => [["pPenId" => 1], []]], $cue->findFormatData("youtube"));
         $this->assertSame("pb3", $subtitle->findFormatData("youtube")["wireMagic"]);
@@ -142,7 +143,7 @@ class YouTubeTimedTextParserTest extends TestCase
         $json   = '{"events": [{"tStartMs": 0, "dDurationMs": 3000, "segs": [{"utf8": "one"}, {"utf8": "\ntwo", "tOffsetMs": 1500}]},
                                {"tStartMs": 3000, "dDurationMs": 1000, "segs": [{"utf8": "[Music]"}]}]}';
 
-        $cues = (new YouTubeTimedTextParser())->parse($json, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)))->getCues();
+        $cues = (new YouTubeTimedTextParser())->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]))->getCues();
 
         $this->assertSame(["<00:00:00.000>one", "<00:00:01.500>two"], $cues[0]->getLines());
         $this->assertSame("[Music]", $cues[1]->getText());

@@ -64,7 +64,7 @@ class YouTubeTimedTextRealFilesTest extends TestCase
     {
         $parser = new YouTubeTimedTextParser();
 
-        return $parser->parse(file_get_contents(self::DIR . $fileName), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
+        return $parser->parse(file_get_contents(self::DIR . $fileName), new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
     }
 
 
@@ -109,7 +109,7 @@ class YouTubeTimedTextRealFilesTest extends TestCase
     {
         $cues = self::parse("styled.en.srv3")->getCues();
 
-        $this->assertSame([8, 2, 2, 7, null], array_map(fn ($cue) => $cue->getAlignment(), $cues));
+        $this->assertSame([8, 2, 2, 7, 2], array_map(fn ($cue) => $cue->getAlignment()->value, $cues));
         $this->assertSame("<font color=\"#00ffff\"><i>Pier 3 'North'</i></font>", $cues[3]->getText());
     }
 

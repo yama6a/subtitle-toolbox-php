@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\JsonWriteOptions;
 use SubtitleToolbox\Image\CueImage;
@@ -19,7 +20,7 @@ class JsonFormatterTest extends TestCase
     public function testWritesCompactJsonByDefault(): void
     {
         $subtitle = (new Subtitle())->setMetadata(Subtitle::METADATA_TITLE, "Big Buck Bunny")->setMetadata(Subtitle::METADATA_LANGUAGE, "en");
-        $subtitle->addCue((new SubtitleCue(1.5, 4, ["Hello", "<i>world</i>"]))->setIdentifier("intro")->setAlignment(8));
+        $subtitle->addCue((new SubtitleCue(1.5, 4, ["Hello", "<i>world</i>"]))->setIdentifier("intro")->setAlignment(Alignment::TopCenter));
         $subtitle->addComment("Translated by Jane Doe", 0);
 
         $this->assertSame(
@@ -44,7 +45,7 @@ class JsonFormatterTest extends TestCase
 
     public function testPrettyPrintEndsWithANewLine(): void
     {
-        $json = (new Subtitle())->toString(Format::Json, new WriteOptions(lineEnding: LineEnding::Crlf, format: new JsonWriteOptions(prettyPrint: true)));
+        $json = (new Subtitle())->toString(Format::Json, new WriteOptions(lineEnding: LineEnding::Crlf, formats: [new JsonWriteOptions(prettyPrint: true)]));
 
         $this->assertSame("{\r\n    \"version\": 1,\r\n    \"metadata\": {},\r\n    \"comments\": [],\r\n    \"formatData\": {},\r\n    \"cues\": []\r\n}\r\n", $json);
     }
@@ -78,7 +79,18 @@ class JsonFormatterTest extends TestCase
 
         $this->assertSame(
             '{"version":1,"metadata":{},"comments":[],"cues":[{"start":1.0,"end":2.0,"lines":["Rain"],"identifier":null,"alignment":null}]}',
-            $subtitle->toString(Format::Json, new WriteOptions(format: new JsonWriteOptions(withFormatData: false)))
+            $subtitle->toString(Format::Json, new WriteOptions(formats: [new JsonWriteOptions(withFormatData: false)]))
         );
+    }
+
+
+    public function testBottomCenterIsWrittenAsNull(): void
+    {
+        $subtitle = Subtitle::load(__DIR__ . "/../files/vtt/real/w3c_cue_settings.vtt", Format::WebVtt);
+        $array    = $subtitle->toArray(false);
+
+        $this->assertSame("center", $subtitle->getCues()[2]->findFormatData("vtt")["align"]);
+        $this->assertSame([1, 3, null], array_column($array["cues"], "alignment"));
+        $this->assertSame(Alignment::BottomCenter, Subtitle::fromArray($array)->getCues()[2]->getAlignment());
     }
 }

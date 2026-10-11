@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
@@ -218,7 +219,7 @@ final class AssParser extends SubtitleParser
 
         [$startTime, $endTime] = $this->orderedTimes($startTime, $this->secondsFromString($fields[$end], $lineNumber), $lineNumber, $eventIndex, [$line]);
         $cue = new SubtitleCue($startTime, $endTime, $lines);
-        $cue->setAlignment($alignment);
+        $cue->setAlignment(Alignment::from($alignment ?? Alignment::BottomCenter->value));
         $cue->setFormatData(self::FORMAT_DATA_KEY, [
             "fields"    => array_diff_key($fields, array_flip([$start, $end, $text])),
             "text"      => $fields[$text],

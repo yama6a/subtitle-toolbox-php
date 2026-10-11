@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
+use Closure;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\CueNotFoundException;
 use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class CueEditingTest extends TestCase
@@ -207,7 +209,7 @@ class CueEditingTest extends TestCase
         $subtitle = TestSubtitles::fromCues([[0, 6, "First sentence.\nSecond sentence."], [7, 8, "next"]])
             ->addComment("about the split cue", 0)
             ->addComment("about next", 1);
-        $subtitle->getCues()[0]->setIdentifier("intro")->setAlignment(8);
+        $subtitle->getCues()[0]->setIdentifier("intro")->setAlignment(Alignment::TopCenter);
 
         $subtitle->splitCue(0, 3, 1);
 
@@ -217,7 +219,7 @@ class CueEditingTest extends TestCase
             TestSubtitles::describe($subtitle)
         );
         $this->assertSame(["intro", null], [$cues[0]->getIdentifier(), $cues[1]->getIdentifier()]);
-        $this->assertSame([8, 8], [$cues[0]->getAlignment(), $cues[1]->getAlignment()]);
+        $this->assertSame([Alignment::TopCenter, Alignment::TopCenter], [$cues[0]->getAlignment(), $cues[1]->getAlignment()]);
         $this->assertSame(
             [["about the split cue", "First sentence."], ["about next", "next"]],
             $this->getCommentsByCueText($subtitle)
@@ -242,11 +244,35 @@ class CueEditingTest extends TestCase
     }
 
 
-    public function testSplitUnknownCueThrowsException(): void
+    /**
+     * @return array<string, array{Closure(Subtitle): mixed, string}>
+     */
+    public static function missingCueEdits(): array
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot edit cue 3: the cue does not exist.");
-        TestSubtitles::fromCues([[0, 6, "a\nb"]])->splitCue(3, 3, 1);
+        return [
+            "split cue 9"       => [fn (Subtitle $subtitle) => $subtitle->splitCue(9, 3, 1), "Cannot split cue 9: the cue does not exist."],
+            "split cue -1"      => [fn (Subtitle $subtitle) => $subtitle->splitCue(-1, 3, 1), "Cannot split cue -1: the cue does not exist."],
+            "join cues 0 to 9"  => [fn (Subtitle $subtitle) => $subtitle->joinCues(0, 9), "Cannot join cue 9: the cue does not exist."],
+            "join cues -1 to 2" => [fn (Subtitle $subtitle) => $subtitle->joinCues(-1, 2), "Cannot join cue -1: the cue does not exist."],
+            "join cues 9 to 2"  => [fn (Subtitle $subtitle) => $subtitle->joinCues(9, 2), "Cannot join cue 9: the cue does not exist."],
+            "remove cue 9"      => [fn (Subtitle $subtitle) => $subtitle->removeCue(9), "Cannot remove cue 9: the cue does not exist."],
+        ];
+    }
+
+
+    #[DataProvider("missingCueEdits")]
+    public function testEditOfAMissingCueThrowsCueNotFoundAndKeepsTheSubtitle(Closure $edit, string $message): void
+    {
+        $subtitle = $this->parseHarbourTour();
+        $before   = $subtitle->toString(Format::WebVtt);
+
+        try {
+            $edit($subtitle);
+            $this->fail("The edit of a missing cue did not throw.");
+        } catch (CueNotFoundException $exception) {
+            $this->assertSame($message, $exception->getMessage());
+        }
+        $this->assertSame($before, $subtitle->toString(Format::WebVtt));
     }
 
 
@@ -267,13 +293,13 @@ class CueEditingTest extends TestCase
             ->addComment("about three", 3)
             ->addComment("about four", 4)
             ->addComment("end", 5);
-        $subtitle->getCues()[1]->setIdentifier("first")->setAlignment(7);
+        $subtitle->getCues()[1]->setIdentifier("first")->setAlignment(Alignment::TopLeft);
 
         $subtitle->joinCues(1, 3);
 
         $cues = $subtitle->getCues();
         $this->assertSame([[0.0, 1.0, "zero"], [1.0, 6.0, "one\ntwo\nthree"], [7.0, 8.0, "four"]], TestSubtitles::describe($subtitle));
-        $this->assertSame(["first", 7], [$cues[1]->getIdentifier(), $cues[1]->getAlignment()]);
+        $this->assertSame(["first", Alignment::TopLeft], [$cues[1]->getIdentifier(), $cues[1]->getAlignment()]);
         $this->assertSame([
             ["about one", "one\ntwo\nthree"],
             ["about two", "one\ntwo\nthree"],
@@ -289,14 +315,6 @@ class CueEditingTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("Cannot join cues 1 to 1: the first index must be lower than the last index.");
         TestSubtitles::fromCues([[0, 1, "zero"], [1, 2, "one"]])->joinCues(1, 1);
-    }
-
-
-    public function testJoinUnknownCueThrowsException(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot edit cue 2: the cue does not exist.");
-        TestSubtitles::fromCues([[0, 1, "zero"], [1, 2, "one"]])->joinCues(0, 2);
     }
 
 
@@ -394,7 +412,7 @@ class CueEditingTest extends TestCase
     public static function cuesThatCannotJoin(): array
     {
         return [
-            "other alignment"   => [(new SubtitleCue(1, 3, "Hello"))->setAlignment(8)],
+            "other alignment"   => [(new SubtitleCue(1, 3, "Hello"))->setAlignment(Alignment::TopCenter)],
             "forced"            => [(new SubtitleCue(1, 3, "Hello"))->setForced(true)],
             "other format data" => [(new SubtitleCue(1, 3, "Hello"))->setFormatData(Format::WebVtt->value, ["line" => "0"])],
         ];
@@ -414,7 +432,7 @@ class CueEditingTest extends TestCase
     {
         $subtitle = TestSubtitles::fromCues([
             new SubtitleCue(1, 3, "Hello"),
-            (new SubtitleCue(1, 3, "Hello"))->setAlignment(SubtitleCue::DEFAULT_ALIGNMENT),
+            (new SubtitleCue(1, 3, "Hello"))->setAlignment(Alignment::BottomCenter),
         ]);
 
         $this->assertSame([[1.0, 3.0, "Hello"]], TestSubtitles::describe($subtitle->removeDuplicateCues()));
@@ -493,7 +511,7 @@ class CueEditingTest extends TestCase
 
     public function testMergeSameTimeCuesKeepsCuesWithAnotherAlignmentOrForcedFlag(): void
     {
-        foreach ([(new SubtitleCue(1, 3, "B"))->setAlignment(8), (new SubtitleCue(1, 3, "B"))->setForced(true)] as $other) {
+        foreach ([(new SubtitleCue(1, 3, "B"))->setAlignment(Alignment::TopCenter), (new SubtitleCue(1, 3, "B"))->setForced(true)] as $other) {
             $subtitle = TestSubtitles::fromCues([new SubtitleCue(1, 3, "A"), $other]);
 
             $this->assertCount(2, $subtitle->mergeSameTimeCues()->getCues());

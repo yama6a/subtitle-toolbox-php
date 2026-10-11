@@ -62,7 +62,7 @@ final class CueList
      */
     public static function canJoin(SubtitleCue $first, SubtitleCue $second): bool
     {
-        return ($first->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT) === ($second->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT)
+        return $first->getAlignment() === $second->getAlignment()
             && $first->isForced() === $second->isForced()
             && self::speakers($first) === self::speakers($second);
     }

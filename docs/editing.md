@@ -17,7 +17,6 @@ $subtitle->shift(3, 600);                            // only cues that start at 
 $subtitle->shift(2, fromTime: 600, toTime: 900);     // only cues that start at 600 s or later and before 900 s
 $subtitle->scale(1.001);                             // multiply all times by 1.001
 $subtitle->convertFrameRate(25, 23.976);             // subtitle for a 25 fps video, video is 23.976 fps
-$subtitle->syncByTwoPoints(10, 12, 6260, 6005);      // 10 s becomes 12 s, 6260 s becomes 6005 s
 $subtitle->syncByPoints([                            // 10 s becomes 12 s, 600 s becomes 610 s, 1200 s becomes 1205 s
     new SyncPoint(oldSeconds: 10, newSeconds: 12),
     new SyncPoint(oldSeconds: 600, newSeconds: 610),
@@ -28,10 +27,10 @@ $subtitle->syncByPoints([                            // 10 s becomes 12 s, 600 s
 
 - **Negative times**: a start or end time that becomes negative becomes 0. The cue stays in the subtitle.
 - **Shift range**: the start time of a cue decides if `shift()` moves it. So a cue that starts before `$toTime` and ends after it moves as a whole. A cue that starts before `$fromTime` stays. `$toTime` must be after `$fromTime`, else `shift()` throws `InvalidArgumentException`.
-- **Sync by points**: `syncByPoints()` moves each old time to its new time. Between 2 points it corrects the times linearly. Before the first point and after the last point it continues the correction of the nearest 2 points. 1 point shifts all cues. 2 points give the same result as `syncByTwoPoints()`.
-- **Point order**: the old and new times must both increase from point to point. Else `syncByPoints()` throws `InvalidArgumentException`. `syncByTwoPoints()` takes its 2 points in either order.
+- **Sync by points**: `syncByPoints()` moves each old time to its new time. Between 2 points it corrects the times linearly. Before the first point and after the last point it continues the correction of the nearest 2 points. 1 point shifts all cues.
+- **Point order**: the old and new times must both increase from point to point. Else `syncByPoints()` throws `InvalidArgumentException`.
 - **Cue across a point**: each start, end and word timestamp moves by the segment that holds it. So a cue across a point keeps its times in step with the speech.
-- **Word timestamps**: these 5 methods also move the word timestamps in the cue text, such as `<00:00:02.000>`. `merge()` with an offset and `withSlice()` with `$moveToZero` move them too. A word timestamp that becomes negative becomes 0.
+- **Word timestamps**: these 4 methods also move the word timestamps in the cue text, such as `<00:00:02.000>`. `merge()` with an offset and `withSlice()` with `$moveToZero` move them too. A word timestamp that becomes negative becomes 0.
 - **Cue boundaries**: some methods move a start or end time without moving the speech. So the word timestamps keep their times. These are `fixOverlaps()`, `extendShortCues()`, `addLeadInOut()`, `limitLongCues()`, the [shot change timing](#shot-changes-and-gaps) and the snap of `DualSubtitle`.
 - **Speech-to-text format data**: the format data of Whisper, Deepgram, AssemblyAI, AWS Transcribe and Google input is a copy of the source file. It keeps the times of the source file. Read the word times from the word timestamps in the cue text.
 - **Other ways to sync**: [sync.md](sync.md) finds the offset and scale from a reference subtitle or the speech in the audio.
@@ -49,7 +48,7 @@ $subtitle->mergeSameTimeCues();                 // joins cues with the same star
 
 - **Merge**: the metadata and the format data of `$part1` win over those of `$part2`. The comments of both files stay before their cues. At the same place, the comments of `$part1` come first.
 - **Slice**: a cue that crosses the start or end time gets cut there. The copy keeps the metadata, the format data and the comments before the kept cues. The original stays unchanged.
-- **Split and join**: the first cue keeps its identifier. A comment before a joined cue moves before the result.
+- **Split and join**: the first cue keeps its identifier. A comment before a joined cue moves before the result. An index without a cue throws `CueNotFoundException`, as in `removeCue()`.
 - **Duplicates**: `removeDuplicateCues()` joins a run of adjacent cues with the same text. Two cues join when they are identical, overlap, touch, or are at most `maxGap` seconds apart. The default `maxGap` is 0. The joined cue runs from the earliest start to the latest end. Cues with other text between them stay apart. Same-text cues also stay apart when their alignment, forced flag or format data differ, such as an ASS `Glow` event on layer 0 under a `Default` event on layer 1. A negative, NAN or INF `maxGap` throws `InvalidArgumentException`.
 - **Same times**: `mergeSameTimeCues()` joins a run of adjacent cues whose start and end both differ by at most `tolerance` seconds from the first cue of the run. The default `tolerance` is 0. Example: ASS gives `- Where are you going?` and `- Home.` at 1.0 to 3.0 s as 2 events, one per speaker. Many TVs show only one of them. After the join, one cue holds both lines.
   - The joined cue keeps the start, identifier and format data of the first cue. It runs to the latest end of the run.
@@ -123,7 +122,7 @@ The `CueLimits` constructor throws `InvalidArgumentException` when `minDuration`
 | `mergeSameSpeakerAnyDuration` | false | join each cue with the next cue of the same `<v>` speaker, short or not, with no `maxDuration` limit. A cue without a `<v>` tag never joins |
 
 - **Order**: the method walks the cues in start time order. It joins a short cue with the next cue. When the next cue does not fit, it tries the previous cue. A joined cue that is still short joins again.
-- **Never joined**: cues with different `<v>` speakers, different alignments or different forced flags, and image cues. A cue without a `<v>` tag and a cue with one have different speakers. Alignment `null` and alignment 2 count as the same.
+- **Never joined**: cues with different `<v>` speakers, different alignments or different forced flags, and image cues. A cue without a `<v>` tag and a cue with one have different speakers.
 - **Joined cue**: it keeps the start, the identifier, the alignment and the format data of the first cue. It keeps the end of the last cue. A comment before a joined cue moves before the result.
 - **Text**: the method joins the lines with a space and wraps them as `wrapLines()` does. A line that starts with a dialogue dash stays on its own line. Each such line must then fit on one line. When both cues start with a `<v>` tag of the same speaker, the joined text keeps only the first tag.
 
@@ -215,6 +214,7 @@ Example at 24 fps with the default options: cue A ends at 10.000, cue B starts a
 A dual subtitle shows two languages at the same time, for example for language learners. Most players show only one subtitle track, so both languages go into one file.
 
 ```php
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Dual\DualSubtitle;
 use SubtitleToolbox\Dual\DualSubtitleMode;
 use SubtitleToolbox\Dual\DualSubtitleOptions;
@@ -229,14 +229,14 @@ $dual = DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(
     mode: DualSubtitleMode::TopBottom,              // English at the bottom, German at the top
     snapTolerance: 0.25,                            // seconds
     secondaryStyle: 'font color="#ffff00"',
-    secondaryAlignment: 8,
+    secondaryAlignment: Alignment::TopCenter,
 ));
 ```
 
 | Mode | Result for `00:00:01.000 --> 00:00:04.000 Where are you going?` and `00:00:01.200 --> 00:00:03.900 Wohin gehst du?` | Formats |
 |:--- |:--- |:--- |
 | `stack`, the default | one cue from 1.000 s to 4.000 s with the lines `Where are you going?` and `<i>Wohin gehst du?</i>` with `secondaryStyle: 'i'` | all |
-| `topBottom` | the English cue with alignment `null`, and the German cue with alignment 8 from 1.000 s to 4.000 s | SubRip with `{\an8}`, WebVTT, ASS, TTML, iTT, EBU STL and SCC. The other formats do not write the alignment |
+| `topBottom` | the English cue with `Alignment::BottomCenter`, and the German cue with `Alignment::TopCenter` from 1.000 s to 4.000 s | SubRip with `{\an8}`, WebVTT, ASS, TTML, iTT, EBU STL and SCC. The other formats do not write the alignment |
 
 - **Stack**: each secondary cue joins the primary cue that it overlaps most. The joined cue spans from the earlier start to the later end. A cue without an overlap stays a cue of its own.
 - **Top and bottom**: a secondary start or end time moves to the closest primary start or end time within `snapTolerance`. So the two languages appear and disappear together. A cue keeps its times when both would move to the same time.
