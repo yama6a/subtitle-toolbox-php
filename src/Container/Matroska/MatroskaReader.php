@@ -94,7 +94,6 @@ final class MatroskaReader implements ContainerReader
 
     private const TRACK_TYPE_SUBTITLE     = 0x11;
     private const DEFAULT_TIMESTAMP_SCALE = 1000000;
-    private const MAX_HOURS               = 100000;
     private const SCOPE_FRAMES            = 1;
     private const SCOPE_CODEC_PRIVATE     = 2;
     private const ALGO_ZLIB               = 0;
@@ -640,9 +639,9 @@ final class MatroskaReader implements ContainerReader
         $end   = $start + ($block["duration"] !== null
             ? $block["duration"] * $this->timestampScale
             : $this->trackData[$trackNumber]["defaultDuration"] ?? 0);
-        if (max(abs($start), abs($end)) >= self::MAX_HOURS * 3600 * 1000000000) {
+        if (max(abs($start), abs($end)) >= Timecode::MAX_HOURS * 3600 * 1000000000) {
             throw new ParsingException("The block of track $trackNumber at byte $offset has the time {$block['start']} at a TimestampScale of " .
-                                       "$this->timestampScale ns. Times must be below " . self::MAX_HOURS . " hours.");
+                                       "$this->timestampScale ns. Times must be below " . Timecode::MAX_HOURS . " hours.");
         }
     }
 

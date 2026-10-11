@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use Generator;
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\AlignmentGrid;
 use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
@@ -25,8 +26,9 @@ final class WebVttParser extends SubtitleParser
     /** @internal */
     public const REGION_SETTINGS = ["id", "width", "lines", "regionanchor", "viewportanchor", "scroll"];
 
-    private const SIGNATURE = "WEBVTT";
-    private const NOTE      = "NOTE";
+    private const SIGNATURE    = "WEBVTT";
+    private const NOTE         = "NOTE";
+    private const TIMING_ARROW = "-->";
 
     private const TIMESTAMP_PATTERN = "((\d+):)?([0-5]\d):([0-5]\d)\.(\d{3})";
 
@@ -107,8 +109,8 @@ final class WebVttParser extends SubtitleParser
                 $repaired = true;
                 break;
             }
-            if (str_contains($line, "-->")) {
-                if (!preg_match("/^" . self::TIMESTAMP_PATTERN . "[ \t]*-->[ \t]*" . self::TIMESTAMP_PATTERN . "(?!\d)/", trim($line))) {
+            if (self::hasArrow($line)) {
+                if (!preg_match("/^" . self::TIMESTAMP_PATTERN . "[ \t]*" . self::TIMING_ARROW . "[ \t]*" . self::TIMESTAMP_PATTERN . "(?!\d)/", trim($line))) {
                     break;
                 }
                 $identifier = trim((string) end($skipped)) !== "" ? [array_key_last($skipped) => array_pop($skipped)] : [];
@@ -165,7 +167,7 @@ final class WebVttParser extends SubtitleParser
         $firstLine = trim($rawLines[0]);
         try {
             switch (true) {
-                case str_contains($rawLines[0], "-->") || str_contains($rawLines[1] ?? "", "-->"):
+                case self::hasArrow($rawLines[0]) || self::hasArrow($rawLines[1] ?? ""):
                     return $this->parseCueBlock($rawLines, $index, $lineNumber);
                 case $this->startsWithKeyword($firstLine, self::NOTE):
                     return $this->parseComment($rawLines);
@@ -263,7 +265,7 @@ final class WebVttParser extends SubtitleParser
 
     private function blockRules(): CueBlockRules
     {
-        return new CueBlockRules(fn (string $line): bool => str_contains($line, "-->"), false);
+        return new CueBlockRules(self::hasArrow(...), false);
     }
 
 
@@ -279,7 +281,7 @@ final class WebVttParser extends SubtitleParser
     private function firstTimingLineOffset(array $block): ?int
     {
         foreach (array_slice($block, 1, null, true) as $offset => $line) {
-            if (str_contains($line, "-->")) {
+            if (self::hasArrow($line)) {
                 return $offset;
             }
         }
@@ -307,9 +309,9 @@ final class WebVttParser extends SubtitleParser
             }
 
             $startsCue = count($current) === 0
-                         || (count($current) === 1 && !str_contains($current[0], "-->"));
+                         || (count($current) === 1 && !self::hasArrow($current[0]));
             // The header block is exempt, so that a missing empty line after WEBVTT still throws.
-            if (str_contains($line, "-->") && !$startsCue && $hasBlocks) {
+            if (self::hasArrow($line) && !$startsCue && $hasBlocks) {
                 yield [$startLine, $current];
                 $current = [];
             }
@@ -326,13 +328,13 @@ final class WebVttParser extends SubtitleParser
 
     private function hasTimingLine(array $block): bool
     {
-        foreach ($block as $line) {
-            if (str_contains($line, "-->")) {
-                return true;
-            }
-        }
+        return array_filter($block, self::hasArrow(...)) !== [];
+    }
 
-        return false;
+
+    private static function hasArrow(string $line): bool
+    {
+        return str_contains($line, self::TIMING_ARROW);
     }
 
 
@@ -351,7 +353,7 @@ final class WebVttParser extends SubtitleParser
 
         $headerLines = array_slice($rawLines, 1);
         foreach ($headerLines as $offset => $line) {
-            if (str_contains($line, "-->")) {
+            if (self::hasArrow($line)) {
                 throw new ParsingException("The WEBVTT header has no empty line before the first cue.", $lineNumber + 1 + $offset);
             }
         }
@@ -382,12 +384,12 @@ final class WebVttParser extends SubtitleParser
 
     private function parseCue(array $rawLines, int $index, ?int $lineNumber): SubtitleCue
     {
-        if (str_contains($rawLines[1] ?? "", "-->")) {
+        if (self::hasArrow($rawLines[1] ?? "")) {
             $identifier = $rawLines[0];
             $rawLines   = array_slice($rawLines, 1);
             $lineNumber = $lineNumber === null ? null : $lineNumber + 1;
         }
-        $times = explode("-->", $rawLines[0], 2);
+        $times = explode(self::TIMING_ARROW, $rawLines[0], 2);
         $end   = trim($times[1]);
         // Settings may follow the end time without white space, as in "00:01.000line:40%". A fourth fraction digit is no setting.
         if (preg_match("/^(" . self::TIMESTAMP_PATTERN . ")((?!\d)[ \t]*(.*))?$/", $end, $matches)) {
@@ -424,8 +426,8 @@ final class WebVttParser extends SubtitleParser
 
         $settings  = $this->parseSettings($settingsText, self::CUE_SETTINGS);
         $alignment = $this->settingsToAlignment($settings);
-        $cue->setFormatData(self::FORMAT_DATA_KEY, $alignment === null ? $settings : [...$settings, "alignment" => $alignment]);
-        $cue->setAlignment(Alignment::from($alignment ?? Alignment::BottomCenter->value));
+        $cue->setFormatData(self::FORMAT_DATA_KEY, $alignment === null ? $settings : [...$settings, "alignment" => $alignment->value]);
+        $cue->setAlignment($alignment ?? Alignment::BottomCenter);
 
         return $cue;
     }
@@ -483,29 +485,29 @@ final class WebVttParser extends SubtitleParser
     /**
      * Maps only the values with an unambiguous screen position. Start and end depend on the text direction.
      */
-    private function settingsToAlignment(array $settings): ?int
+    private function settingsToAlignment(array $settings): ?Alignment
     {
         if ($settings === [] || isset($settings["vertical"])) {
             return null;
         }
 
         $row = match ($settings["line"] ?? null) {
-            null, "-1", "100%,end"  => 0,
-            "50%,center"            => 3,
-            "0", "0%", "0,start"    => 6,
+            null, "-1", "100%,end"  => AlignmentGrid::BOTTOM_ROW,
+            "50%,center"            => AlignmentGrid::MIDDLE_ROW,
+            "0", "0%", "0,start"    => AlignmentGrid::TOP_ROW,
             default                 => null,
         };
         $column = match ($settings["align"] ?? null) {
-            "left"           => 1,
-            null, "center"   => 2,
-            "right"          => 3,
+            "left"           => AlignmentGrid::LEFT,
+            null, "center"   => AlignmentGrid::CENTER,
+            "right"          => AlignmentGrid::RIGHT,
             default          => null,
         };
         if ($row === null || $column === null || !isset($settings["line"]) && !isset($settings["align"])) {
             return null;
         }
 
-        return $row + $column;
+        return AlignmentGrid::of($row, $column);
     }
 
 

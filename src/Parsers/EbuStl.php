@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\AlignmentGrid;
 use SubtitleToolbox\Encoding\CodePage;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Timecode;
@@ -45,6 +46,9 @@ final class EbuStl
     public const TTI_JC  = 14;
     public const TTI_CF  = 15;
     public const TTI_TF  = 16;
+
+    // The TTI_CF byte of a TTI block that holds a comment and no subtitle.
+    public const COMMENT_FLAG = 1;
 
     public const SUBTITLE_NUMBER_SIZE = 2;
     public const TIME_CODE_SIZE       = 4;
@@ -94,13 +98,9 @@ final class EbuStl
 
     public const TELETEXT_MAX_ROW = 23;
 
-    public const JUSTIFY_LEFT  = 1;
-    public const JUSTIFY_RIGHT = 3;
-
-    // The bottom, middle and top rows of the numeric keypad layout, as offsets from alignment 1.
-    private const KEYPAD_BOTTOM_ROW = 0;
-    private const KEYPAD_MIDDLE_ROW = 3;
-    private const KEYPAD_TOP_ROW    = 6;
+    public const JUSTIFY_LEFT   = 1;
+    public const JUSTIFY_CENTER = 2;
+    public const JUSTIFY_RIGHT  = 3;
 
     public const ITALICS_ON      = 0x80;
     public const ITALICS_OFF     = 0x81;
@@ -119,18 +119,18 @@ final class EbuStl
     public static function alignment(int $verticalPosition, int $justificationCode, int $maxRow): Alignment
     {
         $column = match ($justificationCode) {
-            self::JUSTIFY_LEFT  => 0,
-            self::JUSTIFY_RIGHT => 2,
-            default             => 1,
+            self::JUSTIFY_LEFT  => AlignmentGrid::LEFT,
+            self::JUSTIFY_RIGHT => AlignmentGrid::RIGHT,
+            default             => AlignmentGrid::CENTER,
         };
 
         $row = match (true) {
-            3 * $verticalPosition < $maxRow     => self::KEYPAD_TOP_ROW,
-            3 * $verticalPosition < 2 * $maxRow => self::KEYPAD_MIDDLE_ROW,
-            default                             => self::KEYPAD_BOTTOM_ROW,
+            3 * $verticalPosition < $maxRow     => AlignmentGrid::TOP_ROW,
+            3 * $verticalPosition < 2 * $maxRow => AlignmentGrid::MIDDLE_ROW,
+            default                             => AlignmentGrid::BOTTOM_ROW,
         };
 
-        return Alignment::from(1 + $row + $column);
+        return AlignmentGrid::of($row, $column);
     }
 
 

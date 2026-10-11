@@ -20,8 +20,13 @@ final class Timecode
 
     private const SECONDS_PER_MINUTE = 60;
 
-    // The parsers reject a time from this many hours, so parse() does too.
-    private const MAX_HOURS = 100000;
+    /**
+     * The parsers, the Matroska reader and parse() reject a time from this many hours.
+     * Formatters split cue times into integer milliseconds, which overflow far above this bound.
+     *
+     * @internal
+     */
+    public const MAX_HOURS = 100000;
 
     private const CLOCK_REGEX  = '/^(?:(\d+):([0-5]\d)|(\d+)):([0-5]\d)(?:[.,](\d+))?$/';
     private const FRAMES_REGEX = '/^(\d+):([0-5]\d):([0-5]\d):(\d{2,})$/';
@@ -40,7 +45,7 @@ final class Timecode
      * - h:mm:ss:ff, where ff counts frames after the last whole second. This shape needs $frameRate.
      * Minutes and seconds after a colon have 2 digits from 00 to 59. Signs, spaces and drop-frame timecodes are invalid.
      *
-     * @throws InvalidArgumentException when $timecode has another shape, reaches 100000 hours, or counts frames without $frameRate.
+     * @throws InvalidArgumentException when $timecode has another shape, reaches MAX_HOURS, or counts frames without $frameRate.
      */
     public static function parse(string $timecode, ?FrameRate $frameRate = null): float
     {

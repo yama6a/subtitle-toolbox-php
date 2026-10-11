@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use DOMElement;
 use DOMNode;
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\AlignmentGrid;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\TtmlNamespaces;
@@ -146,8 +147,10 @@ final class TtmlHead
         $uri = $context->namespaces[$context->tts];
         $region->setAttributeNS($uri, "$context->tts:origin", "10% 10%");
         $region->setAttributeNS($uri, "$context->tts:extent", "80% 80%");
-        $region->setAttributeNS($uri, "$context->tts:displayAlign", ["after", "center", "before"][intdiv($alignment->value - 1, 3)]);
-        $region->setAttributeNS($uri, "$context->tts:textAlign", ["left", "center", "right"][($alignment->value - 1) % 3]);
+        $displayAlign = [AlignmentGrid::BOTTOM_ROW => "after", AlignmentGrid::MIDDLE_ROW => "center", AlignmentGrid::TOP_ROW => "before"];
+        $textAlign    = [AlignmentGrid::LEFT => "left", AlignmentGrid::CENTER => "center", AlignmentGrid::RIGHT => "right"];
+        $region->setAttributeNS($uri, "$context->tts:displayAlign", $displayAlign[AlignmentGrid::row($alignment)]);
+        $region->setAttributeNS($uri, "$context->tts:textAlign", $textAlign[AlignmentGrid::column($alignment)]);
         self::insertChild($layout, $region, null, 3);
 
         return $context->regionIds[$alignment->value] = $id;

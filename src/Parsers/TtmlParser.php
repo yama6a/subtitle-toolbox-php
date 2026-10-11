@@ -10,6 +10,7 @@ use DOMNode;
 use DOMXPath;
 use LibXMLError;
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\AlignmentGrid;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
@@ -375,8 +376,8 @@ final class TtmlParser extends SubtitleParser
         }
         $textAlign = $this->styles->ownProperties($paragraph)["textAlign"] ?? $scope->textAlign;
         $alignment = $this->alignment($region, $textAlign);
-        $cue->setAlignment(Alignment::from($alignment ?? Alignment::BottomCenter->value));
-        $cue->setFormatData(self::FORMAT_DATA_KEY, array_filter(["attributes" => $attributes, "alignment" => $alignment], fn (mixed $value): bool => $value !== [] && $value !== null));
+        $cue->setAlignment($alignment ?? Alignment::BottomCenter);
+        $cue->setFormatData(self::FORMAT_DATA_KEY, array_filter(["attributes" => $attributes, "alignment" => $alignment?->value], fn (mixed $value): bool => $value !== [] && $value !== null));
 
         $forced = $this->forcedDisplay($paragraph) ?? $scope->forced ?? $this->regionForcedDisplay($region) ?? false;
         $cue->setForced($forced || $this->hasForcedSpan($paragraph, $forced));
@@ -702,7 +703,7 @@ final class TtmlParser extends SubtitleParser
      *
      * @see https://www.w3.org/TR/ttml2/#style-attribute-displayAlign
      */
-    private function alignment(?string $regionId, ?string $textAlign): ?int
+    private function alignment(?string $regionId, ?string $textAlign): ?Alignment
     {
         if ($regionId !== null && !isset($this->styles->regions[$regionId]) || $regionId === null && $this->styles->regions !== []) {
             return null;
@@ -710,9 +711,9 @@ final class TtmlParser extends SubtitleParser
 
         $properties = $this->styles->regionProperties($regionId);
         $column = match (trim($textAlign ?? $properties["textAlign"] ?? "start")) {
-            "left"   => 1,
-            "center" => 2,
-            "right"  => 3,
+            "left"   => AlignmentGrid::LEFT,
+            "center" => AlignmentGrid::CENTER,
+            "right"  => AlignmentGrid::RIGHT,
             default  => null,
         };
         $origin = $this->verticalLength($properties["origin"] ?? "auto", 0.0);
@@ -728,12 +729,14 @@ final class TtmlParser extends SubtitleParser
             default  => null,
         };
 
-        return match (true) {
-            $anchor === null       => null,
-            $anchor < 1 / 3        => 6 + $column,
-            $anchor > 2 / 3        => $column,
-            default                => 3 + $column,
+        $row = match (true) {
+            $anchor === null => null,
+            $anchor < 1 / 3  => AlignmentGrid::TOP_ROW,
+            $anchor > 2 / 3  => AlignmentGrid::BOTTOM_ROW,
+            default          => AlignmentGrid::MIDDLE_ROW,
         };
+
+        return $row === null ? null : AlignmentGrid::of($row, $column);
     }
 
 
