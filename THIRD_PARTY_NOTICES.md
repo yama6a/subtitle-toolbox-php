@@ -516,6 +516,7 @@ SOFTWARE.
 - Licence: MIT
 - Checked at: `ae3c520a8aa13130f36d84df02ce15a843bc9bdb`
 - Files written for this repository in the shape of its fixtures:
+  - `tests/files/json/real/pysubs2_regions_3x.json`
   - `tests/files/mpl2/real/pysubs2_shape_bom.txt`
   - `tests/files/sami/real/pysubs2_source_id.smi`
   - `tests/files/ttml/real/pysubs2_regions.ttml`
@@ -647,6 +648,7 @@ SOFTWARE.
 - Licence: W3C Software and Document License, 2023 version, <https://www.w3.org/copyright/software-license-2023/>
 - Files copied from the examples:
   - `tests/files/forced/w3c_imsc11_forced.ttml`
+  - `tests/files/json/real/w3c_cue_settings_3x.json`
   - `tests/files/ttml/real/w3c_dfxp_timing.dfxp`
   - `tests/files/ttml/real/w3c_imsc11_frames.ttml`
   - `tests/files/ttml/real/w3c_imsc11_line_gaps.ttml`

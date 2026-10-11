@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\JsonWriteOptions;
 use SubtitleToolbox\Image\CueImage;
@@ -60,6 +61,34 @@ class JsonRealFilesTest extends TestCase
         $json = file_get_contents(self::DIR . $fileName);
 
         $this->assertSame($json, Subtitle::fromStringAutoDetectFormat($json)->toString(Format::Json, new WriteOptions(formats: [new JsonWriteOptions(prettyPrint: true)])));
+    }
+
+
+    public static function filesFrom3x(): array
+    {
+        return [
+            "WebVTT cue settings" => ["w3c_cue_settings_3x.json", "vtt/real/w3c_cue_settings.vtt", Format::WebVtt],
+            "TTML regions"        => ["pysubs2_regions_3x.json", "ttml/real/pysubs2_regions.ttml", Format::Ttml],
+        ];
+    }
+
+
+    #[DataProvider("filesFrom3x")]
+    public function testJsonFrom3xKeepsTheStoredPositions(string $jsonFile, string $sourceFile, Format $format): void
+    {
+        $json   = Subtitle::fromString(file_get_contents(self::DIR . $jsonFile), Format::Json);
+        $source = Subtitle::load(__DIR__ . "/../files/" . $sourceFile, $format);
+
+        $this->assertSame($source->toString($format), $json->toString($format));
+    }
+
+
+    public function testJsonFrom3xStillTakesANewAlignment(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "w3c_cue_settings_3x.json"), Format::Json);
+        $subtitle->getCues()[0]->setAlignment(Alignment::TopCenter);
+
+        $this->assertStringContainsString("00:00:00.000 --> 00:00:04.000 size:35% line:0\n", $subtitle->toString(Format::WebVtt));
     }
 
 
