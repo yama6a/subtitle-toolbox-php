@@ -52,6 +52,34 @@ class EbmlReaderTest extends TestCase
     }
 
 
+    public static function brokenElements(): array
+    {
+        return [
+            "ID with first byte 0"     => ["\x00\xA3", fn (EbmlReader $reader) => $reader->readElementHeader(), "The EBML element header at byte 0 is not valid."],
+            "size with first byte 0"   => ["\xA3\x00\x81", fn (EbmlReader $reader) => $reader->readElementHeader(), "The EBML element header at byte 0 is not valid."],
+            "size cut by the file end" => ["\xA3\x40", fn (EbmlReader $reader) => $reader->readElementHeader(), "The EBML element header at byte 0 is not valid."],
+            "data cut by the file end" => [MkvFixtureWriter::element(0x86, "S_TEXT/UTF8") . "\x86\x8BS_TEXT", fn (EbmlReader $reader) => [
+                $reader->readString($reader->readElementHeader()["size"]),
+                $reader->readString($reader->readElementHeader()["size"]),
+            ], "The element data at byte 15 needs 11 bytes, but the file ends before."],
+        ];
+    }
+
+
+    #[DataProvider("brokenElements")]
+    public function testThrowsForABrokenElement(string $bytes, \Closure $read, string $message): void
+    {
+        $stream = fopen("php://memory", "w+b");
+        fwrite($stream, $bytes);
+        rewind($stream);
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage($message);
+
+        $read(new EbmlReader($stream));
+    }
+
+
     public static function unsignedOutOfRange(): array
     {
         return [

@@ -309,6 +309,96 @@ class MatroskaReaderTest extends TestCase
     }
 
 
+    public static function brokenFiles(): array
+    {
+        $tracks    = fn (string $entry): string => MkvFixtureWriter::element(MkvFixtureWriter::TRACKS, $entry);
+        $encrypted = MkvFixtureWriter::element(0x6240, MkvFixtureWriter::uint(0x5031, 0) . MkvFixtureWriter::uint(0x5032, 1) .
+                                                       MkvFixtureWriter::uint(0x5033, 1) . MkvFixtureWriter::element(0x5035, ""));
+
+        return [
+            "laced block"                   => [
+                fn () => self::brokenFile(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::simpleBlock(2, 0, "\x01\x02ab", MkvFixtureWriter::LACING_XIPH)])),
+                "A block of track 2 uses lacing, which subtitle tracks do not use.",
+            ],
+            "block header too short"        => [
+                fn () => self::brokenFile(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::element(0xA3, "\x82\x00")])),
+                "The block header at byte 86 is not valid.",
+            ],
+            "child larger than its parent"  => [
+                fn () => self::brokenFile("", $tracks(MkvFixtureWriter::element(0xAE, MkvFixtureWriter::uint(0xD7, 2) . "\x86\x85ab"))),
+                "The element at byte 55 does not fit into its parent element.",
+            ],
+            "unknown size outside Segment and Cluster" => [
+                fn () => self::brokenFile("", MkvFixtureWriter::unknownSizeElement(MkvFixtureWriter::TRACKS, "")),
+                "The element 0x1654AE6B at byte 57 has an unknown size, which only Segment and Cluster may have.",
+            ],
+            "no Tracks element"             => [
+                fn () => self::brokenFile("", MkvFixtureWriter::info()),
+                "The file has no Tracks element.",
+            ],
+            "zlib data that does not inflate" => [
+                fn () => self::brokenFile(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 0, "not zlib", 1000)]),
+                                          ["encodings" => MkvFixtureWriter::compression(0, 0)]),
+                "The zlib data of track 2 cannot be decompressed.",
+            ],
+            "encrypted track"               => [
+                fn () => self::brokenFile(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 0, "secret", 1000)]),
+                                          ["encodings" => $encrypted]),
+                "Track 2 uses encryption or a compression other than zlib and header stripping.",
+            ],
+            "invalid element header in a cluster" => [
+                fn () => self::brokenFile(MkvFixtureWriter::cluster(0, []) . "\x00\x00\x00\x00"),
+                "The EBML element header at byte 84 is not valid.",
+            ],
+            "block data cut by the file end" => [
+                fn () => self::brokenFile(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 0, "The ferry leaves at noon.", 1000)]), cut: 10),
+                "The element data at byte 92 needs 25 bytes, but the file ends before.",
+            ],
+        ];
+    }
+
+
+    #[DataProvider("brokenFiles")]
+    public function testThrowsForABrokenFile(\Closure $read, string $message): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage($message);
+
+        $read();
+    }
+
+
+    public function testThrowsForAStreamThatIsNotSeekable(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The stream must be seekable.");
+
+        MatroskaReader::open(fopen("php://output", "wb"));
+    }
+
+
+    /**
+     * Extracts track 2 from a file with the given Tracks element, or one S_TEXT/UTF8 track 2 with the given fields, followed by $clusters.
+     * $cut removes bytes from the end of the file.
+     *
+     * @param string|array<string, mixed> $tracks
+     */
+    private static function brokenFile(string $clusters, string|array $tracks = [], int $cut = 0): Subtitle
+    {
+        if (is_array($tracks)) {
+            $tracks = MkvFixtureWriter::element(MkvFixtureWriter::TRACKS, MkvFixtureWriter::trackEntry($tracks + [
+                "number" => 2, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_TEXT/UTF8",
+            ]));
+        }
+        $file   = MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, $tracks . $clusters);
+        $stream = fopen("php://memory", "w+b");
+        fwrite($stream, substr($file, 0, strlen($file) - $cut));
+        rewind($stream);
+
+        return MatroskaReader::open($stream)->extract(2);
+    }
+
+
     public function testLeavesAStreamOpen(): void
     {
         $stream = fopen(self::DIR . "seek_head.mkv", "rb");
