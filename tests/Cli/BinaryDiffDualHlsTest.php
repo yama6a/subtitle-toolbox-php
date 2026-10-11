@@ -52,7 +52,7 @@ class BinaryDiffDualHlsTest extends BinaryTestCase
     }
 
 
-    public function testDiffReadsTheNewFileWithFrom2AndTrack2(): void
+    public function testDiffReadsTheNewFileWithNewFromAndNewTrack(): void
     {
         copy(self::FILES . "mkv/text_tracks.mkv", "$this->dir/movie.mkv");
         $mkv      = MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv");
@@ -60,15 +60,15 @@ class BinaryDiffDualHlsTest extends BinaryTestCase
 
         $this->assertStringContainsString("Der Zug nach Hamburg", $expected);
         $this->assertStringContainsString("Next stop: Central Station.", $expected);
-        $this->assertSame([1, $expected, ""], $this->runBinary(["diff", "movie.mkv", "movie.mkv", "--track", "3", "--track2", "8"]));
+        $this->assertSame([1, $expected, ""], $this->runBinary(["diff", "movie.mkv", "movie.mkv", "--track", "3", "--new-track", "8"]));
 
         $frames   = Subtitle::load(self::FIXTURES . "frames.sub", Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
         $expected = SubtitleDiff::toText(SubtitleDiff::compare(Subtitle::load(self::FIXTURES . "trip.srt", Format::SubRip), $frames));
-        $this->assertSame([1, $expected, ""], $this->runBinary(["diff", "trip.srt", "frames.sub", "--from2", "microdvd", "--input-fps", "25"]));
-        $this->assertSame([3, ""], array_slice($this->runBinary(["diff", "trip.srt", "frames.sub", "--from2", "subviewer"]), 0, 2));
+        $this->assertSame([1, $expected, ""], $this->runBinary(["diff", "trip.srt", "frames.sub", "--new-from", "microdvd", "--input-fps", "25"]));
+        $this->assertSame([3, ""], array_slice($this->runBinary(["diff", "trip.srt", "frames.sub", "--new-from", "subviewer"]), 0, 2));
 
-        $this->assertSame(2, $this->runBinary(["diff", "trip.srt", "frames.sub", "--from2", "docx"])[0]);
-        $this->assertSame(2, $this->runBinary(["diff", "movie.mkv", "movie.mkv", "--track", "3", "--track2", "x"])[0]);
+        $this->assertSame(2, $this->runBinary(["diff", "trip.srt", "frames.sub", "--new-from", "docx"])[0]);
+        $this->assertSame(2, $this->runBinary(["diff", "movie.mkv", "movie.mkv", "--track", "3", "--new-track", "x"])[0]);
     }
 
 
@@ -81,6 +81,22 @@ class BinaryDiffDualHlsTest extends BinaryTestCase
         $this->assertSame($error("dual"), $this->runBinary(["dual", "--primary", "trip.srt", "--secondary", "shop.vtt", "--keep-going"]));
         $this->assertSame($error("hls"), $this->runBinary(["hls", "talk.vtt", "--output-dir", "out", "--keep-going"]));
         $this->assertFileDoesNotExist("$this->dir/out");
+    }
+
+
+    public function testDiffAppliesFromTrackAndEncodingToBothFiles(): void
+    {
+        copy(self::FILES . "deepgram/real/pool_utterances_diarize.json", "$this->dir/old.json");
+        copy(self::FILES . "deepgram/real/pool_utterances_diarize.json", "$this->dir/new.json");
+        copy(self::FILES . "mkv/text_tracks.mkv", "$this->dir/movie.mkv");
+        $mkv      = MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv");
+
+        $this->assertSame([0, "", ""], $this->runBinary(["diff", "old.json", "new.json", "--from", "deepgram"]));
+        $this->assertSame([0, "", ""], $this->runBinary(["diff", "movie.mkv", "movie.mkv", "--track", "3"]));
+        $this->assertSame([1, SubtitleDiff::toText(SubtitleDiff::compare($mkv->extract(3), $mkv->extract(8))), ""],
+                          $this->runBinary(["diff", "movie.mkv", "movie.mkv", "--track", "3", "--new-track", "8"]));
+        $this->assertSame(1, $this->runBinary(["diff", "trip.srt", "new.json", "--new-from", "deepgram"])[0]);
+        $this->assertSame(3, $this->runBinary(["diff", "trip.srt", "new.json"])[0]);
     }
 
 
@@ -113,7 +129,7 @@ class BinaryDiffDualHlsTest extends BinaryTestCase
                           $this->runBinary(["dual", "--primary", "frames.sub", "--primary-from", "microdvd", "--secondary", "en.srt", "--input-fps", "25"]));
         $this->assertSame([3, ""], array_slice($this->runBinary(["dual", "--primary", "en.srt", "--secondary", "frames.sub", "--secondary-from", "subviewer"]), 0, 2));
 
-        foreach (["from" => "srt", "track" => "3", "from2" => "srt", "track2" => "3"] as $option => $value) {
+        foreach (["from" => "srt", "track" => "3", "new-from" => "srt", "new-track" => "3"] as $option => $value) {
             $this->assertSame([2, "", "Error: Unknown option --$option.\nRun \"subtitle-toolbox help dual\" for the usage.\n"],
                               $this->runBinary(["dual", "--primary", "en.srt", "--secondary", "movie.mkv", "--$option", $value]));
         }

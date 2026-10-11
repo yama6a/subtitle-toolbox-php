@@ -33,4 +33,15 @@ $subtitle->syncByPoints([new SyncPoint(oldSeconds: 10, newSeconds: 12), new Sync
 
 ## CLI diff
 
-TODO #711
+`diff` applies `--from`, `--track` and `--encoding` to both files. `--new-from` and `--new-track` replace `--from` and `--track` for the new file. `--from2` and `--track2` are removed.
+
+```sh
+# 3.x
+subtitle-toolbox diff a.json b.json --from deepgram --from2 deepgram
+subtitle-toolbox diff old.mkv new.mkv --track 3 --track2 8
+# 4.0
+subtitle-toolbox diff a.json b.json --from deepgram
+subtitle-toolbox diff old.mkv new.mkv --track 3 --new-track 8
+```
+
+A file that is not MKV, WebM or MP4 cannot take `--track`. For `diff old.mkv new.srt --track 3`, the new file fails. 
