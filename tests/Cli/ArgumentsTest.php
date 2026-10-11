@@ -74,6 +74,7 @@ class ArgumentsTest extends TestCase
         $this->assertSame(1.2, Arguments::parse(["--by=00:00:01.2"], self::spec())->positiveSeconds("by"));
         $this->assertSame(0.0, Arguments::parse(["--by", "00:00"], self::spec())->nonNegativeSeconds("by"));
         $this->assertNull(Arguments::parse([], self::spec())->seconds("by"));
+        $this->assertSame(359999999.0, Arguments::parse(["--by", "359999999"], self::spec())->seconds("by"));
     }
 
 
@@ -149,6 +150,9 @@ class ArgumentsTest extends TestCase
             "lone minus"         => ["seconds", "-", "The option --by needs seconds or a timecode such as 00:01:02.500, got \"-\"."],
             "two minus signs"    => ["seconds", "--00:01", "The option --by needs seconds or a timecode such as 00:01:02.500, got \"--00:01\"."],
             "infinite seconds"   => ["seconds", "1e999", "The option --by needs a finite number, got \"1e999\"."],
+            "huge seconds"       => ["seconds", "1e300", "The option --by needs a time below 100000 hours, got \"1e300\"."],
+            "100000 hours"       => ["seconds", "360000000", "The option --by needs a time below 100000 hours, got \"360000000\"."],
+            "-100000 hours"      => ["seconds", "-360000000", "The option --by needs a time below 100000 hours, got \"-360000000\"."],
             "zero timecode"      => ["positiveSeconds", "00:00", "The option --by must be greater than 0."],
             "negative timecode"  => ["nonNegativeSeconds", "-00:00:00.5", "The option --by must not be negative."],
         ];
