@@ -93,9 +93,9 @@ final class MicroDvdFormatter extends SubtitleFormatter
                 $line   = $matches[2];
             } elseif ($color === null &&
                       preg_match('/^<font\b([^>]*)>(.*)<\/font>$/si', $line, $matches) &&
-                      preg_match('/^#[0-9a-fA-F]{6}$/', trim(MarkupColors::fontColor($matches[1]) ?? ""), $hex) &&
+                      ($hex = MarkupColors::fontColorHex($matches[1])) !== null &&
                       !preg_match('/<\/?font\b/i', $matches[2])) {
-                $color = strtolower($hex[0]);
+                $color = $hex;
                 $line  = $matches[2];
             } else {
                 break;

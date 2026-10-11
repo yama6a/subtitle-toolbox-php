@@ -362,6 +362,8 @@ final class TtmlFormatter extends SubtitleFormatter
 
         if ($tag === "font") {
             $color = Markup::decodeEntities(trim(MarkupColors::fontColor($rest) ?? ""));
+            // A value that ttmlColor() cannot read stays as written, so that no color drops.
+            $color = MarkupColors::ttmlColor($color) ?? $color;
 
             return $color === "" ? "" : "<span" . $this->formatAttribute("$context->tts:color", $color) . ">";
         }

@@ -15,6 +15,7 @@ Cue lines hold HTML-like inline tags, the **core markup**. Parsers convert the s
 - **Escaping**: text that is not markup keeps `<`, `>` and `&` escaped as `&lt;`, `&gt;` and `&amp;`.
 - **Speaker names**: a quote in a name stays a raw character, for example `<v O'Neil>`.
 - **Font colors**: `<font color='#FF0000'>`, `<font color=#ff0000>` and `<FONT COLOR="#FF0000">` give the same color. The formatters read the `color` attribute with double quotes, single quotes or no quotes, in any case and next to other attributes.
+- **Color values**: formatters that convert a color, such as the ASS, SCC and WebVTT formatters, read the value with one rule. They accept `#rgb`, `#rrggbb`, `#rrggbbaa`, `rgb(r, g, b)`, `rgba(r, g, b, a)` and the 18 TTML color names, such as `yellow`, `aqua` or `navy`, in any case. So `#FF0`, `yellow` and `Yellow` all give `#ffff00`. Each formatter then writes the colors that its format has, see [formats.md](formats.md). TTML and iTT output keep a valid TTML color as it is and keep an alpha channel. The other formatters drop it.
 - **WebVTT color classes**: a WebVTT `<c>` tag with one of the 8 [color classes](https://www.w3.org/TR/webvtt1/#default-text-color) is a text color too. Formatters that write `<font color>` read `<c.yellow>` as `<font color="#ffff00">`. The colors are `white` `#ffffff`, `lime` `#00ff00`, `cyan` `#00ffff`, `red` `#ff0000`, `yellow` `#ffff00`, `magenta` `#ff00ff`, `blue` `#0000ff` and `black` `#000000`. When a tag has 2 color classes, the later one in this list wins, as in a browser.
 
 ## Helpers

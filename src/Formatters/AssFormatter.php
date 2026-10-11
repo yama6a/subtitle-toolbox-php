@@ -371,7 +371,8 @@ final class AssFormatter extends SubtitleFormatter
             } elseif (preg_match('/^<(\/?)([bius])>$/', $token, $matches)) {
                 $parts[] = ["tag", "\\" . $matches[2] . ($matches[1] === "" ? "1" : "0")];
             } elseif (preg_match('/^<font\b[^>]*>$/i', $token)) {
-                $color    = preg_match('/^#([0-9a-fA-F]{6})/', trim(MarkupColors::fontColor($token) ?? ""), $matches) ? strtoupper($matches[1]) : null;
+                $color    = MarkupColors::fontColorHex($token);
+                $color    = $color === null ? null : strtoupper(substr($color, 1));
                 $colors[] = $color;
                 if ($color !== null) {
                     $parts[] = ["tag", $this->colorTag($color)];

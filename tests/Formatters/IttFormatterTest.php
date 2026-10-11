@@ -84,8 +84,8 @@ class IttFormatterTest extends TestCase
         $this->assertSame(
             [
                 "<p begin=\"00:00:01:00\" end=\"00:00:02:00\" region=\"top\">Hi &amp; <span tts:fontWeight=\"bold\">bold"
-                . " <span tts:fontStyle=\"italic\">both</span></span><br/><span tts:color=\"#ff0000\">red</span>"
-                . " <span tts:textDecoration=\"underline\">u</span> s x</p>",
+                . " <span tts:fontStyle=\"italic\">both</span></span><br/><span tts:color=\"#ff000080\">red</span>"
+                . " <span tts:textDecoration=\"underline\">u</span> s <span tts:color=\"rgba(0,0,0,0)\">x</span></p>",
                 "<p begin=\"00:00:03:00\" end=\"00:00:04:00\" region=\"bottom\"><span tts:color=\"yellow\">left</span></p>",
                 "<p begin=\"00:00:05:00\" end=\"00:00:06:00\" region=\"top\">top right</p>",
             ],

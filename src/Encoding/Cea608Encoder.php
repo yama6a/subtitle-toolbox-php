@@ -17,10 +17,6 @@ use SubtitleToolbox\MarkupColors;
  */
 final class Cea608Encoder
 {
-    private const NAMED_COLORS = [
-        "white" => 0, "lime" => 1, "blue" => 2, "cyan" => 3, "aqua" => 3, "red" => 4, "yellow" => 5, "magenta" => 6, "fuchsia" => 6,
-    ];
-
     private const DEFAULT_ATTRIBUTES = ["color" => Cea608::WHITE, "italic" => false, "underline" => false];
 
 
@@ -84,24 +80,11 @@ final class Cea608Encoder
                 if ($closing) {
                     array_pop($style["colors"]);
                 } else {
-                    $style["colors"][] = self::fontColor($attributes) ?? end($style["colors"]) ?: Cea608::WHITE;
+                    $index             = array_search(MarkupColors::fontColorHex($attributes), Cea608::COLORS, true);
+                    $style["colors"][] = $index !== false ? $index : (end($style["colors"]) ?: Cea608::WHITE);
                 }
                 break;
         }
-    }
-
-
-    private static function fontColor(string $attributes): ?int
-    {
-        $color = MarkupColors::fontColor($attributes);
-        if ($color === null) {
-            return null;
-        }
-
-        $color = strtolower(trim(Markup::decodeEntities($color)));
-        $index = array_search(substr($color, 0, 7), Cea608::COLORS, true);
-
-        return $index !== false ? $index : self::NAMED_COLORS[$color] ?? null;
     }
 
 

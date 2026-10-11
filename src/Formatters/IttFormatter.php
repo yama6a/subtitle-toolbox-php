@@ -40,13 +40,6 @@ final class IttFormatter extends SubtitleFormatter
         "  </head>",
     ];
 
-    // TTML 1, section 8.3.13, named colors.
-    private const NAMED_COLORS = [
-        "black", "silver", "gray", "white", "maroon", "red", "purple", "fuchsia", "magenta",
-        "green", "lime", "olive", "yellow", "navy", "blue", "teal", "aqua", "cyan",
-    ];
-
-
     /**
      * Writes an Apple iTunes Timed Text file with SMPTE times, one div, and a top and a bottom region.
      *
@@ -155,16 +148,9 @@ final class IttFormatter extends SubtitleFormatter
         return preg_replace_callback(
             "/<font\b([^>]*)>/i",
             function (array $matches): string {
-                $color = MarkupColors::fontColor($matches[1]);
-                if ($color === null) {
-                    return "<font>";
-                }
-                $color = strtolower(trim(Markup::decodeEntities($color)));
-                if (preg_match("/^#[0-9a-f]{6}([0-9a-f]{2})?$/", $color)) {
-                    return "<font color=\"" . substr($color, 0, 7) . "\">";
-                }
+                $color = MarkupColors::ttmlColor(strtolower(trim(Markup::decodeEntities(MarkupColors::fontColor($matches[1]) ?? ""))));
 
-                return in_array($color, self::NAMED_COLORS, true) ? "<font color=\"$color\">" : "<font>";
+                return $color === null ? "<font>" : "<font color=\"$color\">";
             },
             $line
         );
