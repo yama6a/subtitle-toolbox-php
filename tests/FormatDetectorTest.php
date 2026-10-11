@@ -382,10 +382,10 @@ class FormatDetectorTest extends TestCase
         $ttml = "<?xml version=\"1.0\"?>\n<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div>" .
                 "<p begin=\"00:00:01.000\" end=\"00:00:02.000\">Hi</p></div></body></tt>";
 
-        $this->assertSame(Format::Ttml, Subtitle::detectFormat($ttml));
-        $this->assertSame(Format::Itt, Subtitle::detectFormat($ttml, "film.itt"));
-        $this->assertSame(Format::SubRip, Subtitle::detectFormat("plain words", "film.srt"));
-        $this->assertNull(Subtitle::detectFormat("plain words", "film.json"));
-        $this->assertNull(Subtitle::detectFormat("plain words"));
+        $this->assertSame(Format::Ttml, SubtitleReader::detectFormat($ttml));
+        $this->assertSame(Format::Itt, SubtitleReader::detectFormat($ttml, "film.itt"));
+        $this->assertSame(Format::SubRip, SubtitleReader::detectFormat("plain words", "film.srt"));
+        $this->assertNull(SubtitleReader::detectFormat("plain words", "film.json"));
+        $this->assertNull(SubtitleReader::detectFormat("plain words"));
     }
 }
