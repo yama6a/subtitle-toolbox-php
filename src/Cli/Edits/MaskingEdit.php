@@ -10,6 +10,7 @@ use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\FileCommand;
 use SubtitleToolbox\Cli\Option;
 use SubtitleToolbox\Cli\OutputFiles;
+use SubtitleToolbox\Cli\SideFile;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
 use SubtitleToolbox\Profanity\ProfanityMask;
@@ -104,7 +105,7 @@ final class MaskingEdit extends Edit
 
     public function loadSideFiles(): void
     {
-        $this->options = new ProfanityOptions(self::readWordFile($this->wordsPath), ...Command::given([
+        $this->options = new ProfanityOptions(self::readWordFile($this->wordsPath), ...Command::withoutNulls([
             "mask"    => $this->mask,
             "padding" => $this->padding,
         ]));
@@ -118,7 +119,7 @@ final class MaskingEdit extends Edit
      */
     private static function readWordFile(string $path): array
     {
-        $lines = preg_split('/\R/', StringHelpers::removeUtf8Bom(Command::readSideFile($path)));
+        $lines = preg_split('/\R/', StringHelpers::removeUtf8Bom(SideFile::read($path)));
 
         return array_values(array_filter(array_map("trim", $lines), fn (string $line): bool => $line !== ""));
     }

@@ -11,6 +11,7 @@ use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\OcrProgress;
 use SubtitleToolbox\Cli\Option;
+use SubtitleToolbox\Cli\SideFile;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\GlyphOcrOptions;
@@ -81,7 +82,7 @@ final class OcrEdit extends Edit
         }
         $engine           = OcrEngineChooser::choose($engine);
         $language         = $arguments->value("ocr-language");
-        $tesseractOptions = new TesseractOcrOptions(...Command::given(["language" => $language]));
+        $tesseractOptions = new TesseractOcrOptions(...Command::withoutNulls(["language" => $language]));
         if ($engine === OcrEngineName::Tesseract) {
             (new TesseractOcrEngine($tesseractOptions))->requireLanguages();
         }
@@ -94,7 +95,7 @@ final class OcrEdit extends Edit
     {
         if ($this->databasePath !== null) {
             $this->glyphOptions = OptionsCopy::with($this->glyphOptions, [
-                "database" => Command::parseSideFile($this->databasePath, GlyphDatabase::fromBytes(...), GlyphOcrException::class),
+                "database" => SideFile::parse($this->databasePath, GlyphDatabase::fromBytes(...), GlyphOcrException::class),
             ]);
         }
     }

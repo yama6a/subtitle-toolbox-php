@@ -56,7 +56,7 @@ final class KaraokeEdit extends Edit
             return null;
         }
 
-        return new self(new WordHighlightOptions(...Command::given(["style" => $arguments->value("karaoke-style")])));
+        return new self(new WordHighlightOptions(...Command::withoutNulls(["style" => $arguments->value("karaoke-style")])));
     }
 
 

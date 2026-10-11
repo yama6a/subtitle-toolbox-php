@@ -8,6 +8,7 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
+use SubtitleToolbox\Cli\SideFile;
 use SubtitleToolbox\Fixing\CommonErrorFixer;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\CommonErrorRule;
@@ -91,7 +92,7 @@ final class CommonErrorEdit extends Edit
     {
         if ($this->replaceListPath !== null) {
             $this->options = OptionsCopy::with($this->options, [
-                "replaceList" => Command::parseSideFile($this->replaceListPath, OcrReplaceList::fromSubtitleEditXml(...)),
+                "replaceList" => SideFile::parse($this->replaceListPath, OcrReplaceList::fromSubtitleEditXml(...)),
             ]);
         }
     }

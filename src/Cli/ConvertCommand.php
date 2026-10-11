@@ -64,7 +64,7 @@ final class ConvertCommand extends WriteCommand
 
         $common = $this->helpHeader() . "\nOptions:\n" . self::optionList([...$this->commonOptions(), self::helpOption()]);
         if ($topic === null) {
-            $list = self::table(array_map(fn (string $name, string $class): array => [$name, $class::summary()], array_keys($groups), $groups));
+            $list = HelpLayout::table(array_map(fn (string $name, string $class): array => [$name, $class::summary()], array_keys($groups), $groups));
 
             return "$common\nOption groups, in the order that convert runs their edits:\n$list\n" .
                    "Run \"" . Application::NAME . " convert --help GROUP\" for the options of a group,\n" .
@@ -95,7 +95,7 @@ final class ConvertCommand extends WriteCommand
      */
     private static function groupHelp(string $class): string
     {
-        return self::wrap($class::group() . ": " . $class::summary()) . self::optionList($class::options());
+        return HelpLayout::wrap($class::group() . ": " . $class::summary()) . self::optionList($class::options());
     }
 
 

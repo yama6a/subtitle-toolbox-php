@@ -81,7 +81,7 @@ final class SyncCommand extends WriteCommand
         $this->checkReference($arguments);
 
         // The reference loads after the checks of the inputs. Until then, an empty subtitle stands in for it.
-        $this->syncOptions = new ReferenceSyncOptions(...self::given([
+        $this->syncOptions = new ReferenceSyncOptions(...self::withoutNulls([
             "reference"    => new Subtitle(),
             "minOffset"    => $arguments->seconds("min-offset"),
             "maxOffset"    => $arguments->seconds("max-offset"),
@@ -113,7 +113,7 @@ final class SyncCommand extends WriteCommand
             return;
         }
 
-        $this->reference = self::parseSideFile($log, fn (string $content): Subtitle =>
+        $this->reference = SideFile::parse($log, fn (string $content): Subtitle =>
             SpeechReference::fromFfmpegSilencedetect($content, $this->mediaDuration));
     }
 

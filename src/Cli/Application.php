@@ -157,22 +157,22 @@ final class Application
     private function help(): string
     {
         $name      = self::NAME;
-        $commands  = Command::table([
+        $commands  = HelpLayout::table([
             ...array_map(fn (Command $command): array => [$command->name(), $command->summary()], $this->commands),
             ["help", "Show the help of a command."],
         ]);
-        $about     = Command::wrap(
+        $about     = HelpLayout::wrap(
             "Run \"$name help <command>\" or \"$name <command> --help\" for the options of a command. " .
             "A file argument of - reads standard input. One input goes to standard output, or to -o FILE. " .
             "Several inputs need --output-dir DIR. The tool never overwrites a file."
         );
-        $exitCodes = Command::table([
+        $exitCodes = HelpLayout::table([
             [(string)self::EXIT_OK, "Success."],
             [(string)self::EXIT_RESULT, "A file broke a validation rule, or diff found a difference."],
             [(string)self::EXIT_USAGE, "Invalid arguments."],
             [(string)self::EXIT_FILE, "A file could not be read or written."],
         ]);
-        $options   = Command::table([["-h, --help", "Show this help."], ["-V, --version", "Print the version."]]);
+        $options   = HelpLayout::table([["-h, --help", "Show this help."], ["-V, --version", "Print the version."]]);
 
         return "$name " . Version::get() . "\n" .
                "Converts, retimes, checks and fixes subtitle files.\n\n" .

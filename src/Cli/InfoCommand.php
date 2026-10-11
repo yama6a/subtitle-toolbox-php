@@ -93,7 +93,7 @@ final class InfoCommand extends ReportCommand
         ];
 
         $rows = $this->rows($subtitle, $format, $statistics, $images);
-        $text = self::label($input) . "\n" . self::table(array_map(fn (string $name, string $value): array => ["$name:", $value],
+        $text = self::label($input) . "\n" . HelpLayout::table(array_map(fn (string $name, string $value): array => ["$name:", $value],
                                                                    array_keys($rows), $rows), 2, 1);
 
         $this->emit($console, ($this->succeeded > 0 ? "\n" : "") . $text, [

@@ -8,6 +8,7 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
+use SubtitleToolbox\Cli\SideFile;
 use SubtitleToolbox\OptionsCopy;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timing\ShotChangeOptions;
@@ -70,7 +71,7 @@ final class SnapEdit extends Edit
             Command::fail("Pass --snap-shot-changes FILE. With --no-snap-chain and no shot changes, snapping changes nothing.");
         }
 
-        return new self(new ShotChangeOptions(...Command::given([
+        return new self(new ShotChangeOptions(...Command::withoutNulls([
             "frameRate"         => $videoFps,
             "snapWindowFrames"  => $arguments->int("snap-window-frames", 0),
             "minGapFrames"      => $arguments->int("snap-min-gap-frames", 0),
@@ -101,7 +102,7 @@ final class SnapEdit extends Edit
      */
     private static function loadShotChanges(string $path): array
     {
-        return Command::parseSideFile($path, fn (string $content): array =>
+        return SideFile::parse($path, fn (string $content): array =>
             str_contains($content, "pts_time:") ? ShotChanges::fromFfmpegLog($content) : ShotChanges::fromText($content));
     }
 }

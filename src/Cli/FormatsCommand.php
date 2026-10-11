@@ -58,7 +58,7 @@ final class FormatsCommand extends Command
             ];
         }
 
-        $console->out(self::table($rows, 0));
+        $console->out(HelpLayout::table($rows, 0));
 
         return Application::EXIT_OK;
     }

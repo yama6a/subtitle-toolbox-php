@@ -304,7 +304,7 @@ abstract class FileCommand extends Command
         try {
             return $this->inputReader->readSideFile($path, $console);
         } catch (\Throwable $exception) {
-            return self::failSideFile($path, self::throwableMessage($exception) . ($this->inputReader->needsLenientHint() ? "\n" . self::LENIENT_HINT : ""));
+            return SideFile::fail($path, self::throwableMessage($exception) . ($this->inputReader->needsLenientHint() ? "\n" . self::LENIENT_HINT : ""));
         }
     }
 

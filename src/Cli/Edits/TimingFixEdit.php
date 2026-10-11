@@ -70,13 +70,13 @@ final class TimingFixEdit extends Edit
     public function apply(Subtitle $subtitle, Console $console, string $label): Subtitle
     {
         if ($this->overlaps) {
-            $subtitle->fixOverlaps(...Command::given(["minGap" => $this->minGap]));
+            $subtitle->fixOverlaps(...Command::withoutNulls(["minGap" => $this->minGap]));
         }
         if ($this->minDuration !== null) {
-            $subtitle->extendShortCues($this->minDuration, ...Command::given(["minGap" => $this->minGap]));
+            $subtitle->extendShortCues($this->minDuration, ...Command::withoutNulls(["minGap" => $this->minGap]));
         }
         if ($this->leadIn !== null || $this->leadOut !== null) {
-            $subtitle->addLeadInOut($this->leadIn ?? 0, $this->leadOut ?? 0, ...Command::given(["minGap" => $this->minGap]));
+            $subtitle->addLeadInOut($this->leadIn ?? 0, $this->leadOut ?? 0, ...Command::withoutNulls(["minGap" => $this->minGap]));
         }
         if ($this->maxDuration !== null) {
             $subtitle->limitLongCues($this->maxDuration);
