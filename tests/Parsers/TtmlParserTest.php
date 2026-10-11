@@ -10,6 +10,7 @@ use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleReader;
 
 class TtmlParserTest extends TestCase
 {
@@ -318,7 +319,7 @@ class TtmlParserTest extends TestCase
         $cue     = Subtitle::fromString($content, Format::Ttml)->getCues()[0];
 
         $this->assertSame([1.0, 3.0, "<i>Hello</i>"], [$cue->getStart(), $cue->getEnd(), $cue->getText()]);
-        $this->assertSame(Format::Ttml, Subtitle::detectFormat($content));
+        $this->assertSame(Format::Ttml, SubtitleReader::detectFormat($content));
     }
 
 

@@ -18,6 +18,7 @@ use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleReader;
 
 /**
  * Reads each input file, a glob or the files of a directory, and runs process() on it.
@@ -472,7 +473,7 @@ abstract class FileCommand extends Command
     private function detectFormat(string $content, ?string $path): ?Format
     {
         try {
-            return Subtitle::detectFormat(StringHelpers::decode($content, $this->readOptions->encoding)->content, $path);
+            return SubtitleReader::detectFormat(StringHelpers::decode($content, $this->readOptions->encoding)->content, $path);
         } catch (SubtitleToolboxException) {
             return null;
         }
