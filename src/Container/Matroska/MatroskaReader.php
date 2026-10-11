@@ -43,6 +43,13 @@ final class MatroskaReader implements ContainerReader
     /** The first 4 bytes of every Matroska and WebM file. */
     public const EBML_MAGIC = "\x1A\x45\xDF\xA3";
 
+    private const DOC_TYPES = ["matroska", "webm"];
+
+    // The default value of the Language element in the Matroska spec.
+    private const DEFAULT_LANGUAGE = "eng";
+
+    private const NANOSECONDS_PER_MILLISECOND = 1000000;
+
     private const FORMATS = [
         self::CODEC_SUBRIP => Format::SubRip,
         self::CODEC_ASS    => Format::Ass,
@@ -205,11 +212,11 @@ final class MatroskaReader implements ContainerReader
                                        implode(", ", self::CODECS) . ".");
         }
 
-        $data         = $this->trackData[$trackNumber];
-        $codecPrivate = $this->decode($trackNumber, $data["codecPrivate"], self::SCOPE_CODEC_PRIVATE);
+        $trackData    = $this->trackData[$trackNumber];
+        $codecPrivate = $this->decode($trackNumber, $trackData["codecPrivate"], self::SCOPE_CODEC_PRIVATE);
         $blocks       = $this->readBlocks($trackNumber);
         if ($format !== Format::Pgs) {
-            $blocks = $this->withEnds($blocks, $data, $options->lastCueDuration);
+            $blocks = $this->timedBlocks($blocks, $trackData, $options->lastCueDuration);
         }
 
         $subtitle = match ($format) {
@@ -218,7 +225,7 @@ final class MatroskaReader implements ContainerReader
             Format::SubRip => (new SubRipParser())->parse(TrackFileBuilder::subRipFile($blocks), $options),
             Format::Ass    => (new AssParser())->parse(TrackFileBuilder::assFile($track, $codecPrivate, $blocks), $options),
             Format::VobSub => (new VobSubParser())->parseBlocks($codecPrivate, array_map(
-                fn (array $block): array => ["start" => $block["start"] / 1000, "end" => $block["end"] / 1000, "data" => $block["data"]],
+                fn (array $block): array => ["start" => $block["startMs"] / 1000, "end" => $block["endMs"] / 1000, "data" => $block["data"]],
                 $blocks,
             ), $options),
         };
@@ -246,7 +253,7 @@ final class MatroskaReader implements ContainerReader
     {
         $header  = $this->ebml->readElementHeader();
         $docType = $header !== null && $header["id"] === self::ID_EBML ? $this->readDocType($header) : null;
-        if (!in_array($docType, ["matroska", "webm"], true) || ($segment = $this->findSegment()) === null) {
+        if (!in_array($docType, self::DOC_TYPES, true) || ($segment = $this->findSegment()) === null) {
             throw new ParsingException("The file is not a Matroska or WebM file.");
         }
 
@@ -398,7 +405,7 @@ final class MatroskaReader implements ContainerReader
                 $number,
                 $codecId,
                 self::FORMATS[$codecId] ?? null,
-                $fields["bcp47"] ?? $fields["language"] ?? "eng",
+                $fields["bcp47"] ?? $fields["language"] ?? self::DEFAULT_LANGUAGE,
                 $fields["name"] ?? null,
                 $fields["default"],
                 $fields["forced"],
@@ -552,26 +559,26 @@ final class MatroskaReader implements ContainerReader
     private function readBlock(array $block, int $trackNumber): ?array
     {
         $header = $this->ebml->readBytes(min($block["size"], self::MAX_BLOCK_HEADER));
-        $track  = EbmlReader::readVint($header, 0, false);
-        if ($track === null || strlen($header) < $track[1] + self::BLOCK_HEADER_TAIL) {
+        [$blockTrack, $trackVintLength] = EbmlReader::readVint($header, 0, false) ?? [null, 0];
+        if ($blockTrack === null || strlen($header) < $trackVintLength + self::BLOCK_HEADER_TAIL) {
             $offset = $block["offset"];
             throw new ParsingException("The block header at byte $offset is not valid.");
         }
-        if ($track[0] !== $trackNumber) {
+        if ($blockTrack !== $trackNumber) {
             return null;
         }
 
-        ["time" => $time, "flags" => $flags] = unpack("ntime/Cflags", $header, $track[1]);
+        ["time" => $time, "flags" => $flags] = unpack("ntime/Cflags", $header, $trackVintLength);
         if (($flags & self::LACING_MASK) !== 0) {
             throw new ParsingException("A block of track $trackNumber uses lacing, which subtitle tracks do not use.");
         }
 
-        $this->ebml->seek($block["offset"] + $track[1] + self::BLOCK_HEADER_TAIL);
+        $this->ebml->seek($block["offset"] + $trackVintLength + self::BLOCK_HEADER_TAIL);
 
         return [
             "start"      => $time >= self::INT16_SIGN ? $time - self::INT16_RANGE : $time,
             "duration"   => null,
-            "data"       => $this->ebml->readBytes($block["size"] - $track[1] - self::BLOCK_HEADER_TAIL),
+            "data"       => $this->ebml->readBytes($block["size"] - $trackVintLength - self::BLOCK_HEADER_TAIL),
             "additional" => null,
         ];
     }
@@ -606,13 +613,14 @@ final class MatroskaReader implements ContainerReader
 
 
     /**
-     * Converts the block times to milliseconds and sets the end of each block.
+     * Converts the block times from ticks to milliseconds and sets the end of each block.
      * A block without BlockDuration and DefaultDuration ends at the start of the next block.
      * The last such block ends after $lastDuration seconds.
      *
-     * @return list<array{start: int, end: int, data: string, additional: ?string}>
+     * @param list<array{start: int, duration: ?int, data: string, additional: ?string}> $blocks times in TimestampScale ticks
+     * @return list<array{startMs: int, endMs: int, data: string, additional: ?string}>
      */
-    private function withEnds(array $blocks, array $trackData, float $lastDuration): array
+    private function timedBlocks(array $blocks, array $trackData, float $lastDuration): array
     {
         $cues = [];
         foreach ($blocks as $index => $block) {
@@ -625,7 +633,7 @@ final class MatroskaReader implements ContainerReader
                 default                                => $start + Timecode::totalMilliseconds($lastDuration),
             };
 
-            $cues[] = ["start" => $start, "end" => $end, "data" => $block["data"], "additional" => $block["additional"]];
+            $cues[] = ["startMs" => $start, "endMs" => $end, "data" => $block["data"], "additional" => $block["additional"]];
         }
 
         return $cues;
@@ -652,7 +660,7 @@ final class MatroskaReader implements ContainerReader
 
     private function milliseconds(int $nanoseconds): int
     {
-        return intdiv($nanoseconds + 500000, 1000000);
+        return intdiv($nanoseconds + intdiv(self::NANOSECONDS_PER_MILLISECOND, 2), self::NANOSECONDS_PER_MILLISECOND);
     }
 
 

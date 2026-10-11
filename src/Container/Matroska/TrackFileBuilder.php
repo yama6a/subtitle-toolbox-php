@@ -32,11 +32,14 @@ final class TrackFileBuilder
     private const ASS_BLOCK_FIELDS = 9;
 
 
+    /**
+     * @param list<array{startMs: int, endMs: int, data: string}> $cues
+     */
     public static function subRipFile(array $cues): string
     {
         $file = "";
         foreach ($cues as $index => $cue) {
-            $file .= ($index + 1) . "\n" . self::time($cue["start"], ",", true) . " --> " . self::time($cue["end"], ",", true) .
+            $file .= ($index + 1) . "\n" . self::time($cue["startMs"], ",", true) . " --> " . self::time($cue["endMs"], ",", true) .
                      "\n" . self::cueText($cue["data"]) . "\n\n";
         }
 
@@ -48,6 +51,8 @@ final class TrackFileBuilder
      * Rebuilds the Dialogue lines from the fields of each block, as mkvextract does.
      * The fields are ReadOrder, Layer, Style, Name, MarginL, MarginR, MarginV, Effect and Text.
      * Each Dialogue line takes its fields in the order of the Format line of the header.
+     *
+     * @param list<array{startMs: int, endMs: int, data: string}> $cues
      */
     public static function assFile(SubtitleTrack $track, string $codecPrivate, array $cues): string
     {
@@ -66,8 +71,8 @@ final class TrackFileBuilder
             foreach ($format as $name) {
                 $key      = strtolower($name);
                 $values[] = match ($key) {
-                    "start"  => self::time($cue["start"], ".", false),
-                    "end"    => self::time($cue["end"], ".", false),
+                    "start"  => self::time($cue["startMs"], ".", false),
+                    "end"    => self::time($cue["endMs"], ".", false),
                     "marked" => str_starts_with($fields[1], "Marked=") ? $fields[1] : "Marked=" . ($fields[1] === "" ? "0" : $fields[1]),
                     "text"   => str_replace("\n", "\\N", StringHelpers::normalizeEOLs($fields[self::ASS_FIELDS["text"]])),
                     default  => $fields[self::ASS_FIELDS[$key] ?? -1] ?? "",
@@ -84,6 +89,8 @@ final class TrackFileBuilder
     /**
      * Rebuilds the cue blocks from the block text and the BlockAdditional.
      * The BlockAdditional holds the cue settings, the cue identifier and the comments before the cue.
+     *
+     * @param list<array{startMs: int, endMs: int, data: string, additional: ?string}> $cues
      */
     public static function webVttFile(string $codecPrivate, array $cues): string
     {
@@ -101,10 +108,10 @@ final class TrackFileBuilder
 
             $text  = preg_replace_callback(
                 '/<(?:(\d+):)?(\d{2}):(\d{2})\.(\d{3})>/',
-                fn (array $m): string => "<" . self::time($cue["start"] + ((int) $m[1] * 3600 + (int) $m[2] * 60 + (int) $m[3]) * 1000 + (int) $m[4], ".", true) . ">",
+                fn (array $m): string => "<" . self::time($cue["startMs"] + ((int) $m[1] * 3600 + (int) $m[2] * 60 + (int) $m[3]) * 1000 + (int) $m[4], ".", true) . ">",
                 self::cueText($cue["data"]),
             );
-            $file .= self::time($cue["start"], ".", true) . " --> " . self::time($cue["end"], ".", true) .
+            $file .= self::time($cue["startMs"], ".", true) . " --> " . self::time($cue["endMs"], ".", true) .
                      ($settings === "" ? "" : " $settings") . "\n$text";
         }
 
@@ -114,6 +121,8 @@ final class TrackFileBuilder
 
     /**
      * Puts the PG magic bytes, the PTS from the block timestamp and a DTS of 0 before each segment of each block.
+     *
+     * @param list<array{start: int, data: string}> $blocks start in TimestampScale ticks
      */
     public static function pgsStream(array $blocks, int $timestampScale): string
     {

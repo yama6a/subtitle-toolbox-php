@@ -48,6 +48,16 @@ final class Mp4Reader implements ContainerReader
     // A tx3g sample starts with a 16-bit text length.
     private const TEXT_LENGTH_SIZE = 2;
 
+    // A box header holds a 32-bit size and the type. A size of 1 adds a 64-bit size field.
+    private const BOX_HEADER_SIZE   = 8;
+    private const LARGE_SIZE_LENGTH = 8;
+
+    // Byte offsets in the box data, which starts with the version byte. The keys are the box versions of ISO/IEC 14496-12.
+    private const HDLR_HANDLER_TYPE_OFFSET = 8;
+    private const TKHD_TRACK_ID_OFFSET     = [0 => 12, 1 => 20];
+    private const MDHD_TIMESCALE_OFFSET    = [0 => 12, 1 => 20];
+    private const MDHD_LANGUAGE_OFFSET     = [0 => 20, 1 => 32];
+
     /** @var resource */
     private $stream;
 
@@ -189,19 +199,14 @@ final class Mp4Reader implements ContainerReader
         $boxes = $this->childMap($trak);
         $mdia  = isset($boxes["mdia"]) ? $this->childMap($boxes["mdia"]) : [];
         if (!isset($boxes["tkhd"], $mdia["hdlr"], $mdia["mdhd"])
-            || !in_array(substr($this->read($mdia["hdlr"], 8, 4), 0, 4), self::SUBTITLE_HANDLERS, true)) {
+            || !in_array($this->read($mdia["hdlr"], self::HDLR_HANDLER_TYPE_OFFSET, 4), self::SUBTITLE_HANDLERS, true)) {
             return;
         }
 
-        $minf  = isset($mdia["minf"]) ? $this->childMap($mdia["minf"]) : [];
-        $stbl  = isset($minf["stbl"]) ? $this->childMap($minf["stbl"]) : [];
-        $tkhdV1 = $this->read($boxes["tkhd"], 0, 1) === "\x01";
-        $tkhd   = $this->read($boxes["tkhd"], 0, $tkhdV1 ? 24 : 16);
-        $flags  = unpack("N", "\0" . substr($tkhd, 1, 3))[1];
-        $id     = unpack("N", $tkhd, $tkhdV1 ? 20 : 12)[1];
-        [$timescale, $packedLanguage] = $this->read($mdia["mdhd"], 0, 1) === "\x01"
-            ? array_values(unpack("Ntimescale/x8/nlanguage", $this->read($mdia["mdhd"], 20, 14)))
-            : array_values(unpack("Ntimescale/x4/nlanguage", $this->read($mdia["mdhd"], 12, 10)));
+        $minf = isset($mdia["minf"]) ? $this->childMap($mdia["minf"]) : [];
+        $stbl = isset($minf["stbl"]) ? $this->childMap($minf["stbl"]) : [];
+        ["id" => $id, "enabled" => $enabled]                = $this->readTrackHeader($boxes["tkhd"]);
+        ["timescale" => $timescale, "language" => $language] = $this->readMediaHeader($mdia["mdhd"]);
         if ($timescale === 0) {
             throw new ParsingException("Track $id has a timescale of 0.");
         }
@@ -214,14 +219,55 @@ final class Mp4Reader implements ContainerReader
         $this->tracks[$id]    = new SubtitleTrack(
             ContainerFormat::Mp4,
             $id,
-            preg_match('/^[\x20-\x7E]{4}$/', $entry["codec"]) === 1 ? $entry["codec"] : "0x" . bin2hex($entry["codec"]),
+            self::codecName($entry["codec"]),
             $entry["encrypted"] ? null : self::FORMATS[$entry["codec"]] ?? null,
-            $elng === "" ? self::language($packedLanguage) : $elng,
+            $elng === "" ? self::language($language) : $elng,
             $name === "" ? null : $name,
-            ($flags & self::TRACK_ENABLED) !== 0,
+            $enabled,
             $entry["forced"],
         );
         $this->trackData[$id] = ["timescale" => $timescale, "encrypted" => $entry["encrypted"], "tables" => $stbl];
+    }
+
+
+    /**
+     * @param array{type: string, offset: int, end: int} $tkhd
+     * @return array{id: int, enabled: bool}
+     */
+    private function readTrackHeader(array $tkhd): array
+    {
+        $version = $this->boxVersion($tkhd);
+        $flags   = unpack("N", "\0" . $this->read($tkhd, 1, 3))[1];
+
+        return [
+            "id"      => unpack("N", $this->read($tkhd, self::TKHD_TRACK_ID_OFFSET[$version], 4))[1],
+            "enabled" => ($flags & self::TRACK_ENABLED) !== 0,
+        ];
+    }
+
+
+    /**
+     * @param array{type: string, offset: int, end: int} $mdhd
+     * @return array{timescale: int, language: int} language in the packed ISO 639-2/T form
+     */
+    private function readMediaHeader(array $mdhd): array
+    {
+        $version = $this->boxVersion($mdhd);
+
+        return [
+            "timescale" => unpack("N", $this->read($mdhd, self::MDHD_TIMESCALE_OFFSET[$version], 4))[1],
+            "language"  => unpack("n", $this->read($mdhd, self::MDHD_LANGUAGE_OFFSET[$version], 2))[1],
+        ];
+    }
+
+
+    /**
+     * @param array{type: string, offset: int, end: int} $box
+     * @return 0|1 version 1 for a box with 64-bit times, otherwise 0
+     */
+    private function boxVersion(array $box): int
+    {
+        return $this->read($box, 0, 1) === "\x01" ? 1 : 0;
     }
 
 
@@ -446,22 +492,22 @@ final class Mp4Reader implements ContainerReader
      */
     private function readBoxHeader(int $position, int $end): ?array
     {
-        if ($position + 8 > $end) {
+        if ($position + self::BOX_HEADER_SIZE > $end) {
             return null;
         }
 
         fseek($this->stream, $position);
-        $header = (string) fread($this->stream, 8);
-        if (strlen($header) < 8) {
+        $header = (string) fread($this->stream, self::BOX_HEADER_SIZE);
+        if (strlen($header) < self::BOX_HEADER_SIZE) {
             return null;
         }
 
         ["size" => $size, "type" => $type] = unpack("Nsize/a4type", $header);
-        $offset = $position + 8;
+        $offset = $position + self::BOX_HEADER_SIZE;
         if ($size === 1) {
-            $largeSize = (string) fread($this->stream, 8);
-            $size      = strlen($largeSize) === 8 ? unpack("J", $largeSize)[1] : -1;
-            $offset   += 8;
+            $largeSize = (string) fread($this->stream, self::LARGE_SIZE_LENGTH);
+            $size      = strlen($largeSize) === self::LARGE_SIZE_LENGTH ? unpack("J", $largeSize)[1] : -1;
+            $offset   += self::LARGE_SIZE_LENGTH;
         } elseif ($size === 0) {
             $size = $end - $position;
         }
@@ -473,9 +519,20 @@ final class Mp4Reader implements ContainerReader
     }
 
 
+    /**
+     * Returns a printable type as it is, and other bytes as hex.
+     */
+    private static function codecName(string $type): string
+    {
+        return preg_match('/^[\x20-\x7E]{4}$/', $type) === 1 ? $type : "0x" . bin2hex($type);
+    }
+
+
     private static function typeName(string $type): string
     {
-        return preg_match('/^[\x20-\x7E]{4}$/', $type) === 1 ? "\"$type\"" : "0x" . bin2hex($type);
+        $name = self::codecName($type);
+
+        return $name === $type ? "\"$type\"" : $name;
     }
 
 
