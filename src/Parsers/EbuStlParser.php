@@ -121,7 +121,7 @@ final class EbuStlParser extends SubtitleParser
             $blockIndex += count($blocks);
             $lines       = self::decodeLines(self::textBytes($blocks), $gsi["CCT"]);
             $hexes       = array_map("bin2hex", $blocks);
-            if (ord($header[EbuStl::TTI_CF]) === 1) {
+            if (ord($header[EbuStl::TTI_CF]) === EbuStl::COMMENT_FLAG) {
                 $lines = array_filter(array_map("trim", $lines), fn (string $line): bool => $line !== "");
                 $text  = Markup::plainText(implode("\n", $lines));
                 $read["cueComments"][] = [$text, count($read["cues"])];

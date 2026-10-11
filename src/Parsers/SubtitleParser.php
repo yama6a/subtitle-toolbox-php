@@ -47,9 +47,6 @@ abstract class SubtitleParser
     // C0 control characters except tab, LF and CR, and DEL. U+200E, U+200F and other format characters stay.
     private const CONTROL_CHARACTER_REGEX = '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/';
 
-    // Formatters split cue times into integer milliseconds, which overflow far above this bound.
-    protected const MAX_HOURS = 100000;
-
     // Lenient mode swaps the times of a cue that ends before it starts only up to this duration in seconds, as a typo.
     private const MAX_SWAPPED_DURATION = 30;
 
@@ -383,8 +380,8 @@ abstract class SubtitleParser
      */
     protected static function boundedTime(float $seconds, string $text, ?int $lineNumber): float
     {
-        if ($seconds >= self::MAX_HOURS * 3600) {
-            throw new ParsingException("The time \"$text\" is not below " . self::MAX_HOURS . " hours.", $lineNumber);
+        if ($seconds >= Timecode::MAX_HOURS * 3600) {
+            throw new ParsingException("The time \"$text\" is not below " . Timecode::MAX_HOURS . " hours.", $lineNumber);
         }
 
         return $seconds;
@@ -396,8 +393,8 @@ abstract class SubtitleParser
      */
     protected static function boundedField(float $seconds, string $path): float
     {
-        if ($seconds >= self::MAX_HOURS * 3600) {
-            throw new ParsingException("The field $path is not below " . self::MAX_HOURS . " hours.");
+        if ($seconds >= Timecode::MAX_HOURS * 3600) {
+            throw new ParsingException("The field $path is not below " . Timecode::MAX_HOURS . " hours.");
         }
 
         return $seconds;

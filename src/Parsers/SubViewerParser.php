@@ -25,7 +25,7 @@ final class SubViewerParser extends SubtitleParser
         "AUTHOR" => Subtitle::METADATA_AUTHOR,
     ];
 
-    // Five hour digits keep a time below SubtitleParser::MAX_HOURS.
+    // Five hour digits keep a time below Timecode::MAX_HOURS.
     private const VERSION_1_TIME_REGEX = '/^\[(0*\d{1,5}):(\d{2}):(\d{2})\]$/';
     private const VERSION_2_TIME_REGEX = '/^(0*\d{1,5}):(\d{2}):(\d{2})\.(\d{1,3}),(0*\d{1,5}):(\d{2}):(\d{2})\.(\d{1,3})$/';
     private const TAG_REGEX            = '/^\[([^\]]+)\](.*)$/';

@@ -38,7 +38,7 @@ final class YouTubeChaptersParser extends SubtitleParser
                 continue;
             }
             $time = Timecode::toSeconds((int) $hours, (int) $minutes, (int) $seconds);
-            if ((int) $seconds > 59 || ($hours !== "" && (int) $minutes > 59) || $time >= self::MAX_HOURS * 3600) {
+            if ((int) $seconds > 59 || ($hours !== "" && (int) $minutes > 59) || $time >= Timecode::MAX_HOURS * 3600) {
                 continue;
             }
 

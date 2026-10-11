@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\AlignmentGrid;
 use SubtitleToolbox\Encoding\CodePage;
 use SubtitleToolbox\Encoding\Iso6937;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -123,7 +124,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         $bytes    = implode(chr(EbuStl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode(LineEnding::Lf->value, $text)));
         $position = $this->position($context, Alignment::BottomCenter, count(explode(LineEnding::Lf->value, $text)));
 
-        return $this->textBlocks($context, $bytes, $this->header(0, 0, $timeCode, $timeCode, $position, 1));
+        return $this->textBlocks($context, $bytes, $this->header(0, 0, $timeCode, $timeCode, $position, EbuStl::COMMENT_FLAG));
     }
 
 
@@ -253,13 +254,18 @@ final class EbuStlFormatter extends SubtitleFormatter
         $firstRow = $context->teletext ? 1 : 0;
         $lastRow  = max($firstRow, $context->maxRow - $lineCount + 1);
 
-        $verticalPosition = match (intdiv($alignment->value - 1, 3)) {
-            2       => $firstRow,
-            1       => intdiv($firstRow + $lastRow, 2),
-            default => $lastRow,
+        $verticalPosition = match (AlignmentGrid::row($alignment)) {
+            AlignmentGrid::TOP_ROW    => $firstRow,
+            AlignmentGrid::MIDDLE_ROW => intdiv($firstRow + $lastRow, 2),
+            default                   => $lastRow,
+        };
+        $justificationCode = match (AlignmentGrid::column($alignment)) {
+            AlignmentGrid::LEFT  => EbuStl::JUSTIFY_LEFT,
+            AlignmentGrid::RIGHT => EbuStl::JUSTIFY_RIGHT,
+            default              => EbuStl::JUSTIFY_CENTER,
         };
 
-        return [$verticalPosition, ($alignment->value - 1) % 3 + 1];
+        return [$verticalPosition, $justificationCode];
     }
 
 

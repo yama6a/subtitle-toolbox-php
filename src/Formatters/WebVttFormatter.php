@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\AlignmentGrid;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\MarkupColors;
@@ -22,8 +23,8 @@ final class WebVttFormatter extends SubtitleFormatter
 
     private const SPAN_TAGS = ["strong", "b", "u", "i", "v", "lang", "c", "ruby", "rt"];
 
-    private const ALIGNMENT_ROWS    = [0 => "", 1 => "line:50%,center", 2 => "line:0"];
-    private const ALIGNMENT_COLUMNS = [1 => "align:left", 2 => "", 3 => "align:right"];
+    private const ALIGNMENT_ROWS    = [AlignmentGrid::BOTTOM_ROW => "", AlignmentGrid::MIDDLE_ROW => "line:50%,center", AlignmentGrid::TOP_ROW => "line:0"];
+    private const ALIGNMENT_COLUMNS = [AlignmentGrid::LEFT => "align:left", AlignmentGrid::CENTER => "", AlignmentGrid::RIGHT => "align:right"];
     private const POSITION_SETTINGS = ["line", "position", "align"];
 
     /** @var list<WebVttDroppedColor> */
@@ -196,8 +197,8 @@ final class WebVttFormatter extends SubtitleFormatter
             return implode(" ", $settings);
         }
 
-        $alignment = $cue->getAlignment()->value - 1;
-        $settings  = [...$settings, self::ALIGNMENT_ROWS[intdiv($alignment, 3)], self::ALIGNMENT_COLUMNS[$alignment % 3 + 1]];
+        $alignment = $cue->getAlignment();
+        $settings  = [...$settings, self::ALIGNMENT_ROWS[AlignmentGrid::row($alignment)], self::ALIGNMENT_COLUMNS[AlignmentGrid::column($alignment)]];
 
         return implode(" ", array_filter($settings, fn (string $setting): bool => $setting !== ""));
     }
