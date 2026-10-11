@@ -45,6 +45,8 @@ abstract class FileCommand extends Command
 
     private ?int $secondTrack = null;
 
+    private bool $secondTrackInherited = false;
+
     protected bool $wordTimestamps = false;
 
     private ?SccRollUp $sccRollUp = null;
@@ -169,7 +171,10 @@ abstract class FileCommand extends Command
         $this->sccRollUp      = $sccRollUp === null ? null : SccRollUp::from($sccRollUp);
         $names                = $this->fileOptionNames();
         $this->inputTrack     = $arguments->positiveInt($names["track"]);
-        $this->secondTrack    = $arguments->positiveInt($names["secondTrack"]) ?? ($this->secondFileInherits() ? $this->inputTrack : null);
+        $explicitSecondTrack  = $arguments->positiveInt($names["secondTrack"]);
+        $this->secondTrack    = $explicitSecondTrack ?? ($this->secondFileInherits() ? $this->inputTrack : null);
+
+        $this->secondTrackInherited = $explicitSecondTrack === null && $this->secondTrack !== null;
 
         $from               = $arguments->value($names["from"]);
         $this->fromFormat   = $from === null ? null : FormatArgument::readable($from);
@@ -374,7 +379,8 @@ abstract class FileCommand extends Command
     {
         $names              = $this->fileOptionNames();
         $this->failureLabel = $path;
-        $subtitle           = $this->loadOtherFile($path, $console, $this->secondFormat, $this->secondTrack,
+        $track              = $this->secondTrackInherited && Containers::detectFile($path) === null ? null : $this->secondTrack;
+        $subtitle           = $this->loadOtherFile($path, $console, $this->secondFormat, $track,
                                                    "--" . $names["secondTrack"], "--" . $names["secondFrom"]);
         $this->failureLabel = null;
 
