@@ -25,6 +25,8 @@ class MatroskaReaderTest extends TestCase
 {
     private const DIR = __DIR__ . "/../../files/mkv/";
 
+    private const MKVMERGE = "mkvmerge v99.0 ('Buka') 64-bit";
+
 
     public static function fixtures(): array
     {
@@ -427,6 +429,46 @@ class MatroskaReaderTest extends TestCase
 
 
     /**
+     * Writes a file with a video track 1 and an S_TEXT/UTF8 track 2 with the TrackUID 2000. Cluster N starts at N * 2000 ms and
+     * holds a video block and the block "Cue N." of track 2. The Cues list the track 2 blocks of the clusters in $listed, and
+     * a NUMBER_OF_FRAMES tag of $frames follows them, unless $frames is null. The SeekHead points to both.
+     *
+     * @param list<int> $listed
+     * @param array<int, string> $replaced cluster data in place of cluster N
+     * @return resource
+     */
+    private static function cuedFile(string $writingApp, int $clusterCount, array $listed, ?int $frames, array $replaced = [])
+    {
+        $head     = MkvFixtureWriter::info(writingApp: $writingApp) . MkvFixtureWriter::element(MkvFixtureWriter::TRACKS,
+            MkvFixtureWriter::trackEntry(["number" => 1, "type" => MkvFixtureWriter::TRACK_VIDEO, "codecId" => "V_UNCOMPRESSED"]) .
+            MkvFixtureWriter::trackEntry(["number" => 2, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_TEXT/UTF8"]));
+        $seekHead = fn (int $cues, int $tags): string => MkvFixtureWriter::seekHead([MkvFixtureWriter::CUES => $cues, MkvFixtureWriter::TAGS => $tags]);
+        $position = strlen($seekHead(0, 0)) + strlen($head);
+        $clusters = "";
+        $points   = [];
+        for ($number = 1; $number <= $clusterCount; $number++) {
+            $time  = $number * 2000;
+            $video = MkvFixtureWriter::uint(0xE7, $time) . MkvFixtureWriter::simpleBlock(1, 0, "\x00\x01");
+            $data  = $replaced[$number] ?? $video . MkvFixtureWriter::blockGroup(2, 500, "Cue $number.", 1000);
+            if (in_array($number, $listed, true)) {
+                $points[] = [$time + 500, 2, $position, strlen($video)];
+            }
+            $cluster   = MkvFixtureWriter::element(MkvFixtureWriter::CLUSTER, $data);
+            $clusters .= $cluster;
+            $position += strlen($cluster);
+        }
+        $cues   = MkvFixtureWriter::cues($points);
+        $tags   = $frames === null ? "" : MkvFixtureWriter::frameCountTags(2000, $frames);
+        $stream = fopen("php://memory", "w+b");
+        fwrite($stream, MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT,
+            $seekHead($position, $position + strlen($cues)) . $head . $clusters . $cues . $tags));
+        rewind($stream);
+
+        return $stream;
+    }
+
+
+    /**
      * A Tracks element whose TrackEntry declares a CodecPrivate of 2^40 bytes and holds 3 of them, as in a damaged file.
      */
     private static function hugeCodecPrivate(): string
@@ -474,6 +516,44 @@ class MatroskaReaderTest extends TestCase
         rewind($stream);
 
         return MatroskaReader::open($stream)->extract(2);
+    }
+
+
+    public function testReadsOnlyTheBlocksThatTheCuesOfAnMkvmergeFileList(): void
+    {
+        $unlisted = MkvFixtureWriter::uint(0xE7, 4000) . MkvFixtureWriter::element(0xA3, "\x82\x00");
+        $mkv      = MatroskaReader::open(self::cuedFile(self::MKVMERGE, 3, [1, 3], 2, [2 => $unlisted]));
+
+        $this->assertSame([[2.5, 3.5, ["Cue 1."], false], [6.5, 7.5, ["Cue 3."], false]], $this->cues($mkv->extract(2)));
+    }
+
+
+    public static function cuesThatMissABlock(): array
+    {
+        return [
+            "NUMBER_OF_FRAMES larger than the Cues" => [self::MKVMERGE, 3],
+            "no NUMBER_OF_FRAMES tag"               => [self::MKVMERGE, null],
+            "file from ffmpeg"                      => ["Lavf61.1.100", 2],
+        ];
+    }
+
+
+    #[DataProvider("cuesThatMissABlock")]
+    public function testReadsEveryBlockWhenTheCuesMayMissOne(string $writingApp, ?int $frames): void
+    {
+        $mkv = MatroskaReader::open(self::cuedFile($writingApp, 3, [1, 3], $frames));
+
+        $this->assertSame([[2.5, 3.5, ["Cue 1."], false], [4.5, 5.5, ["Cue 2."], false], [6.5, 7.5, ["Cue 3."], false]],
+                          $this->cues($mkv->extract(2)));
+    }
+
+
+    public function testReadsEveryBlockWhenAListedPositionHoldsNoBlockOfTheTrack(): void
+    {
+        $videoOnly = MkvFixtureWriter::uint(0xE7, 4000) . MkvFixtureWriter::simpleBlock(1, 0, "\x00\x01") . MkvFixtureWriter::simpleBlock(1, 1, "\x00\x01");
+        $mkv       = MatroskaReader::open(self::cuedFile(self::MKVMERGE, 3, [1, 2, 3], 3, [2 => $videoOnly]));
+
+        $this->assertSame(["Cue 1.", "Cue 3."], array_map(fn (array $cue): string => $cue[2][0], $this->cues($mkv->extract(2))));
     }
 
 

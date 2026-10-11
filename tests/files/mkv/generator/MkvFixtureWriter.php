@@ -72,10 +72,10 @@ final class MkvFixtureWriter
     }
 
 
-    public static function info(int $timestampScale = 1000000): string
+    public static function info(int $timestampScale = 1000000, string $writingApp = "MkvFixtureWriter"): string
     {
         return self::element(self::INFO, self::uint(0x2AD7B1, $timestampScale) . self::element(0x4D80, "MkvFixtureWriter") .
-                                         self::element(0x5741, "MkvFixtureWriter"));
+                                         self::element(0x5741, $writingApp));
     }
 
 
@@ -157,6 +157,31 @@ final class MkvFixtureWriter
         $data = self::uint(0xE7, $timestamp) . implode("", $blocks);
 
         return $unknownSize ? self::unknownSizeElement(self::CLUSTER, $data) : self::element(self::CLUSTER, $data);
+    }
+
+
+    /**
+     * @param list<array{int, int, int, int}> $points the time, the track number, the cluster position relative to the segment data
+     *                                               and the block position relative to the cluster data
+     */
+    public static function cues(array $points): string
+    {
+        return self::element(self::CUES, implode("", array_map(
+            fn (array $point): string => self::element(0xBB, self::uint(0xB3, $point[0]) . self::element(0xB7,
+                self::uint(0xF7, $point[1]) . self::uint(0xF1, $point[2]) . self::uint(0xF0, $point[3]))),
+            $points,
+        )));
+    }
+
+
+    /**
+     * Writes the NUMBER_OF_FRAMES statistics tag of one track, as mkvmerge writes it.
+     */
+    public static function frameCountTags(int $trackUid, int $frames): string
+    {
+        return self::element(self::TAGS, self::element(0x7373, self::element(0x63C0, self::uint(0x63C5, $trackUid)) .
+                                                               self::element(0x67C8, self::element(0x45A3, "NUMBER_OF_FRAMES") .
+                                                                                     self::element(0x4487, (string) $frames))));
     }
 
 

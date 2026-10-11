@@ -44,7 +44,7 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
 - **Compression**: the reader reads zlib compression and header stripping. It throws `ParsingException` for bzlib compression, LZO compression and encrypted tracks.
 - **Live recordings**: the reader accepts a file with elements of unknown size, as live recordings write them.
 - **Memory**: the reader skips video and audio data, so memory grows with the subtitle track, not with the file. In the tests, a 64 MB file with 64 cues needs less than 4 MB.
-- **Speed**: the reader walks the whole file for each `loadTrack()` call. A 2-hour, 4 GB file takes about 3 s of CPU time. On a network volume it takes 30 to 45 s.
+- **Speed**: in a file from mkvmerge, the reader reads only the blocks that the `Cues` element lists for the track. It does so only when their number equals the `NUMBER_OF_FRAMES` tag that mkvmerge writes for the track. For a 2-hour, 1.3 GB film with 2,000 cues, `loadTrack()` then takes 0.24 s instead of 1.1 s, and 3.2 s instead of 6.8 s from disk. In other files, and when the numbers differ, the reader walks the whole file for each `loadTrack()` call.
 - **Errors**: `loadTrack()`, `MatroskaReader::extract()` and `MatroskaReader::trackFormat()` throw `InvalidArgumentException` for a number that is not a subtitle track. `trackFormat()` returns null for a codec that the reader does not extract, such as `S_DVBSUB`. `loadTrack()` and `extract()` throw `ParsingException` in these cases:
   - Another codec, such as `S_DVBSUB`.
   - A `S_VOBSUB` track without a `size` or `palette` line in `CodecPrivate`.
