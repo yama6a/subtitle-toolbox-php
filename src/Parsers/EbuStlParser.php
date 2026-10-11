@@ -119,7 +119,7 @@ final class EbuStlParser extends SubtitleParser
         foreach ($sets as $blocks) {
             $header      = $blocks[0];
             $blockIndex += count($blocks);
-            $lines       = self::decodeLines(self::textBytes($blocks), $gsi["CCT"]);
+            $lines       = self::decodeLines(EbuStl::textBytes($blocks), $gsi["CCT"]);
             $hexes       = array_map("bin2hex", $blocks);
             if (ord($header[EbuStl::TTI_CF]) === EbuStl::COMMENT_FLAG) {
                 $lines = array_filter(array_map("trim", $lines), fn (string $line): bool => $line !== "");
@@ -248,23 +248,6 @@ final class EbuStlParser extends SubtitleParser
         }
 
         return $sets;
-    }
-
-
-    /**
-     * Joins the text fields of the blocks that carry subtitle text, EBN 00h to EFh and FFh, without the unused space code.
-     */
-    private static function textBytes(array $blocks): string
-    {
-        $text = "";
-        foreach ($blocks as $block) {
-            $extensionBlockNumber = ord($block[EbuStl::TTI_EBN]);
-            if ($extensionBlockNumber <= 0xEF || $extensionBlockNumber === EbuStl::LAST_BLOCK) {
-                $text .= substr($block, EbuStl::TTI_TF, EbuStl::TEXT_FIELD_SIZE);
-            }
-        }
-
-        return str_replace(chr(EbuStl::UNUSED_SPACE), "", $text);
     }
 
 

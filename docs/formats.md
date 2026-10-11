@@ -243,6 +243,7 @@ $subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOp
 - **Alignment**: the justification code gives the column. The vertical position gives the row: the top, middle or bottom third of the rows.
 - **Metadata**: the title is the OPT field. The language is the LC field, for example `09` is `en`.
 - **Format data**: the subtitle keeps the GSI fields by name in `gsi`, for example `DSC` and `TCP`. Each cue keeps its subtitle group, cumulative status, vertical position, justification code and original blocks.
+- **Row length**: the formatter writes each line as one row and does not wrap it. It sets the GSI field MNC, the maximum characters per row, to the longest row when that row is longer than the stored MNC. A teletext decoder shows at most 40 characters per row and cuts the rest. Wrap long lines before the write, with `wrapLines(40)` or the CLI options `--structure-wrap --structure-max-cpl 40`.
 - **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text keeps its text field bytes, also after retiming.
 - **New files**: a subtitle from another format gets these GSI values. The creation date is today.
   - Code page 850, 25 fps and level-1 teletext.

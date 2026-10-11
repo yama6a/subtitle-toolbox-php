@@ -187,4 +187,21 @@ final class EbuStl
     {
         return vsprintf("%02d%02d%02d%02d", array_map("ord", str_split($bytes)));
     }
+
+
+    /**
+     * Joins the text fields of the blocks that carry subtitle text, EBN 00h to EFh and FFh, without the unused space code.
+     */
+    public static function textBytes(array $blocks): string
+    {
+        $text = "";
+        foreach ($blocks as $block) {
+            $extensionBlockNumber = ord($block[self::TTI_EBN]);
+            if ($extensionBlockNumber <= 0xEF || $extensionBlockNumber === self::LAST_BLOCK) {
+                $text .= substr($block, self::TTI_TF, self::TEXT_FIELD_SIZE);
+            }
+        }
+
+        return str_replace(chr(self::UNUSED_SPACE), "", $text);
+    }
 }

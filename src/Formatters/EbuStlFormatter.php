@@ -40,6 +40,7 @@ final class EbuStlFormatter extends SubtitleFormatter
     private const MAX_EXTENSION_BLOCKS  = 0xF0;
     private const MAX_SUBTITLE_NUMBER   = 0xFFFF;
     private const DEFAULT_FRAME_RATE    = 25;
+    private const MAX_MNC               = 99;
 
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
@@ -372,6 +373,11 @@ final class EbuStlFormatter extends SubtitleFormatter
             }
         }
 
+        $longestRow = $this->longestRow($subtitles, $gsi["CCT"]);
+        if ($longestRow > (int) $gsi["MNC"]) {
+            $gsi["MNC"] = (string) min($longestRow, self::MAX_MNC);
+        }
+
         $title = $subtitle->findMetadata(Subtitle::METADATA_TITLE) ?? "";
         if ($title !== rtrim($gsi["OPT"] ?? "", " \0")) {
             $gsi["OPT"] = $title;
@@ -392,6 +398,26 @@ final class EbuStlFormatter extends SubtitleFormatter
         }
 
         return $block;
+    }
+
+
+    /**
+     * Counts the displayable characters of the longest row, as the MNC field does. Control codes do not count.
+     * A diacritic of table 00 combines with the next letter, so it does not count either.
+     *
+     * @param list<array{blocks: list<string>, comment: bool}> $subtitles
+     */
+    private function longestRow(array $subtitles, string $characterCodeTable): int
+    {
+        $character = $characterCodeTable === "00" ? '/[\x20-\x7F\xA0-\xC0\xD0-\xFF]/' : '/[\x20-\x7F\xA0-\xFF]/';
+        $longest   = 0;
+        foreach ($subtitles as $set) {
+            foreach (explode(chr(EbuStl::NEW_LINE), EbuStl::textBytes($set["blocks"])) as $row) {
+                $longest = max($longest, preg_match_all($character, $row));
+            }
+        }
+
+        return $longest;
     }
 
 
