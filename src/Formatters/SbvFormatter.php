@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\LineEnding;
-use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
@@ -20,7 +19,7 @@ final class SbvFormatter extends SubtitleFormatter
         $options ??= new WriteOptions();
         $blocks = [];
         foreach ($subtitle->getCues() as $cue) {
-            $lines = Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines()));
+            $lines = $this->plainLines($cue);
 
             // An empty line ends an SBV cue, so a cue without text cannot be written.
             if ($lines === []) {

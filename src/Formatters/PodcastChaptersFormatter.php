@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
@@ -17,31 +16,31 @@ final class PodcastChaptersFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $stored = $subtitle->findFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
-        $data   = ["version" => $stored["version"] ?? self::VERSION];
+        $fileData = $subtitle->findFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
+        $document = ["version" => $fileData["version"] ?? self::VERSION];
         foreach (["author" => Subtitle::METADATA_AUTHOR, "title" => Subtitle::METADATA_TITLE] as $field => $key) {
             if ($subtitle->findMetadata($key) !== null) {
-                $data[$field] = $subtitle->findMetadata($key);
+                $document[$field] = $subtitle->findMetadata($key);
             }
         }
-        $data += $stored;
+        $document += $fileData;
 
-        $cues             = array_values($subtitle->getCues());
-        $data["chapters"] = [];
+        $cues                 = array_values($subtitle->getCues());
+        $document["chapters"] = [];
         foreach ($cues as $index => $cue) {
             $chapter     = ["startTime" => $this->number($cue->getStart())];
             $implicitEnd = $this->number(isset($cues[$index + 1]) ? $cues[$index + 1]->getStart() : $cue->getStart());
             if ($this->number($cue->getEnd()) !== $implicitEnd) {
                 $chapter["endTime"] = $this->number($cue->getEnd());
             }
-            $title = implode(" ", Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines())));
+            $title = implode(" ", $this->plainLines($cue));
             if ($title !== "") {
                 $chapter["title"] = $title;
             }
-            $data["chapters"][] = $chapter + $cue->findFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
+            $document["chapters"][] = $chapter + $cue->findFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
         }
 
-        $json = JsonOutput::document($data, true, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $json = JsonOutput::document($document, true, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         return $this->applyOutputOptions($json, $options);
     }

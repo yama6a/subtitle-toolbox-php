@@ -32,10 +32,10 @@ final class CsvFormatter extends SubtitleFormatter
     {
         $options ??= new WriteOptions();
         $formatOptions = $this->formatOptions($options);
-        $data          = $subtitle->findFormatData(CsvParser::FORMAT_DATA_KEY);
-        $delimiter     = $formatOptions->delimiter ?? $data["delimiter"] ?? ",";
-        $timeFormat    = $formatOptions->timeFormat ?? CsvTimeFormat::from($data["timeFormat"] ?? CsvTimeFormat::Dot->value);
-        $fps           = $formatOptions->frameRate ?? $data["frameRate"] ?? null;
+        $fileData      = $subtitle->findFormatData(CsvParser::FORMAT_DATA_KEY);
+        $delimiter     = $formatOptions->delimiter ?? $fileData["delimiter"] ?? ",";
+        $timeFormat    = $formatOptions->timeFormat ?? CsvTimeFormat::from($fileData["timeFormat"] ?? CsvTimeFormat::Dot->value);
+        $fps           = $formatOptions->frameRate ?? $fileData["frameRate"] ?? null;
         $frameRate     = $fps === null ? null : new FrameRate($fps);
         if ($timeFormat === CsvTimeFormat::Frames && $frameRate === null) {
             throw new InvalidArgumentException("The time format " . CsvTimeFormat::Frames->value . " needs a frame rate. Set CsvWriteOptions::\$frameRate.");
@@ -44,7 +44,7 @@ final class CsvFormatter extends SubtitleFormatter
 
         $cues               = array_values($subtitle->getCues());
         $rows               = array_map($this->splitSpeaker(...), $cues);
-        [$columns, $header] = $this->columns($data, $cues, $rows);
+        [$columns, $header] = $this->columns($fileData, $cues, $rows);
         if ($second !== null) {
             $position = array_search(["text", null], $columns, true) + 1;
             array_splice($columns, $position, 0, [["second", null]]);
@@ -52,7 +52,7 @@ final class CsvFormatter extends SubtitleFormatter
             $secondTexts = $this->secondTexts($cues, array_values($second->getCues()));
         }
 
-        $records = $data === [] || $data["header"] !== null ? [$header] : [];
+        $records = $fileData === [] || $fileData["header"] !== null ? [$header] : [];
         foreach ($cues as $index => $cue) {
             $records[] = array_map(fn (array $column): string => match ($column[0]) {
                 "identifier" => $cue->getIdentifier() ?? "",
@@ -83,15 +83,15 @@ final class CsvFormatter extends SubtitleFormatter
      *
      * @return array{list<array{string, string|int|null}>, list<string>}
      */
-    private function columns(array $data, array $cues, array $rows): array
+    private function columns(array $fileData, array $cues, array $rows): array
     {
         $columns = [];
         $header  = [];
-        if ($data !== []) {
-            for ($index = 0; $index < $data["width"]; $index++) {
-                $role      = array_search($index, $data["roles"], true);
-                $columns[] = $role === false ? ["other", $data["header"][$index] ?? $index] : [$role, null];
-                $header[]  = $data["header"][$index] ?? "";
+        if ($fileData !== []) {
+            for ($index = 0; $index < $fileData["width"]; $index++) {
+                $role      = array_search($index, $fileData["roles"], true);
+                $columns[] = $role === false ? ["other", $fileData["header"][$index] ?? $index] : [$role, null];
+                $header[]  = $fileData["header"][$index] ?? "";
             }
         } else {
             $hasIdentifier = array_filter($cues, fn (SubtitleCue $cue): bool => $cue->getIdentifier() !== null) !== [];
@@ -167,7 +167,7 @@ final class CsvFormatter extends SubtitleFormatter
                 continue;
             }
             $used[$best] = true;
-            $texts[]     = implode(LineEnding::Lf->value, Markup::plainLines(array_map(Markup::rubyAsText(...), $secondCues[$best]->getLines())));
+            $texts[]     = implode(LineEnding::Lf->value, $this->plainLines($secondCues[$best]));
         }
 
         return $texts;

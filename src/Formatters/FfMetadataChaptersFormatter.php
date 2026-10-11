@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\LineEnding;
-use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
@@ -18,22 +17,22 @@ final class FfMetadataChaptersFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $stored = $subtitle->findFormatData(FfMetadataChaptersParser::FORMAT_DATA_KEY);
-        $output = ";FFMETADATA1" . LineEnding::Lf->value . $this->tags($this->globalTags($subtitle, $stored["tags"] ?? []));
-        foreach ($stored["streams"] ?? [] as $streamTags) {
+        $fileData = $subtitle->findFormatData(FfMetadataChaptersParser::FORMAT_DATA_KEY);
+        $output   = ";FFMETADATA1" . LineEnding::Lf->value . $this->tags($this->globalTags($subtitle, $fileData["tags"] ?? []));
+        foreach ($fileData["streams"] ?? [] as $streamTags) {
             $output .= "[STREAM]" . LineEnding::Lf->value . $this->tags($streamTags);
         }
 
         foreach ($subtitle->getCues() as $cue) {
-            $data     = $cue->findFormatData(FfMetadataChaptersParser::FORMAT_DATA_KEY);
-            $timeBase = $data["timeBase"] ?? self::DEFAULT_TIME_BASE;
+            $cueData  = $cue->findFormatData(FfMetadataChaptersParser::FORMAT_DATA_KEY);
+            $timeBase = $cueData["timeBase"] ?? self::DEFAULT_TIME_BASE;
             [$numerator, $denominator] = array_map("intval", explode("/", $timeBase));
-            $title    = implode(LineEnding::Lf->value, Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines())));
+            $title    = implode(LineEnding::Lf->value, $this->plainLines($cue));
 
             $output .= "[CHAPTER]" . LineEnding::Lf->value . "TIMEBASE=$timeBase" . LineEnding::Lf->value .
                        "START=" . $this->ticks($cue->getStart(), $numerator, $denominator) . LineEnding::Lf->value .
                        "END=" . $this->ticks($cue->getEnd(), $numerator, $denominator) . LineEnding::Lf->value .
-                       $this->tags(($title === "" ? [] : ["title" => $title]) + ($data["tags"] ?? []));
+                       $this->tags(($title === "" ? [] : ["title" => $title]) + ($cueData["tags"] ?? []));
         }
 
         return $this->applyOutputOptions($output, $options);

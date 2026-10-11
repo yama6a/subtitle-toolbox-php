@@ -24,18 +24,18 @@ final class SamiFormatter extends SubtitleFormatter
     {
         $options ??= new WriteOptions();
         $stripTags = $options->stripTags;
-        $data      = $subtitle->findFormatData(SamiParser::FORMAT_DATA_KEY);
+        $fileData  = $subtitle->findFormatData(SamiParser::FORMAT_DATA_KEY);
         $language  = $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);
-        $class     = isset($data["style"]) || isset($data["class"]) ? ($data["class"] ?? null) : $this->classFor($language);
-        $style     = isset($data["style"]) ? $this->keepOnlyClass($data["style"], $class) : $this->defaultStyle($class, $language);
+        $class     = isset($fileData["style"]) || isset($fileData["class"]) ? ($fileData["class"] ?? null) : $this->classFor($language);
+        $style     = isset($fileData["style"]) ? $this->keepOnlyClass($fileData["style"], $class) : $this->defaultStyle($class, $language);
         $title     = $subtitle->findMetadata(Subtitle::METADATA_TITLE);
 
         $output = "<SAMI>" . LineEnding::Lf->value . "<HEAD>" . LineEnding::Lf->value;
         if ($title !== null) {
             $output .= "<TITLE>" . htmlspecialchars(XmlOutput::requireUtf8($title), ENT_NOQUOTES, "UTF-8") . "</TITLE>" . LineEnding::Lf->value;
         }
-        if (isset($data["samiParam"])) {
-            $output .= "<SAMIParam>{$data["samiParam"]}</SAMIParam>" . LineEnding::Lf->value;
+        if (isset($fileData["samiParam"])) {
+            $output .= "<SAMIParam>{$fileData["samiParam"]}</SAMIParam>" . LineEnding::Lf->value;
         }
         $output .= "<STYLE TYPE=\"text/css\">$style</STYLE>" . LineEnding::Lf->value . "</HEAD>" . LineEnding::Lf->value . "<BODY>" . LineEnding::Lf->value;
 
@@ -56,11 +56,11 @@ final class SamiFormatter extends SubtitleFormatter
 
     private function formatParagraphs(SubtitleCue $cue, ?string $class, bool $stripTags): string
     {
-        $stored = $cue->findFormatData(SamiParser::FORMAT_DATA_KEY);
-        if (!$stripTags && isset($stored["paragraphs"]) && ($stored["lines"] ?? null) === $cue->getLines()) {
+        $cueData = $cue->findFormatData(SamiParser::FORMAT_DATA_KEY);
+        if (!$stripTags && isset($cueData["paragraphs"]) && ($cueData["lines"] ?? null) === $cue->getLines()) {
             return implode("", array_map(
                 fn (array $paragraph): string => $this->openParagraph($class, $paragraph["attributes"]) . $this->writeNbsp($paragraph["html"]),
-                $stored["paragraphs"]
+                $cueData["paragraphs"]
             ));
         }
 

@@ -7,8 +7,10 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\FormatOptionsList;
 use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
 
 /**
@@ -67,5 +69,16 @@ abstract class SubtitleFormatter
         $class = static::FORMAT_OPTIONS;
 
         return $class === null ? null : FormatOptionsList::find($options->formats, $class) ?? new $class();
+    }
+
+
+    /**
+     * Returns Markup::plainLines() of the cue lines, with ruby written as "base (annotation)".
+     *
+     * @return list<string>
+     */
+    protected function plainLines(SubtitleCue $cue): array
+    {
+        return Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines()));
     }
 }
