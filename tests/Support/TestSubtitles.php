@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Tests\Support;
 
+use SubtitleToolbox\Alignment;
+use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -60,26 +63,46 @@ final class TestSubtitles
 
 
     /**
-     * @return list<array{float, float, string}>|list<array{float, float, string, int}> [start, end, text] of each
-     *         cue, with the alignment as 4th value when $withAlignment is true
+     * @param Subtitle|iterable<SubtitleCue> $cues
+     *
+     * @return list<array{float, float, string}> [start, end, text] of each cue
      */
-    public static function describe(Subtitle $subtitle, bool $withAlignment = false): array
+    public static function describe(Subtitle|iterable $cues): array
     {
-        return array_map(
-            fn (SubtitleCue $cue): array => $withAlignment
-                ? [$cue->getStart(), $cue->getEnd(), $cue->getText(), $cue->getAlignment()->value]
-                : [$cue->getStart(), $cue->getEnd(), $cue->getText()],
-            array_values($subtitle->getCues())
-        );
+        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()], self::cues($cues));
     }
 
 
     /**
+     * @param Subtitle|iterable<SubtitleCue> $cues
+     *
+     * @return list<array{float, float, string, Alignment}> [start, end, text, alignment] of each cue
+     */
+    public static function describeWithAlignment(Subtitle|iterable $cues): array
+    {
+        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText(), $cue->getAlignment()], self::cues($cues));
+    }
+
+
+    /**
+     * @param Subtitle|iterable<SubtitleCue> $cues
+     *
+     * @return list<array{float, float, list<string>}> [start, end, lines] of each cue
+     */
+    public static function describeLines(Subtitle|iterable $cues): array
+    {
+        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], self::cues($cues));
+    }
+
+
+    /**
+     * @param Subtitle|iterable<SubtitleCue> $cues
+     *
      * @return list<array{float, float}>
      */
-    public static function times(Subtitle $subtitle): array
+    public static function times(Subtitle|iterable $cues): array
     {
-        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], array_values($subtitle->getCues()));
+        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], self::cues($cues));
     }
 
 
@@ -89,6 +112,31 @@ final class TestSubtitles
      */
     public static function texts(Subtitle|array $cues): array
     {
-        return array_map(fn (SubtitleCue $cue): string => $cue->getText(), array_values($cues instanceof Subtitle ? $cues->getCues() : $cues));
+        return array_map(fn (SubtitleCue $cue): string => $cue->getText(), self::cues($cues));
+    }
+
+
+    /**
+     * @param Subtitle|list<ParseWarning> $warnings
+     *
+     * @return list<array{int, int, ParseWarningAction, string}> [line number, block index, action, message] of each warning
+     */
+    public static function warnings(Subtitle|array $warnings): array
+    {
+        return array_map(
+            fn (ParseWarning $warning): array => [$warning->lineNumber, $warning->blockIndex, $warning->action, $warning->message],
+            $warnings instanceof Subtitle ? $warnings->getParseWarnings() : $warnings
+        );
+    }
+
+
+    /**
+     * @param Subtitle|iterable<SubtitleCue> $cues
+     *
+     * @return list<SubtitleCue>
+     */
+    private static function cues(Subtitle|iterable $cues): array
+    {
+        return array_values($cues instanceof Subtitle ? $cues->getCues() : iterator_to_array($cues, false));
     }
 }

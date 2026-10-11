@@ -29,13 +29,13 @@ class DualSubtitleTest extends TestCase
         $german  = $this->parseFixture("station_de.srt");
 
         $this->assertCount(5, $english->getCues());
-        $this->assertSame([1.0, 4.0, "The train to Hamburg leaves from platform 4.", 2],
-                          TestSubtitles::describe($english, withAlignment: true)[0]);
-        $this->assertSame([16.0, 19.0, "Take an umbrella with you.", 2], TestSubtitles::describe($english, withAlignment: true)[4]);
+        $this->assertSame([1.0, 4.0, "The train to Hamburg leaves from platform 4.", Alignment::BottomCenter],
+                          TestSubtitles::describeWithAlignment($english)[0]);
+        $this->assertSame([16.0, 19.0, "Take an umbrella with you.", Alignment::BottomCenter], TestSubtitles::describeWithAlignment($english)[4]);
 
         $this->assertCount(6, $german->getCues());
-        $this->assertSame([1.2, 3.9, "Der Zug nach Hamburg fährt von Gleis 4.", 2], TestSubtitles::describe($german, withAlignment: true)[0]);
-        $this->assertSame([19.2, 21.0, "Gute Reise!", 2], TestSubtitles::describe($german, withAlignment: true)[5]);
+        $this->assertSame([1.2, 3.9, "Der Zug nach Hamburg fährt von Gleis 4.", Alignment::BottomCenter], TestSubtitles::describeWithAlignment($german)[0]);
+        $this->assertSame([19.2, 21.0, "Gute Reise!", Alignment::BottomCenter], TestSubtitles::describeWithAlignment($german)[5]);
     }
 
 
@@ -45,7 +45,7 @@ class DualSubtitleTest extends TestCase
             $subtitle = $this->parseFixture($fileName);
             $again    = Subtitle::fromString($subtitle->toString(Format::SubRip), Format::SubRip);
 
-            $this->assertSame(TestSubtitles::describe($subtitle, withAlignment: true), TestSubtitles::describe($again, withAlignment: true), $fileName);
+            $this->assertSame(TestSubtitles::describeWithAlignment($subtitle), TestSubtitles::describeWithAlignment($again), $fileName);
         }
     }
 
@@ -82,14 +82,14 @@ class DualSubtitleTest extends TestCase
     {
         $english       = $this->parseFixture("station_en.srt");
         $german        = $this->parseFixture("station_de.srt");
-        $englishBefore = TestSubtitles::describe($english, withAlignment: true);
-        $germanBefore  = TestSubtitles::describe($german, withAlignment: true);
+        $englishBefore = TestSubtitles::describeWithAlignment($english);
+        $germanBefore  = TestSubtitles::describeWithAlignment($german);
 
         DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(secondaryStyle: "i"));
         DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(mode: DualSubtitleMode::TopBottom));
 
-        $this->assertSame($englishBefore, TestSubtitles::describe($english, withAlignment: true));
-        $this->assertSame($germanBefore, TestSubtitles::describe($german, withAlignment: true));
+        $this->assertSame($englishBefore, TestSubtitles::describeWithAlignment($english));
+        $this->assertSame($germanBefore, TestSubtitles::describeWithAlignment($german));
     }
 
 
@@ -100,8 +100,8 @@ class DualSubtitleTest extends TestCase
 
         $dual = DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(secondaryStyle: "i"));
 
-        $this->assertSame([[1.0, 4.0, "Where are you going?\n<i>Wohin gehst du?</i>", 2]],
-                          TestSubtitles::describe($dual, withAlignment: true));
+        $this->assertSame([[1.0, 4.0, "Where are you going?\n<i>Wohin gehst du?</i>", Alignment::BottomCenter]],
+                          TestSubtitles::describeWithAlignment($dual));
     }
 
 
@@ -112,8 +112,8 @@ class DualSubtitleTest extends TestCase
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
-        $this->assertSame([[0.0, 2.5, "first\nbetween", 2], [2.0, 4.0, "second", 2]],
-                          TestSubtitles::describe($dual, withAlignment: true));
+        $this->assertSame([[0.0, 2.5, "first\nbetween", Alignment::BottomCenter], [2.0, 4.0, "second", Alignment::BottomCenter]],
+                          TestSubtitles::describeWithAlignment($dual));
     }
 
 
@@ -124,7 +124,7 @@ class DualSubtitleTest extends TestCase
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
-        $this->assertSame([[0.0, 2.0, "first", 2], [2.0, 3.0, "after", 2]], TestSubtitles::describe($dual, withAlignment: true));
+        $this->assertSame([[0.0, 2.0, "first", Alignment::BottomCenter], [2.0, 3.0, "after", Alignment::BottomCenter]], TestSubtitles::describeWithAlignment($dual));
     }
 
 
@@ -138,7 +138,7 @@ class DualSubtitleTest extends TestCase
             secondaryAlignment: Alignment::TopRight,
         ));
 
-        $this->assertSame([[0.0, 2.0, "first", 2], [0.0, 2.0, "erste", 9]], TestSubtitles::describe($dual, withAlignment: true));
+        $this->assertSame([[0.0, 2.0, "first", Alignment::BottomCenter], [0.0, 2.0, "erste", Alignment::TopRight]], TestSubtitles::describeWithAlignment($dual));
     }
 
 
@@ -169,7 +169,7 @@ class DualSubtitleTest extends TestCase
             mode: DualSubtitleMode::TopBottom,
         ));
 
-        $this->assertSame([3.9, 4.1, "kurz", 8], TestSubtitles::describe($dual, withAlignment: true)[1]);
+        $this->assertSame([3.9, 4.1, "kurz", Alignment::TopCenter], TestSubtitles::describeWithAlignment($dual)[1]);
     }
 
 
@@ -194,8 +194,8 @@ class DualSubtitleTest extends TestCase
         $this->assertSame([], $dual->findFormatData("ass"));
         $this->assertEquals([new Comment("before second", 2),
                            new Comment("at the end", 3)], $dual->getComments());
-        $this->assertSame([[0.0, 2.0, "first\nvorher", 2], [2.2, 2.8, "dazwischen", 2], [3.0, 5.0, "second", 2]],
-                          TestSubtitles::describe($dual, withAlignment: true));
+        $this->assertSame([[0.0, 2.0, "first\nvorher", Alignment::BottomCenter], [2.2, 2.8, "dazwischen", Alignment::BottomCenter], [3.0, 5.0, "second", Alignment::BottomCenter]],
+                          TestSubtitles::describeWithAlignment($dual));
     }
 
 
@@ -230,7 +230,7 @@ class DualSubtitleTest extends TestCase
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
-        $this->assertSame([[0.0, 2.0, "erste", 2]], TestSubtitles::describe($dual, withAlignment: true));
+        $this->assertSame([[0.0, 2.0, "erste", Alignment::BottomCenter]], TestSubtitles::describeWithAlignment($dual));
         $this->assertEquals([new Comment("only a note", 1)], $dual->getComments());
         $this->assertSame([], $primary->getCues());
     }

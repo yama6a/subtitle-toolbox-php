@@ -35,6 +35,6 @@ trait RealFiles
      */
     private function describeCue(SubtitleCue $cue): array
     {
-        return [$cue->getStart(), $cue->getEnd(), $cue->getText(), $cue->getAlignment()];
+        return TestSubtitles::describeWithAlignment([$cue])[0];
     }
 }
