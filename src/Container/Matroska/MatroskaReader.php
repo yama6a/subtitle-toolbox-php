@@ -38,7 +38,8 @@ final class MatroskaReader implements ContainerReader
     public const CODEC_PGS    = "S_HDMV/PGS";
     public const CODEC_VOBSUB = "S_VOBSUB";
 
-    public const CODECS = [self::CODEC_SUBRIP, self::CODEC_ASS, self::CODEC_SSA, self::CODEC_WEBVTT, self::CODEC_PGS, self::CODEC_VOBSUB];
+    public const CODECS = [self::CODEC_SUBRIP, self::CODEC_ASS, self::CODEC_SSA, self::CODEC_WEBVTT, self::CODEC_PGS, self::CODEC_VOBSUB,
+                           self::CODEC_WEBM_SUBTITLES, self::CODEC_WEBM_CAPTIONS, self::CODEC_WEBM_DESCRIPTIONS];
 
     /** The first 4 bytes of every Matroska and WebM file. */
     public const EBML_MAGIC = "\x1A\x45\xDF\xA3";
@@ -50,11 +51,19 @@ final class MatroskaReader implements ContainerReader
 
     private const NANOSECONDS_PER_MILLISECOND = 1000000;
 
+    // The WebM codecs of WebVTT tracks. D_WEBVTT/METADATA holds no text to display.
+    private const CODEC_WEBM_SUBTITLES    = "D_WEBVTT/SUBTITLES";
+    private const CODEC_WEBM_CAPTIONS     = "D_WEBVTT/CAPTIONS";
+    private const CODEC_WEBM_DESCRIPTIONS = "D_WEBVTT/DESCRIPTIONS";
+
     private const FORMATS = [
         self::CODEC_SUBRIP => Format::SubRip,
         self::CODEC_ASS    => Format::Ass,
         self::CODEC_SSA    => Format::Ass,
         self::CODEC_WEBVTT => Format::WebVtt,
+        self::CODEC_WEBM_SUBTITLES    => Format::WebVtt,
+        self::CODEC_WEBM_CAPTIONS     => Format::WebVtt,
+        self::CODEC_WEBM_DESCRIPTIONS => Format::WebVtt,
         self::CODEC_PGS    => Format::Pgs,
         self::CODEC_VOBSUB => Format::VobSub,
     ];
@@ -221,7 +230,7 @@ final class MatroskaReader implements ContainerReader
 
         $subtitle = match ($format) {
             Format::Pgs    => (new PgsParser())->parse(TrackFileBuilder::pgsStream($blocks, $this->timestampScale), $options),
-            Format::WebVtt => (new WebVttParser())->parse(TrackFileBuilder::webVttFile($codecPrivate, $blocks), $options),
+            Format::WebVtt => (new WebVttParser())->parse(TrackFileBuilder::webVttFile($track, $codecPrivate, $blocks), $options),
             Format::SubRip => (new SubRipParser())->parse(TrackFileBuilder::subRipFile($blocks), $options),
             Format::Ass    => (new AssParser())->parse(TrackFileBuilder::assFile($track, $codecPrivate, $blocks), $options),
             Format::VobSub => (new VobSubParser())->parseBlocks($codecPrivate, array_map(

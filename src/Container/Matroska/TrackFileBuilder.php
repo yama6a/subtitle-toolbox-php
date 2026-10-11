@@ -20,6 +20,9 @@ final class TrackFileBuilder
     private const PTS_TICKS       = 9;
     private const PTS_NANOSECONDS = 100000;
 
+    // The codec IDs of WebVTT tracks in WebM files start with this prefix.
+    private const WEBM_WEBVTT_PREFIX = "D_WEBVTT/";
+
     // A PGS segment starts with a type byte and a 16-bit size.
     private const PGS_SEGMENT_HEADER = 3;
 
@@ -89,14 +92,20 @@ final class TrackFileBuilder
     /**
      * Rebuilds the cue blocks from the block text and the BlockAdditional.
      * The BlockAdditional holds the cue settings, the cue identifier and the comments before the cue.
+     * In a WebM track, the block holds the cue identifier, the cue settings and the cue text, each after a line break.
      *
      * @param list<array{startMs: int, endMs: int, data: string, additional: ?string}> $cues
      */
-    public static function webVttFile(string $codecPrivate, array $cues): string
+    public static function webVttFile(SubtitleTrack $track, string $codecPrivate, array $cues): string
     {
         $file = $codecPrivate === "" ? "WEBVTT" : rtrim(StringHelpers::normalizeEOLs($codecPrivate));
+        $webm = str_starts_with($track->codecId, self::WEBM_WEBVTT_PREFIX);
         foreach ($cues as $cue) {
             [$settings, $identifier, $comments] = array_pad(explode("\n", StringHelpers::normalizeEOLs($cue["additional"] ?? ""), 3), 3, "");
+            $data = $cue["data"];
+            if ($webm) {
+                [$identifier, $settings, $data] = array_pad(explode("\n", StringHelpers::normalizeEOLs($data), 3), 3, "");
+            }
 
             $file .= "\n\n";
             if (trim($comments) !== "") {
@@ -109,7 +118,7 @@ final class TrackFileBuilder
             $text  = preg_replace_callback(
                 '/<(?:(\d+):)?(\d{2}):(\d{2})\.(\d{3})>/',
                 fn (array $m): string => "<" . self::time($cue["startMs"] + ((int) $m[1] * 3600 + (int) $m[2] * 60 + (int) $m[3]) * 1000 + (int) $m[4], ".", true) . ">",
-                self::cueText($cue["data"]),
+                self::cueText($data),
             );
             $file .= self::time($cue["startMs"], ".", true) . " --> " . self::time($cue["endMs"], ".", true) .
                      ($settings === "" ? "" : " $settings") . "\n$text";
