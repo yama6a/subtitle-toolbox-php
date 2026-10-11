@@ -25,5 +25,6 @@
 | [errors.md](errors.md) | exceptions, error codes and line numbers |
 | [cli.md](cli.md) | the command line tool, the PHAR file and the container image |
 | [compatibility.md](compatibility.md) | what semantic versioning covers in 3.x, and what a minor or patch release can change |
+| [upgrade-4.0.md](upgrade-4.0.md) | the 4.0 call for each changed 3.x call |
 | [upgrade-3.0.md](upgrade-3.0.md) | the new package name, the 3.0 call for each changed 2.x call, and the changes in output |
 | [upgrade-2.0.md](upgrade-2.0.md) | the 2.0 call for each 1.x call, and the changes in output and exit codes |
