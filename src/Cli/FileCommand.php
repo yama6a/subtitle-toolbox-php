@@ -4,21 +4,9 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Container\Containers;
-use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Parsers\Options\CsvReadOptions;
-use SubtitleToolbox\Parsers\Options\FormatReadOptions;
-use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
-use SubtitleToolbox\Parsers\Options\SccReadOptions;
-use SubtitleToolbox\Parsers\Options\SccRollUp;
-use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ParseWarning;
-use SubtitleToolbox\ReadOptions;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleReader;
 
 /**
  * Reads each input file, a glob or the files of a directory, and runs process() on it.
@@ -31,30 +19,11 @@ abstract class FileCommand extends Command
 
     public const LENIENT_HINT = "Pass --lenient to skip or repair broken cues.";
 
-    private const IGNORE_LENIENT = [Format::Scc, Format::Pgs, Format::VobSub, Format::FfMetadataChapters, Format::OgmChapters,
-                                    Format::PodcastChapters, Format::YouTubeChapters];
-
-    protected ?Format $fromFormat = null;
-
-    protected ?Format $secondFormat = null;
-
-    protected ?float $inputFps = null;
-
-    protected ?int $inputTrack = null;
-
-    private ?int $secondTrack = null;
-
-    private bool $secondTrackInherited = false;
-
-    protected bool $wordTimestamps = false;
-
-    private ?SccRollUp $sccRollUp = null;
-
     protected int $succeeded = 0;
 
     protected int $failed = 0;
 
-    protected ReadOptions $readOptions;
+    protected InputReader $inputReader;
 
     protected OutputFiles $outputFiles;
 
@@ -63,8 +32,6 @@ abstract class FileCommand extends Command
 
     // The second file of diff and dual while it loads. A failure then names it instead of the input.
     private ?string $failureLabel = null;
-
-    private bool $lenientHint = false;
 
 
     /**
@@ -161,30 +128,10 @@ abstract class FileCommand extends Command
 
     protected function prepare(Arguments $arguments): void
     {
-        $this->succeeded      = 0;
-        $this->failed         = 0;
-        $this->outputFiles    = new OutputFiles();
-        $this->inputFps       = $arguments->rate("input-fps");
-        $this->wordTimestamps = $this->needsWordTimestamps($arguments);
-        $sccRollUp            = $arguments->choice("scc-roll-up", array_column(SccRollUp::cases(), "value"));
-        $this->sccRollUp      = $sccRollUp === null ? null : SccRollUp::from($sccRollUp);
-        $names                = $this->fileOptionNames();
-        $this->inputTrack     = $arguments->positiveInt($names["track"]);
-        $explicitSecondTrack  = $arguments->positiveInt($names["secondTrack"]);
-        $this->secondTrack    = $explicitSecondTrack ?? ($this->secondFileInherits() ? $this->inputTrack : null);
-
-        $this->secondTrackInherited = $explicitSecondTrack === null && $this->secondTrack !== null;
-
-        $from               = $arguments->value($names["from"]);
-        $this->fromFormat   = $from === null ? null : FormatArgument::readable($from);
-        $second             = $arguments->value($names["secondFrom"]);
-        $this->secondFormat = $second === null ? ($this->secondFileInherits() ? $this->fromFormat : null) : FormatArgument::readable($second);
-
-        $this->readOptions = new ReadOptions(
-            encoding: $arguments->value("encoding"),
-            lenient: $arguments->has("lenient"),
-            formats: $this->formatOptions(),
-        );
+        $this->succeeded   = 0;
+        $this->failed      = 0;
+        $this->outputFiles = new OutputFiles();
+        $this->inputReader = new InputReader($arguments, $this->fileOptionNames(), $this->secondFileInherits(), $this->needsWordTimestamps($arguments));
     }
 
 
@@ -207,7 +154,7 @@ abstract class FileCommand extends Command
     /**
      * Fails when $directory, the value of --output-dir, names a file.
      */
-    protected static function checkOutputDirectory(?string $directory): void
+    public static function checkOutputDirectory(?string $directory): void
     {
         $real = $directory === null ? null : self::realTarget($directory);
         if ($real !== null && OutputFiles::exists($real) && !is_dir($real)) {
@@ -288,7 +235,6 @@ abstract class FileCommand extends Command
 
         foreach ($inputs as $input) {
             $this->failureLabel = null;
-            $this->lenientHint  = false;
             try {
                 $read = $this->read($input, $arguments, $console);
                 if ($read !== null) {
@@ -301,7 +247,7 @@ abstract class FileCommand extends Command
                 $this->failed++;
                 $names = $this->fileOptionNames();
                 $console->err(($this->failureLabel ?? self::label($input)) . ": " . CliMessages::reword(self::throwableMessage($exception), "--$names[track]", "--$names[from]") . "\n");
-                if ($this->lenientHint) {
+                if ($this->inputReader->needsLenientHint()) {
                     $console->err(self::LENIENT_HINT . "\n");
                 }
                 if (!$arguments->has("keep-going")) {
@@ -338,15 +284,7 @@ abstract class FileCommand extends Command
     protected function read(string $input, Arguments $arguments, Console $console): ?array
     {
         $this->parseWarnings = [];
-        $track               = $this->inputTrack;
-        if ($input !== self::DASH) {
-            if (!is_file($input)) {
-                self::fail("The file does not exist.");
-            }
-            $subtitle = $this->readPath($input, $input, $track, $console);
-        } else {
-            $subtitle = $this->readStdin($track, $console);
-        }
+        $subtitle            = $this->inputReader->read($input, $console, fn (string $path, string $input): bool => $this->listTracks($path, $input, $console));
         if ($subtitle === null) {
             return null;
         }
@@ -363,11 +301,10 @@ abstract class FileCommand extends Command
      */
     protected function loadSideSubtitle(string $path, Console $console): Subtitle
     {
-        $this->lenientHint = false;
         try {
-            return $this->loadOtherFile($path, $console);
+            return $this->inputReader->readSideFile($path, $console);
         } catch (\Throwable $exception) {
-            return self::failSideFile($path, self::throwableMessage($exception) . ($this->lenientHint ? "\n" . self::LENIENT_HINT : ""));
+            return self::failSideFile($path, self::throwableMessage($exception) . ($this->inputReader->needsLenientHint() ? "\n" . self::LENIENT_HINT : ""));
         }
     }
 
@@ -377,35 +314,9 @@ abstract class FileCommand extends Command
      */
     protected function loadSecondFile(string $path, Arguments $arguments, Console $console): Subtitle
     {
-        $names              = $this->fileOptionNames();
         $this->failureLabel = $path;
-        $track              = $this->secondTrackInherited && Containers::detectFile($path) === null ? null : $this->secondTrack;
-        $subtitle           = $this->loadOtherFile($path, $console, $this->secondFormat, $track,
-                                                   "--" . $names["secondTrack"], "--" . $names["secondFrom"]);
+        $subtitle           = $this->inputReader->readSecondFile($path, $console);
         $this->failureLabel = null;
-
-        return $subtitle;
-    }
-
-
-    /**
-     * Reads a file other than the input without --from and --track.
-     * Detects the format unless $format or $track is given.
-     * $trackOption and $fromOption name the options that set $track and $format.
-     */
-    private function loadOtherFile(string $path, Console $console, ?Format $format = null, ?int $track = null,
-                                   ?string $trackOption = null, ?string $fromOption = null): Subtitle
-    {
-        if (!is_file($path)) {
-            self::fail("The file does not exist.");
-        }
-
-        try {
-            $subtitle = $this->loadFile($path, $format, $track);
-        } catch (SubtitleToolboxException $exception) {
-            return self::fail(CliMessages::reword($exception->getMessage(), $trackOption, $fromOption));
-        }
-        CliMessages::printWarnings($console, $path, $subtitle->getParseWarnings());
 
         return $subtitle;
     }
@@ -418,107 +329,5 @@ abstract class FileCommand extends Command
     protected function listTracks(string $path, string $input, Console $console): bool
     {
         return false;
-    }
-
-
-    /**
-     * Returns null when listTracks() handled an MKV, WebM or MP4 file.
-     */
-    private function readPath(string $path, string $input, ?int $track, Console $console): ?Subtitle
-    {
-        if ($track === null && $this->listTracks($path, $input, $console)) {
-            return null;
-        }
-
-        return $this->loadFile($path, $this->fromFormat, $track);
-    }
-
-
-    private function loadFile(string $path, ?Format $format, ?int $track): Subtitle
-    {
-        if ($track !== null) {
-            return Subtitle::loadTrack($path, $track, $this->readOptions);
-        }
-        if ($format !== null) {
-            return $this->parse(fn (): Subtitle => Subtitle::load($path, $format, $this->readOptions), fn (): Format => $format);
-        }
-        if (Containers::detectFile($path) !== null) {
-            return Subtitle::loadAutoDetectFormat($path, $this->readOptions);
-        }
-
-        return $this->parse(fn (): Subtitle => Subtitle::loadAutoDetectFormat($path, $this->readOptions),
-                            fn (): ?Format => $this->detectFormat((string) @file_get_contents($path), $path));
-    }
-
-
-    /**
-     * Runs $read. After a ParsingException, it calls $format for the format of the input and sets the --lenient hint.
-     *
-     * @param callable(): Subtitle $read
-     * @param callable(): ?Format  $format
-     */
-    private function parse(callable $read, callable $format): Subtitle
-    {
-        try {
-            return $read();
-        } catch (ParsingException $exception) {
-            $detected          = $this->readOptions->lenient ? null : $format();
-            $this->lenientHint = $detected !== null && !in_array($detected, self::IGNORE_LENIENT, true);
-
-            throw $exception;
-        }
-    }
-
-
-    private function detectFormat(string $content, ?string $path): ?Format
-    {
-        try {
-            return SubtitleReader::detectFormat(StringHelpers::decode($content, $this->readOptions->encoding)->content, $path);
-        } catch (SubtitleToolboxException) {
-            return null;
-        }
-    }
-
-
-    /**
-     * Returns the read options of --input-fps for MicroDVD and CSV, of the word timestamps for the transcript formats and of --scc-roll-up for SCC.
-     * Each parser uses only the object of its own class.
-     *
-     * @return list<FormatReadOptions>
-     */
-    private function formatOptions(): array
-    {
-        return array_values(array_filter([
-            $this->inputFps === null ? null : new MicroDvdReadOptions($this->inputFps),
-            $this->inputFps === null ? null : new CsvReadOptions(frameRate: $this->inputFps),
-            $this->wordTimestamps ? new TranscriptReadOptions(wordTimestamps: true) : null,
-            $this->sccRollUp === null ? null : new SccReadOptions(rollUp: $this->sccRollUp),
-        ]));
-    }
-
-
-    private function readStdin(?int $track, Console $console): ?Subtitle
-    {
-        $content = $console->readStdin();
-        if ($track !== null || Containers::detect($content) !== null) {
-            // The track list and loadTrack() need a file.
-            $path = tempnam(sys_get_temp_dir(), Application::NAME . "-");
-            try {
-                file_put_contents($path, $content);
-
-                return $this->readPath($path, self::DASH, $track, $console);
-            } finally {
-                @unlink($path);
-            }
-        }
-        if ($this->fromFormat === Format::VobSub) {
-            self::fail("VobSub needs the path of the .idx file. Standard input does not work.");
-        }
-
-        $format = $this->fromFormat;
-
-        return $format === null
-            ? $this->parse(fn (): Subtitle => Subtitle::fromStringAutoDetectFormat($content, $this->readOptions), fn (): ?Format => $this->detectFormat($content, null))
-            : $this->parse(fn (): Subtitle => Subtitle::fromString($content, $format, $this->readOptions), fn (): Format => $format);
     }
 }
