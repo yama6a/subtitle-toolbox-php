@@ -194,7 +194,7 @@ vendor/bin/subtitle-toolbox retime movie.srt --sync first=00:00:12.5 --sync '#12
 
 - **Negative times**: a time that becomes negative becomes 0.
 - **Shift range**: the start time of a cue decides if it moves. `--shift 2 --shift-after 10:00 --shift-before 15:00` moves a cue from 14:59 to 15:03 as a whole.
-- **Sync points**: `OLD` is a [time](#times), `first` or `last` for the start of the first or last cue, or `#N` for the start of cue N, counted from 1. 1 point shifts all cues. 2 points give the result of `syncByTwoPoints()`.
+- **Sync points**: `OLD` is a [time](#times), `first` or `last` for the start of the first or last cue, or `#N` for the start of cue N, counted from 1. 1 point shifts all cues.
 - **Sync errors**: `--sync` with `--shift` or `--scale` is a usage error, exit code 2. So are points whose old or new times do not increase in the order of the options. A point that does not fit a file, such as `#120` in a file with 80 cues, fails that file with exit code 3.
 
 ## Convert
