@@ -7,8 +7,18 @@ composer require yama6a/subtitle-toolbox-php:^4.0
 4.0 needs the same PHP version and extensions as 3.x. [compatibility.md](compatibility.md) says what semantic versioning covers in 4.x. 4.0 has no deprecation period. Each section shows the 3.x call and the 4.0 call side by side.
 
 ## Alignment
+`setAlignment()` wins over a stored WebVTT position and a stored TTML region. A cue keeps its stored position while it has the alignment that the parser read.
 
-TODO #675 #771
+| Call | 3.x | 4.0 | To keep the 3.x result |
+|:--- |:--- |:--- |:--- |
+| `setAlignment(2)` on the WebVTT cue `00:00:01.000 --> 00:00:02.000 line:0`, then `toString(Format::WebVtt)` | `00:00:01.000 --> 00:00:02.000 line:0` | `00:00:01.000 --> 00:00:02.000` | `$cue->setFormatData('vtt', ['alignment' => 2] + $cue->findFormatData('vtt'))` |
+| `setAlignment(2)` on the TTML `<p region="top">`, then `toString(Format::Ttml)` | `<p region="top">` | `<p region="bottomCenter">`, with a new `bottomCenter` region in the `<head>` | `$cue->setFormatData('ttml', ['alignment' => 2] + $cue->findFormatData('ttml'))` |
+
+- **WebVTT**: the formatter drops the stored `line`, `position` and `align` settings and writes the settings of the new alignment. It keeps `size`, `vertical` and `region`.
+- **TTML**: the formatter also writes `tts:textAlign` on the `<p>` when a style of the `<p>`, `<div>` or `<body>` sets another column.
+- **Format data**: the `vtt` and `ttml` cue format data hold the key `alignment`, the alignment that the parser read. The JSON output of a WebVTT or TTML file holds it too. A cue whose alignment equals this value keeps its stored position.
+
+TODO #771
 
 ## Read and write options
 

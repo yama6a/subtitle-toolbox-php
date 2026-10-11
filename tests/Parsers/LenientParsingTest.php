@@ -905,7 +905,7 @@ class LenientParsingTest extends TestCase
 
         $this->assertSame(["WEBVTS", "Kind: captions"], $subtitle->getParseWarnings()[0]->block);
         $this->assertEquals([new Comment("closing time", 1)], $subtitle->getComments());
-        $this->assertSame(["line" => "0"], $subtitle->getCues()[0]->findFormatData("vtt"));
+        $this->assertSame(["line" => "0", "alignment" => 8], $subtitle->getCues()[0]->findFormatData("vtt"));
     }
 
 

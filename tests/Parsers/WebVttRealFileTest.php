@@ -80,7 +80,7 @@ class WebVttRealFileTest extends TestCase
         $cue      = $subtitle->getCues()[1];
 
         $this->assertSame(["fred", "bill"], array_column($subtitle->findFormatData("vtt")["regions"], "id"));
-        $this->assertSame(["region" => "bill", "align" => "right"], $cue->findFormatData("vtt"));
+        $this->assertSame(["region" => "bill", "align" => "right", "alignment" => 3], $cue->findFormatData("vtt"));
         $this->assertSame(3, $cue->getAlignment());
     }
 

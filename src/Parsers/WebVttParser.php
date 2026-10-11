@@ -415,9 +415,10 @@ final class WebVttParser extends SubtitleParser
             );
         }
 
-        $settings = $this->parseSettings($settingsText, self::CUE_SETTINGS);
-        $cue->setFormatData(self::FORMAT_DATA_KEY, $settings);
-        $cue->setAlignment($this->settingsToAlignment($settings));
+        $settings  = $this->parseSettings($settingsText, self::CUE_SETTINGS);
+        $alignment = $this->settingsToAlignment($settings);
+        $cue->setFormatData(self::FORMAT_DATA_KEY, $alignment === null ? $settings : [...$settings, "alignment" => $alignment]);
+        $cue->setAlignment($alignment);
 
         return $cue;
     }

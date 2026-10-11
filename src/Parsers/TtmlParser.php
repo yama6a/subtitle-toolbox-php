@@ -428,10 +428,10 @@ final class TtmlParser extends SubtitleParser
         if (!$paragraph->hasAttribute("region") && $scope->region !== null) {
             $attributes["region"] = $scope->region;
         }
-        $cue->setFormatData(self::FORMAT_DATA_KEY, $attributes === [] ? [] : ["attributes" => $attributes]);
-
         $textAlign = $this->styles->ownProperties($paragraph)["textAlign"] ?? $scope->textAlign;
-        $cue->setAlignment($this->alignment($region, $textAlign));
+        $alignment = $this->alignment($region, $textAlign);
+        $cue->setAlignment($alignment);
+        $cue->setFormatData(self::FORMAT_DATA_KEY, array_filter(["attributes" => $attributes, "alignment" => $alignment], fn (mixed $value): bool => $value !== [] && $value !== null));
 
         $forced = $this->forcedDisplay($paragraph) ?? $scope->forced ?? $this->regionForcedDisplay($region) ?? false;
         $cue->setForced($forced || $this->hasForcedSpan($paragraph, $forced));
