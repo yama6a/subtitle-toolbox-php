@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -98,7 +99,7 @@ class SubRipFormatterTest extends TestCase
     public function testDefaultAlignmentIsNotWritten(): void
     {
         $subtitle = (new Subtitle())
-            ->addCue((new SubtitleCue(1, 2, "Bottom center"))->setAlignment(2))
+            ->addCue((new SubtitleCue(1, 2, "Bottom center"))->setAlignment(Alignment::BottomCenter))
             ->addCue(new SubtitleCue(3, 4, "Default"));
 
         $this->assertSame(

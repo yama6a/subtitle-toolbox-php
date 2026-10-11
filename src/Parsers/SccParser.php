@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Encoding\Cea608Decoder;
 use SubtitleToolbox\Exceptions\ParsingException;
@@ -88,7 +89,7 @@ final class SccParser extends SubtitleParser
     private static function cue(float $start, float $end, array $lines, string $mode): SubtitleCue
     {
         $cue = new SubtitleCue($start, $end, array_column($lines, "text"));
-        $cue->setAlignment($lines[0]["row"] <= Cea608::MAX_LINES ? SubtitleCue::TOP_CENTER_ALIGNMENT : null);
+        $cue->setAlignment($lines[0]["row"] <= Cea608::MAX_LINES ? Alignment::TopCenter : Alignment::BottomCenter);
         $cue->setFormatData(self::FORMAT_DATA_KEY, [
             "mode"    => $mode,
             "rows"    => array_column($lines, "row"),

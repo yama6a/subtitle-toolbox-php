@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
@@ -91,7 +92,7 @@ class SccParserTest extends TestCase
 
         $this->assertCount(1, $subtitle->getCues());
         $this->assertSame([1.768, 4.004], [$cue->getStart(), $cue->getEnd()]);
-        $this->assertSame([["Hello!"], null], [$cue->getLines(), $cue->getAlignment()]);
+        $this->assertSame([["Hello!"], Alignment::BottomCenter], [$cue->getLines(), $cue->getAlignment()]);
         $this->assertSame(["mode" => "pop-on", "rows" => [14], "columns" => [5]], $cue->findFormatData(SccParser::FORMAT_DATA_KEY));
         $this->assertSame(["dropFrame" => true], $subtitle->findFormatData(SccParser::FORMAT_DATA_KEY));
     }
@@ -216,27 +217,27 @@ class SccParserTest extends TestCase
     public static function pacProvider(): array
     {
         return [
-            "row 1 white"            => ["9140", 1, 0, "Hi", 8],
-            "row 2 green"            => ["9162", 2, 0, "<font color=\"#00ff00\">Hi</font>", 8],
-            "row 3 blue underline"   => ["9245", 3, 0, "<font color=\"#0000ff\"><u>Hi</u></font>", 8],
-            "row 4 cyan"             => ["92e6", 4, 0, "<font color=\"#00ffff\">Hi</font>", 8],
-            "row 5 red"              => ["15c8", 5, 0, "<font color=\"#ff0000\">Hi</font>", null],
-            "row 6 yellow"           => ["15ea", 6, 0, "<font color=\"#ffff00\">Hi</font>", null],
-            "row 7 magenta"          => ["164c", 7, 0, "<font color=\"#ff00ff\">Hi</font>", null],
-            "row 8 italics"          => ["166e", 8, 0, "<i>Hi</i>", null],
-            "row 9 italics underline" => ["974f", 9, 0, "<i><u>Hi</u></i>", null],
-            "row 10 indent 28"       => ["97fe", 10, 28, "Hi", null],
-            "row 11 indent 4"        => ["1052", 11, 4, "Hi", null],
-            "row 12 indent 8 underline" => ["13d5", 12, 8, "<u>Hi</u>", null],
-            "row 13 indent 12"       => ["1376", 13, 12, "Hi", null],
-            "row 14 indent 16"       => ["9458", 14, 16, "Hi", null],
-            "row 15 indent 20"       => ["947a", 15, 20, "Hi", null],
+            "row 1 white"            => ["9140", 1, 0, "Hi", Alignment::TopCenter],
+            "row 2 green"            => ["9162", 2, 0, "<font color=\"#00ff00\">Hi</font>", Alignment::TopCenter],
+            "row 3 blue underline"   => ["9245", 3, 0, "<font color=\"#0000ff\"><u>Hi</u></font>", Alignment::TopCenter],
+            "row 4 cyan"             => ["92e6", 4, 0, "<font color=\"#00ffff\">Hi</font>", Alignment::TopCenter],
+            "row 5 red"              => ["15c8", 5, 0, "<font color=\"#ff0000\">Hi</font>", Alignment::BottomCenter],
+            "row 6 yellow"           => ["15ea", 6, 0, "<font color=\"#ffff00\">Hi</font>", Alignment::BottomCenter],
+            "row 7 magenta"          => ["164c", 7, 0, "<font color=\"#ff00ff\">Hi</font>", Alignment::BottomCenter],
+            "row 8 italics"          => ["166e", 8, 0, "<i>Hi</i>", Alignment::BottomCenter],
+            "row 9 italics underline" => ["974f", 9, 0, "<i><u>Hi</u></i>", Alignment::BottomCenter],
+            "row 10 indent 28"       => ["97fe", 10, 28, "Hi", Alignment::BottomCenter],
+            "row 11 indent 4"        => ["1052", 11, 4, "Hi", Alignment::BottomCenter],
+            "row 12 indent 8 underline" => ["13d5", 12, 8, "<u>Hi</u>", Alignment::BottomCenter],
+            "row 13 indent 12"       => ["1376", 13, 12, "Hi", Alignment::BottomCenter],
+            "row 14 indent 16"       => ["9458", 14, 16, "Hi", Alignment::BottomCenter],
+            "row 15 indent 20"       => ["947a", 15, 20, "Hi", Alignment::BottomCenter],
         ];
     }
 
 
     #[DataProvider("pacProvider")]
-    public function testPreambleAddressCodeSetsRowColumnAndStyle(string $pac, int $row, int $column, string $line, ?int $alignment): void
+    public function testPreambleAddressCodeSetsRowColumnAndStyle(string $pac, int $row, int $column, string $line, Alignment $alignment): void
     {
         $cue = $this->cues($this->popOn("$pac $pac " . self::text("Hi")))[0];
 
@@ -249,7 +250,7 @@ class SccParserTest extends TestCase
     {
         $cue = $this->cues($this->popOn("9470 9470 " . self::text("B") . " 9140 9140 " . self::text("A")))[0];
 
-        $this->assertSame([["A", "B"], 8], [$cue->getLines(), $cue->getAlignment()]);
+        $this->assertSame([["A", "B"], Alignment::TopCenter], [$cue->getLines(), $cue->getAlignment()]);
         $this->assertSame([1, 15], $cue->findFormatData(SccParser::FORMAT_DATA_KEY)["rows"]);
     }
 

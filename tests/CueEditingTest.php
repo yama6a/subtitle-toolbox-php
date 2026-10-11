@@ -209,7 +209,7 @@ class CueEditingTest extends TestCase
         $subtitle = TestSubtitles::fromCues([[0, 6, "First sentence.\nSecond sentence."], [7, 8, "next"]])
             ->addComment("about the split cue", 0)
             ->addComment("about next", 1);
-        $subtitle->getCues()[0]->setIdentifier("intro")->setAlignment(8);
+        $subtitle->getCues()[0]->setIdentifier("intro")->setAlignment(Alignment::TopCenter);
 
         $subtitle->splitCue(0, 3, 1);
 
@@ -219,7 +219,7 @@ class CueEditingTest extends TestCase
             TestSubtitles::describe($subtitle)
         );
         $this->assertSame(["intro", null], [$cues[0]->getIdentifier(), $cues[1]->getIdentifier()]);
-        $this->assertSame([8, 8], [$cues[0]->getAlignment(), $cues[1]->getAlignment()]);
+        $this->assertSame([Alignment::TopCenter, Alignment::TopCenter], [$cues[0]->getAlignment(), $cues[1]->getAlignment()]);
         $this->assertSame(
             [["about the split cue", "First sentence."], ["about next", "next"]],
             $this->getCommentsByCueText($subtitle)
@@ -293,13 +293,13 @@ class CueEditingTest extends TestCase
             ->addComment("about three", 3)
             ->addComment("about four", 4)
             ->addComment("end", 5);
-        $subtitle->getCues()[1]->setIdentifier("first")->setAlignment(7);
+        $subtitle->getCues()[1]->setIdentifier("first")->setAlignment(Alignment::TopLeft);
 
         $subtitle->joinCues(1, 3);
 
         $cues = $subtitle->getCues();
         $this->assertSame([[0.0, 1.0, "zero"], [1.0, 6.0, "one\ntwo\nthree"], [7.0, 8.0, "four"]], TestSubtitles::describe($subtitle));
-        $this->assertSame(["first", 7], [$cues[1]->getIdentifier(), $cues[1]->getAlignment()]);
+        $this->assertSame(["first", Alignment::TopLeft], [$cues[1]->getIdentifier(), $cues[1]->getAlignment()]);
         $this->assertSame([
             ["about one", "one\ntwo\nthree"],
             ["about two", "one\ntwo\nthree"],
@@ -412,7 +412,7 @@ class CueEditingTest extends TestCase
     public static function cuesThatCannotJoin(): array
     {
         return [
-            "other alignment"   => [(new SubtitleCue(1, 3, "Hello"))->setAlignment(8)],
+            "other alignment"   => [(new SubtitleCue(1, 3, "Hello"))->setAlignment(Alignment::TopCenter)],
             "forced"            => [(new SubtitleCue(1, 3, "Hello"))->setForced(true)],
             "other format data" => [(new SubtitleCue(1, 3, "Hello"))->setFormatData(Format::WebVtt->value, ["line" => "0"])],
         ];
@@ -432,7 +432,7 @@ class CueEditingTest extends TestCase
     {
         $subtitle = TestSubtitles::fromCues([
             new SubtitleCue(1, 3, "Hello"),
-            (new SubtitleCue(1, 3, "Hello"))->setAlignment(SubtitleCue::DEFAULT_ALIGNMENT),
+            (new SubtitleCue(1, 3, "Hello"))->setAlignment(Alignment::BottomCenter),
         ]);
 
         $this->assertSame([[1.0, 3.0, "Hello"]], TestSubtitles::describe($subtitle->removeDuplicateCues()));
@@ -511,7 +511,7 @@ class CueEditingTest extends TestCase
 
     public function testMergeSameTimeCuesKeepsCuesWithAnotherAlignmentOrForcedFlag(): void
     {
-        foreach ([(new SubtitleCue(1, 3, "B"))->setAlignment(8), (new SubtitleCue(1, 3, "B"))->setForced(true)] as $other) {
+        foreach ([(new SubtitleCue(1, 3, "B"))->setAlignment(Alignment::TopCenter), (new SubtitleCue(1, 3, "B"))->setForced(true)] as $other) {
             $subtitle = TestSubtitles::fromCues([new SubtitleCue(1, 3, "A"), $other]);
 
             $this->assertCount(2, $subtitle->mergeSameTimeCues()->getCues());

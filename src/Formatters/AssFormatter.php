@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Formatters\Options\AssWriteOptions;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
@@ -200,7 +201,7 @@ final class AssFormatter extends SubtitleFormatter
 
         $unchanged = !$context->stripTags && isset($stored["text"]) &&
                      ($stored["lines"] ?? null) === $cue->getLines() &&
-                     ($stored["alignment"] ?? null) === $cue->getAlignment();
+                     ($stored["alignment"] ?? Alignment::BottomCenter->value) === $cue->getAlignment()->value;
         [$text, $name] = $unchanged
             ? [$stored["text"], $this->fieldValue($fields, "Name") ?? ""]
             : $this->convertLines($cue, $context, AssStyles::forEvent($context->styles, $this->fieldValue($fields, "Style") ?? "Default"));
@@ -233,10 +234,9 @@ final class AssFormatter extends SubtitleFormatter
         $name = str_replace(",", "", Markup::speaker($text) ?? "");
 
         $parts     = [];
-        $alignment = $cue->getAlignment();
-        if ($alignment !== AssStyles::alignment($style, $context->legacyStyles)) {
-            $alignment ??= 2;
-            $parts[]     = ["tag", $context->isSsa ? "\\a" . array_flip(SsaOverrideTags::SSA_ALIGNMENTS)[$alignment] : "\\an" . $alignment];
+        $alignment = $cue->getAlignment()->value;
+        if ($alignment !== (AssStyles::alignment($style, $context->legacyStyles) ?? Alignment::BottomCenter->value)) {
+            $parts[] = ["tag", $context->isSsa ? "\\a" . array_flip(SsaOverrideTags::SSA_ALIGNMENTS)[$alignment] : "\\an" . $alignment];
         }
 
         $tokens = $context->stripTags ? [Markup::stripAllTags($text)] : Markup::splitTags(Markup::webVttColorsToFont($text));

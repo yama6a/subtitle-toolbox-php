@@ -155,9 +155,9 @@ class SubtitleCueTest extends TestCase
     }
 
 
-    public function testAlignmentIsNullByDefault(): void
+    public function testAlignmentIsBottomCenterByDefault(): void
     {
-        $this->assertNull((new SubtitleCue())->getAlignment());
+        $this->assertSame(Alignment::BottomCenter, (new SubtitleCue())->getAlignment());
     }
 
 
@@ -165,23 +165,8 @@ class SubtitleCueTest extends TestCase
     {
         $cue = new SubtitleCue();
 
-        foreach ([1, 2, 8, 9] as $alignment) {
+        foreach (Alignment::cases() as $alignment) {
             $this->assertSame($alignment, $cue->setAlignment($alignment)->getAlignment());
-        }
-
-        $this->assertNull($cue->setAlignment(null)->getAlignment());
-    }
-
-
-    public function testAlignmentOutOfRangeThrowsException(): void
-    {
-        foreach ([0, 10, -1] as $alignment) {
-            try {
-                (new SubtitleCue())->setAlignment($alignment);
-                $this->fail("Alignment $alignment was accepted");
-            } catch (InvalidArgumentException $e) {
-                $this->assertStringContainsString("must be a number from 1 to 9", $e->getMessage());
-            }
         }
     }
 

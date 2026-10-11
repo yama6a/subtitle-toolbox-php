@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\Parsers\EbuStl;
@@ -140,16 +141,16 @@ class EbuStlFormatterTest extends TestCase
     public static function alignments(): array
     {
         return [
-            "default"       => [null, 23, 2],
-            "bottom left"   => [1, 23, 1],
-            "middle centre" => [5, 12, 2],
-            "top right"     => [9, 1, 3],
+            "default"       => [Alignment::BottomCenter, 23, 2],
+            "bottom left"   => [Alignment::BottomLeft, 23, 1],
+            "middle centre" => [Alignment::MiddleCenter, 12, 2],
+            "top right"     => [Alignment::TopRight, 1, 3],
         ];
     }
 
 
     #[DataProvider("alignments")]
-    public function testWritesPositionAndJustificationForTheAlignment(?int $alignment, int $vertical, int $justification): void
+    public function testWritesPositionAndJustificationForTheAlignment(Alignment $alignment, int $vertical, int $justification): void
     {
         $subtitle = (new Subtitle())->addCue((new SubtitleCue(1, 2, "One row"))->setAlignment($alignment));
         $block    = self::ttiBlocks($subtitle->toString(Format::EbuStl))[0];
@@ -163,7 +164,7 @@ class EbuStlFormatterTest extends TestCase
         $raw      = file_get_contents(self::DIR . "bakery_teletext_25fps.stl");
         $subtitle = Subtitle::fromString($raw, Format::EbuStl);
         $subtitle->shift(1);
-        $subtitle->getCues()[1]->setAlignment(8);
+        $subtitle->getCues()[1]->setAlignment(Alignment::TopCenter);
 
         $original = self::ttiBlocks($raw);
         $written  = self::ttiBlocks($subtitle->toString(Format::EbuStl));

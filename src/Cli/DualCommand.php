@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Dual\DualSubtitle;
 use SubtitleToolbox\Dual\DualSubtitleMode;
 use SubtitleToolbox\Dual\DualSubtitleOptions;
@@ -138,11 +139,12 @@ final class DualCommand extends WriteCommand
         parent::prepare($arguments);
 
         $mode              = $arguments->choice("mode", array_keys(self::MODES));
+        $alignment         = $arguments->int("secondary-alignment", 1, 9);
         $this->dualOptions = new DualSubtitleOptions(...self::given([
             "mode"               => $mode === null ? null : self::MODES[$mode],
             "snapTolerance"      => $arguments->nonNegativeSeconds("snap-tolerance"),
             "secondaryStyle"     => $arguments->value("secondary-style"),
-            "secondaryAlignment" => $arguments->int("secondary-alignment", 1, 9),
+            "secondaryAlignment" => $alignment === null ? null : Alignment::from($alignment),
         ]));
     }
 

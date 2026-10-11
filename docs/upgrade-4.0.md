@@ -11,14 +11,45 @@ composer require yama6a/subtitle-toolbox-php:^4.0
 
 | Call | 3.x | 4.0 | To keep the 3.x result |
 |:--- |:--- |:--- |:--- |
-| `setAlignment(2)` on the WebVTT cue `00:00:01.000 --> 00:00:02.000 line:0`, then `toString(Format::WebVtt)` | `00:00:01.000 --> 00:00:02.000 line:0` | `00:00:01.000 --> 00:00:02.000` | `$cue->setFormatData('vtt', ['alignment' => 2] + $cue->findFormatData('vtt'))` |
-| `setAlignment(2)` on the TTML `<p region="top">`, then `toString(Format::Ttml)` | `<p region="top">` | `<p region="bottomCenter">`, with a new `bottomCenter` region in the `<head>` | `$cue->setFormatData('ttml', ['alignment' => 2] + $cue->findFormatData('ttml'))` |
+| `setAlignment(Alignment::BottomCenter)` on the WebVTT cue `00:00:01.000 --> 00:00:02.000 line:0`, then `toString(Format::WebVtt)` | `00:00:01.000 --> 00:00:02.000 line:0` | `00:00:01.000 --> 00:00:02.000` | `$cue->setFormatData('vtt', ['alignment' => 2] + $cue->findFormatData('vtt'))` |
+| `setAlignment(Alignment::BottomCenter)` on the TTML `<p region="top">`, then `toString(Format::Ttml)` | `<p region="top">` | `<p region="bottomCenter">`, with a new `bottomCenter` region in the `<head>` | `$cue->setFormatData('ttml', ['alignment' => 2] + $cue->findFormatData('ttml'))` |
 
 - **WebVTT**: the formatter drops the stored `line`, `position` and `align` settings and writes the settings of the new alignment. It keeps `size`, `vertical` and `region`.
 - **TTML**: the formatter also writes `tts:textAlign` on the `<p>` when a style of the `<p>`, `<div>` or `<body>` sets another column.
 - **Format data**: the `vtt` and `ttml` cue format data hold the key `alignment`, the alignment that the parser read. The JSON output of a WebVTT or TTML file holds it too. A cue whose alignment equals this value keeps its stored position.
 
-TODO #771
+The `Alignment` enum replaces the alignment numbers from 1 to 9 and `null`.
+
+| 3.x | 4.0 |
+|:--- |:--- |
+| `$cue->setAlignment(8)` | `$cue->setAlignment(Alignment::TopCenter)` |
+| `$cue->setAlignment(null)` | `$cue->setAlignment(Alignment::BottomCenter)` |
+| `$cue->setAlignment($number)` | `$cue->setAlignment(Alignment::from($number))` |
+| `$cue->getAlignment() === 8` | `$cue->getAlignment() === Alignment::TopCenter` |
+| `$cue->getAlignment() ?? 2` | `$cue->getAlignment()->value` |
+| `new DualSubtitleOptions(secondaryAlignment: 7)` | `new DualSubtitleOptions(secondaryAlignment: Alignment::TopLeft)` |
+| `SubtitleCue::DEFAULT_ALIGNMENT`, `SubtitleCue::TOP_CENTER_ALIGNMENT` | `Alignment::BottomCenter`, `Alignment::TopCenter` |
+
+| 3.x number | 4.0 case |
+|:--- |:--- |
+| 1 | `Alignment::BottomLeft` |
+| 2 or `null` | `Alignment::BottomCenter` |
+| 3 | `Alignment::BottomRight` |
+| 4 | `Alignment::MiddleLeft` |
+| 5 | `Alignment::MiddleCenter` |
+| 6 | `Alignment::MiddleRight` |
+| 7 | `Alignment::TopLeft` |
+| 8 | `Alignment::TopCenter` |
+| 9 | `Alignment::TopRight` |
+
+- **One default**: `getAlignment()` returns `Alignment::BottomCenter` for a cue without a position. 3.x returned `null` for it, and 2 for a cue with an explicit bottom center position.
+- **Same numbers**: the value of each case is the 3.x number. JSON, the format data and the CLI option `--secondary-alignment` keep the numbers. `fromArray()` and the JSON reader accept 1 to 9 and `null`.
+- **Invalid numbers**: `setAlignment()` and `DualSubtitleOptions` take only the enum. `Alignment::from(10)` throws `ValueError`. 3.x threw `InvalidArgumentException`.
+
+| Call | 3.x | 4.0 | To keep the 3.x result |
+|:--- |:--- |:--- |:--- |
+| `toString(Format::Ass)` on the WebVTT cue `00:00:04.000 --> 00:00:06.500 align:center` | `{\an2}` before the text | no tag | no option |
+| `toString(Format::Json)` on the same cue | `"alignment":2` | `"alignment":null` | no option |
 
 ## Read and write options
 

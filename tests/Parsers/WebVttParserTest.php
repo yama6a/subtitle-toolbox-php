@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
@@ -175,7 +176,7 @@ class WebVttParserTest extends TestCase
         $this->assertEquals([new Comment("Translated by Jane Doe", 0)], $subtitle->getComments());
         $this->assertSame("intro", $cue->getIdentifier());
         $this->assertSame(["region" => "fred", "align" => "left", "line" => "85%"], $cue->findFormatData("vtt"));
-        $this->assertNull($cue->getAlignment());
+        $this->assertSame(Alignment::BottomCenter, $cue->getAlignment());
         $this->assertSame("<v Fred>Hi, I am Fred &amp; this is <c.yellow>Bob</c></v>", $cue->getText());
     }
 
@@ -309,12 +310,12 @@ class WebVttParserTest extends TestCase
         $cue = Subtitle::fromString($raw, Format::WebVtt)->getCues()[0];
 
         $this->assertSame(["vertical" => "rl", "size" => "50.5%", "position" => "10%,line-left"], $cue->findFormatData("vtt"));
-        $this->assertNull($cue->getAlignment());
+        $this->assertSame(Alignment::BottomCenter, $cue->getAlignment());
     }
 
 
     #[DataProvider("alignmentProvider")]
-    public function testCueSettingsMapToAlignment(string $settings, ?int $alignment): void
+    public function testCueSettingsMapToAlignment(string $settings, Alignment $alignment): void
     {
         $raw = "WEBVTT\n\n00:01.000 --> 00:02.000 $settings\nOne\n";
 
@@ -325,20 +326,20 @@ class WebVttParserTest extends TestCase
     public static function alignmentProvider(): array
     {
         return [
-            "no settings"              => ["", null],
-            "line 0"                   => ["line:0", 8],
-            "line 0 percent left"      => ["line:0% align:left", 7],
-            "line 0 right"             => ["align:right line:0", 9],
-            "middle"                   => ["line:50%,center", 5],
-            "middle left"              => ["line:50%,center align:left", 4],
-            "bottom line"              => ["line:-1", 2],
-            "bottom right"             => ["line:100%,end align:right", 3],
-            "align left"               => ["align:left", 1],
-            "align center"             => ["align:center", 2],
-            "align start is unclear"   => ["align:start", null],
-            "line 85 percent unclear"  => ["line:85%", null],
-            "vertical text is unclear" => ["vertical:rl line:0", null],
-            "only position"            => ["position:10%", null],
+            "no settings"              => ["", Alignment::BottomCenter],
+            "line 0"                   => ["line:0", Alignment::TopCenter],
+            "line 0 percent left"      => ["line:0% align:left", Alignment::TopLeft],
+            "line 0 right"             => ["align:right line:0", Alignment::TopRight],
+            "middle"                   => ["line:50%,center", Alignment::MiddleCenter],
+            "middle left"              => ["line:50%,center align:left", Alignment::MiddleLeft],
+            "bottom line"              => ["line:-1", Alignment::BottomCenter],
+            "bottom right"             => ["line:100%,end align:right", Alignment::BottomRight],
+            "align left"               => ["align:left", Alignment::BottomLeft],
+            "align center"             => ["align:center", Alignment::BottomCenter],
+            "align start is unclear"   => ["align:start", Alignment::BottomCenter],
+            "line 85 percent unclear"  => ["line:85%", Alignment::BottomCenter],
+            "vertical text is unclear" => ["vertical:rl line:0", Alignment::BottomCenter],
+            "only position"            => ["position:10%", Alignment::BottomCenter],
         ];
     }
 

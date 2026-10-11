@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use Generator;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
@@ -418,7 +419,7 @@ final class WebVttParser extends SubtitleParser
         $settings  = $this->parseSettings($settingsText, self::CUE_SETTINGS);
         $alignment = $this->settingsToAlignment($settings);
         $cue->setFormatData(self::FORMAT_DATA_KEY, $alignment === null ? $settings : [...$settings, "alignment" => $alignment]);
-        $cue->setAlignment($alignment);
+        $cue->setAlignment(Alignment::from($alignment ?? Alignment::BottomCenter->value));
 
         return $cue;
     }

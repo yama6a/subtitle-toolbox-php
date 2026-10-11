@@ -40,12 +40,14 @@ $cue->setIdentifier('intro');
 
 ## Alignment and format data
 ```php
-$cue->setAlignment(8);                                  // top center
+use SubtitleToolbox\Alignment;
+
+$cue->setAlignment(Alignment::TopCenter);
 $cue->setFormatData('ass', ['fields' => ['Style' => 'Sign']]);
 $subtitle->findFormatData('ass');                       // [] when not set
 ```
 
-- **Alignment**: a number from 1 to 9 in numeric keypad layout. 1 is bottom left, 2 is bottom center, 8 is top center. `null` means the format default, bottom center.
+- **Alignment**: the `Alignment` enum has 9 cases, from `BottomLeft` to `TopRight`. A cue without a position returns `Alignment::BottomCenter`, the default of every format. The value of a case is its key on a numeric keypad, for example 8 for `TopCenter`. JSON and format data hold this value.
 - **Format data**: the data of a format that has no shared field, for example ASS styles. Only the formatter of the same format reads it. The key is the value of the `Format` case, for example `ass` for `Format::Ass` and `microdvd` for `Format::MicroDvd`. CSV and TSV share the key `csv`. Image cues use the key `image`. [formats.md](formats.md) lists the fields of each format.
 - **Checks**: `setFormatData()` checks the fields that a formatter reads, as `fromArray()` does. A field of the wrong type, or a value outside its allowed set, throws `InvalidArgumentException` with its path, for example `The field formatData.scc.dropFrame must be a boolean.` Other fields pass as they are.
 

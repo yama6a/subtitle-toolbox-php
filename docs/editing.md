@@ -122,7 +122,7 @@ The `CueLimits` constructor throws `InvalidArgumentException` when `minDuration`
 | `mergeSameSpeakerAnyDuration` | false | join each cue with the next cue of the same `<v>` speaker, short or not, with no `maxDuration` limit. A cue without a `<v>` tag never joins |
 
 - **Order**: the method walks the cues in start time order. It joins a short cue with the next cue. When the next cue does not fit, it tries the previous cue. A joined cue that is still short joins again.
-- **Never joined**: cues with different `<v>` speakers, different alignments or different forced flags, and image cues. A cue without a `<v>` tag and a cue with one have different speakers. Alignment `null` and alignment 2 count as the same.
+- **Never joined**: cues with different `<v>` speakers, different alignments or different forced flags, and image cues. A cue without a `<v>` tag and a cue with one have different speakers.
 - **Joined cue**: it keeps the start, the identifier, the alignment and the format data of the first cue. It keeps the end of the last cue. A comment before a joined cue moves before the result.
 - **Text**: the method joins the lines with a space and wraps them as `wrapLines()` does. A line that starts with a dialogue dash stays on its own line. Each such line must then fit on one line. When both cues start with a `<v>` tag of the same speaker, the joined text keeps only the first tag.
 
@@ -214,6 +214,7 @@ Example at 24 fps with the default options: cue A ends at 10.000, cue B starts a
 A dual subtitle shows two languages at the same time, for example for language learners. Most players show only one subtitle track, so both languages go into one file.
 
 ```php
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Dual\DualSubtitle;
 use SubtitleToolbox\Dual\DualSubtitleMode;
 use SubtitleToolbox\Dual\DualSubtitleOptions;
@@ -228,14 +229,14 @@ $dual = DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(
     mode: DualSubtitleMode::TopBottom,              // English at the bottom, German at the top
     snapTolerance: 0.25,                            // seconds
     secondaryStyle: 'font color="#ffff00"',
-    secondaryAlignment: 8,
+    secondaryAlignment: Alignment::TopCenter,
 ));
 ```
 
 | Mode | Result for `00:00:01.000 --> 00:00:04.000 Where are you going?` and `00:00:01.200 --> 00:00:03.900 Wohin gehst du?` | Formats |
 |:--- |:--- |:--- |
 | `stack`, the default | one cue from 1.000 s to 4.000 s with the lines `Where are you going?` and `<i>Wohin gehst du?</i>` with `secondaryStyle: 'i'` | all |
-| `topBottom` | the English cue with alignment `null`, and the German cue with alignment 8 from 1.000 s to 4.000 s | SubRip with `{\an8}`, WebVTT, ASS, TTML, iTT, EBU STL and SCC. The other formats do not write the alignment |
+| `topBottom` | the English cue with `Alignment::BottomCenter`, and the German cue with `Alignment::TopCenter` from 1.000 s to 4.000 s | SubRip with `{\an8}`, WebVTT, ASS, TTML, iTT, EBU STL and SCC. The other formats do not write the alignment |
 
 - **Stack**: each secondary cue joins the primary cue that it overlaps most. The joined cue spans from the earlier start to the later end. A cue without an overlap stays a cue of its own.
 - **Top and bottom**: a secondary start or end time moves to the closest primary start or end time within `snapTolerance`. So the two languages appear and disappear together. A cue keeps its times when both would move to the same time.

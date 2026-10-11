@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
@@ -83,7 +84,7 @@ class SccFormatterTest extends TestCase
     public function testWritesCoreMarkupAsMidRowCodesAndPacStyles(): void
     {
         $lines  = ["<i>Rain</i> and <font color=\"#ffff00\">sun <u>later</u></font>", "<font color=\"#ff0000\"><i>Red</i></font> sky"];
-        $cue    = (new SubtitleCue(2.0, 4.0, $lines))->setAlignment(1);
+        $cue    = (new SubtitleCue(2.0, 4.0, $lines))->setAlignment(Alignment::BottomLeft);
         $output = $this->subtitle($cue)->toString(Format::Scc);
 
         // Line 1 starts with the italics PAC 94ce. Line 2 starts with the red PAC 9468 and the italics mid-row code 91ae.
@@ -121,23 +122,23 @@ class SccFormatterTest extends TestCase
     public static function alignmentProvider(): array
     {
         return [
-            "default is bottom centre" => [null, [14, 15], [12, 13]],
-            "top left"                 => [7, [1, 2], [0, 0]],
-            "top centre"               => [8, [1, 2], [12, 13]],
-            "middle right"             => [6, [7, 8], [25, 27]],
-            "bottom left"              => [1, [14, 15], [0, 0]],
+            "default is bottom centre" => [Alignment::BottomCenter, [14, 15], [12, 13]],
+            "top left"                 => [Alignment::TopLeft, [1, 2], [0, 0]],
+            "top centre"               => [Alignment::TopCenter, [1, 2], [12, 13]],
+            "middle right"             => [Alignment::MiddleRight, [7, 8], [25, 27]],
+            "bottom left"              => [Alignment::BottomLeft, [14, 15], [0, 0]],
         ];
     }
 
 
     #[DataProvider("alignmentProvider")]
-    public function testAlignmentSetsRowsAndColumns(?int $alignment, array $rows, array $columns): void
+    public function testAlignmentSetsRowsAndColumns(Alignment $alignment, array $rows, array $columns): void
     {
         $cue    = (new SubtitleCue(2.0, 4.0, ["Weather", "today"]))->setAlignment($alignment);
         $parsed = Subtitle::fromString($this->subtitle($cue)->toString(Format::Scc), Format::Scc)->getCues()[0];
 
         $this->assertSame(["rows" => $rows, "columns" => $columns], array_diff_key($parsed->findFormatData(SccParser::FORMAT_DATA_KEY), ["mode" => 0]));
-        $this->assertSame(in_array($alignment, [7, 8], true) ? 8 : null, $parsed->getAlignment());
+        $this->assertSame(in_array($alignment, [Alignment::TopLeft, Alignment::TopCenter], true) ? Alignment::TopCenter : Alignment::BottomCenter, $parsed->getAlignment());
     }
 
 

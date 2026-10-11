@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Karaoke;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Comment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\AssKaraokeTag;
@@ -161,7 +162,7 @@ class WordHighlightTest extends TestCase
     {
         $cue = (new SubtitleCue(1, 2, ["<i>Plain</i> text", "second line"]))
             ->setIdentifier("intro")
-            ->setAlignment(8)
+            ->setAlignment(Alignment::TopCenter)
             ->setFormatData("vtt", ["line" => "0"]);
 
         $karaoke = self::expand(TestSubtitles::fromCues([$cue]), new WordHighlightOptions());
@@ -218,7 +219,7 @@ class WordHighlightTest extends TestCase
     {
         $cue = (new SubtitleCue(0, 1.6, self::BEACH))
             ->setIdentifier("intro")
-            ->setAlignment(8)
+            ->setAlignment(Alignment::TopCenter)
             ->setForced(true)
             ->setFormatData("ass", ["fields" => ["Style" => "Karaoke"]]);
 
@@ -226,7 +227,7 @@ class WordHighlightTest extends TestCase
 
         $this->assertSame(["intro", null, null, null], array_map(fn (SubtitleCue $cue): ?string => $cue->getIdentifier(), $cues));
         foreach ($cues as $wordCue) {
-            $this->assertSame(8, $wordCue->getAlignment());
+            $this->assertSame(Alignment::TopCenter, $wordCue->getAlignment());
             $this->assertTrue($wordCue->isForced());
             $this->assertSame(["fields" => ["Style" => "Karaoke"]], $wordCue->findFormatData("ass"));
         }

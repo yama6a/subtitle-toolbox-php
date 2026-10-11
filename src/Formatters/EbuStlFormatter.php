@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Encoding\CodePage;
 use SubtitleToolbox\Encoding\Iso6937;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -119,7 +120,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         }
 
         $bytes    = implode(chr(EbuStl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode(LineEnding::Lf->value, $text)));
-        $position = $this->position($context, 2, count(explode(LineEnding::Lf->value, $text)));
+        $position = $this->position($context, Alignment::BottomCenter, count(explode(LineEnding::Lf->value, $text)));
 
         return $this->textBlocks($context, $bytes, $this->header(0, 0, $timeCode, $timeCode, $position, 1));
     }
@@ -133,7 +134,7 @@ final class EbuStlFormatter extends SubtitleFormatter
     private function cueBlocks(EbuStlContext $context, SubtitleCue $cue): array
     {
         $stored      = $cue->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
-        $alignment   = $cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT;
+        $alignment   = $cue->getAlignment();
         $timeCodeIn  = $this->timeCode($context, $cue->getStart());
         $timeCodeOut = $this->timeCode($context, $cue->getEnd());
 
@@ -246,18 +247,18 @@ final class EbuStlFormatter extends SubtitleFormatter
      *
      * @return array{int, int}
      */
-    private function position(EbuStlContext $context, int $alignment, int $lineCount): array
+    private function position(EbuStlContext $context, Alignment $alignment, int $lineCount): array
     {
         $firstRow = $context->teletext ? 1 : 0;
         $lastRow  = max($firstRow, $context->maxRow - $lineCount + 1);
 
-        $verticalPosition = match (intdiv($alignment - 1, 3)) {
+        $verticalPosition = match (intdiv($alignment->value - 1, 3)) {
             2       => $firstRow,
             1       => intdiv($firstRow + $lastRow, 2),
             default => $lastRow,
         };
 
-        return [$verticalPosition, ($alignment - 1) % 3 + 1];
+        return [$verticalPosition, ($alignment->value - 1) % 3 + 1];
     }
 
 

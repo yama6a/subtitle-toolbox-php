@@ -26,7 +26,7 @@ trait ArrayConversion
                 "end"        => $cue->getEnd(),
                 "lines"      => array_values($cue->getLines()),
                 "identifier" => $cue->getIdentifier(),
-                "alignment"  => $cue->getAlignment(),
+                "alignment"  => $cue->getAlignment() === Alignment::BottomCenter ? null : $cue->getAlignment()->value,
             ];
             if ($cue->isForced()) {
                 $cueArray["forced"] = true;
@@ -212,8 +212,9 @@ trait ArrayConversion
         if (!is_string($identifier) && $identifier !== null) {
             throw new ParsingException("The field $path.identifier must be a string or null.");
         }
-        $alignment = $cueData["alignment"] ?? null;
-        if ($alignment !== null && (!is_int($alignment) || !OptionChecks::isAlignment($alignment))) {
+        $alignment = $cueData["alignment"] ?? Alignment::BottomCenter->value;
+        $alignment = is_int($alignment) ? Alignment::tryFrom($alignment) : null;
+        if ($alignment === null) {
             throw new ParsingException("The field $path.alignment must be an integer from 1 to 9 or null.");
         }
 

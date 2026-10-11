@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Streaming\WebVttStreamReader;
 use SubtitleToolbox\Subtitle;
@@ -81,7 +82,7 @@ class WebVttRealFileTest extends TestCase
 
         $this->assertSame(["fred", "bill"], array_column($subtitle->findFormatData("vtt")["regions"], "id"));
         $this->assertSame(["region" => "bill", "align" => "right", "alignment" => 3], $cue->findFormatData("vtt"));
-        $this->assertSame(3, $cue->getAlignment());
+        $this->assertSame(Alignment::BottomRight, $cue->getAlignment());
     }
 
 
