@@ -53,7 +53,7 @@ final class SubRipParser extends SubtitleParser
      */
     public function splitIntoBlocks(iterable $lines): Generator
     {
-        return $this->joinCueTextBlocks($this->splitAtEmptyLines($lines), $this->isTimingLine(...), true);
+        return $this->joinCueTextBlocks($this->splitAtEmptyLines($lines), $this->blockRules());
     }
 
 
@@ -73,8 +73,7 @@ final class SubRipParser extends SubtitleParser
             $rawLines,
             $lineNumber,
             $index,
-            $this->isTimingLine(...),
-            true,
+            $this->blockRules(),
             function (array $part, int $partLine) use ($index): SubtitleCue {
                 $hasNumber = !$this->isTimingLine($part[0]);
                 if ($hasNumber || !$this->options->lenient) {
@@ -94,6 +93,12 @@ final class SubRipParser extends SubtitleParser
                 return $cue;
             }
         );
+    }
+
+
+    private function blockRules(): CueBlockRules
+    {
+        return new CueBlockRules($this->isTimingLine(...), true);
     }
 
 

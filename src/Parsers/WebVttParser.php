@@ -221,7 +221,7 @@ final class WebVttParser extends SubtitleParser
 
         // The spec ends a cue at an empty line, so strict mode keeps the text block apart.
         return $this->options->lenient
-            ? $this->joinCueTextBlocks($blocks, fn (string $line): bool => str_contains($line, "-->"), false, $this->isOtherBlock(...))
+            ? $this->joinCueTextBlocks($blocks, $this->blockRules(), $this->isOtherBlock(...))
             : $blocks;
     }
 
@@ -258,6 +258,12 @@ final class WebVttParser extends SubtitleParser
                 yield $restLineNumber => $restBlock;
             }
         }
+    }
+
+
+    private function blockRules(): CueBlockRules
+    {
+        return new CueBlockRules(fn (string $line): bool => str_contains($line, "-->"), false);
     }
 
 

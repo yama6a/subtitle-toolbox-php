@@ -548,23 +548,25 @@ abstract class SubtitleParser
     /**
      * Yields the blocks of splitAtEmptyLines() and joins a block of cue text to the block before it, when that block has a timing line.
      * So an empty line inside the cue text, or between the timing line and the text, does not end the cue.
-     * A block of cue text has no timing line, and no cue number or time on its first line. In lenient mode, it warns for each join.
+     * In lenient mode, it warns for each join.
      * $isOtherBlock returns true for a block that is no cue text, such as a WebVTT NOTE block.
+     *
+     * @see CueBlockRules::isCueTextBlock()
      *
      * @param iterable<int, list<string>> $blocks
      * @param (callable(list<string>): bool)|null $isOtherBlock
      *
      * @return Generator<int, list<string>>
      */
-    protected function joinCueTextBlocks(iterable $blocks, callable $isTimingLine, bool $withCueNumbers, ?callable $isOtherBlock = null): Generator
+    protected function joinCueTextBlocks(iterable $blocks, CueBlockRules $rules, ?callable $isOtherBlock = null): Generator
     {
         $pending     = null;
         $pendingLine = 0;
         $blockIndex  = 0;
         foreach ($blocks as $lineNumber => $block) {
-            if ($pending !== null && $this->isCueTextBlock($block, $isTimingLine, $withCueNumbers)
+            if ($pending !== null && $rules->isCueTextBlock($block)
                 && ($isOtherBlock === null || !$isOtherBlock($block))
-                && array_filter($pending, $isTimingLine) !== []) {
+                && $rules->hasTimingLine($pending)) {
                 if ($this->options->lenient) {
                     $this->warn(
                         "Block #$blockIndex has an empty line before line $lineNumber inside the cue. The parser kept the text after it in the cue.",
@@ -592,28 +594,15 @@ abstract class SubtitleParser
 
 
     /**
-     * A first line that looks like a broken time keeps the block apart, so the parser still skips it with a warning.
-     *
-     * @param list<string> $block
-     */
-    private function isCueTextBlock(array $block, callable $isTimingLine, bool $withCueNumbers): bool
-    {
-        return array_filter($block, $isTimingLine) === []
-            && !($withCueNumbers && is_numeric($block[0]))
-            && preg_match('/^\d+\s*[:：]\d|-+>/u', $block[0]) !== 1;
-    }
-
-
-    /**
-     * Returns the parts of a block that splitAtTimingLines() returns. In lenient mode, it warns for each split.
+     * Returns the parts of a block that CueBlockRules::splitAtTimingLines() returns. In lenient mode, it warns for each split.
      *
      * @param list<string> $block
      *
      * @return array<int, list<string>>
      */
-    protected function repairMissingEmptyLines(array $block, int $lineNumber, int $blockIndex, callable $isTimingLine, bool $withCueNumbers): array
+    protected function repairMissingEmptyLines(array $block, int $lineNumber, int $blockIndex, CueBlockRules $rules): array
     {
-        $parts = $this->splitAtTimingLines($block, $isTimingLine, $withCueNumbers);
+        $parts = $rules->splitAtTimingLines($block);
         foreach (array_keys($parts) as $offset) {
             if ($offset > 0 && $this->options->lenient) {
                 $this->warn(
@@ -640,10 +629,10 @@ abstract class SubtitleParser
      *
      * @return list<SubtitleCue>
      */
-    protected function parseRepairedBlock(array $block, int $lineNumber, int $blockIndex, callable $isTimingLine, bool $withCueNumbers, callable $parsePart): array
+    protected function parseRepairedBlock(array $block, int $lineNumber, int $blockIndex, CueBlockRules $rules, callable $parsePart): array
     {
         $cues = [];
-        foreach ($this->repairMissingEmptyLines($block, $lineNumber, $blockIndex, $isTimingLine, $withCueNumbers) as $offset => $part) {
+        foreach ($this->repairMissingEmptyLines($block, $lineNumber, $blockIndex, $rules) as $offset => $part) {
             try {
                 $cues[] = $parsePart($part, $lineNumber + $offset);
             } catch (ParsingException $exception) {
@@ -652,46 +641,5 @@ abstract class SubtitleParser
         }
 
         return $cues;
-    }
-
-
-    /**
-     * Splits a block before each line that $isTimingLine accepts, and before the cue number line in front of it.
-     * Each part is keyed by its 0-based offset in the block.
-     * A part that starts at a timing line has no cue number.
-     *
-     * @param list<string> $block
-     *
-     * @return array<int, list<string>>
-     */
-    protected function splitAtTimingLines(array $block, callable $isTimingLine, bool $withCueNumbers): array
-    {
-        $starts     = [0];
-        $lastTiming = null;
-        foreach ($block as $offset => $line) {
-            if (!$isTimingLine($line)) {
-                continue;
-            }
-
-            $start = $offset;
-            if ($withCueNumbers && $offset > 0 && is_numeric($block[$offset - 1])
-                && ($lastTiming === null || $offset - 1 > $lastTiming)) {
-                $start = $offset - 1;
-            }
-            if ($start > 0) {
-                $starts[] = $start;
-            }
-            $lastTiming = $offset;
-        }
-
-        $parts = [];
-        foreach ($starts as $i => $start) {
-            $end = $starts[$i + 1] ?? count($block);
-            if ($end > $start) {
-                $parts[$start] = array_slice($block, $start, $end - $start);
-            }
-        }
-
-        return $parts;
     }
 }

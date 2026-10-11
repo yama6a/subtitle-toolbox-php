@@ -23,9 +23,10 @@ final class SbvParser extends SubtitleParser
         $subtitle   = new Subtitle();
         $parsedCues = [];
         $index      = 0;
-        $blocks     = $this->joinCueTextBlocks($this->splitAtEmptyLines($this->lines($content)), $this->isTimingLine(...), false);
+        $rules      = $this->blockRules();
+        $blocks     = $this->joinCueTextBlocks($this->splitAtEmptyLines($this->lines($content)), $rules);
         foreach ($blocks as $lineNumber => $rawLines) {
-            $cues = $this->parseRepairedBlock($rawLines, $lineNumber, $index, $this->isTimingLine(...), false,
+            $cues = $this->parseRepairedBlock($rawLines, $lineNumber, $index, $rules,
                                               fn (array $part, int $partLine): SubtitleCue => $this->parseCueBlock($part, $index, $partLine));
             array_push($parsedCues, ...$cues);
             $index++;
@@ -73,6 +74,12 @@ final class SbvParser extends SubtitleParser
         );
 
         return new SubtitleCue($start, $end, array_map(Markup::escapeText(...), array_slice($rawLines, 1)));
+    }
+
+
+    private function blockRules(): CueBlockRules
+    {
+        return new CueBlockRules($this->isTimingLine(...), false);
     }
 
 
