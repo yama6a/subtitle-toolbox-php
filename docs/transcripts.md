@@ -1,6 +1,6 @@
 # Transcripts
 
-Speech-to-text tools, YouTube and podcast apps use their own transcript formats. The parsers on this page turn them into cues, so you can write SubRip or WebVTT. The library writes Whisper JSON, the podcast transcript formats and plain text. Cloud speech-to-text and YouTube formats are read only.
+Speech-to-text tools, YouTube and podcast apps use their own transcript formats. The parsers on this page turn them into cues, so you can write SubRip or WebVTT. The library writes Whisper JSON, Amazon Transcribe JSON, the podcast transcript formats and plain text. The other cloud speech-to-text formats and YouTube timed text are read only.
 
 ## Edit and save a transcript
 Read a transcript, fix the cues, and write it in its own format. The writer keeps the fields of the source, so other tools still read the file.
@@ -81,10 +81,11 @@ $subtitle->getCues()[2]->findFormatData('deepgram')['confidence'];           // 
 - **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each word gets a word timestamp before it.
 - **Speakers**: off by default. `TranscriptReadOptions::$speakerVoices` writes the speaker label of the service as a `<v>` tag, for example `<v spk_0>`, `<v 0>`, `<v A>` or `<v 1>`. The `rename` option of [`SpeakerLabels::apply()`](text.md#speakers) gives them names.
 - **Amazon Transcribe**: the language comes from `results.language_code`.
+- **Amazon Transcribe output**: `Format::AwsTranscribe` writes `results.transcripts`, one `pronunciation` item per word and one `punctuation` item per punctuation mark at the end of a word, with times as strings such as `"2.0"`. It numbers the item IDs again from 0. `speaker_labels` holds one segment per run of items with the same speaker. The writer writes one `audio_segments` entry per cue when the source had them, or when a cue has no words, because the items alone cannot hold such a cue. A new word gets confidence `"1.0"`, a new punctuation mark `"0.0"` as Amazon Transcribe writes it. See [Edit and save a transcript](#edit-and-save-a-transcript). The parser ignores `channel_labels`, so the writer does not write them.
 - **Deepgram**: the parser reads every channel and sorts the cues by time. The language comes from `detected_language` of the first channel.
 - **AssemblyAI**: the language `en_us` becomes `en-US`.
 - **Google**: the parser reads the V1 and V2 field names, and a long-running operation from `operations.get` through its `response`.
-- **Format data**: the subtitle keeps the top-level fields except the transcript text and the lists of words and segments. Each cue keeps the fields of its segment, utterance or result except the times and the text. Its words with their confidence are in `items` for Amazon Transcribe and in `words` for the other services.
+- **Format data**: the subtitle keeps the top-level fields except the transcript text and the lists of words and segments. Each cue keeps the fields of its segment, utterance or result except the times and the text. An Amazon Transcribe audio segment keeps all its fields. Its words with their confidence are in `items` for Amazon Transcribe and in `words` for the other services. The Amazon Transcribe `speaker_labels` stay in `results` without their `segments`.
 - **Errors**: each parser throws `ParsingException` for JSON without the list it needs. Amazon Transcribe needs `results.items`, Deepgram `results.channels`, AssemblyAI `words` or `utterances`, and Google `results`.
 
 ## YouTube timed text

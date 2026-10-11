@@ -39,10 +39,14 @@ final class AwsTranscribeParser extends SubtitleParser
         $segments = self::listOrEmpty($results["audio_segments"] ?? null);
         $cues     = $segments === [] ? $this->cuesFromWords($words, "items") : $this->readSegments($segments, $words);
 
+        if (is_array($results["speaker_labels"] ?? null)) {
+            $results["speaker_labels"] = array_diff_key($results["speaker_labels"], ["segments" => true]);
+        }
+
         return $this->transcript($cues, $results["language_code"] ?? null, self::fileDataWithResults(
             $data,
             $results,
-            ["transcripts", "items", "audio_segments", "speaker_labels", "channel_labels"]
+            ["transcripts", "items", "audio_segments", "channel_labels"]
         ));
     }
 
@@ -129,7 +133,7 @@ final class AwsTranscribeParser extends SubtitleParser
                 }
             }
 
-            $formatData          = array_diff_key($segment, array_flip(["start_time", "end_time", "transcript"]));
+            $formatData          = $segment;
             $formatData["items"] = $segmentWords === [] ? [] : array_merge(...array_column($segmentWords, "data"));
             $cue                 = $this->cue($start, $end, $text, $segmentWords,
                                               self::speaker($segment["speaker_label"] ?? null), $formatData, $index, $segment);
