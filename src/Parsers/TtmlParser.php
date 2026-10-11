@@ -17,7 +17,6 @@ use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
-use SubtitleToolbox\Timecode;
 use SubtitleToolbox\XmlLoader;
 
 final class TtmlParser extends SubtitleParser
@@ -44,25 +43,11 @@ final class TtmlParser extends SubtitleParser
     /** @var array<string, string> */
     private array $agents = [];
 
-    private float $frameRate;
-
-    /** Frame labels per second of an SMPTE time code, which is ttp:frameRate without the multiplier. */
-    private float $smpteFrameRate;
-
-    private bool $smpteTimeBase;
-
-    private string $dropMode;
-
-    private float $subFrameRate;
-
-    private float $tickRate;
-
-    /** True when lenient mode reads the last field of hh:mm:ss:ff as hundredths of a second. */
-    private bool $hundredths = false;
+    private TtmlClock $clock;
 
     private int $paragraphIndex = 0;
 
-    /** @var list<array{int, SubtitleCue, int, int, list<string>}> the cue key, cue, line, paragraph index and lines of each paragraph without an end */
+    /** @var array<int, array{cueKey: int, cue: SubtitleCue, line: int, paragraphIndex: int, lines: list<string>}> the paragraphs without an end */
     private array $openParagraphs = [];
 
 
@@ -78,7 +63,7 @@ final class TtmlParser extends SubtitleParser
             throw new ParsingException("The root element is not a TTML <tt> element.");
         }
 
-        $this->readTimingParameters();
+        $this->clock = $this->readClock();
         $head = $this->firstChild($this->root, "head");
         $body = $this->firstChild($this->root, "body");
         $this->styles = new TtmlStyles($this->namespace, $head);
@@ -108,75 +93,23 @@ final class TtmlParser extends SubtitleParser
         if ($body !== null) {
             $this->readContainer($cues, $body, new TtmlScope(), []);
         }
-        foreach ($this->openParagraphs as [$key, $cue, $line, $index, $lines]) {
-            unset($cues[$key]);
-            $this->fail(new ParsingException("The paragraph that begins at {$cue->getStart()}s has no end time."), $line, $index, $lines);
+        foreach ($this->openParagraphs as $open) {
+            unset($cues[$open["cueKey"]]);
+            $this->fail(
+                new ParsingException("The paragraph that begins at {$open["cue"]->getStart()}s has no end time."),
+                $open["line"],
+                $open["paragraphIndex"],
+                $open["lines"]
+            );
         }
 
         return $subtitle->addCues($cues);
     }
 
 
-    private function parseTimeExpression(string $expression): float
+    private function boundedTimeExpression(string $expression): float
     {
-        return self::boundedTime($this->unboundedTimeExpression($expression), trim($expression), null);
-    }
-
-
-    /**
-     * @see https://www.w3.org/TR/ttml2/#timing-value-time-expression
-     */
-    private function unboundedTimeExpression(string $expression): float
-    {
-        $expression = trim($expression);
-        // Some tools write a comma as decimal separator, for example 00:00:01,500.
-        if (preg_match("/^(\d{2,}):(\d{2}):(\d{2})(?:[.,](\d+)|:(\d{2})(?:\.(\d+))?)?$/", $expression, $matches)) {
-            $seconds = Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4] ?? "");
-            if (($matches[4] ?? "") !== "") {
-                return $seconds;
-            }
-            if ($this->hundredths && ($matches[5] ?? "") !== "") {
-                return $seconds + (int) $matches[5] / 100;
-            }
-            $frames = ($matches[5] ?? "") === "" ? 0 : (int) $matches[5];
-            $frames += ($matches[6] ?? "") === "" ? 0 : (int) $matches[6] / $this->subFrameRate;
-            if ($this->smpteTimeBase) {
-                return ($seconds * $this->smpteFrameRate + $frames - $this->droppedFrames((int) $matches[1], (int) $matches[2]))
-                       / $this->frameRate;
-            }
-
-            return $seconds + $frames / $this->frameRate;
-        }
-
-        if (preg_match("/^(\d+(?:\.\d+)?)(h|ms|m|s|f|t)$/", $expression, $matches)) {
-            $count = (float) $matches[1];
-
-            return match ($matches[2]) {
-                "h"  => $count * 3600,
-                "m"  => $count * 60,
-                "s"  => $count,
-                "ms" => $count / 1000,
-                "f"  => $count / $this->frameRate,
-                "t"  => $count / $this->tickRate,
-            };
-        }
-
-        throw new ParsingException("The time expression \"$expression\" is not valid.");
-    }
-
-
-    /**
-     * Counts the frame labels that drop-frame time code skips before hh:mm:00, as in SMPTE ST 12-1.
-     *
-     * @see https://www.w3.org/TR/ttml1/#time-expression-semantics-smpte
-     */
-    private function droppedFrames(int $hours, int $minutes): int
-    {
-        return match ($this->dropMode) {
-            "dropNTSC" => ($hours * 54 + $minutes - intdiv($minutes, 10)) * 2,
-            "dropPAL"  => ($hours * 27 + intdiv($minutes, 2) - intdiv($minutes, 20)) * 4,
-            default    => 0,
-        };
+        return self::boundedTime($this->clock->seconds($expression), trim($expression), null);
     }
 
 
@@ -269,7 +202,7 @@ final class TtmlParser extends SubtitleParser
     /**
      * @see https://www.w3.org/TR/ttml2/#parameter-attribute-frameRate
      */
-    private function readTimingParameters(): void
+    private function readClock(): TtmlClock
     {
         $frameRate  = $this->attribute($this->root, "ttp", "frameRate");
         $multiplier = preg_split("/[\s:]+/", trim($this->attribute($this->root, "ttp", "frameRateMultiplier") ?? "1 1"));
@@ -277,26 +210,30 @@ final class TtmlParser extends SubtitleParser
             $multiplier = [1, 1];
         }
 
-        $this->hundredths     = false;
-        $this->smpteFrameRate = (float) ($frameRate ?? $this->guessFrameRate()) ?: 30;
-        $this->frameRate      = $this->smpteFrameRate * (float) $multiplier[0] / (float) $multiplier[1];
-        $this->smpteTimeBase  = trim($this->attribute($this->root, "ttp", "timeBase") ?? "") === "smpte";
-        $this->dropMode       = trim($this->attribute($this->root, "ttp", "dropMode") ?? "nonDrop");
-        $this->subFrameRate   = (float) ($this->attribute($this->root, "ttp", "subFrameRate") ?? 1) ?: 1;
-        $tickRate             = $this->attribute($this->root, "ttp", "tickRate");
-        $this->tickRate       = $tickRate !== null && (float) $tickRate > 0
-            ? (float) $tickRate
-            : ($frameRate !== null ? $this->frameRate : 1);
+        $guess          = $frameRate === null ? $this->guessFrameRate() : null;
+        $smpteFrameRate = (float) ($frameRate ?? $guess ?? 30) ?: 30;
+        $effectiveRate  = $smpteFrameRate * (float) $multiplier[0] / (float) $multiplier[1];
+        $tickRate       = $this->attribute($this->root, "ttp", "tickRate");
+
+        return new TtmlClock(
+            frameRate: $effectiveRate,
+            smpteFrameRate: $smpteFrameRate,
+            smpteTimeBase: trim($this->attribute($this->root, "ttp", "timeBase") ?? "") === "smpte",
+            dropMode: trim($this->attribute($this->root, "ttp", "dropMode") ?? "nonDrop"),
+            subFrameRate: (float) ($this->attribute($this->root, "ttp", "subFrameRate") ?? 1) ?: 1,
+            tickRate: $tickRate !== null && (float) $tickRate > 0 ? (float) $tickRate : ($frameRate !== null ? $effectiveRate : 1),
+            lastFieldIsHundredths: $frameRate === null && $guess === null,
+        );
     }
 
 
     /**
      * Returns the default of 30 fps, or 50 or 60 fps in lenient mode when a frame label in the file is 30 or more.
-     * No frame rate fits a label of 60 or more, so lenient mode then reads the last field as hundredths of a second.
+     * No frame rate fits a label of 60 or more, so lenient mode then returns null and reads the last field as hundredths of a second.
      *
      * @see https://www.w3.org/TR/ttml2/#parameter-attribute-frameRate
      */
-    private function guessFrameRate(): float
+    private function guessFrameRate(): ?float
     {
         $highest = null;
         // libxml merges the node sets of a union query such as "//@begin | //@end" in quadratic time.
@@ -318,10 +255,9 @@ final class TtmlParser extends SubtitleParser
             throw new ParsingException($message, $line);
         }
         if ($label >= 60) {
-            $this->hundredths = true;
             $this->warn("$message The parser read the last field as hundredths of a second.", $line, null, [], ParseWarningAction::Repaired);
 
-            return 30;
+            return null;
         }
 
         $guess = $label < 50 ? 50 : 60;
@@ -361,7 +297,7 @@ final class TtmlParser extends SubtitleParser
                 $this->readContainer($cues, $child, $scope, $divAttributes);
             } elseif ($this->isTtElement($child, "p")) {
                 try {
-                    $cue = $this->readParagraph($child, $scope, $open);
+                    [$cue, $open] = $this->readParagraph($child, $scope);
                 } catch (ParsingException $exception) {
                     $this->fail($exception, $child->getLineNo(), $this->paragraphIndex++, $this->xmlLines($child));
                     continue;
@@ -372,7 +308,13 @@ final class TtmlParser extends SubtitleParser
                 }
                 $this->endOpenParagraphs($cue->getStart());
                 if ($open) {
-                    $this->openParagraphs[] = [count($cues), $cue, $child->getLineNo(), $this->paragraphIndex - 1, $this->xmlLines($child)];
+                    $this->openParagraphs[] = [
+                        "cueKey"         => count($cues),
+                        "cue"            => $cue,
+                        "line"           => $child->getLineNo(),
+                        "paragraphIndex" => $this->paragraphIndex - 1,
+                        "lines"          => $this->xmlLines($child),
+                    ];
                 }
                 $cues[] = $cue;
             }
@@ -392,9 +334,11 @@ final class TtmlParser extends SubtitleParser
 
 
     /**
-     * In lenient mode, a paragraph without an end gets its begin as end, and $open becomes true.
+     * In lenient mode, a paragraph without an end gets its begin as end.
+     *
+     * @return array{SubtitleCue, bool} the cue, and true for a paragraph without an end
      */
-    private function readParagraph(DOMElement $paragraph, TtmlScope $scope, ?bool &$open = null): SubtitleCue
+    private function readParagraph(DOMElement $paragraph, TtmlScope $scope): array
     {
         $open = false;
         [$begin, $end] = $this->interval($paragraph, $scope->begin, $scope->end);
@@ -418,7 +362,7 @@ final class TtmlParser extends SubtitleParser
         }
         $runs = array_values(array_filter(
             $runs,
-            fn (array $run): bool => !isset($run["begin"]) || $run["begin"] > $begin && ($open || $run["begin"] < $end)
+            fn (TtmlRun $run): bool => !$run->isTimedSpan() || $run->begin > $begin && ($open || $run->begin < $end)
         ));
 
         $cue = new SubtitleCue($begin, $end, $this->runsToLines($runs));
@@ -437,7 +381,7 @@ final class TtmlParser extends SubtitleParser
         $forced = $this->forcedDisplay($paragraph) ?? $scope->forced ?? $this->regionForcedDisplay($region) ?? false;
         $cue->setForced($forced || $this->hasForcedSpan($paragraph, $forced));
 
-        return $cue;
+        return [$cue, $open];
     }
 
 
@@ -446,14 +390,14 @@ final class TtmlParser extends SubtitleParser
      */
     private function endOpenParagraphs(float $begin): void
     {
-        foreach ($this->openParagraphs as $key => [, $cue, $line, $index, $lines]) {
-            if ($cue->getStart() < $begin) {
-                $cue->setEnd($begin);
+        foreach ($this->openParagraphs as $key => $open) {
+            if ($open["cue"]->getStart() < $begin) {
+                $open["cue"]->setEnd($begin);
                 $this->warn(
-                    "The paragraph that begins at {$cue->getStart()}s has no end time. The parser ended it at the next paragraph at {$begin}s.",
-                    $line,
-                    $index,
-                    $lines,
+                    "The paragraph that begins at {$open["cue"]->getStart()}s has no end time. The parser ended it at the next paragraph at {$begin}s.",
+                    $open["line"],
+                    $open["paragraphIndex"],
+                    $open["lines"],
                     ParseWarningAction::Repaired
                 );
                 unset($this->openParagraphs[$key]);
@@ -550,9 +494,9 @@ final class TtmlParser extends SubtitleParser
     {
         $expression = trim($element->getAttribute($attribute));
         try {
-            $seconds = $this->parseTimeExpression($expression);
+            $seconds = $this->boundedTimeExpression($expression);
         } catch (ParsingException $exception) {
-            $seconds = $this->options->lenient ? self::looseTimeExpression($expression) : null;
+            $seconds = $this->options->lenient ? TtmlClock::looseSeconds($expression) : null;
             if ($seconds === null) {
                 throw $exception;
             }
@@ -569,26 +513,6 @@ final class TtmlParser extends SubtitleParser
         }
 
         return self::boundedTime($base + $seconds, $expression, $element->getLineNo());
-    }
-
-
-    /**
-     * Reads the time expressions that TTML does not allow but some tools write:
-     * one-digit clock fields, m:ss without hours, hh:mm:ss:fff with milliseconds, and a bare number of milliseconds.
-     */
-    private static function looseTimeExpression(string $expression): ?float
-    {
-        return match (true) {
-            (bool) preg_match("/^(\d+):(\d{1,2}):(\d{1,2})(?:[.,](\d+))?$/", $expression, $matches)
-                => Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4] ?? ""),
-            (bool) preg_match("/^(\d+):(\d{1,2}):(\d{1,2}):(\d{3})$/", $expression, $matches)
-                => Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]),
-            (bool) preg_match("/^(\d{1,2}):(\d{1,2})(?:[.,](\d+))?$/", $expression, $matches)
-                => Timecode::toSeconds(0, (int) $matches[1], (int) $matches[2], $matches[3] ?? ""),
-            (bool) preg_match("/^\d{1,15}$/", $expression)
-                => (int) $expression / 1000,
-            default => null,
-        };
     }
 
 
@@ -627,9 +551,8 @@ final class TtmlParser extends SubtitleParser
 
 
     /**
-     * A run with null text marks a line break. A run with a begin marks the start of a timed span.
-     *
      * @param array{float, ?float} $interval the time interval of $node
+     * @param list<TtmlRun>        $runs
      */
     private function collectRuns(DOMNode $node, array $style, ?string $agent, bool $preserveSpace, array $interval, array &$runs): void
     {
@@ -637,13 +560,13 @@ final class TtmlParser extends SubtitleParser
             if ($child->nodeType === XML_TEXT_NODE || $child->nodeType === XML_CDATA_SECTION_NODE) {
                 self::addTextRuns($runs, $child->nodeValue, $style, $agent, $preserveSpace);
             } elseif ($this->isTtElement($child, "br")) {
-                $runs[] = ["text" => null];
+                $runs[] = TtmlRun::lineBreak();
             } elseif ($this->isTtElement($child, "span")) {
                 $spanInterval = $interval;
                 if (array_filter(self::TIMING_ATTRIBUTES, $child->hasAttribute(...)) !== []) {
                     try {
                         $spanInterval = $this->interval($child, ...$interval);
-                        $runs[]       = ["text" => "", "begin" => $spanInterval[0], "end" => $spanInterval[1]];
+                        $runs[]       = TtmlRun::timedSpan(...$spanInterval);
                     } catch (ParsingException) {
                         // A broken span time only drops the word timestamp, so the text of the cue stays.
                     }
@@ -664,22 +587,26 @@ final class TtmlParser extends SubtitleParser
     /**
      * Returns the union of the timed spans, for a paragraph that has no end of its own.
      *
+     * @param list<TtmlRun> $runs
+     *
      * @return ?array{float, float}
      */
     private function timedSpansInterval(array $runs): ?array
     {
-        $timed = array_filter($runs, fn (array $run): bool => isset($run["begin"]));
-        $ends  = array_filter(array_column($timed, "end"), fn (?float $end): bool => $end !== null);
+        $timed = array_filter($runs, fn (TtmlRun $run): bool => $run->isTimedSpan());
+        $ends  = array_filter(array_map(fn (TtmlRun $run): ?float => $run->end, $timed), fn (?float $end): bool => $end !== null);
         if ($ends === []) {
             return null;
         }
 
-        return [min(array_column($timed, "begin")), max($ends)];
+        return [min(array_map(fn (TtmlRun $run): float => $run->begin, $timed)), max($ends)];
     }
 
 
     /**
      * Adds the runs of a text node. With xml:space="preserve", each line feed becomes a line break.
+     *
+     * @param list<TtmlRun> $runs
      */
     private static function addTextRuns(array &$runs, string $text, array $style, ?string $agent, bool $preserveSpace): void
     {
@@ -687,39 +614,43 @@ final class TtmlParser extends SubtitleParser
         $parts = $preserveSpace ? explode("\n", $text) : [$text];
         foreach ($parts as $index => $part) {
             if ($index > 0) {
-                $runs[] = ["text" => null];
+                $runs[] = TtmlRun::lineBreak();
             }
-            $runs[] = ["text" => preg_replace("/[ \t\n]+/", " ", $part), "style" => $style, "agent" => $agent];
+            $runs[] = TtmlRun::text(preg_replace("/[ \t\n]+/", " ", $part), $style, $agent);
         }
     }
 
 
     /**
      * @see https://www.w3.org/TR/ttml2/#content-attribute-space
+     *
+     * @param list<TtmlRun> $runs
+     *
+     * @return list<string>
      */
     private function runsToLines(array $runs): array
     {
         $lines       = [];
         $lineRuns    = [];
         $openAgent   = null;
-        foreach ([...$runs, ["text" => null]] as $run) {
-            if ($run["text"] !== null) {
+        foreach ([...$runs, TtmlRun::lineBreak()] as $run) {
+            if (!$run->isLineBreak()) {
                 $lineRuns[] = $run;
                 continue;
             }
 
             $endsWithSpace = true;
-            foreach ($lineRuns as $index => $lineRun) {
-                if ($endsWithSpace && str_starts_with($lineRun["text"], " ")) {
-                    $lineRuns[$index]["text"] = substr($lineRun["text"], 1);
+            foreach ($lineRuns as $lineRun) {
+                if ($endsWithSpace && str_starts_with($lineRun->text, " ")) {
+                    $lineRun->text = substr($lineRun->text, 1);
                 }
-                if ($lineRuns[$index]["text"] !== "") {
-                    $endsWithSpace = str_ends_with($lineRuns[$index]["text"], " ");
+                if ($lineRun->text !== "") {
+                    $endsWithSpace = str_ends_with($lineRun->text, " ");
                 }
             }
             for ($index = count($lineRuns) - 1; $index >= 0; $index--) {
-                $lineRuns[$index]["text"] = rtrim($lineRuns[$index]["text"], " ");
-                if ($lineRuns[$index]["text"] !== "") {
+                $lineRuns[$index]->text = rtrim($lineRuns[$index]->text, " ");
+                if ($lineRuns[$index]->text !== "") {
                     break;
                 }
             }
@@ -734,24 +665,26 @@ final class TtmlParser extends SubtitleParser
 
     /**
      * A speaker tag stays open across lines, as in WebVTT.
+     *
+     * @param list<TtmlRun> $runs
      */
     private function runsToMarkup(array $runs, ?string &$openAgent): string
     {
         $markup    = "";
         $agentRuns = [];
         foreach ($runs as $run) {
-            if (isset($run["begin"])) {
-                $markup   .= StyleRuns::toMarkup($agentRuns) . "<" . Markup::coreTimestamp($run["begin"]) . ">";
+            if ($run->isTimedSpan()) {
+                $markup   .= StyleRuns::toMarkup($agentRuns) . "<" . Markup::coreTimestamp($run->begin) . ">";
                 $agentRuns = [];
                 continue;
             }
-            if (trim($run["text"]) !== "" && $run["agent"] !== $openAgent) {
+            if (trim($run->text) !== "" && $run->agent !== $openAgent) {
                 $markup   .= StyleRuns::toMarkup($agentRuns) . ($openAgent === null ? "" : "</v>")
-                    . ($run["agent"] === null ? "" : Markup::voiceTag($run["agent"]));
+                    . ($run->agent === null ? "" : Markup::voiceTag($run->agent));
                 $agentRuns = [];
-                $openAgent = $run["agent"];
+                $openAgent = $run->agent;
             }
-            $agentRuns[] = [$run["text"], $run["style"]];
+            $agentRuns[] = [$run->text, $run->style];
         }
 
         return $markup . StyleRuns::toMarkup($agentRuns);
