@@ -70,7 +70,7 @@ final class HlsCommand extends FileCommand
         $this->playlist  = $arguments->value("playlist") ?? self::DEFAULT_PLAYLIST;
         self::checkOutputDirectory($this->directory);
 
-        $this->segmentOptions = new HlsSegmentOptions(...self::given([
+        $this->segmentOptions = new HlsSegmentOptions(...self::withoutNulls([
             "segmentDuration" => $arguments->positiveSeconds("segment"),
             "mpegts"          => $arguments->int("mpegts", 0),
             "local"           => $arguments->nonNegativeSeconds("local"),

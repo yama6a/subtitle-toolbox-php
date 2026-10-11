@@ -104,7 +104,7 @@ abstract class WriteCommand extends FileCommand
 
         $this->sccFit       = $arguments->has("scc-fit");
         $lineEnding         = $arguments->choice("line-ending", array_keys(self::LINE_ENDINGS));
-        $this->writeOptions = new WriteOptions(...self::given([
+        $this->writeOptions = new WriteOptions(...self::withoutNulls([
             "lineEnding"    => $lineEnding === null ? null : self::LINE_ENDINGS[$lineEnding],
             "bom"           => $arguments->has("bom") || $arguments->has("no-bom") ? $arguments->has("bom") : null,
             "skipImageCues" => $arguments->has("skip-image-cues"),
