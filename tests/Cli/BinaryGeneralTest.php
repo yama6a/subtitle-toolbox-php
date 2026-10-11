@@ -339,7 +339,7 @@ class BinaryGeneralTest extends BinaryTestCase
      */
     public static function libraryMessagesInCliWords(): array
     {
-        $tracks = "InvalidParserException (Error #102): The MKV or WebM file has 6 subtitle tracks. %s\n" .
+        $tracks = "UnsupportedFormatException (Error #102): The MKV or WebM file has 6 subtitle tracks. %s\n" .
                   "  3: S_TEXT/UTF8, de, \"Deutsch (Forced)\", forced\n";
         $format = "UnknownFormatException (Error #106): Format detection found no subtitle format. %s\n";
         $frames = "The frame rate is unknown. Pass --fps or --input-fps, start the file with {1}{1}<fps>, or pass --lenient for 23.976 fps.\n";
@@ -348,7 +348,7 @@ class BinaryGeneralTest extends BinaryTestCase
             "track"            => [["convert", "movie.mkv", "--to", "srt", "-o", "-"], "",
                                    "movie.mkv: " . sprintf($tracks, "Pass --track N with one of them:")],
             "track on stdin"   => [["convert", "-", "--from", "srt", "--to", "vtt", "-o", "-"], "movie.mkv",
-                                   "stdin: InvalidParserException (Error #102): The input is an MKV or WebM file. Pass --track N.\n"],
+                                   "stdin: UnsupportedFormatException (Error #102): The input is an MKV or WebM file. Pass --track N.\n"],
             "new track"       => [["diff", "trip.srt", "movie.mkv"], "",
                                    "movie.mkv: " . sprintf($tracks, "Pass --new-track N with one of them:")],
             "reference track"  => [["sync", "trip.srt", "--reference", "movie.mkv"], "",

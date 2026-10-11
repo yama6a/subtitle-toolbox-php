@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use JsonException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -36,7 +36,7 @@ class JsonOutputTest extends TestCase
         try {
             $subtitle->toString($format);
             $this->fail("No exception");
-        } catch (InvalidArgumentException $exception) {
+        } catch (UnwritableContentException $exception) {
             $this->assertInstanceOf(JsonException::class, $exception->getPrevious());
             $this->assertSame("JSON cannot hold the subtitle: Malformed UTF-8 characters, possibly incorrectly encoded. " .
                               "Read a file in another encoding with its source encoding.", $exception->getMessage());
@@ -52,7 +52,7 @@ class JsonOutputTest extends TestCase
         try {
             $subtitle->toString(Format::Json);
             $this->fail("No exception");
-        } catch (InvalidArgumentException $exception) {
+        } catch (UnwritableContentException $exception) {
             $this->assertInstanceOf(JsonException::class, $exception->getPrevious());
             $this->assertSame("JSON cannot hold the subtitle: Inf and NaN cannot be JSON encoded.", $exception->getMessage());
         }

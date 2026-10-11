@@ -10,8 +10,8 @@ use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Mp4\Mp4Reader;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
+use SubtitleToolbox\Exceptions\UnsupportedFormatException;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
@@ -139,12 +139,12 @@ class LoadSaveTest extends TestCase
         try {
             Subtitle::loadAutoDetectFormat($mkv);
             $this->fail("6 tracks must throw.");
-        } catch (InvalidParserException $exception) {
+        } catch (UnsupportedFormatException $exception) {
             $this->assertStringContainsString("has 6 subtitle tracks. Call loadTrack() with one of them:\n  3: S_TEXT/UTF8, de", $exception->getMessage());
             $this->assertStringContainsString("\n  8: S_TEXT/UTF8, eng", $exception->getMessage());
         }
 
-        $this->expectException(InvalidParserException::class);
+        $this->expectException(UnsupportedFormatException::class);
         $this->expectExceptionMessage("Call loadTrack()");
         Subtitle::load($mkv, Format::SubRip);
     }
@@ -213,18 +213,18 @@ class LoadSaveTest extends TestCase
         try {
             Subtitle::loadAutoDetectFormat($mp4);
             $this->fail("4 tracks must throw.");
-        } catch (InvalidParserException $exception) {
-            $this->assertStringStartsWith("InvalidParserException (Error #102): The MP4 file has 4 subtitle tracks. Call loadTrack() with one of them:\n" .
+        } catch (UnsupportedFormatException $exception) {
+            $this->assertStringStartsWith("UnsupportedFormatException (Error #102): The MP4 file has 4 subtitle tracks. Call loadTrack() with one of them:\n" .
                                           "  2: tx3g, eng, \"English\", default\n", $exception->getMessage());
         }
         try {
             Subtitle::fromString(file_get_contents($mp4), Format::SubRip);
             $this->fail("MP4 content must throw.");
-        } catch (InvalidParserException $exception) {
+        } catch (UnsupportedFormatException $exception) {
             $this->assertStringEndsWith("The content is an MP4 file. Call loadTrack() with a track number.", $exception->getMessage());
         }
 
-        $this->expectException(InvalidParserException::class);
+        $this->expectException(UnsupportedFormatException::class);
         $this->expectExceptionMessage("$mp4 is an MP4 file. Call loadTrack() with a track number.");
         Subtitle::load($mp4, Format::SubRip);
     }
@@ -247,7 +247,7 @@ class LoadSaveTest extends TestCase
         $this->assertNotSame([], $subtitle->getCues());
         $this->assertTrue(Image\CueImage::isImageCue($subtitle->getCues()[0]));
 
-        $this->expectException(InvalidParserException::class);
+        $this->expectException(UnsupportedFormatException::class);
         $this->expectExceptionMessage("has 2 subtitle tracks. Call loadTrack() with one of them:\n  3: S_HDMV/PGS, ger, default\n  4: S_HDMV/PGS, eng");
         Subtitle::loadAutoDetectFormat(self::FILES . "mkv/pgs.mkv");
     }

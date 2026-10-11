@@ -124,8 +124,7 @@ class ThrowSitesTest extends TestCase
 
     private const CODES = [
         ParsingException::class             => 100,
-        InvalidFormatterException::class    => 101,
-        InvalidParserException::class       => 102,
+        UnsupportedFormatException::class   => 102,
         ImageCueWithoutTextException::class => 103,
         InvalidArgumentException::class     => 104,
         CueNotFoundException::class         => 105,
@@ -134,6 +133,9 @@ class ThrowSitesTest extends TestCase
         UnwritableContentException::class   => 108,
         TranslationException::class         => 109,
     ];
+
+    // 101 belonged to InvalidFormatterException in 3.x. Do not give it to a new class.
+    private const RETIRED_CODES = [101];
 
     // The CLI catches its own exceptions, so they need no error code.
     private const CLI_CODES = [FileFailure::class => 0];
@@ -274,7 +276,9 @@ class ThrowSitesTest extends TestCase
         $parsing     = [ParsingException::class, ParsingException::class];
         $ocr         = [\RuntimeException::class, OcrException::class];
         $translation = [\RuntimeException::class, TranslationException::class];
-        $unwritable = [\InvalidArgumentException::class, UnwritableContentException::class];
+        $unwritable  = [\RuntimeException::class, UnwritableContentException::class];
+        $unsupported = [\RuntimeException::class, UnsupportedFormatException::class];
+        $unknown     = [UnsupportedFormatException::class, UnknownFormatException::class];
         $imageCue   = (new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2));
 
         $cue = ["start" => 1, "end" => 2, "lines" => ["text"]];
@@ -360,8 +364,9 @@ class ThrowSitesTest extends TestCase
             "CueEditing.php: slice start after end"         => [fn () => self::subtitle()->withSlice(5, 1), ...$invalid],
             "CueEditing.php: split time outside the cue"    => [fn () => self::subtitle()->splitCue(0, 9, 1), ...$invalid],
             "CueEditing.php: split line out of range"       => [fn () => self::subtitle()->splitCue(0, 1.5, 5), ...$invalid],
-            "CueEditing.php: join in the wrong order"       => [fn () => self::subtitle()->joinCues(1, 0), ...$invalid],
-            "CueEditing.php: edit a missing cue"            => [fn () => self::subtitle()->splitCue(9, 1.5, 1), ...$invalid],
+            "CueEditing.php: join in the wrong order"       => [fn () => self::subtitle()->joinCues(0, 0), ...$invalid],
+            "CueEditing.php: split a missing cue"           => [fn () => self::subtitle()->splitCue(9, 1.5, 1),
+                                                                \RuntimeException::class, CueNotFoundException::class],
             "CueLookup.php: range start after end"          => [fn () => self::subtitle()->findCuesBetween(10, 5), ...$invalid],
             "Dependency.php: missing"                       => [fn () => Dependency::check("gzuncompress_missing", "Cannot decode a PNG - PHP has no ext-zlib."),
                                                                 ...$invalid],
@@ -663,28 +668,21 @@ class ThrowSitesTest extends TestCase
             "StringHelpers.php: unknown encoding"           => [fn () => StringHelpers::convertToUtf8("text", "NO-SUCH-ENCODING"),
                                                                 ...$parsing],
             "Subtitle.php: addCues no cue"                 => [fn () => (new Subtitle())->addCues([5]), ...$invalid],
-            "Subtitle.php: unknown format"                  => [fn () => Subtitle::fromStringAutoDetectFormat("text"),
-                                                                InvalidParserException::class, UnknownFormatException::class],
+            "Subtitle.php: unknown format"                  => [fn () => Subtitle::fromStringAutoDetectFormat("text"), ...$unknown],
             "Subtitle.php: unknown format of a file"        => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "chapters/ffmetadata/real/m4b_audiobook.ffmeta"),
-                                                                InvalidParserException::class, UnknownFormatException::class],
-            "Subtitle.php: load() of an MKV file"           => [fn () => Subtitle::load(self::FILES . "mkv/pgs.mkv", Format::Pgs),
-                                                                InvalidParserException::class, InvalidParserException::class],
-            "Subtitle.php: fromString() of MKV content"     => [fn () => Subtitle::fromString(MatroskaReader::EBML_MAGIC, Format::SubRip),
-                                                                InvalidParserException::class, InvalidParserException::class],
-            "Subtitle.php: MKV with 2 subtitle tracks"      => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "mkv/pgs.mkv"),
-                                                                InvalidParserException::class, InvalidParserException::class],
+                                                                ...$unknown],
+            "Subtitle.php: load() of an MKV file"           => [fn () => Subtitle::load(self::FILES . "mkv/pgs.mkv", Format::Pgs), ...$unsupported],
+            "Subtitle.php: fromString() of MKV content"     => [fn () => Subtitle::fromString(MatroskaReader::EBML_MAGIC, Format::SubRip), ...$unsupported],
+            "Subtitle.php: MKV with 2 subtitle tracks"      => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "mkv/pgs.mkv"), ...$unsupported],
             "Subtitle.php: VobSub without its .sub file"    => [fn () => Subtitle::load(self::FILES . "vobsub/SOURCES.md", Format::VobSub), ...$invalid],
             "Subtitle.php: missing file"                    => [fn () => Subtitle::load(self::FILES . "missing.srt", Format::SubRip), ...$invalid],
             "Subtitle.php: unreadable file"                 => [fn () => Subtitle::load(self::unreadableFile(), Format::SubRip), ...$invalid],
-            "Subtitle.php: save() to an unknown extension"  => [fn () => self::subtitle()->save(self::FILES . "out.unknown"),
-                                                                InvalidFormatterException::class, InvalidFormatterException::class],
+            "Subtitle.php: save() to an unknown extension"  => [fn () => self::subtitle()->save(self::FILES . "out.unknown"), ...$unsupported],
             "Subtitle.php: save() into a missing directory" => [fn () => self::subtitle()->save(self::FILES . "missing/out.srt"), ...$invalid],
             "Subtitle.php: MicroDVD without a frame rate"   => [fn () => self::subtitle()->toString(Format::MicroDvd), ...$invalid],
             "Subtitle.php: iTT without a frame rate"        => [fn () => self::subtitle()->toString(Format::Itt), ...$invalid],
-            "Subtitle.php: format without a parser"         => [fn () => Subtitle::fromString("text", Format::PlainText),
-                                                                InvalidParserException::class, InvalidParserException::class],
-            "Subtitle.php: format without a formatter"      => [fn () => self::subtitle()->toString(Format::Whisper),
-                                                                InvalidFormatterException::class, InvalidFormatterException::class],
+            "Subtitle.php: format without a parser"         => [fn () => Subtitle::fromString("text", Format::PlainText), ...$unsupported],
+            "Subtitle.php: format without a formatter"      => [fn () => self::subtitle()->toString(Format::Whisper), ...$unsupported],
             "Subtitle.php: image cue without text"          => [fn () => (new Subtitle())->addCue($imageCue)->toString(Format::SubRip),
                                                                 ImageCueWithoutTextException::class, ImageCueWithoutTextException::class],
             "Subtitle.php: remove a missing cue"            => [fn () => self::subtitle()->removeCue(9),
@@ -837,7 +835,7 @@ class ThrowSitesTest extends TestCase
     }
 
 
-    public function testErrorCodesStartAt100WithoutGapsOrClashes(): void
+    public function testErrorCodesStartAt100WithoutGapsOrClashesExceptTheRetiredCode(): void
     {
         $codes = [];
         foreach (glob(self::SRC . "Exceptions/*.php") as $path) {
@@ -850,7 +848,7 @@ class ThrowSitesTest extends TestCase
         asort($codes);
 
         $this->assertSame(self::CODES, $codes);
-        $this->assertSame(range(100, 99 + count($codes)), array_values($codes));
+        $this->assertSame(array_values(array_diff(range(100, 100 + count($codes)), self::RETIRED_CODES)), array_values($codes));
     }
 
 

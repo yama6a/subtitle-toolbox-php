@@ -12,9 +12,8 @@ use SubtitleToolbox\Encoding\DecodedText;
 use SubtitleToolbox\Exceptions\CueNotFoundException;
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Exceptions\InvalidFormatterException;
-use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
+use SubtitleToolbox\Exceptions\UnsupportedFormatException;
 use SubtitleToolbox\Formatters\ImageFormatter;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
@@ -94,7 +93,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     {
         $options ??= new ReadOptions();
         if (($container = self::containerOf($path)) !== null) {
-            throw new InvalidParserException("$path is an " . Containers::label($container) . " file. Call loadTrack() with a track number.");
+            throw new UnsupportedFormatException("$path is an " . Containers::label($container) . " file. Call loadTrack() with a track number.");
         }
         if ($format !== Format::VobSub) {
             return self::fromString(self::readFile($path), $format, $options);
@@ -168,7 +167,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     public static function fromString(string $content, Format $format, ?ReadOptions $options = null): self
     {
         if (($container = Containers::detect($content)) !== null) {
-            throw new InvalidParserException("The content is an " . Containers::label($container) . " file. Call loadTrack() with a track number.");
+            throw new UnsupportedFormatException("The content is an " . Containers::label($container) . " file. Call loadTrack() with a track number.");
         }
         $options ??= new ReadOptions();
 
@@ -258,7 +257,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     private static function parseUtf8(string $content, Format $format, ReadOptions $options): self
     {
         $parserClass = FormatRegistry::parserClass($format)
-            ?? throw new InvalidParserException("The format {$format->value} can be written but not read.");
+            ?? throw new UnsupportedFormatException("The format {$format->value} can be written but not read.");
 
         $subtitle         = (new $parserClass())->parse($content, $options);
         $subtitle->format = $format;
@@ -278,7 +277,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         $tracks = $reader->getSubtitleTracks();
         $label  = Containers::label($container);
         if (count($tracks) !== 1) {
-            throw new InvalidParserException($tracks === [] ? "The $label file has no subtitle track." :
+            throw new UnsupportedFormatException($tracks === [] ? "The $label file has no subtitle track." :
                 "The $label file has " . count($tracks) . " subtitle tracks. Call loadTrack() with one of them:\n" .
                 implode("\n", array_map(fn (SubtitleTrack $track): string => "  $track->number: " . $track->describe(), $tracks)));
         }
@@ -410,7 +409,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     public function save(string $path, ?Format $format = null, ?WriteOptions $options = null): void
     {
         $format ??= Format::fromPath($path)
-            ?? throw new InvalidFormatterException("The extension of $path names no format. Pass a format to save().");
+            ?? throw new UnsupportedFormatException("The extension of $path names no format. Pass a format to save().");
         $content  = $this->toString($format, $options ?? new WriteOptions());
 
         if (@file_put_contents($path, $content) === false) {
@@ -429,7 +428,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         $options ??= new WriteOptions();
         $options = $this->withFormatDefaults($format, $options);
         $formatterClass = FormatRegistry::formatterClass($format)
-            ?? throw new InvalidFormatterException("The format {$format->value} can be read but not written.");
+            ?? throw new UnsupportedFormatException("The format {$format->value} can be read but not written.");
 
         $subtitle = $this;
         if (!is_subclass_of($formatterClass, ImageFormatter::class)) {
@@ -518,6 +517,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     /**
      * Removes the cue at $cueIndex and numbers the remaining cues from 0 again.
+     *
+     * @throws CueNotFoundException when no cue has the index $cueIndex.
      */
     public function removeCue(int $cueIndex): self
     {

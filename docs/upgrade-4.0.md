@@ -16,7 +16,19 @@ TODO #709
 
 ## Exceptions
 
-TODO #710 #715
+| 3.x | 4.0 |
+|:--- |:--- |
+| `catch (InvalidParserException $e)` | `catch (UnsupportedFormatException $e)` |
+| `catch (InvalidFormatterException $e)` | `catch (UnsupportedFormatException $e)` |
+| `$e->getCode() === 101` for `toString(Format::Whisper)` or `save('out.unknown')` | `$e->getCode() === 102` |
+| `catch (\InvalidArgumentException $e)` around `toString(Format::Scc)` for a cue with 5 lines | `catch (UnwritableContentException $e)` or `catch (\RuntimeException $e)` |
+| `catch (InvalidArgumentException $e)` around `splitCue(9, 1.5, 1)` or `joinCues(0, 9)` on 3 cues | `catch (CueNotFoundException $e)` |
+
+- **One class for formats**: `UnsupportedFormatException` replaces `InvalidParserException` and `InvalidFormatterException`. It keeps code 102. No class has code 101.
+- **Unknown format**: `UnknownFormatException` keeps code 106 and extends `UnsupportedFormatException`.
+- **Unwritable content**: `UnwritableContentException` keeps code 108 and extends `\RuntimeException`. `catch (\InvalidArgumentException $e)` and `catch (InvalidArgumentException $e)` no longer catch it.
+- **Missing cue**: `removeCue()`, `splitCue()` and `joinCues()` throw `CueNotFoundException` for an index without a cue. `joinCues()` checks both indexes before their order, so `joinCues(9, 2)` on 3 cues throws `CueNotFoundException`.
+- **Final class**: `InvalidArgumentException` is `final`. `UnsupportedFormatException` is the only exception class that is not `final`.
 
 ## Sync
 

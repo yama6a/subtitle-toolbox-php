@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Formatters;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\CueLimits;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
@@ -220,7 +219,7 @@ class SccFormatterTest extends TestCase
 
     public function testThrowsForMoreThanFourLines(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(UnwritableContentException::class);
         $this->expectExceptionMessage("Cue #1 at 3 s has 5 lines, but SCC allows 4. Call wrapLines(32, 4) first.");
 
         $this->subtitle(new SubtitleCue(1.0, 2.0, "Hi"), new SubtitleCue(3.0, 4.0, ["1", "2", "3", "4", "5"]))->toString(Format::Scc);
@@ -229,7 +228,7 @@ class SccFormatterTest extends TestCase
 
     public function testThrowsForALineLongerThan32Characters(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(UnwritableContentException::class);
         $this->expectExceptionMessage("Cue #0 at 1 s has a line with 33 characters, but SCC allows 32. Call wrapLines(32, 4) first.");
 
         $this->subtitle(new SubtitleCue(1.0, 2.0, "<i>" . str_repeat("a", 33) . "</i>"))->toString(Format::Scc);
@@ -238,7 +237,7 @@ class SccFormatterTest extends TestCase
 
     public function testNamesTheSplitStepWhenWrappingCannotFitTheCue(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(UnwritableContentException::class);
         $this->expectExceptionMessage("Cue #0 at 1 s has a line with 139 characters, but SCC allows 32. " .
                                       "Call Resegmenter::apply() with ResegmentMode::SplitLong and new CueLimits(32, 4), then wrapLines(32, 4).");
 
@@ -268,7 +267,7 @@ class SccFormatterTest extends TestCase
 
     public function testThrowsForACharacterThatCea608Lacks(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(UnwritableContentException::class);
         $this->expectExceptionMessage("Cue #0 at 1 s has the character \"\u{65E5}\", which CEA-608 cannot show.");
 
         $this->subtitle(new SubtitleCue(1.0, 2.0, "\u{65E5}"))->toString(Format::Scc);

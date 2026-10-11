@@ -17,23 +17,32 @@ try {
 | Exception | Extends | `getCode()` | Thrown for |
 |:--- |:--- |:--- |:--- |
 | `ParsingException` | `\RuntimeException` | 100 | content that a parser or `fromArray()` cannot read, or a byte that is not valid in the source encoding |
-| `InvalidFormatterException` | `\RuntimeException` | 101 | `toString()` with a format that the library cannot write, or `save()` with an unknown extension |
-| `InvalidParserException` | `\RuntimeException` | 102 | `fromString()` with a format that the library cannot read. An MKV, WebM or MP4 file in `load()` or `fromString()`. An MKV, WebM or MP4 file without exactly 1 subtitle track in `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` |
+| `UnsupportedFormatException` | `\RuntimeException` | 102 | a format that the library cannot read or write, see [Unsupported formats](#unsupported-formats) |
 | `ImageCueWithoutTextException` | `\RuntimeException` | 103 | an image cue without text in `toString()` with a text format |
 | `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, see [Invalid arguments](#invalid-arguments) |
-| `CueNotFoundException` | `\RuntimeException` | 105 | `removeCue()` with an index that has no cue |
-| `UnknownFormatException` | `InvalidParserException` | 106 | `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` when detection finds no format |
+| `CueNotFoundException` | `\RuntimeException` | 105 | `removeCue()`, `splitCue()` or `joinCues()` with an index that has no cue |
+| `UnknownFormatException` | `UnsupportedFormatException` | 106 | `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` when detection finds no format |
 | `OcrException` | `\RuntimeException` | 107 | an OCR engine that fails on one image. Tesseract exits with an error, or php-glyph-ocr cannot read the image |
-| `UnwritableContentException` | `InvalidArgumentException` | 108 | `toString()` or `save()` with a subtitle that the output format cannot hold, see [Unwritable content](#unwritable-content) |
+| `UnwritableContentException` | `\RuntimeException` | 108 | `toString()` or `save()` with a subtitle that the output format cannot hold, see [Unwritable content](#unwritable-content) |
 | `TranslationException` | `\RuntimeException` | 109 | a translation service that fails, see [Translation errors](#translation-errors) |
 
 - **SPL classes**: each class extends an SPL class, so `catch (\InvalidArgumentException $e)` and `catch (\RuntimeException $e)` also work.
 - **Messages**: `InvalidArgumentException`, `UnwritableContentException` and `CueNotFoundException` keep the plain message. The other classes start it with the class name and the code, for example `ParsingException (Error #100): `. See [compatibility.md](compatibility.md) for the parts of an exception that stay stable.
 - **Previous exception**: every constructor takes the message, then an optional `$previous` exception. `ParsingException` takes the line number before it. `getPrevious()` returns it.
-- **Final classes**: every exception class is `final`, except 2. `UnknownFormatException` extends `InvalidParserException`, and `UnwritableContentException` extends `InvalidArgumentException`. Do not extend them, see [compatibility.md](compatibility.md#not-covered).
+- **Final classes**: every exception class is `final`, except `UnsupportedFormatException`. `UnknownFormatException` extends it. Do not extend it, see [compatibility.md](compatibility.md#not-covered).
 - **Line number**: `ParsingException::getLineNumber()` returns the 1-based input line when the parser knows it, and null otherwise. The message then ends with the line, for example ` (line 12)`. Read the line from `getLineNumber()`, not from the message.
 
 [Lenient mode](lenient-parsing.md) skips a broken block in place of throwing.
+
+## Unsupported formats
+`UnsupportedFormatException` covers these cases:
+
+- `fromString()` or `load()` with a format that the library cannot read, such as `Format::PlainText`.
+- `toString()` or `save()` with a format that the library cannot write, such as `Format::Whisper`.
+- `save()` without a format and with an unknown extension, such as `out.unknown`.
+- An MKV, WebM or MP4 file in `load()` or `fromString()`. Call `loadTrack()` instead.
+- An MKV, WebM or MP4 file without exactly 1 subtitle track in `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()`.
+- Detection that finds no format. This throws the subclass `UnknownFormatException`.
 
 ## Invalid arguments
 `InvalidArgumentException` covers these cases:

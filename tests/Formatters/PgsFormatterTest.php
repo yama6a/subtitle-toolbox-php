@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Application;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\Image\CueImage;
@@ -384,7 +384,7 @@ class PgsFormatterTest extends TestCase
     #[DataProvider("invalidCues")]
     public function testRejectsCuesThatPgsCannotHold(SubtitleCue $cue, string $message): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(UnwritableContentException::class);
         $this->expectExceptionMessage($message);
 
         (new Subtitle())->addCue($cue)->toString(Format::Pgs);
