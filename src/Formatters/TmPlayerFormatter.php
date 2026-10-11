@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\LineEnding;
-use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
@@ -20,7 +19,7 @@ final class TmPlayerFormatter extends SubtitleFormatter
         $options ??= new WriteOptions();
         $cues = [];
         foreach ($subtitle->getCues() as $cue) {
-            $lines = Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines()));
+            $lines = $this->plainLines($cue);
             // A line without text would end the cue before it.
             if ($lines !== []) {
                 $cues[] = [$cue, $lines];

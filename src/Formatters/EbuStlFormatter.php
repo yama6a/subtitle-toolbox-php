@@ -44,8 +44,8 @@ final class EbuStlFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $data = $subtitle->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
-        $gsi  = ($data["gsi"] ?? []) + self::DEFAULT_GSI;
+        $fileData = $subtitle->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
+        $gsi      = ($fileData["gsi"] ?? []) + self::DEFAULT_GSI;
         $fps  = $this->formatOptions($options)->frameRate ?? EbuStl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? self::DEFAULT_FRAME_RATE;
 
         if (!array_key_exists($gsi["CCT"], EbuStl::CHARACTER_CODE_TABLES)) {
@@ -56,16 +56,16 @@ final class EbuStlFormatter extends SubtitleFormatter
         $frameRate  = new FrameRate($fps);
         $context    = new EbuStlContext(
             frameRate: $frameRate,
-            offset: empty($data["startOfProgrammeSubtracted"]) ? 0.0 : EbuStl::timeCodeToSeconds($gsi["TCP"], $frameRate),
+            offset: empty($fileData["startOfProgrammeSubtracted"]) ? 0.0 : EbuStl::timeCodeToSeconds($gsi["TCP"], $frameRate),
             characterCodeTable: $gsi["CCT"],
             maxRow: EbuStl::maxRow($gsi),
             teletext: in_array($gsi["DSC"], ["1", "2"], true),
             stripTags: $options->stripTags,
         );
 
-        $sets = $this->subtitleSets($context, $subtitle, $data["comments"] ?? []);
+        $sets = $this->subtitleSets($context, $subtitle, $fileData["comments"] ?? []);
 
-        $number = $data["firstSubtitleNumber"] ?? self::FIRST_SUBTITLE_NUMBER;
+        $number = $fileData["firstSubtitleNumber"] ?? self::FIRST_SUBTITLE_NUMBER;
         $blocks = "";
         foreach ($sets as $set) {
             if ($number > self::MAX_SUBTITLE_NUMBER) {
@@ -78,7 +78,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             $number++;
         }
 
-        return $this->formatGsi($subtitle, $gsi, $data, $sets) . $blocks;
+        return $this->formatGsi($subtitle, $gsi, $fileData, $sets) . $blocks;
     }
 
 
@@ -134,20 +134,20 @@ final class EbuStlFormatter extends SubtitleFormatter
      */
     private function cueBlocks(EbuStlContext $context, SubtitleCue $cue): array
     {
-        $stored      = $cue->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
+        $cueData     = $cue->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
         $alignment   = $cue->getAlignment();
         $timeCodeIn  = $this->timeCode($context, $cue->getStart());
         $timeCodeOut = $this->timeCode($context, $cue->getEnd());
 
-        $position = [$stored["verticalPosition"] ?? -1, $stored["justificationCode"] ?? -1];
-        if (!isset($stored["verticalPosition"], $stored["justificationCode"]) ||
+        $position = [$cueData["verticalPosition"] ?? -1, $cueData["justificationCode"] ?? -1];
+        if (!isset($cueData["verticalPosition"], $cueData["justificationCode"]) ||
             EbuStl::alignment($position[0], $position[1], $context->maxRow) !== $alignment) {
             $position = $this->position($context, $alignment, max(1, count($cue->getLines())));
         }
 
-        $header = $this->header($stored["subtitleGroupNumber"] ?? 0, $stored["cumulativeStatus"] ?? 0, $timeCodeIn, $timeCodeOut, $position);
-        $blocks = array_map("hex2bin", $stored["blocks"] ?? []);
-        if ($blocks !== [] && !$context->stripTags && ($stored["text"] ?? null) === $cue->getText()) {
+        $header = $this->header($cueData["subtitleGroupNumber"] ?? 0, $cueData["cumulativeStatus"] ?? 0, $timeCodeIn, $timeCodeOut, $position);
+        $blocks = array_map("hex2bin", $cueData["blocks"] ?? []);
+        if ($blocks !== [] && !$context->stripTags && ($cueData["text"] ?? null) === $cue->getText()) {
             return $this->patchHeaders($blocks, $header);
         }
 
@@ -350,7 +350,7 @@ final class EbuStlFormatter extends SubtitleFormatter
      *
      * @param list<array{blocks: list<string>, comment: bool}> $sets
      */
-    private function formatGsi(Subtitle $subtitle, array $gsi, array $data, array $sets): string
+    private function formatGsi(Subtitle $subtitle, array $gsi, array $fileData, array $sets): string
     {
         $subtitles = array_values(array_filter($sets, fn (array $set): bool => !$set["comment"]));
         $counts    = [
@@ -361,7 +361,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         ];
         $formats = ["TNB" => "%05d", "TNS" => "%05d", "TNG" => "%03d", "TCF" => "%s"];
         foreach ($counts as $field => $count) {
-            if (!isset($gsi[$field]) || $count !== ($data["counts"][$field] ?? null)) {
+            if (!isset($gsi[$field]) || $count !== ($fileData["counts"][$field] ?? null)) {
                 $gsi[$field] = sprintf($formats[$field], $count);
             }
         }

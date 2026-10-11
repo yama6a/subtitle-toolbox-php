@@ -54,19 +54,19 @@ final class MpSubFormatter extends SubtitleFormatter
 
     private function header(Subtitle $subtitle, ?FrameRate $frameRate): string
     {
-        $formatData = $subtitle->findFormatData(MpSubParser::FORMAT_DATA_KEY);
-        $headers    = [
+        $fileData = $subtitle->findFormatData(MpSubParser::FORMAT_DATA_KEY);
+        $headers  = [
             "TITLE"  => $subtitle->findMetadata(Subtitle::METADATA_TITLE) ?? "",
             "AUTHOR" => $subtitle->findMetadata(Subtitle::METADATA_AUTHOR) ?? "",
-            "TYPE"   => $formatData["TYPE"] ?? self::DEFAULT_TYPE,
+            "TYPE"   => $fileData["TYPE"] ?? self::DEFAULT_TYPE,
         ];
-        foreach ($formatData as $key => $value) {
+        foreach ($fileData as $key => $value) {
             if (!in_array($key, ["TITLE", "AUTHOR", "TYPE", "FORMAT", "NOTE"], true)) {
                 $headers[$key] = $value;
             }
         }
         $headers["FORMAT"] = $frameRate === null ? "TIME" : (string)(int)$frameRate->getFramesPerSecond();
-        $headers["NOTE"]   = $formatData["NOTE"] ?? self::DEFAULT_NOTE;
+        $headers["NOTE"]   = $fileData["NOTE"] ?? self::DEFAULT_NOTE;
 
         $header = "";
         foreach ($headers as $key => $value) {

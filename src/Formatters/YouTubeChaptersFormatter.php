@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\LineEnding;
-use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
@@ -18,7 +17,7 @@ final class YouTubeChaptersFormatter extends SubtitleFormatter
         $output = "";
         foreach ($subtitle->getCues() as $cue) {
             $start   = Timecode::shortClock($cue->getStart());
-            $output .= rtrim($start . " " . implode(" ", Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines())))) . LineEnding::Lf->value;
+            $output .= rtrim($start . " " . implode(" ", $this->plainLines($cue))) . LineEnding::Lf->value;
         }
 
         return $this->applyOutputOptions($output, $options);

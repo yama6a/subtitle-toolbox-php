@@ -38,21 +38,21 @@ final class AssFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $data    = $subtitle->findFormatData(AssParser::FORMAT_DATA_KEY) + $this->defaultData();
-        $context = new AssContext(
-            $this->isSsa($data),
+        $fileData = $subtitle->findFormatData(AssParser::FORMAT_DATA_KEY) + $this->defaultData();
+        $context  = new AssContext(
+            $this->isSsa($fileData),
             $options->stripTags,
             $this->formatOptions($options)->karaokeTag,
-            $data["styles"] ?? [],
-            strcasecmp($data["stylesSection"] ?? "", "V4 Styles") === 0,
+            $fileData["styles"] ?? [],
+            strcasecmp($fileData["stylesSection"] ?? "", "V4 Styles") === 0,
         );
         // The cue tags follow the styles before the style option, so that the option changes the look of every cue without its own tag.
         $style = $this->formatOptions($options)->style;
         if ($style !== null) {
-            $data = $this->withDefaultStyle($data, $style);
+            $fileData = $this->withDefaultStyle($fileData, $style);
         }
 
-        $order = $data["sectionOrder"];
+        $order = $fileData["sectionOrder"];
         if (!in_array("script info", array_map("strtolower", $order), true)) {
             array_unshift($order, "Script Info");
         }
@@ -63,10 +63,10 @@ final class AssFormatter extends SubtitleFormatter
         $blocks = [];
         foreach (array_unique($order) as $section) {
             $lines = match (true) {
-                strcasecmp($section, "Script Info") === 0                => $this->scriptInfoLines($subtitle, $data),
-                strcasecmp($section, $data["stylesSection"] ?? "") === 0 => $this->styleLines($data),
-                strcasecmp($section, "Events") === 0                     => $this->eventLines($subtitle, $data, $context),
-                default                                                  => $data["sections"][$section] ?? [],
+                strcasecmp($section, "Script Info") === 0                    => $this->scriptInfoLines($subtitle, $fileData),
+                strcasecmp($section, $fileData["stylesSection"] ?? "") === 0 => $this->styleLines($fileData),
+                strcasecmp($section, "Events") === 0                         => $this->eventLines($subtitle, $fileData, $context),
+                default                                                      => $fileData["sections"][$section] ?? [],
             };
             $blocks[] = implode(LineEnding::Lf->value, ["[$section]", ...$lines]);
         }
@@ -94,35 +94,35 @@ final class AssFormatter extends SubtitleFormatter
     }
 
 
-    private function withDefaultStyle(array $data, string $style): array
+    private function withDefaultStyle(array $fileData, string $style): array
     {
-        if ($data["stylesSection"] === null) {
-            $isSsa                 = $this->isSsa($data);
-            $data["stylesSection"] = $isSsa ? "V4 Styles" : "V4+ Styles";
-            $data["styleFormat"]   = $isSsa ? AssFormatLines::SSA_STYLE_FORMAT : AssFormatLines::ASS_STYLE_FORMAT;
-            $events                = array_search("events", array_map("strtolower", $data["sectionOrder"]), true);
-            array_splice($data["sectionOrder"], $events === false ? count($data["sectionOrder"]) : $events, 0, [$data["stylesSection"]]);
+        if ($fileData["stylesSection"] === null) {
+            $isSsa                     = $this->isSsa($fileData);
+            $fileData["stylesSection"] = $isSsa ? "V4 Styles" : "V4+ Styles";
+            $fileData["styleFormat"]   = $isSsa ? AssFormatLines::SSA_STYLE_FORMAT : AssFormatLines::ASS_STYLE_FORMAT;
+            $events                    = array_search("events", array_map("strtolower", $fileData["sectionOrder"]), true);
+            array_splice($fileData["sectionOrder"], $events === false ? count($fileData["sectionOrder"]) : $events, 0, [$fileData["stylesSection"]]);
         }
-        $data["styleFormat"] ??= AssFormatLines::ASS_STYLE_FORMAT;
-        $data["styles"]        = AssStyleOverride::apply(
+        $fileData["styleFormat"] ??= AssFormatLines::ASS_STYLE_FORMAT;
+        $fileData["styles"]        = AssStyleOverride::apply(
             $style,
-            $data["styleFormat"],
-            $data["styles"],
+            $fileData["styleFormat"],
+            $fileData["styles"],
             array_combine(AssFormatLines::ASS_STYLE_FORMAT, self::DEFAULT_STYLE)
         );
 
-        return $data;
+        return $fileData;
     }
 
 
-    private function scriptInfoLines(Subtitle $subtitle, array $data): array
+    private function scriptInfoLines(Subtitle $subtitle, array $fileData): array
     {
-        $lines = $data["scriptInfoComments"] ?? [];
+        $lines = $fileData["scriptInfoComments"] ?? [];
         $title = $subtitle->findMetadata(Subtitle::METADATA_TITLE);
         if ($title !== null) {
             $lines[] = "Title: " . Markup::toSingleLine($title);
         }
-        foreach ($data["scriptInfo"] ?? [] as $key => $value) {
+        foreach ($fileData["scriptInfo"] ?? [] as $key => $value) {
             $lines[] = "$key: $value";
         }
 
@@ -130,11 +130,11 @@ final class AssFormatter extends SubtitleFormatter
     }
 
 
-    private function styleLines(array $data): array
+    private function styleLines(array $fileData): array
     {
-        $format = $data["styleFormat"] ?? AssFormatLines::ASS_STYLE_FORMAT;
+        $format = $fileData["styleFormat"] ?? AssFormatLines::ASS_STYLE_FORMAT;
         $lines  = ["Format: " . implode(", ", $format)];
-        foreach ($data["styles"] ?? [] as $style) {
+        foreach ($fileData["styles"] ?? [] as $style) {
             $lines[] = "Style: " . implode(",", array_map(fn (string $field): string => $style[$field] ?? "", $format));
         }
 
@@ -142,10 +142,10 @@ final class AssFormatter extends SubtitleFormatter
     }
 
 
-    private function eventLines(Subtitle $subtitle, array $data, AssContext $context): array
+    private function eventLines(Subtitle $subtitle, array $fileData, AssContext $context): array
     {
-        $format        = $data["eventFormat"] ?? AssFormatLines::ASS_EVENT_FORMAT;
-        $commentEvents = $data["commentEvents"] ?? [];
+        $format        = $fileData["eventFormat"] ?? AssFormatLines::ASS_EVENT_FORMAT;
+        $commentEvents = $fileData["commentEvents"] ?? [];
         $comments      = $subtitle->getComments();
         $cues          = array_values($subtitle->getCues());
 
@@ -197,14 +197,14 @@ final class AssFormatter extends SubtitleFormatter
 
     private function dialogueLine(SubtitleCue $cue, array $format, AssContext $context): string
     {
-        $stored = $cue->findFormatData(AssParser::FORMAT_DATA_KEY);
-        $fields = $stored["fields"] ?? [];
+        $cueData = $cue->findFormatData(AssParser::FORMAT_DATA_KEY);
+        $fields  = $cueData["fields"] ?? [];
 
-        $unchanged = !$context->stripTags && isset($stored["text"]) &&
-                     ($stored["lines"] ?? null) === $cue->getLines() &&
-                     ($stored["alignment"] ?? Alignment::BottomCenter->value) === $cue->getAlignment()->value;
+        $unchanged = !$context->stripTags && isset($cueData["text"]) &&
+                     ($cueData["lines"] ?? null) === $cue->getLines() &&
+                     ($cueData["alignment"] ?? Alignment::BottomCenter->value) === $cue->getAlignment()->value;
         [$text, $name] = $unchanged
-            ? [$stored["text"], $this->fieldValue($fields, "Name") ?? ""]
+            ? [$cueData["text"], $this->fieldValue($fields, "Name") ?? ""]
             : $this->convertLines($cue, $context, AssStyles::forEvent($context->styles, $this->fieldValue($fields, "Style") ?? "Default"));
 
         $values = [];
@@ -459,10 +459,10 @@ final class AssFormatter extends SubtitleFormatter
     }
 
 
-    private function isSsa(array $data): bool
+    private function isSsa(array $fileData): bool
     {
-        $scriptType = array_change_key_case($data["scriptInfo"] ?? [])["scripttype"] ?? "";
+        $scriptType = array_change_key_case($fileData["scriptInfo"] ?? [])["scripttype"] ?? "";
 
-        return strcasecmp($scriptType, "v4.00") === 0 || strcasecmp($data["stylesSection"] ?? "", "V4 Styles") === 0;
+        return strcasecmp($scriptType, "v4.00") === 0 || strcasecmp($fileData["stylesSection"] ?? "", "V4 Styles") === 0;
     }
 }

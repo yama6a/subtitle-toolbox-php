@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Formatters\Options\SubViewerVersion;
 use SubtitleToolbox\Formatters\Options\SubViewerWriteOptions;
 use SubtitleToolbox\LineEnding;
-use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
@@ -49,7 +48,7 @@ final class SubViewerFormatter extends SubtitleFormatter
         $output .= SubViewerParser::START_SCRIPT . LineEnding::Lf->value;
 
         foreach ($subtitle->getCues() as $cue) {
-            $lines = Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines()));
+            $lines = $this->plainLines($cue);
             // An empty line after a time ends a SubViewer 1 cue, so a cue without text cannot be written.
             if ($lines === []) {
                 continue;
@@ -80,7 +79,7 @@ final class SubViewerFormatter extends SubtitleFormatter
 
         $blocks = [];
         foreach ($subtitle->getCues() as $cue) {
-            $lines = Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines()));
+            $lines = $this->plainLines($cue);
             // An empty line after the timing line would leave the cue without text.
             if ($lines === []) {
                 continue;

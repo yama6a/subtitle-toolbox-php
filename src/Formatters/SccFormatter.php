@@ -265,9 +265,9 @@ final class SccFormatter extends SubtitleFormatter
     {
         $count     = count($cells);
         $alignment = $cue->getAlignment()->value;
-        $stored    = $cue->findFormatData(SccParser::FORMAT_DATA_KEY);
-        $rows      = $stored["rows"] ?? null;
-        $columns   = $stored["columns"] ?? null;
+        $cueData   = $cue->findFormatData(SccParser::FORMAT_DATA_KEY);
+        $rows      = $cueData["rows"] ?? null;
+        $columns   = $cueData["columns"] ?? null;
         $storedOk  = is_array($rows) && is_array($columns) && count($rows) === $count && count($columns) === $count
                      && array_is_list($rows) && array_is_list($columns)
                      && (($rows[0] ?? 0) <= Cea608::MAX_LINES) === in_array($alignment, [7, 8, 9], true);

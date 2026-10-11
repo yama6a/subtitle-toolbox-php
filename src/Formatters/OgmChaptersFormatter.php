@@ -18,7 +18,7 @@ final class OgmChaptersFormatter extends SubtitleFormatter
         foreach (array_values($subtitle->getCues()) as $index => $cue) {
             $number  = sprintf("CHAPTER%02d", $index + 1);
             $output .= "$number=" . Markup::coreTimestamp($cue->getStart()) . LineEnding::Lf->value .
-                       "{$number}NAME=" . implode(" ", Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines()))) . LineEnding::Lf->value;
+                       "{$number}NAME=" . implode(" ", $this->plainLines($cue)) . LineEnding::Lf->value;
         }
 
         return $this->applyOutputOptions($output, $options);
