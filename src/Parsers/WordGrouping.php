@@ -121,7 +121,7 @@ trait WordGrouping
                 continue;
             }
 
-            $formatData = array_diff_key($utterance, array_flip(["start", "end", $textKey]));
+            $formatData = $utterance;
             $cue        = $this->cue($start, $end, $text, $words, self::speaker($utterance["speaker"] ?? null), $formatData, $index, $utterance);
             if ($cue !== null) {
                 $cues[] = $cue;

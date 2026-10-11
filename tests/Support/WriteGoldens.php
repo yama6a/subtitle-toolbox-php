@@ -22,6 +22,7 @@ final class WriteGoldens
     private const ROUND_TRIPS = [
         "whisper"        => Format::Whisper,
         "aws-transcribe" => Format::AwsTranscribe,
+        "deepgram"       => Format::Deepgram,
     ];
 
     /**

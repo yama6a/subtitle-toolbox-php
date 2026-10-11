@@ -25,6 +25,19 @@
                             "arch": "nova-3"
                         }
                     }
+                },
+                "results": {
+                    "channels": [
+                        {
+                            "alternatives": [
+                                {
+                                    "confidence": 0.99609375
+                                }
+                            ],
+                            "detected_language": "de",
+                            "language_confidence": 0.9902344
+                        }
+                    ]
                 }
             }
         },
@@ -39,7 +52,15 @@
                 "alignment": null,
                 "formatData": {
                     "deepgram": {
+                        "text": "Der Zug nach Hamburg fährt um zehn Uhr ab.",
+                        "start": 0.4,
+                        "end": 4.06,
                         "channel": 0,
+                        "paragraph": {
+                            "num_words": 14,
+                            "start": 0.4,
+                            "end": 6.2
+                        },
                         "words": [
                             {
                                 "word": "der",
@@ -118,7 +139,15 @@
                 "alignment": null,
                 "formatData": {
                     "deepgram": {
+                        "text": "Bitte steigen Sie vorne ein.",
+                        "start": 4.34,
+                        "end": 6.2,
                         "channel": 0,
+                        "paragraph": {
+                            "num_words": 14,
+                            "start": 0.4,
+                            "end": 6.2
+                        },
                         "words": [
                             {
                                 "word": "bitte",
@@ -169,7 +198,15 @@
                 "alignment": null,
                 "formatData": {
                     "deepgram": {
+                        "text": "Der Speisewagen ist heute geschlossen.",
+                        "start": 7.1,
+                        "end": 8.96,
                         "channel": 0,
+                        "paragraph": {
+                            "num_words": 5,
+                            "start": 7.1,
+                            "end": 8.96
+                        },
                         "words": [
                             {
                                 "word": "der",

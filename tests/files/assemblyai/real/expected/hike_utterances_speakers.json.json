@@ -80,7 +80,10 @@
                 "formatData": {
                     "assemblyai": {
                         "confidence": 0.93655,
+                        "end": 3500,
                         "speaker": "A",
+                        "start": 260,
+                        "text": "Where should we meet for the hike tomorrow?",
                         "words": [
                             {
                                 "text": "Where",
@@ -153,7 +156,10 @@
                 "formatData": {
                     "assemblyai": {
                         "confidence": 0.9450115384615384,
+                        "end": 9260,
                         "speaker": "B",
+                        "start": 4020,
+                        "text": "At the car park by the bridge. Bring water and a warm jacket.",
                         "words": [
                             {
                                 "text": "At",
@@ -261,7 +267,10 @@
                 "formatData": {
                     "assemblyai": {
                         "confidence": 0.91655,
+                        "end": 11860,
                         "speaker": "A",
+                        "start": 9960,
+                        "text": "Great, see you at eight.",
                         "words": [
                             {
                                 "text": "Great,",

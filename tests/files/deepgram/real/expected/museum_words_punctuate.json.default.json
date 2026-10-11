@@ -23,6 +23,17 @@
                             "arch": "nova-3"
                         }
                     }
+                },
+                "results": {
+                    "channels": [
+                        {
+                            "alternatives": [
+                                {
+                                    "confidence": 0.9980469
+                                }
+                            ]
+                        }
+                    ]
                 }
             }
         },
