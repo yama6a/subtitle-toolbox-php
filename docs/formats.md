@@ -22,7 +22,7 @@ $vtt      = $subtitle->toString(Format::WebVtt);
 Format::from('srt');                          // Format::SubRip, for a name from user input
 Format::fromPath('movie.sub');                // Format::MicroDvd
 Format::Ass->extensions();                    // ['ass', 'ssa'], the first one for new files
-Format::Whisper->canWrite();                  // false
+Format::VobSub->canWrite();                   // false
 Format::PlainText->canRead();                 // false
 Format::FfMetadataChapters->isAutoDetected(); // false
 ```

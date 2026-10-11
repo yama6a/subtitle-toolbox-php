@@ -169,6 +169,6 @@ class WhisperJsonRealFilesTest extends TestCase
         $this->assertSame(["SPEAKER_00", "SPEAKER_01", "SPEAKER_01"],
                           array_map(fn ($cue) => $cue->findFormatData("whisper")["speaker"], $subtitle->getCues()));
         $this->assertSame([["word" => "15.", "speaker" => "SPEAKER_01"]], $last["words"]);
-        $this->assertSame(["language" => "en"], $subtitle->findFormatData("whisper"));
+        $this->assertSame(["format" => "whisperx", "language" => "en"], $subtitle->findFormatData("whisper"));
     }
 }

@@ -8,6 +8,7 @@
         "comments": [],
         "formatData": {
             "whisper": {
+                "format": "openai-api",
                 "task": "transcribe",
                 "language": "english",
                 "duration": 8.470000267028809,
@@ -30,6 +31,9 @@
                     "whisper": {
                         "id": 0,
                         "seek": 0,
+                        "start": 0.0,
+                        "end": 3.319999933242798,
+                        "text": " The beach was quiet in the morning.",
                         "tokens": [
                             50364,
                             440,
@@ -98,6 +102,9 @@
                     "whisper": {
                         "id": 1,
                         "seek": 0,
+                        "start": 3.9000000953674316,
+                        "end": 5.099999904632568,
+                        "text": " Nobody came.",
                         "tokens": [
                             50559,
                             9297,
@@ -136,6 +143,9 @@
                     "whisper": {
                         "id": 2,
                         "seek": 0,
+                        "start": 5.619999885559082,
+                        "end": 8.470000267028809,
+                        "text": " The tide was low at noon.",
                         "tokens": [
                             50645,
                             440,

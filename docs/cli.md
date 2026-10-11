@@ -141,7 +141,7 @@ Every option with the value `SECONDS` takes a time, in every command. `--sync` t
 ## Formats and file extensions
 Run `subtitle-toolbox formats` for the list. For an extension that two formats share, see [Shared extensions](formats.md#the-format-enum).
 
-- **Output extension**: `--to` sets the output format, never the extension of `-o`. So `--to mpl2 -o film.txt` writes MPL2, and `--to txt -o film.txt` writes plain text. The tool cannot write Whisper JSON, so convert it with `--to json` to the library JSON.
+- **Output extension**: `--to` sets the output format, never the extension of `-o`. So `--to mpl2 -o film.txt` writes MPL2, and `--to txt -o film.txt` writes plain text. Without `--to`, the output has the format of the input. So pass `--to json` to convert Whisper JSON to the library JSON.
 - **`.sub`**: MicroDVD. Pass `--from subviewer` for SubViewer. A directory skips a `.sub` file that has an `.idx` file next to it.
 - **VobSub**: pass the `.idx` file. The tool reads the `.sub` file next to it. Standard input does not work.
 - **`.json` and `.txt` input**: format detection finds 6 of these formats by their content. These are the library JSON, Whisper JSON, YouTube json3, Podcasting 2.0 transcripts, MPL2 and TMPlayer. Other `.json` and `.txt` input fails without `--from`.

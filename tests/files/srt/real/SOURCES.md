@@ -18,3 +18,4 @@
 | `own_font_colors.srt` | Written for this repository. `<font color>` as hex, short hex and a name, a color without a WebVTT class and a `<font>` without a color | MIT |
 | `own_color_classes_from_vtt.srt` | Generated for this repository. Expected `SubRipFormatter` output for `vtt/real/own_color_classes.vtt`. | MIT |
 | `swift_subtitle_kit_embedded_bom.srt` | https://github.com/dioKaratzas/swift-subtitle-kit/blob/728d62dac9fbda7fabd299eed3673ce36c85c267/Tests/SubtitleKitTests/Fixtures/embedded-bom-srt-fixture.srt. Two joined files: LF, then a UTF-8 BOM before cue 1 of the second file and CR LF | swift-subtitle-kit, MIT |
+| `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |

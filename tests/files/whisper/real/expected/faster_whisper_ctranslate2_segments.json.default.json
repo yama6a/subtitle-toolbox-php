@@ -8,6 +8,7 @@
         "comments": [],
         "formatData": {
             "whisper": {
+                "format": "openai-whisper",
                 "language": "en"
             }
         },
@@ -24,6 +25,9 @@
                     "whisper": {
                         "id": 1,
                         "seek": 0,
+                        "start": 0.0,
+                        "end": 3.2,
+                        "text": " Snow is likely on the hills.",
                         "tokens": [
                             25262,
                             307,
@@ -53,6 +57,9 @@
                     "whisper": {
                         "id": 2,
                         "seek": 0,
+                        "start": 3.2,
+                        "end": 6.0,
+                        "text": " Roads may be icy in the morning.",
                         "tokens": [
                             35781,
                             815,

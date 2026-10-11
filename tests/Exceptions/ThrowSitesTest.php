@@ -667,7 +667,7 @@ class ThrowSitesTest extends TestCase
             "Subtitle.php: addCues no cue"                  => [fn () => (new Subtitle())->addCues([5]), ...$invalid],
             "Subtitle.php: save() to an unknown extension"  => [fn () => self::subtitle()->save(self::FILES . "out.unknown"), ...$unsupported],
             "Subtitle.php: save() into a missing directory" => [fn () => self::subtitle()->save(self::FILES . "missing/out.srt"), ...$invalid],
-            "Subtitle.php: format without a formatter"      => [fn () => self::subtitle()->toString(Format::Whisper), ...$unsupported],
+            "Subtitle.php: format without a formatter"      => [fn () => self::subtitle()->toString(Format::VobSub), ...$unsupported],
             "Subtitle.php: image cue without text"          => [fn () => (new Subtitle())->addCue($imageCue)->toString(Format::SubRip),
                                                                 ImageCueWithoutTextException::class, ImageCueWithoutTextException::class],
             "Subtitle.php: remove a missing cue"            => [fn () => self::subtitle()->removeCue(9),

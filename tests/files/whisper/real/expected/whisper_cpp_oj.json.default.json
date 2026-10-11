@@ -8,6 +8,7 @@
         "comments": [],
         "formatData": {
             "whisper": {
+                "format": "whisper.cpp",
                 "systeminfo": "WHISPER : COREML = 0 | OPENVINO = 0 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | OPENMP = 1 | REPACK = 1 | ",
                 "model": {
                     "type": "base",
@@ -47,7 +48,19 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "whisper": {
+                        "timestamps": {
+                            "from": "00:00:00,000",
+                            "to": "00:00:02,500"
+                        },
+                        "offsets": {
+                            "from": 0,
+                            "to": 2500
+                        },
+                        "text": " The train to the coast leaves from platform four."
+                    }
+                }
             },
             {
                 "start": 2.5,
@@ -57,7 +70,19 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "whisper": {
+                        "timestamps": {
+                            "from": "00:00:02,500",
+                            "to": "00:00:05,200"
+                        },
+                        "offsets": {
+                            "from": 2500,
+                            "to": 5200
+                        },
+                        "text": " Please keep your ticket ready."
+                    }
+                }
             },
             {
                 "start": 5.2,
@@ -67,7 +92,19 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "whisper": {
+                        "timestamps": {
+                            "from": "00:00:05,200",
+                            "to": "00:00:08,000"
+                        },
+                        "offsets": {
+                            "from": 5200,
+                            "to": 8000
+                        },
+                        "text": " The next stop is the harbour."
+                    }
+                }
             }
         ]
     }
