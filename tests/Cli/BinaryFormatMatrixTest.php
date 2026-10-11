@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Tests\Support\BinaryTestCase;
+use SubtitleToolbox\Tests\Support\CliTestCase;
 
 /**
- * Converts one fixture of each readable format to each writable format with the binary, and reads each output back.
+ * Converts one fixture of each readable format to each writable format, and reads each output back.
  */
-class BinaryFormatMatrixTest extends BinaryTestCase
+class BinaryFormatMatrixTest extends CliTestCase
 {
     private const INPUTS = [
         "ass"                => "ass/real/own_aegisub.ass",
@@ -67,8 +67,6 @@ class BinaryFormatMatrixTest extends BinaryTestCase
     /** The PGS writer renders no text, so each text input fails with exit 3. */
     private const PGS_OUTPUT_FAILURE = "convert exit 3";
 
-    private const PARALLEL_PROCESSES = 4;
-
 
     public function testInputsCoverEveryReadableFormat(): void
     {
@@ -93,7 +91,7 @@ class BinaryFormatMatrixTest extends BinaryTestCase
 
         $outcomes  = [];
         $readbacks = [];
-        foreach ($this->runParallel($converts) as $pair => [$code, $stdout, $stderr]) {
+        foreach (array_map($this->runCli(...), $converts) as $pair => [$code, $stdout, $stderr]) {
             [$input, $output] = explode(">", $pair);
             $file   = "$this->dir/$input-to-$output.out";
             $stderr = preg_replace('/^.*: dropped the color "[^"]*", because WebVTT has classes for 8 colors only\.\n/m', "", $stderr);
@@ -109,7 +107,7 @@ class BinaryFormatMatrixTest extends BinaryTestCase
                 $readbacks[$pair] = ["info", $file, "--from", $output, "--input-fps", "25"];
             }
         }
-        foreach ($this->runParallel($readbacks) as $pair => [$code, , $stderr]) {
+        foreach (array_map($this->runCli(...), $readbacks) as $pair => [$code, , $stderr]) {
             $outcomes[$pair] = match (true) {
                 self::hasPhpError($stderr) => "readback PHP error: $stderr",
                 $code !== 0                => "readback exit $code",
@@ -142,7 +140,7 @@ class BinaryFormatMatrixTest extends BinaryTestCase
      */
     private function formats(): array
     {
-        [$code, $stdout] = $this->runBinary(["formats"]);
+        [$code, $stdout] = $this->runCli(["formats"]);
         $this->assertSame(0, $code);
 
         $readable = [];
@@ -159,53 +157,5 @@ class BinaryFormatMatrixTest extends BinaryTestCase
         }
 
         return [$readable, $writable];
-    }
-
-
-    /**
-     * Runs the binary once for each argument list, some processes at a time. Standard output and error go to files,
-     * so a process with much output cannot block on a full pipe.
-     *
-     * @param array<string, list<string>> $jobs
-     *
-     * @return array<string, array{int, string, string}> exit code, standard output and standard error of each job
-     */
-    private function runParallel(array $jobs): array
-    {
-        $results = [];
-        $running = [];
-        $queue = $jobs;
-        $count = 0;
-        while ($queue !== [] || $running !== []) {
-            while ($queue !== [] && count($running) < self::PARALLEL_PROCESSES) {
-                $key = array_key_first($queue);
-                $arguments = $queue[$key];
-                unset($queue[$key]);
-                $log = "$this->dir/job-" . $count++;
-                $process = proc_open(
-                    [PHP_BINARY, "-d", "error_reporting=-1", "-d", "display_errors=stderr", self::BIN, ...$arguments],
-                    [0 => ["file", "/dev/null", "r"], 1 => ["file", "$log.out", "w"], 2 => ["file", "$log.err", "w"]],
-                    $pipes,
-                    $this->dir
-                );
-                $running[$key] = [$process, $log];
-            }
-            foreach ($running as $key => [$process, $log]) {
-                $status = proc_get_status($process);
-                if ($status["running"]) {
-                    continue;
-                }
-                proc_close($process);
-                $results[$key] = [$status["exitcode"], file_get_contents("$log.out"), file_get_contents("$log.err")];
-                unlink("$log.out");
-                unlink("$log.err");
-                unset($running[$key]);
-            }
-            if ($running !== []) {
-                usleep(2000);
-            }
-        }
-
-        return array_replace(array_intersect_key($jobs, $results), $results);
     }
 }

@@ -6,18 +6,18 @@ namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\Tests\Support\BinaryTestCase;
+use SubtitleToolbox\Tests\Support\CliTestCase;
 use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
 
 /**
  * Checks the info and validate commands.
  */
-class BinaryInfoValidateTest extends BinaryTestCase
+class BinaryInfoValidateTest extends CliTestCase
 {
     public function testInfoAsText(): void
     {
-        [$code, $stdout, $stderr] = $this->runBinary(["info", "trip.srt"]);
+        [$code, $stdout, $stderr] = $this->runCli(["info", "trip.srt"]);
 
         $this->assertSame(0, $code);
         $this->assertStringStartsWith("trip.srt\n  Format:                srt\n  Encoding:              UTF-8\n  Cues:                  3\n", $stdout);
@@ -28,15 +28,15 @@ class BinaryInfoValidateTest extends BinaryTestCase
 
     public function testInfoAsJsonGivesNullForStatisticsWithoutData(): void
     {
-        [$code, $stdout] = $this->runBinary(["info", "-", "--json"], "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHi\n");
+        [$code, $stdout] = $this->runCli(["info", "-", "--json"], "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHi\n");
         $statistics = json_decode($stdout, true)[0]["statistics"];
         $this->assertSame([0, null, 1], [$code, $statistics["gaps"], $statistics["span"]]);
 
-        [$code, $stdout] = $this->runBinary(["info", "-", "--json"], "WEBVTT\n");
+        [$code, $stdout] = $this->runCli(["info", "-", "--json"], "WEBVTT\n");
         $statistics = json_decode($stdout, true)[0]["statistics"];
         $this->assertSame([0, null, null, null, null, null], [$code, $statistics["span"], $statistics["charactersPerSecond"],
                           $statistics["wordsPerMinute"], $statistics["charactersPerLine"], $statistics["gaps"]]);
-        $this->assertStringContainsString("  Gaps:                  -\n", $this->runBinary(["info", "-"], "WEBVTT\n")[1]);
+        $this->assertStringContainsString("  Gaps:                  -\n", $this->runCli(["info", "-"], "WEBVTT\n")[1]);
     }
 
 
@@ -44,11 +44,11 @@ class BinaryInfoValidateTest extends BinaryTestCase
     {
         $lyrics = "[ti:Harbour walk]\nThe ferry leaves at nine.\n";
 
-        [$code, , $stderr] = $this->runBinary(["info", "-", "--from", "lrc"], $lyrics);
+        [$code, , $stderr] = $this->runCli(["info", "-", "--from", "lrc"], $lyrics);
         $this->assertSame(3, $code);
         $this->assertStringContainsString("The file has text but no cues. (line 2)", $stderr);
 
-        [$code, , $stderr] = $this->runBinary(["info", "-", "--from", "lrc", "--lenient"], $lyrics);
+        [$code, , $stderr] = $this->runCli(["info", "-", "--from", "lrc", "--lenient"], $lyrics);
         $this->assertSame(0, $code);
         $this->assertStringContainsString("line 2: The file has text but no cues. (skipped)", $stderr);
     }
@@ -56,7 +56,7 @@ class BinaryInfoValidateTest extends BinaryTestCase
 
     public function testInfoAsJson(): void
     {
-        [$code, $stdout] = $this->runBinary(["info", "trip.srt", "--json"]);
+        [$code, $stdout] = $this->runCli(["info", "trip.srt", "--json"]);
         $list = json_decode($stdout, true);
         $info = $list[0];
 
@@ -66,7 +66,7 @@ class BinaryInfoValidateTest extends BinaryTestCase
         $this->assertSame(3, $info["statistics"]["cueCount"]);
         $this->assertSame(["word" => "the", "count" => 3], $info["statistics"]["mostUsedWords"][0]);
 
-        [$code, $stdout, $stderr] = $this->runBinary(["info", "trip.srt", "shop.vtt", "broken.srt", "--json", "--keep-going"]);
+        [$code, $stdout, $stderr] = $this->runCli(["info", "trip.srt", "shop.vtt", "broken.srt", "--json", "--keep-going"]);
         $list = json_decode($stdout, true);
 
         $this->assertSame(3, $code);
@@ -75,19 +75,19 @@ class BinaryInfoValidateTest extends BinaryTestCase
         $this->assertStringStartsWith("broken.srt: ", $stderr);
         $this->assertStringEndsWith("3 files: 2 succeeded, 1 failed.\n", $stderr);
 
-        [$code, $stdout] = $this->runBinary(["info", "broken.srt", "--json"]);
+        [$code, $stdout] = $this->runCli(["info", "broken.srt", "--json"]);
         $this->assertSame([3, "[]\n"], [$code, $stdout]);
     }
 
 
     public function testInfoReportsTheSourceEncoding(): void
     {
-        $this->assertSame("UTF-8", json_decode($this->runBinary(["info", "trip.srt", "--json"])[1], true)[0]["encoding"]);
-        $this->assertSame("Windows-1252", json_decode($this->runBinary(["info", "latin1.srt", "--json"])[1], true)[0]["encoding"]);
-        $this->assertSame("Windows-1250", json_decode($this->runBinary(["info", "latin1.srt", "--json", "--encoding", "Windows-1250"])[1], true)[0]["encoding"]);
-        $this->assertMatchesRegularExpression('/^  Encoding: +Windows-1252$/m', $this->runBinary(["info", "latin1.srt"])[1]);
+        $this->assertSame("UTF-8", json_decode($this->runCli(["info", "trip.srt", "--json"])[1], true)[0]["encoding"]);
+        $this->assertSame("Windows-1252", json_decode($this->runCli(["info", "latin1.srt", "--json"])[1], true)[0]["encoding"]);
+        $this->assertSame("Windows-1250", json_decode($this->runCli(["info", "latin1.srt", "--json", "--encoding", "Windows-1250"])[1], true)[0]["encoding"]);
+        $this->assertMatchesRegularExpression('/^  Encoding: +Windows-1252$/m', $this->runCli(["info", "latin1.srt"])[1]);
 
-        [$code, , $stderr] = $this->runBinary(["info", "latin1.srt", "--lenient"]);
+        [$code, , $stderr] = $this->runCli(["info", "latin1.srt", "--lenient"]);
         $this->assertSame([0, "latin1.srt: The content is not UTF-8. Detection picked Windows-1252. Pass --encoding if that is wrong. (repaired)\n"],
                           [$code, $stderr]);
     }
@@ -95,9 +95,9 @@ class BinaryInfoValidateTest extends BinaryTestCase
 
     public function testInfoListsTheParseWarnings(): void
     {
-        $this->assertSame([], json_decode($this->runBinary(["info", "trip.srt", "--json"])[1], true)[0]["warnings"]);
+        $this->assertSame([], json_decode($this->runCli(["info", "trip.srt", "--json"])[1], true)[0]["warnings"]);
 
-        [$code, $stdout, $stderr] = $this->runBinary(["info", "broken.srt", "--json", "--lenient"]);
+        [$code, $stdout, $stderr] = $this->runCli(["info", "broken.srt", "--json", "--lenient"]);
         $this->assertSame(0, $code);
         $this->assertSame([[
             "lineNumber" => 6,
@@ -107,8 +107,8 @@ class BinaryInfoValidateTest extends BinaryTestCase
         ]], json_decode($stdout, true)[0]["warnings"]);
         $this->assertSame("broken.srt: line 6: Block #1 has no timing line on its second line. The line is \"00:00:03,000 => 00:00:04,000\". (skipped)\n", $stderr);
 
-        $this->assertMatchesRegularExpression('/^  Warnings: +1$/m', $this->runBinary(["info", "broken.srt", "--lenient"])[1]);
-        $this->assertDoesNotMatchRegularExpression('/Warnings/', $this->runBinary(["info", "trip.srt"])[1]);
+        $this->assertMatchesRegularExpression('/^  Warnings: +1$/m', $this->runCli(["info", "broken.srt", "--lenient"])[1]);
+        $this->assertDoesNotMatchRegularExpression('/Warnings/', $this->runCli(["info", "trip.srt"])[1]);
     }
 
 
@@ -118,19 +118,19 @@ class BinaryInfoValidateTest extends BinaryTestCase
         $expected = Subtitle::load($path, Format::SubRip)->validate(new ValidationRules(noOverlap: true));
         $this->assertNotSame([], $expected);
 
-        [$code, $stdout, $stderr] = $this->runBinary(["validate", $path, "--check-overlaps", "--json"]);
+        [$code, $stdout, $stderr] = $this->runCli(["validate", $path, "--check-overlaps", "--json"]);
 
         $this->assertSame([1, ""], [$code, $stderr]);
         $violations = json_decode($stdout, true)[0]["violations"];
         $this->assertSame(array_fill(0, count($expected), "noOverlap"), array_column($violations, "rule"));
         $this->assertSame(array_map(fn (ValidationViolation $violation): int => $violation->cueIndex, $expected), array_column($violations, "cueIndex"));
-        $this->assertSame(2, $this->runBinary(["validate", $path, "--no-overlap"])[0]);
+        $this->assertSame(2, $this->runCli(["validate", $path, "--no-overlap"])[0]);
     }
 
 
     public function testValidateWithThePreset(): void
     {
-        [$code, $stdout, $stderr] = $this->runBinary(["validate", "trip.srt", "--preset", "netflix-en"]);
+        [$code, $stdout, $stderr] = $this->runCli(["validate", "trip.srt", "--preset", "netflix-en"]);
 
         $this->assertSame(1, $code);
         $this->assertSame(
@@ -145,11 +145,11 @@ class BinaryInfoValidateTest extends BinaryTestCase
 
         $this->assertSame(
             [1, "trip.srt: cue 2: noOverlap 0.5\nshop.vtt: no problems\n2 files: 1 valid, 1 with problems, 0 failed.\n", ""],
-            $this->runBinary(["validate", "trip.srt", "shop.vtt", "--check-overlaps"])
+            $this->runCli(["validate", "trip.srt", "shop.vtt", "--check-overlaps"])
         );
-        $this->assertSame([0, "shop.vtt: no problems\n", ""], $this->runBinary(["validate", "shop.vtt", "--preset", "netflix-en", "--max-cps", "30"]));
-        $this->assertSame(2, $this->runBinary(["validate", "shop.vtt"])[0]);
-        $this->assertSame(2, $this->runBinary(["validate", "shop.vtt", "--preset", "nope"])[0]);
+        $this->assertSame([0, "shop.vtt: no problems\n", ""], $this->runCli(["validate", "shop.vtt", "--preset", "netflix-en", "--max-cps", "30"]));
+        $this->assertSame(2, $this->runCli(["validate", "shop.vtt"])[0]);
+        $this->assertSame(2, $this->runCli(["validate", "shop.vtt", "--preset", "nope"])[0]);
     }
 
 
@@ -158,14 +158,14 @@ class BinaryInfoValidateTest extends BinaryTestCase
         copy(self::FILES . "validation/own_netflix_checks.srt", "$this->dir/checks.srt");
 
         $this->assertStringContainsString("checks.srt: cue 2: minGap 0.04, limit 0.083\n",
-                                          $this->runBinary(["validate", "checks.srt", "--preset", "netflix-en"])[1]);
+                                          $this->runCli(["validate", "checks.srt", "--preset", "netflix-en"])[1]);
         $this->assertStringContainsString("checks.srt: cue 2: minGap 0.04, limit 0.08\n",
-                                          $this->runBinary(["validate", "checks.srt", "--preset", "netflix-en", "--video-fps", "25"])[1]);
+                                          $this->runCli(["validate", "checks.srt", "--preset", "netflix-en", "--video-fps", "25"])[1]);
         $this->assertStringContainsString("checks.srt: cue 2: minGap 0.04, limit 0.08\n",
-                                          $this->runBinary(["validate", "checks.srt", "--preset", "netflix-en", "--fps", "25"])[1]);
+                                          $this->runCli(["validate", "checks.srt", "--preset", "netflix-en", "--fps", "25"])[1]);
         $this->assertStringNotContainsString("minGap",
-                                             $this->runBinary(["validate", "checks.srt", "--preset", "netflix-en", "--video-fps", "50"])[1]);
-        $this->assertSame(2, $this->runBinary(["validate", "checks.srt", "--preset", "netflix-en", "--from", "25"])[0]);
+                                             $this->runCli(["validate", "checks.srt", "--preset", "netflix-en", "--video-fps", "50"])[1]);
+        $this->assertSame(2, $this->runCli(["validate", "checks.srt", "--preset", "netflix-en", "--from", "25"])[0]);
     }
 
 
@@ -179,10 +179,10 @@ class BinaryInfoValidateTest extends BinaryTestCase
             "trip.srt: cue 3: maxWordsPerMinute 450, limit 180\n" .
             "trip.srt: cue 3: minSecondsPerWord 0.133, limit 0.3\n",
             "",
-        ], $this->runBinary(["validate", "trip.srt", "--preset", "bbc"]));
+        ], $this->runCli(["validate", "trip.srt", "--preset", "bbc"]));
         $this->assertSame(
             [1, "trip.srt: cue 2: maxCharactersPerLine 57, limit 37\n", ""],
-            $this->runBinary(["validate", "trip.srt", "--preset", "bbc", "--max-wpm", "500", "--min-seconds-per-word", "00:00.1"])
+            $this->runCli(["validate", "trip.srt", "--preset", "bbc", "--max-wpm", "500", "--min-seconds-per-word", "00:00.1"])
         );
     }
 
@@ -205,22 +205,22 @@ class BinaryInfoValidateTest extends BinaryTestCase
             "stdin: cue 4: noLeadingOrTrailingSpaces 1\n" .
             "stdin: cue 4: allowedCharacters 2\n",
             "",
-        ], $this->runBinary([
+        ], $this->runCli([
             "validate", "-", "--dialogue-dash", "- ", "--check-unbalanced-tags", "--check-all-caps-lines", "--check-double-spaces",
             "--check-leading-or-trailing-spaces", "--max-speakers", "2", "--allowed-characters", "[A-Za-z0-9 .,!?<>/\\-]",
         ], $vtt));
         $this->assertSame(
             [2, "", "Error: The option --dialogue-dash must be a hyphen, an en dash or an em dash, with or without one space after it, got \"x\".\n" .
                     "Run \"subtitle-toolbox help validate\" for the usage.\n"],
-            $this->runBinary(["validate", "-", "--dialogue-dash", "x"], $vtt)
+            $this->runCli(["validate", "-", "--dialogue-dash", "x"], $vtt)
         );
-        $this->assertSame(2, $this->runBinary(["validate", "-", "--allowed-characters", "[z-a]"], $vtt)[0]);
+        $this->assertSame(2, $this->runCli(["validate", "-", "--allowed-characters", "[z-a]"], $vtt)[0]);
     }
 
 
     public function testValidateAsJson(): void
     {
-        [$code, $stdout] = $this->runBinary(["validate", "trip.srt", "--max-cpl", "42", "--json"]);
+        [$code, $stdout] = $this->runCli(["validate", "trip.srt", "--max-cpl", "42", "--json"]);
 
         $this->assertSame(1, $code);
         $this->assertSame([[
@@ -231,7 +231,7 @@ class BinaryInfoValidateTest extends BinaryTestCase
             "warnings"   => [],
         ]], json_decode($stdout, true));
 
-        [$code, $stdout] = $this->runBinary(["validate", "-", "--max-cps", "20", "--check-overlaps", "--json"],
+        [$code, $stdout] = $this->runCli(["validate", "-", "--max-cps", "20", "--check-overlaps", "--json"],
                                             "1\n00:00:01,000 --> 00:00:01,000\nHello\n\n2\n00:00:01,000 --> 00:00:03,000\nHi\n\n" .
                                             "3\n00:00:02,500 --> 00:00:04,000\nYo\n");
         $this->assertSame(1, $code);
@@ -258,14 +258,14 @@ class BinaryInfoValidateTest extends BinaryTestCase
         ];
         $line    = "line 6: Block #1 has no timing line on its second line. The line is \"00:00:03,000 => 00:00:04,000\". (skipped)\n";
 
-        [$code, $stdout, $stderr] = $this->runBinary(["validate", "broken.srt", "--max-cpl", "42", "--json", "--lenient"]);
+        [$code, $stdout, $stderr] = $this->runCli(["validate", "broken.srt", "--max-cpl", "42", "--json", "--lenient"]);
         $this->assertSame([0, [$warning], "broken.srt: $line"], [$code, json_decode($stdout, true)[0]["warnings"], $stderr]);
 
-        [$code, $stdout, $stderr] = $this->runBinary(["diff", "trip.srt", "broken.srt", "--json", "--lenient"]);
+        [$code, $stdout, $stderr] = $this->runCli(["diff", "trip.srt", "broken.srt", "--json", "--lenient"]);
         $json = json_decode($stdout, true)[0];
         $this->assertSame([1, [], [$warning], "broken.srt: $line"], [$code, $json["oldWarnings"], $json["newWarnings"], $stderr]);
 
-        [$code, $stdout] = $this->runBinary(["diff", "broken.srt", "trip.srt", "--json", "--lenient"]);
+        [$code, $stdout] = $this->runCli(["diff", "broken.srt", "trip.srt", "--json", "--lenient"]);
         $json = json_decode($stdout, true)[0];
         $this->assertSame([1, [$warning], []], [$code, $json["oldWarnings"], $json["newWarnings"]]);
     }

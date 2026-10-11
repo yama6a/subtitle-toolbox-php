@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Tests\Support\BinaryTestCase;
+use SubtitleToolbox\Tests\Support\CliTestCase;
 
 /**
  * Checks that the other tests in tests/Cli use each option of each command at least once.
  */
-class OptionUsageTest extends BinaryTestCase
+class OptionUsageTest extends CliTestCase
 {
     private const GLOBAL_OPTIONS = ["--help", "--version"];
 
@@ -61,7 +61,7 @@ class OptionUsageTest extends BinaryTestCase
                 #[DataProvider("cases")]
                 public function testRun(string $command): void
                 {
-                    $this->runBinary([$command, "a.srt", "--bom"]);
+                    $this->runCli([$command, "a.srt", "--bom"]);
                 }
 
                 public static function cases(): array
@@ -71,8 +71,8 @@ class OptionUsageTest extends BinaryTestCase
 
                 public function testTwo(): void
                 {
-                    $this->runBinary(["convert", "a.srt", "-o", "-", "--to=vtt"]);
-                    $this->runBinary(["info", "a.srt", "--json"]);
+                    $this->runCli(["convert", "a.srt", "-o", "-", "--to=vtt"]);
+                    $this->runCli(["info", "a.srt", "--json"]);
                     $closure = function () {
                         return "--lenient";
                     };
@@ -101,7 +101,7 @@ class OptionUsageTest extends BinaryTestCase
             return self::$help;
         }
 
-        [$code, $help] = $this->runBinary(["help"]);
+        [$code, $help] = $this->runCli(["help"]);
         $this->assertSame(0, $code);
         $this->assertSame(1, preg_match('/^Commands:\n((?:  .*\n)+)/m', $help, $match));
         preg_match_all('/^  (\S+)/m', $match[1], $commands);
@@ -109,9 +109,9 @@ class OptionUsageTest extends BinaryTestCase
         $options = [];
         $aliases = [];
         foreach (array_diff($commands[1], ["help"]) as $command) {
-            $texts = [$this->runBinary(["help", $command])];
+            $texts = [$this->runCli(["help", $command])];
             if ($command === "convert") {
-                $texts[] = $this->runBinary(["convert", "--help", "all"]);
+                $texts[] = $this->runCli(["convert", "--help", "all"]);
             }
             $options[$command] = [];
             foreach ($texts as [$code, $text]) {

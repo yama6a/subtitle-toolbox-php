@@ -9,7 +9,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\Tests\Support\BinaryTestCase;
+use SubtitleToolbox\Tests\Support\CliTestCase;
 use SubtitleToolbox\Tests\Support\CountingFileStream;
 use SubtitleToolbox\Tests\Support\RunsApplication;
 
@@ -170,7 +170,7 @@ class ApplicationTest extends TestCase
         $this->assertStringStartsWith($sdh, self::runApplication(["convert", "--help", "sdh"])[1]);
         $this->assertSame(self::runApplication(["convert", "--help", "sdh"]), self::runApplication(["convert", "-h", "sdh"]));
         $this->assertSame(self::runApplication(["convert", "--help", "sdh"]), self::runApplication(["help", "convert", "sdh"]));
-        $this->assertSame(9, substr_count(BinaryTestCase::unwrapHelp(self::runApplication(["convert", "--help", "sdh"])[1]), "\n"));
+        $this->assertSame(9, substr_count(CliTestCase::unwrapHelp(self::runApplication(["convert", "--help", "sdh"])[1]), "\n"));
     }
 
 
@@ -229,7 +229,7 @@ class ApplicationTest extends TestCase
             "Pass one or more edits. retime applies them in this order: --sync, --shift,\n--scale, --from-fps and --to-fps.",
             $stdout
         );
-        $stdout = BinaryTestCase::unwrapHelp($stdout);
+        $stdout = CliTestCase::unwrapHelp($stdout);
         preg_match_all('/^  (?:-\w, )?--([\w-]+)/m', $stdout, $matches);
         $this->assertSame([
             "shift", "shift-after", "shift-before", "scale", "sync", "from-fps", "to-fps", "to", "output", "output-dir", "output-fps",
@@ -276,9 +276,9 @@ class ApplicationTest extends TestCase
                                           "  -h, --help     Show this help.\n" .
                                           "  -V, --version  Print the version.\n",
                                           self::runApplication(["--help"])[1]);
-        $this->assertMatchesRegularExpression('/^  --json +Print the differences as JSON: a list with one object for the pair of files\.$/m', BinaryTestCase::unwrapHelp(self::runApplication(["diff", "--help"])[1]));
+        $this->assertMatchesRegularExpression('/^  --json +Print the differences as JSON: a list with one object for the pair of files\.$/m', CliTestCase::unwrapHelp(self::runApplication(["diff", "--help"])[1]));
         $this->assertMatchesRegularExpression('/^  --json +Print JSON: a list with one object for each input file\.$/m',
-                                              BinaryTestCase::unwrapHelp(self::runApplication(["info", "--help"])[1]));
+                                              CliTestCase::unwrapHelp(self::runApplication(["info", "--help"])[1]));
     }
 
 
