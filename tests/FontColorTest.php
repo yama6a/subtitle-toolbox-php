@@ -115,11 +115,26 @@ class FontColorTest extends TestCase
 
     public function testTtmlNormalizesAColorThatIsNotValidTtmlAndKeepsAnUnknownValue(): void
     {
-        $text = "<font color=\"#FF0\">a</font> <font color=\"Yellow\">b</font> <font color=\"RGB(0,0,255)\">c</font> <font color=\"grey\">d</font>";
+        $text = "<font color=\"#FF0\">a</font> <font color=\"Yellow\">b</font> <font color=\"RGB(0,0,255)\">c</font> <font color=\"grey\">d</font>"
+                . " <font color=\"rgba(255, 0, 0, 0.5)\">e</font> <font color=\"Transparent\">f</font>";
 
         $output = (new Subtitle())->addCue(new SubtitleCue(1, 2, $text))->toString(Format::Ttml);
 
-        $this->assertStringContainsString("<span tts:color=\"#ffff00\">a</span> <span tts:color=\"#ffff00\">b</span>"
-                                          . " <span tts:color=\"#0000ff\">c</span> <span tts:color=\"grey\">d</span>", $output);
+        $this->assertStringContainsString("<span tts:color=\"#ffff00\">a</span> <span tts:color=\"yellow\">b</span>"
+                                          . " <span tts:color=\"#0000ff\">c</span> <span tts:color=\"grey\">d</span>"
+                                          . " <span tts:color=\"#ff000080\">e</span> <span tts:color=\"transparent\">f</span>", $output);
+    }
+
+
+    public function testIttKeepsEveryValidTtmlColorAndTheAlphaChannel(): void
+    {
+        $text = "<font color=\"rgba(0,0,0,0)\">a</font> <font color=\"transparent\">b</font> <font color=\"#FF000080\">c</font>"
+                . " <font color=\"rgba(255,0,0,0.5)\">d</font> <font color=\"#FFFF00\">e</font> <font color=\"grey\">f</font>";
+
+        $output = (new Subtitle())->addCue(new SubtitleCue(1, 2, $text))->toString(Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 25)]));
+
+        $this->assertStringContainsString("<span tts:color=\"rgba(0,0,0,0)\">a</span> <span tts:color=\"transparent\">b</span>"
+                                          . " <span tts:color=\"#ff000080\">c</span> <span tts:color=\"#ff000080\">d</span>"
+                                          . " <span tts:color=\"#ffff00\">e</span> f</p>", $output);
     }
 }

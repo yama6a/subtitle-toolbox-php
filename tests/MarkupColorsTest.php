@@ -42,4 +42,29 @@ class MarkupColorsTest extends TestCase
         $this->assertNull(MarkupColors::colorHex("#ff00"));
         $this->assertNull(MarkupColors::colorHex(""));
     }
+
+
+    public function testColorHexWithAlphaKeepsTheAlphaChannel(): void
+    {
+        $this->assertSame("#ff000080", MarkupColors::colorHexWithAlpha("#FF000080"));
+        $this->assertSame("#ff000080", MarkupColors::colorHexWithAlpha("rgba(255, 0, 0, 0.5)"));
+        $this->assertSame("#ff000080", MarkupColors::colorHexWithAlpha("rgba(255,0,0,50%)"));
+        $this->assertSame("#ff000080", MarkupColors::colorHexWithAlpha("RGBA(255,0,0,128)"));
+        $this->assertSame("#00000000", MarkupColors::colorHexWithAlpha("rgba(0,0,0,0)"));
+        $this->assertSame("#ff0000", MarkupColors::colorHexWithAlpha("#ff0000zz"));
+        $this->assertSame("#ff0000", MarkupColors::colorHexWithAlpha("red"));
+        $this->assertNull(MarkupColors::colorHexWithAlpha("rgba(255,0,0,1.5)"));
+    }
+
+
+    public function testTtmlColorKeepsAValidTtmlColorAndConvertsOtherColors(): void
+    {
+        $this->assertSame("rgba(0,0,0,0)", MarkupColors::ttmlColor("rgba(0,0,0,0)"));
+        $this->assertSame("#FFFF0080", MarkupColors::ttmlColor("#FFFF0080"));
+        $this->assertSame("transparent", MarkupColors::ttmlColor("Transparent"));
+        $this->assertSame("yellow", MarkupColors::ttmlColor("Yellow"));
+        $this->assertSame("#ff000080", MarkupColors::ttmlColor("rgba(255, 0, 0, 0.5)"));
+        $this->assertSame("#ffff00", MarkupColors::ttmlColor("#FF0"));
+        $this->assertNull(MarkupColors::ttmlColor("grey"));
+    }
 }

@@ -148,8 +148,7 @@ final class IttFormatter extends SubtitleFormatter
         return preg_replace_callback(
             "/<font\b([^>]*)>/i",
             function (array $matches): string {
-                $color = strtolower(trim(Markup::decodeEntities(MarkupColors::fontColor($matches[1]) ?? "")));
-                $color = isset(MarkupColors::NAMED_COLORS[$color]) ? $color : MarkupColors::colorHex($color);
+                $color = MarkupColors::ttmlColor(strtolower(trim(Markup::decodeEntities(MarkupColors::fontColor($matches[1]) ?? ""))));
 
                 return $color === null ? "<font>" : "<font color=\"$color\">";
             },

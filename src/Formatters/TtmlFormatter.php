@@ -20,9 +20,6 @@ final class TtmlFormatter extends SubtitleFormatter
     // The formatter writes media times, which these time parameters would change.
     private const SKIPPED_ROOT_PARAMETERS = ["timeBase", "clockMode", "dropMode", "markerMode"];
 
-    // Matches a TTML color that MarkupColors::NAMED_COLORS does not list.
-    private const TTML_COLOR = '/^(?:#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?|rgb\(\s*\d{1,3}(?:\s*,\s*\d{1,3}){2}\s*\)|rgba\(\s*\d{1,3}(?:\s*,\s*\d{1,3}){3}\s*\)|transparent)$/';
-
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
@@ -365,10 +362,8 @@ final class TtmlFormatter extends SubtitleFormatter
 
         if ($tag === "font") {
             $color = Markup::decodeEntities(trim(MarkupColors::fontColor($rest) ?? ""));
-            if (preg_match(self::TTML_COLOR, $color) !== 1 && !isset(MarkupColors::NAMED_COLORS[$color])) {
-                // A value that colorHex() cannot read stays as written, so that no color drops.
-                $color = MarkupColors::colorHex($color) ?? $color;
-            }
+            // A value that ttmlColor() cannot read stays as written, so that no color drops.
+            $color = MarkupColors::ttmlColor($color) ?? $color;
 
             return $color === "" ? "" : "<span" . $this->formatAttribute("$context->tts:color", $color) . ">";
         }
