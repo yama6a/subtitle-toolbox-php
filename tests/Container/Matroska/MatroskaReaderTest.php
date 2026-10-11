@@ -339,7 +339,7 @@ class MatroskaReaderTest extends TestCase
             "zlib data that does not inflate" => [
                 fn () => self::brokenFile(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 0, "not zlib", 1000)]),
                                           ["encodings" => MkvFixtureWriter::compression(0, 0)]),
-                "The zlib data of track 2 cannot be decompressed.",
+                "The zlib data of track 2 is not valid or inflates to more than 64 MB.",
             ],
             "encrypted track"               => [
                 fn () => self::brokenFile(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 0, "secret", 1000)]),
@@ -353,6 +353,15 @@ class MatroskaReaderTest extends TestCase
             "block data cut by the file end" => [
                 fn () => self::brokenFile(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 0, "The ferry leaves at noon.", 1000)]), cut: 10),
                 "The element data at byte 92 needs 25 bytes, but the file ends before.",
+            ],
+            "CodecPrivate of 2^40 bytes"    => [
+                fn () => self::brokenFile("", self::hugeCodecPrivate()),
+                "The element data at byte 89 needs 1099511627776 bytes, but the file ends before.",
+            ],
+            "zlib block that inflates past 64 MB" => [
+                fn () => self::brokenFile(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 0, self::zlibZeros((64 << 20) + 1), 1000)]),
+                                          ["encodings" => MkvFixtureWriter::compression(0, 0)]),
+                "The zlib data of track 2 is not valid or inflates to more than 64 MB.",
             ],
         ];
     }
@@ -374,6 +383,35 @@ class MatroskaReaderTest extends TestCase
         $this->expectExceptionMessage("The stream must be seekable.");
 
         MatroskaReader::open(fopen("php://output", "wb"));
+    }
+
+
+    /**
+     * A Tracks element whose TrackEntry declares a CodecPrivate of 2^40 bytes and holds 3 of them, as in a damaged file.
+     */
+    private static function hugeCodecPrivate(): string
+    {
+        $declared = 1 << 40;
+        $entry    = MkvFixtureWriter::uint(0xD7, 2) . MkvFixtureWriter::uint(0x83, MkvFixtureWriter::TRACK_SUBTITLE) .
+                    MkvFixtureWriter::element(0x86, "S_TEXT/UTF8") . MkvFixtureWriter::id(0x63A2) . MkvFixtureWriter::size($declared) . "abc";
+        $entry    = MkvFixtureWriter::id(0xAE) . MkvFixtureWriter::size($declared + strlen($entry)) . $entry;
+
+        return MkvFixtureWriter::id(MkvFixtureWriter::TRACKS) . MkvFixtureWriter::size($declared + strlen($entry)) . $entry;
+    }
+
+
+    /**
+     * Compresses $length zero bytes in steps of 1 MB, so the test does not hold the inflated data.
+     */
+    private static function zlibZeros(int $length): string
+    {
+        $context    = deflate_init(ZLIB_ENCODING_DEFLATE);
+        $compressed = "";
+        for ($left = $length; $left > 0; $left -= 1 << 20) {
+            $compressed .= deflate_add($context, str_repeat("\0", min($left, 1 << 20)), ZLIB_NO_FLUSH);
+        }
+
+        return $compressed . deflate_add($context, "", ZLIB_FINISH);
     }
 
 

@@ -21,13 +21,16 @@ final class EbmlReader
     /** @var resource */
     private $stream;
 
+    private int $streamSize;
+
 
     /**
      * @param resource $stream
      */
     public function __construct($stream)
     {
-        $this->stream = $stream;
+        $this->stream     = $stream;
+        $this->streamSize = fstat($stream)["size"] ?? PHP_INT_MAX;
     }
 
 
@@ -79,8 +82,9 @@ final class EbmlReader
             return "";
         }
 
+        // fread() allocates $length bytes before it reads, so a damaged size must not reach it.
         $start = $this->tell();
-        $bytes = fread($this->stream, $length);
+        $bytes = $length > $this->streamSize - $start ? false : fread($this->stream, $length);
         if ($bytes === false || strlen($bytes) !== $length) {
             throw new ParsingException("The element data at byte $start needs $length bytes, but the file ends before.");
         }

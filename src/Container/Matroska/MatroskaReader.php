@@ -109,6 +109,9 @@ final class MatroskaReader implements ContainerReader
     private const INT16_SIGN  = 0x8000;
     private const INT16_RANGE = 0x10000;
 
+    // A full-screen 4K PGS display set holds about 8 MB and a VobSub unit 64 KB. A block that inflates to more is a zip bomb.
+    private const MAX_INFLATED_SIZE = 64 << 20;
+
     // The WebVTT BlockAdditional of a cue has the BlockAddID 1, the default value.
     private const WEBVTT_ADD_ID = 1;
 
@@ -590,9 +593,10 @@ final class MatroskaReader implements ContainerReader
             }
 
             // gzuncompress() warns before it returns false. The exception reports the failure.
-            $inflated = Dependency::isAvailable("gzuncompress") ? @gzuncompress($data) : false;
-            if ($inflated === false) {
-                throw new ParsingException("The zlib data of track $trackNumber cannot be decompressed.");
+            $inflated = Dependency::isAvailable("gzuncompress") ? @gzuncompress($data, self::MAX_INFLATED_SIZE) : false;
+            if ($inflated === false || strlen($inflated) > self::MAX_INFLATED_SIZE) {
+                throw new ParsingException("The zlib data of track $trackNumber is not valid or inflates to more than " .
+                                           (self::MAX_INFLATED_SIZE >> 20) . " MB.");
             }
             $data = $inflated;
         }
