@@ -23,6 +23,7 @@ final class WriteGoldens
         "whisper"        => Format::Whisper,
         "aws-transcribe" => Format::AwsTranscribe,
         "deepgram"       => Format::Deepgram,
+        "assemblyai"     => Format::AssemblyAi,
     ];
 
     /**

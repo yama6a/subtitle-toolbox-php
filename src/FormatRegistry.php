@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Formatters\AssemblyAiFormatter;
 use SubtitleToolbox\Formatters\AssFormatter;
 use SubtitleToolbox\Formatters\AwsTranscribeFormatter;
 use SubtitleToolbox\Formatters\CsvFormatter;
@@ -82,7 +83,7 @@ final class FormatRegistry
         Format::HtmlTranscript->value     => [HtmlTranscriptParser::class, HtmlTranscriptFormatter::class, ["html", "htm"]],
         Format::Itt->value                => [IttParser::class, IttFormatter::class, ["itt"]],
         Format::Json->value               => [JsonParser::class, JsonFormatter::class, ["json"]],
-        Format::AssemblyAi->value         => [AssemblyAiParser::class, null, ["json"]],
+        Format::AssemblyAi->value         => [AssemblyAiParser::class, AssemblyAiFormatter::class, ["json"]],
         Format::AwsTranscribe->value      => [AwsTranscribeParser::class, AwsTranscribeFormatter::class, ["json"]],
         Format::Deepgram->value           => [DeepgramParser::class, DeepgramFormatter::class, ["json"]],
         Format::GoogleSpeech->value       => [GoogleSpeechParser::class, null, ["json"]],
