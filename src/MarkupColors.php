@@ -25,6 +25,32 @@ final class MarkupColors
         "black"   => "#000000",
     ];
 
+    /**
+     * The color names of TTML without "transparent". They are the 16 basic colors of CSS plus "cyan" and "magenta".
+     *
+     * @see https://www.w3.org/TR/ttml1/#style-value-namedColor
+     */
+    public const NAMED_COLORS = [
+        "black"   => "#000000",
+        "silver"  => "#c0c0c0",
+        "gray"    => "#808080",
+        "white"   => "#ffffff",
+        "maroon"  => "#800000",
+        "red"     => "#ff0000",
+        "purple"  => "#800080",
+        "fuchsia" => "#ff00ff",
+        "magenta" => "#ff00ff",
+        "green"   => "#008000",
+        "lime"    => "#00ff00",
+        "olive"   => "#808000",
+        "yellow"  => "#ffff00",
+        "navy"    => "#000080",
+        "blue"    => "#0000ff",
+        "teal"    => "#008080",
+        "aqua"    => "#00ffff",
+        "cyan"    => "#00ffff",
+    ];
+
 
     /**
      * Returns the color attribute of a <font> tag as written, such as "#FF0000" for <FONT COLOR='#FF0000'>, or null.
@@ -38,6 +64,39 @@ final class MarkupColors
         }
 
         return ($color[1] ?? "") . ($color[2] ?? "") . ($color[3] ?? "");
+    }
+
+
+    /**
+     * Returns the color of a <font> tag as "#rrggbb", or null. See colorHex() for the colors it reads.
+     */
+    public static function fontColorHex(string $attributes): ?string
+    {
+        $color = self::fontColor($attributes);
+
+        return $color === null ? null : self::colorHex($color);
+    }
+
+
+    /**
+     * Returns a color as "#rrggbb" in lower case, or null when it is not a color. This is the one color rule of all writers.
+     * It reads "#rgb", a value that starts with "#rrggbb" such as "#rrggbbaa", "rgb(r, g, b)", "rgba(r, g, b, a)"
+     * and NAMED_COLORS, in any case and with entities decoded. It drops an alpha channel.
+     */
+    public static function colorHex(string $color): ?string
+    {
+        $color = strtolower(trim(Markup::decodeEntities($color)));
+        if (preg_match('/^#[0-9a-f]{6}/', $color, $hex) === 1) {
+            return $hex[0];
+        }
+        if (preg_match('/^#([0-9a-f])([0-9a-f])([0-9a-f])$/', $color, $digits) === 1) {
+            return "#$digits[1]$digits[1]$digits[2]$digits[2]$digits[3]$digits[3]";
+        }
+        if (preg_match('/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*[\d.]+%?\s*)?\)$/', $color, $rgb) === 1) {
+            return max($rgb[1], $rgb[2], $rgb[3]) > 255 ? null : sprintf("#%02x%02x%02x", $rgb[1], $rgb[2], $rgb[3]);
+        }
+
+        return self::NAMED_COLORS[$color] ?? null;
     }
 
 
@@ -134,15 +193,7 @@ final class MarkupColors
      */
     private static function webVttColorClass(string $color): ?string
     {
-        $color = strtolower(trim(Markup::decodeEntities($color)));
-        if (preg_match('/^#([0-9a-f])([0-9a-f])([0-9a-f])$/', $color, $digits) === 1) {
-            $color = "#$digits[1]$digits[1]$digits[2]$digits[2]$digits[3]$digits[3]";
-        }
-        if (isset(self::WEBVTT_COLORS[$color])) {
-            return $color;
-        }
-
-        $class = array_search($color, self::WEBVTT_COLORS, true);
+        $class = array_search(self::colorHex($color), self::WEBVTT_COLORS, true);
 
         return $class === false ? null : $class;
     }

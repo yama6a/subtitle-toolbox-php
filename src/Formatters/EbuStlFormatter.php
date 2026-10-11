@@ -298,7 +298,7 @@ final class EbuStlFormatter extends SubtitleFormatter
 
                 $tag = strtolower($token);
                 if (preg_match('/^<font\b[^>]*>$/', $tag)) {
-                    $color    = array_search(trim(MarkupColors::fontColor($tag) ?? ""), EbuStl::COLORS, true);
+                    $color    = array_search(MarkupColors::fontColorHex($tag), EbuStl::COLORS, true);
                     $colors[] = $color === false ? end($colors) : $color;
                     $bytes    .= $color === false ? "" : chr($color);
                     continue;
