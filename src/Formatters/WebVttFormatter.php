@@ -22,6 +22,7 @@ final class WebVttFormatter extends SubtitleFormatter
 
     private const ALIGNMENT_ROWS    = [0 => "", 1 => "line:50%,center", 2 => "line:0"];
     private const ALIGNMENT_COLUMNS = [1 => "align:left", 2 => "", 3 => "align:right"];
+    private const POSITION_SETTINGS = ["line", "position", "align"];
 
     /** @var list<WebVttDroppedColor> */
     private array $droppedColors = [];
@@ -182,18 +183,21 @@ final class WebVttFormatter extends SubtitleFormatter
 
     private function formatSettings(SubtitleCue $cue): string
     {
-        $settings = [];
-        foreach ($cue->findFormatData(WebVttParser::FORMAT_DATA_KEY) as $name => $value) {
-            if (in_array($name, WebVttParser::CUE_SETTINGS, true)) {
+        $stored    = $cue->findFormatData(WebVttParser::FORMAT_DATA_KEY);
+        $unchanged = ($stored["alignment"] ?? null) === $cue->getAlignment();
+        $names     = $unchanged ? WebVttParser::CUE_SETTINGS : array_diff(WebVttParser::CUE_SETTINGS, self::POSITION_SETTINGS);
+        $settings  = [];
+        foreach ($stored as $name => $value) {
+            if (in_array($name, $names, true)) {
                 $settings[] = "$name:$value";
             }
         }
-        if ($settings !== [] || $cue->getAlignment() === null) {
+        if ($unchanged && $settings !== [] || $cue->getAlignment() === null) {
             return implode(" ", $settings);
         }
 
         $alignment = $cue->getAlignment() - 1;
-        $settings  = [self::ALIGNMENT_ROWS[intdiv($alignment, 3)], self::ALIGNMENT_COLUMNS[$alignment % 3 + 1]];
+        $settings  = [...$settings, self::ALIGNMENT_ROWS[intdiv($alignment, 3)], self::ALIGNMENT_COLUMNS[$alignment % 3 + 1]];
 
         return implode(" ", array_filter($settings, fn (string $setting): bool => $setting !== ""));
     }

@@ -448,7 +448,7 @@ $report->changes[0]->message;                                                   
 | `00：00：01，000` | 1 s in lenient mode, with a warning. Lenient mode reads the full-width `：`, `，`, `．` and `。` in a timing line as `:`, `,` and `.`. Cue text keeps them. | `00:00:01,000` |
 | `00:00:01,000-->00:00:02,000` | 1 s to 2 s. Accepts any spaces or tabs around `-->`, or none. Lenient mode also reads an arrow with 1 or more dashes, such as `->`, and warns. | `00:00:01,000 --> 00:00:02,000` |
 | `X1:100 X2:600 Y1:40 Y2:80` after the end time | `findFormatData('srt')['coordinates']` | the same coordinates |
-| `align:start position:0%` after the end time | `findFormatData('vtt')`, for the WebVTT settings `vertical`, `line`, `position`, `size` and `align`. Other text after the end time throws. Lenient mode ignores it and warns. | nothing. The WebVTT formatter writes the settings. |
+| `align:start position:0%` after the end time | `findFormatData('vtt')`, for the WebVTT settings `vertical`, `line`, `position`, `size` and `align`. The key `alignment` holds the cue alignment, when it has one. Other text after the end time throws. Lenient mode ignores it and warns. | nothing. The WebVTT formatter writes the settings. |
 | `{\an8}` anywhere in the cue | alignment 8. The first tag wins. SSA `{\a6}` also becomes 8. | `{\an8}` at the start of the first line, nothing for 2 or `null` |
 | `{\b1}`, `{\i1}`, `{\u1}`, `{\s1}` and their `0` forms | `<b>`, `<i>`, `<u>`, `<s>` and their closing tags. An open tag closes at the end of the cue. | the HTML-like tags |
 
@@ -491,7 +491,7 @@ use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.ttml'), Format::Ttml);
 $subtitle->findFormatData('ttml')['head'];             // <head> without ttm:title, as XML
-$subtitle->getCues()[0]->findFormatData('ttml');       // ['attributes' => ['region' => 'bottom'], 'div' => [...]]
+$subtitle->getCues()[0]->findFormatData('ttml');       // ['attributes' => ['region' => 'bottom'], 'alignment' => 2, 'div' => [...]]
 $subtitle->toString(Format::Ttml);
 ```
 
@@ -501,8 +501,8 @@ $subtitle->toString(Format::Ttml);
 - **Styles**: the parser resolves the `style` references and the inline `tts:` attributes. Styles inherit in the order region, `<body>`, `<div>`, `<p>`, `<span>`. Bold, italic, oblique, underline, line-through and the text color become core markup. White text gives no `<font>` tag. The formatter writes each tag as a `<span>` with an inline style.
 - **Inherited styles in output**: the formatter keeps the stored styles of the region, `<body>`, `<div>` and `<p>`. Core markup cannot turn an inherited style off. So the formatter wraps text without that style in a `<span>` with the default value, such as `tts:color="white"` or `tts:fontStyle="normal"`.
 - **Speakers**: `ttm:agent` becomes `<v Name>`, with the name from the `ttm:name` of the agent. The formatter adds a `ttm:agent` element to the head for a new name.
-- **Alignment**: the parser maps the region to an alignment only for `tts:textAlign` `left`, `center` or `right`. A text anchor in the top third of the screen gives the top row, in the bottom third the bottom row.
-- **Regions from alignment**: a cue without a stored `region` gets a region such as `topCenter` that matches its alignment. A subtitle from another format gets `bottomCenter` for cues without alignment. The stored `region` wins over the alignment.
+- **Alignment**: the parser maps the region to an alignment only for `tts:textAlign` `left`, `center` or `right`. A text anchor in the top third of the screen gives the top row, in the bottom third the bottom row. The `alignment` key of the `ttml` format data keeps the alignment that the parser read.
+- **Regions from alignment**: a cue without a stored `region` gets a region such as `topCenter` that matches its alignment. A subtitle from another format gets `bottomCenter` for cues without alignment. A cue keeps its stored `region` while it has the alignment that the parser read. After `setAlignment()` with another value, the formatter writes the region of the new alignment. It also writes `tts:textAlign` on the `<p>` when a style of the `<p>`, `<div>` or `<body>` sets another column.
 - **Metadata**: `xml:lang` of `<tt>` is the `language` and the first `ttm:title` is the `title`. The formatter writes the title as the first child of `<head>`.
 - **Kept as is**: the `<head>`, the namespace and the attributes of `<tt>`, `<body>`, `<div>` and `<p>`. So a DFXP file stays DFXP. The formatter drops `ttp:timeBase`, `ttp:clockMode`, `ttp:dropMode` and `ttp:markerMode`, because it writes media times.
 - **Limits**: the parser reads `seq` time containers as `par`. The formatter strips word timestamps. A cue identifier that is not a valid `xml:id` is not written.
@@ -519,11 +519,11 @@ $subtitle->toString(Format::Ttml);
 | Text after `WEBVTT`, lines up to the first empty line | `$subtitle->findFormatData('vtt')`, keys `header` and `headerLines` |
 | `STYLE` blocks, CSS not parsed | `$subtitle->findFormatData('vtt')['styles']` |
 | `REGION` blocks | `$subtitle->findFormatData('vtt')['regions']`, one `name => value` array per region |
-| Cue settings `vertical`, `line`, `position`, `size`, `align`, `region` | `$cue->findFormatData('vtt')`, exact values |
+| Cue settings `vertical`, `line`, `position`, `size`, `align`, `region` | `$cue->findFormatData('vtt')`, exact values. The key `alignment` holds the alignment that the parser read from them. |
 | `&nbsp;`, `&lrm;`, `&rlm;` | the characters U+00A0, U+200E, U+200F |
 
 - **Alignment from cue settings**: `line:0` is the top row, and `line:50%,center` is the middle row. No `line`, `line:-1` and `line:100%,end` are the bottom row. `align:left`, `center` and `right` set the column. Other values, `align:start`, `align:end` and `vertical` give no alignment.
-- **Cue settings from alignment**: a cue without `vtt` format data gets settings from its alignment. Alignment 8 becomes `line:0`, 7 becomes `line:0 align:left`. The `vtt` format data wins over the alignment.
+- **Cue settings from alignment**: a cue without `vtt` format data gets settings from its alignment. Alignment 8 becomes `line:0`, 7 becomes `line:0 align:left`. A cue keeps its stored settings while it has the alignment that the parser read. After `setAlignment()` with another value, the formatter drops the stored `line`, `position` and `align` and writes the settings of the new alignment. It keeps `size`, `vertical` and `region`.
 - **Cue settings without a space**: the parser also reads settings that follow the end time directly, as in `00:01.000line:40%`. The formatter writes a space before them.
 - **Hours**: the parser reads hours with any number of digits, such as `0:00:00.800` and `0010:00:40.750`, as the spec allows. The [time limit](#the-format-enum) applies. A time without hours has exactly 2 minute digits. The formatter writes at least 2 hour digits, so `0010` becomes `10`.
 - **Lines of white space**: only an empty line ends a cue. A line with only spaces or tabs inside a cue is an empty text line, and the parser drops it. YouTube automatic captions have such a line in each cue.

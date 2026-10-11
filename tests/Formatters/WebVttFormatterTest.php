@@ -140,16 +140,55 @@ class WebVttFormatterTest extends TestCase
     }
 
 
-    public function testCueSettingsFromFormatDataWinOverAlignment(): void
+    public function testCueSettingsFromFormatDataStayWhileTheAlignmentIsUnchanged(): void
     {
-        $cue = (new SubtitleCue(1, 2, "One"))
-            ->setAlignment(8)
-            ->setFormatData("vtt", ["size" => "50%", "unknown" => "x", "align" => "start"]);
+        $cue = (new SubtitleCue(1, 2, "One"))->setFormatData("vtt", ["size" => "50%", "unknown" => "x", "align" => "start"]);
 
         $this->assertSame(
             "\xEF\xBB\xBFWEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000 size:50% align:start\nOne\n",
             (new Subtitle())->addCue($cue)->toString(Format::WebVtt)
         );
+    }
+
+
+    public function testChangedAlignmentReplacesTheStoredPosition(): void
+    {
+        $path     = __DIR__ . "/../files/vtt/real/w3c_cue_settings.vtt";
+        $subtitle = Subtitle::load($path, Format::WebVtt);
+        $subtitle->getCues()[0]->setAlignment(8);
+        $subtitle->getCues()[1]->setAlignment(null);
+
+        $this->assertSame(
+            str_replace(
+                [" position:10%,line-left align:left size:35%", " position:90% align:right size:35%"],
+                [" size:35% line:0", " size:35%"],
+                Subtitle::load($path, Format::WebVtt)->toString(Format::WebVtt)
+            ),
+            $subtitle->toString(Format::WebVtt)
+        );
+    }
+
+
+    public function testIssueExampleMovesTheCueToTheBottom(): void
+    {
+        $subtitle = Subtitle::fromString("WEBVTT\n\n00:00:01.000 --> 00:00:02.000 line:0\nHello\n", Format::WebVtt);
+        $subtitle->getCues()[0]->setAlignment(2);
+
+        $this->assertSame(
+            "WEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000\nHello\n",
+            $subtitle->toString(Format::WebVtt, new WriteOptions(bom: false))
+        );
+    }
+
+
+    public function testSubRipCueSettingsStayWhileTheAlignmentIsUnchanged(): void
+    {
+        $subtitle = Subtitle::fromString("1\n00:00:01,000 --> 00:00:02,000 position:10%\n{\\an8}Hello\n", Format::SubRip);
+
+        $this->assertStringContainsString("00:00:01.000 --> 00:00:02.000 position:10%\n", $subtitle->toString(Format::WebVtt));
+
+        $subtitle->getCues()[0]->setAlignment(7);
+        $this->assertStringContainsString("00:00:01.000 --> 00:00:02.000 line:0 align:left\n", $subtitle->toString(Format::WebVtt));
     }
 
 

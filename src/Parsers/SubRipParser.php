@@ -157,7 +157,8 @@ final class SubRipParser extends SubtitleParser
                 throw new ParsingException("The text \"" . implode(" ", $unknown) . "\" after the end time is not valid.", $lineNumber);
             }
             if ($settings !== []) {
-                $cue->setFormatData(WebVttParser::FORMAT_DATA_KEY, $settings);
+                $alignment = $cue->getAlignment();
+                $cue->setFormatData(WebVttParser::FORMAT_DATA_KEY, $alignment === null ? $settings : [...$settings, "alignment" => $alignment]);
             }
             if ($unknown !== []) {
                 $this->warn(

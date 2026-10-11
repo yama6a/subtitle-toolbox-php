@@ -77,6 +77,29 @@ class TtmlFormatterTest extends TestCase
     }
 
 
+    public function testChangedAlignmentReplacesTheStoredRegion(): void
+    {
+        $path     = __DIR__ . "/../files/ttml/real/pysubs2_regions.ttml";
+        $subtitle = Subtitle::load($path, Format::Ttml);
+        $subtitle->getCues()[0]->setAlignment(2);
+        $subtitle->getCues()[1]->setAlignment(9);
+
+        $output    = $subtitle->toString(Format::Ttml);
+        $unchanged = Subtitle::load($path, Format::Ttml)->toString(Format::Ttml);
+
+        $this->assertStringContainsString('<p xml:id="subtitle1" begin="00:00:01.375" end="00:00:05.750" style="s1" region="bottomCenter">', $output);
+        $this->assertStringContainsString('<p xml:id="subtitle2" begin="00:00:05.916" end="00:00:10.216" style="s1" tts:textAlign="right" region="topRight">', $output);
+        $this->assertSame(
+            array_slice(explode("\n", $unchanged), -11),
+            array_slice(explode("\n", $output), -11)
+        );
+        $this->assertSame(
+            [2, 9, 8, 2],
+            array_map(fn (SubtitleCue $cue): ?int => $cue->getAlignment(), array_slice(Subtitle::fromString($output, Format::Ttml)->getCues(), 0, 4))
+        );
+    }
+
+
     public function testOutputParsesBackToTheSameCues(): void
     {
         $subtitle = new Subtitle();
