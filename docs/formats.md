@@ -42,9 +42,9 @@ use SubtitleToolbox\Subtitle;
 
 Subtitle::load('movie.srt', Format::SubRip)->save('movie.vtt');
 Subtitle::loadAutoDetectFormat('movie.srt')->save('movie.vtt');
-Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(encoding: 'Windows-1252', format: new MicroDvdReadOptions(frameRate: 23.976)))->save('movie.srt');
-Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(format: new VobSubReadOptions(language: 'de')));
-Subtitle::load('call.json', Format::Deepgram, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true)));
+Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(encoding: 'Windows-1252', formats: [new MicroDvdReadOptions(frameRate: 23.976)]))->save('movie.srt');
+Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions(language: 'de')]));
+Subtitle::load('call.json', Format::Deepgram, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]));
 Subtitle::loadTrack('/media/movie.mkv', 3);           // see mkv.md
 
 $subtitle = Subtitle::load('movie.srt', Format::SubRip);
@@ -82,7 +82,7 @@ $subtitle->toString(Format::SubRip, new WriteOptions(
     stripTags: true,                 // no tags in the output
     skipImageCues: true,             // drops image cues without text
 ));
-$subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 23.976)));
+$subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 23.976)]));
 ```
 
 - **`lineEnding` and `bom`**: EBU STL and PGS ignore them.
@@ -112,7 +112,8 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWrite
 - **Negative times**: `new SubtitleCue(-0.5, 1)` and `setStart(-0.5)` keep a negative time. Every formatter except JSON writes it as 0.
 - **Precedence**: a field that you set wins over the format data of the subtitle. For example, `IttWriteOptions(frameRate: 25)` wins over the frame rate that `IttParser` stored. A field left at `null` takes the stored value, for example `MicroDvdWriteOptions(writeFrameRateLine: true)` with a MicroDVD input.
 - **Frame rate**: every `frameRate` field is a `float`. Each format checks the values it can write, for example 25 or 30 for EBU STL.
-- **Errors**: an options class of another format throws `InvalidArgumentException`, for example `CsvWriteOptions` for SubRip. Each options class checks its values when you create it, so `new CsvWriteOptions(delimiter: '|')` throws at once.
+- **Several formats**: `WriteOptions::$formats` takes at most one object per class. Each formatter uses the object of its own class and ignores the others. So `new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25), new CsvWriteOptions(delimiter: ';')])` works for every output format.
+- **Errors**: 2 objects of one class in `formats` throw `InvalidArgumentException`. Each options class checks its values when you create it, so `new CsvWriteOptions(delimiter: '|')` throws at once.
 
 ## ASS and SSA
 `AssParser` reads ASS v4.00+ and SSA v4.00. `AssFormatter` writes the version that the parser read, or ASS for cues from other formats.
@@ -128,8 +129,8 @@ $subtitle = Subtitle::fromString(file_get_contents('episode.ass'), Format::Ass);
 $subtitle->findFormatData('ass')['scriptInfo']['PlayResX'];     // '1920'
 $subtitle->getCues()[0]->findFormatData('ass')['fields'];       // ['Layer' => '0', 'Style' => 'Default', ...]
 $subtitle->toString(Format::Ass);
-$subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill)));   // \kf
-$subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(style: 'Fontname=Roboto,Fontsize=48')));
+$subtitle->toString(Format::Ass, new WriteOptions(formats: [new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill)]));   // \kf
+$subtitle->toString(Format::Ass, new WriteOptions(formats: [new AssWriteOptions(style: 'Fontname=Roboto,Fontsize=48')]));
 ```
 
 | Input | Parser result | Formatter output |
@@ -174,14 +175,14 @@ use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.csv'), Format::Csv);   // headers start, end, text, ...
 $columns  = new CsvColumns(start: 'Start TC', text: 'Text', speaker: 'Character');
-$subtitle = Subtitle::fromString(file_get_contents('dubbing-script.csv'), Format::Csv, new ReadOptions(format: new CsvReadOptions($columns, frameRate: 25)));
-$subtitle = Subtitle::fromString($tsv, Format::Tsv, new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: 0, end: 1, text: 2, header: false), "\t")));
+$subtitle = Subtitle::fromString(file_get_contents('dubbing-script.csv'), Format::Csv, new ReadOptions(formats: [new CsvReadOptions($columns, frameRate: 25)]));
+$subtitle = Subtitle::fromString($tsv, Format::Tsv, new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(start: 0, end: 1, text: 2, header: false), "\t")]));
 
-$csv = $english->toString(Format::Csv, new WriteOptions(format: new CsvWriteOptions(
+$csv = $english->toString(Format::Csv, new WriteOptions(formats: [new CsvWriteOptions(
     delimiter: ';',                  // Excel in German and French locales
     secondText: $german,             // a second text column, aligned by time
     secondTextHeader: 'text (de)',   // default 'text2'
-)));
+)]));
 ```
 
 | Column role | Parser | Formatter |
@@ -229,9 +230,9 @@ use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('news.stl'));  // detects EBU STL
 $subtitle = Subtitle::fromString(file_get_contents('news.stl'), Format::EbuStl,
-    new ReadOptions(format: new EbuStlReadOptions(subtractStartOfProgramme: true))); // cue times minus the start of programme
+    new ReadOptions(formats: [new EbuStlReadOptions(subtractStartOfProgramme: true)])); // cue times minus the start of programme
 $subtitle->findFormatData('stl')['gsi']['TCP'];                                   // '10000000'
-$subtitle->toString(Format::EbuStl, new WriteOptions(format: new EbuStlWriteOptions(frameRate: 30)));  // 25 or 30
+$subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 30)]));  // 25 or 30
 ```
 
 - **Times**: the disk format code `STL25.01` or `STL30.01` sets the frame rate. By default, the parser keeps the time codes of the file.
@@ -260,7 +261,7 @@ use SubtitleToolbox\WriteOptions;
 $subtitle = Subtitle::fromString(file_get_contents('movie.itt'), Format::Itt);
 $subtitle->findFormatData('itt');  // ['timeBase' => 'smpte', 'frameRate' => '24', 'frameRateMultiplier' => '999 1000', 'dropMode' => 'nonDrop']
 $subtitle->toString(Format::Itt);
-Subtitle::fromStringAutoDetectFormat($srt)->toString(Format::Itt, new WriteOptions(format: new IttWriteOptions(frameRate: 23.976)));
+Subtitle::fromStringAutoDetectFormat($srt)->toString(Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 23.976)]));
 ```
 
 - **Parser**: `IttParser` is `TtmlParser` plus the `itt` format data. Format detection returns `Format::Ttml` for an iTT file. Both read the same cues.
@@ -303,14 +304,14 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
-$subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(frameRate: 23.976)));
+$subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 23.976)]));
 $subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDvd);   // reads {1}{1}23.976
 
-$subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(
+$subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(
     frameRate: 23.976,               // null (default) takes the frame rate that the parser stored
     writeFrameRateLine: true,        // writes {1}{1}23.976 first
-)));
-$subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(writeFrameRateLine: true)));
+)]));
+$subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(writeFrameRateLine: true)]));
 ```
 
 - **Frame rate**: `MicroDvdReadOptions::$frameRate` wins over a `{1}{1}<fps>` first line. The parser never reads that line as a cue. Without either, the parser throws `ParsingException` in strict mode. Lenient mode uses 23.976 fps, as pysubs2 and mantas-done/subtitles do, and adds a `ParseWarning`. The format data holds this `frameRate`.
@@ -354,7 +355,7 @@ use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.mpsub'), Format::MpSub);
 $subtitle->toString(Format::MpSub);                                               // FORMAT=TIME
-$subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubWriteOptions(frameRate: 25)));   // FORMAT=25 and frame counts
+$subtitle->toString(Format::MpSub, new WriteOptions(formats: [new MpSubWriteOptions(frameRate: 25)]));   // FORMAT=25 and frame counts
 ```
 
 - **Header lines**: the parser reads `TITLE` and `AUTHOR` into the metadata. It keeps all other header lines, such as `TYPE` and `NOTE`, in the `mpsub` format data. `FORMAT` only sets the time unit. The formatter writes these lines back, and writes empty `TITLE` and `AUTHOR` lines when the values are not set.
@@ -370,7 +371,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami);   // the first class of the STYLE block that a <P> uses
-$subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami, new ReadOptions(format: new SamiReadOptions(languageClass: 'FRCC')));   // the FRCC class
+$subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami, new ReadOptions(formats: [new SamiReadOptions(languageClass: 'FRCC')]));   // the FRCC class
 $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);                             // 'fr-FR', from the lang property of .FRCC
 $subtitle->findFormatData('sami');                                                // keys style, class and samiParam
 ```
@@ -405,13 +406,13 @@ use SubtitleToolbox\WriteOptions;
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('show.scc'));  // detects SCC
 $subtitle->findFormatData('scc');                                                 // ['dropFrame' => true]
 $subtitle->getCues()[0]->findFormatData('scc');                                   // ['mode' => 'pop-on', 'rows' => [14, 15], 'columns' => [4, 8]]
-Subtitle::fromString($content, Format::Scc, new ReadOptions(format: new SccReadOptions(channel: 2)));   // CC2 or CC4
-Subtitle::fromString($content, Format::Scc, new ReadOptions(format: new SccReadOptions(rollUp: SccRollUp::Lines)));   // one cue per row
+Subtitle::fromString($content, Format::Scc, new ReadOptions(formats: [new SccReadOptions(channel: 2)]));   // CC2 or CC4
+Subtitle::fromString($content, Format::Scc, new ReadOptions(formats: [new SccReadOptions(rollUp: SccRollUp::Lines)]));   // one cue per row
 
 $subtitle->wrapLines(32, 4)->toString(Format::Scc);
-$subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dropFrame: false)));
+$subtitle->toString(Format::Scc, new WriteOptions(formats: [new SccWriteOptions(dropFrame: false)]));
 
-$report = (new SccFormatter())->formatWithReport($subtitle, new WriteOptions(format: new SccWriteOptions(fit: true)));
+$report = (new SccFormatter())->formatWithReport($subtitle, new WriteOptions(formats: [new SccWriteOptions(fit: true)]));
 $report->content;                                                                 // the SCC file
 $report->changes[0]->message;                                                     // Cue #0 at 1 s: replaced "Š" with "S".
 ```
@@ -472,7 +473,7 @@ use SubtitleToolbox\WriteOptions;
 $subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::SubViewer);
 $subtitle->findFormatData('subviewer');  // ['version' => 2, 'header' => ['DELAY' => '0', 'CD TRACK' => '0'], 'style' => '[COLF]&HFFFFFF,[STYLE]bd,[SIZE]18,[FONT]Arial']
 $subtitle->toString(Format::SubViewer);                                             // SubViewer 2
-$subtitle->toString(Format::SubViewer, new WriteOptions(format: new SubViewerWriteOptions(version: SubViewerVersion::V1)));  // SubViewer 1
+$subtitle->toString(Format::SubViewer, new WriteOptions(formats: [new SubViewerWriteOptions(version: SubViewerVersion::V1)]));  // SubViewer 1
 ```
 
 - **Version**: a `******** START SCRIPT ********` line makes a file SubViewer 1. All other files are SubViewer 2.

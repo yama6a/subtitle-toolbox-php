@@ -218,7 +218,7 @@ class BinaryInputTest extends BinaryTestCase
     public function testInputFpsReadsCsvTimesInFrames(): void
     {
         copy(self::FILES . "csv/own_frame_times.csv", "$this->dir/frames.csv");
-        $expected = Subtitle::fromString($this->file("frames.csv"), Format::Csv, new ReadOptions(format: new CsvReadOptions(frameRate: 25)));
+        $expected = Subtitle::fromString($this->file("frames.csv"), Format::Csv, new ReadOptions(formats: [new CsvReadOptions(frameRate: 25)]));
 
         $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary(["convert", "frames.csv", "--to", "srt", "-o", "-", "--input-fps", "25"]));
         $this->assertSame([0, str_replace("\r\n", "\n", $this->file("frames.csv")), ""],
@@ -229,7 +229,7 @@ class BinaryInputTest extends BinaryTestCase
     public function testSccRollUpLinesReadsEachRowOnce(): void
     {
         copy(self::FILES . "scc/real/rollup_news_ndf.scc", "$this->dir/news.scc");
-        $lines  = Subtitle::fromString($this->file("news.scc"), Format::Scc, new ReadOptions(format: new SccReadOptions(rollUp: SccRollUp::Lines)));
+        $lines  = Subtitle::fromString($this->file("news.scc"), Format::Scc, new ReadOptions(formats: [new SccReadOptions(rollUp: SccRollUp::Lines)]));
         $screen = Subtitle::fromString($this->file("news.scc"), Format::Scc);
 
         $this->assertSame([0, $lines->toString(Format::SubRip), ""], $this->runBinary(["convert", "news.scc", "--to", "srt", "-o", "-", "--scc-roll-up", "Lines"]));

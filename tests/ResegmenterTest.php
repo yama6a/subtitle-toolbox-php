@@ -46,7 +46,7 @@ class ResegmenterTest extends TestCase
     private function parseWhisperFixture(): Subtitle
     {
         return (new WhisperJsonParser())
-            ->parse(file_get_contents(self::FILES . "own_whisper_long_segments.json"), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
+            ->parse(file_get_contents(self::FILES . "own_whisper_long_segments.json"), new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
     }
 
 

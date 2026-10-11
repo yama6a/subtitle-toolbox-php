@@ -222,7 +222,7 @@ class AssFormatterTest extends TestCase
 
     private static function styleOptions(string $style): WriteOptions
     {
-        return new WriteOptions(format: new AssWriteOptions(style: $style));
+        return new WriteOptions(formats: [new AssWriteOptions(style: $style)]);
     }
 
 

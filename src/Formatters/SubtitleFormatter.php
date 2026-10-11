@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\FormatOptionsList;
 use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\StringHelpers;
@@ -17,7 +17,7 @@ use SubtitleToolbox\WriteOptions;
  */
 abstract class SubtitleFormatter
 {
-    /** @var class-string<FormatWriteOptions>|null the class that WriteOptions::$format must have, or null for none */
+    /** @var class-string<FormatWriteOptions>|null the class that the formatter reads from WriteOptions::$formats, or null for none */
     protected const FORMAT_OPTIONS = null;
 
     /** WriteOptions::$bom when it is null. Null leaves the output as the formatter wrote it. */
@@ -32,8 +32,6 @@ abstract class SubtitleFormatter
      */
     protected function applyOutputOptions(string $output, WriteOptions $options): string
     {
-        $this->rejectForeignOptions($options);
-
         return $this->applyBom($this->applyLineEnding($output, $options), $options);
     }
 
@@ -61,38 +59,13 @@ abstract class SubtitleFormatter
 
 
     /**
-     * Returns WriteOptions::$format, or the default options of the format when $options holds none.
+     * Returns the FORMAT_OPTIONS object of WriteOptions::$formats, or the defaults of FORMAT_OPTIONS when the list has none.
      * Returns null for a formatter without format options.
-     *
-     * @throws InvalidArgumentException when WriteOptions::$format holds the settings of another format.
      */
     protected function formatOptions(WriteOptions $options): ?FormatWriteOptions
     {
-        $this->rejectForeignOptions($options);
         $class = static::FORMAT_OPTIONS;
 
-        return $options->format ?? ($class === null ? null : new $class());
-    }
-
-
-    /**
-     * @throws InvalidArgumentException when WriteOptions::$format holds the settings of another format.
-     */
-    protected function rejectForeignOptions(WriteOptions $options): void
-    {
-        $class = static::FORMAT_OPTIONS;
-        if ($options->format !== null && ($class === null || !$options->format instanceof $class)) {
-            $formatter = $this->shortName(static::class);
-            $given     = $this->shortName($options->format::class);
-            throw new InvalidArgumentException($class === null
-                ? "$formatter takes no format options, got $given."
-                : "$formatter takes " . $this->shortName($class) . ", got $given.");
-        }
-    }
-
-
-    private function shortName(string $class): string
-    {
-        return substr(strrchr("\\" . $class, "\\"), 1);
+        return $class === null ? null : FormatOptionsList::find($options->formats, $class) ?? new $class();
     }
 }

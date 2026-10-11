@@ -14,6 +14,7 @@ use SubtitleToolbox\Formatters\Options\AssWriteOptions;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
+use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\Formatters\Options\HtmlTranscriptWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\JsonWriteOptions;
@@ -24,6 +25,7 @@ use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\Formatters\Options\SubViewerWriteOptions;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -174,27 +176,33 @@ class OutputOptionsTest extends TestCase
     }
 
 
-    #[DataProvider("writableFormats")]
-    public function testOptionsOfAnotherFormatThrow(Format $format): void
+    #[DataProvider("textFormats")]
+    public function testTheFormatterUsesItsOwnClassAndIgnoresTheOtherClassesOfTheList(Format $format): void
     {
-        $other = $format === Format::Ass ? new SccWriteOptions() : new AssWriteOptions();
+        $own     = self::options($format);
+        $classes = array_diff(array_unique(array_values(self::OPTIONS_CLASSES)), [self::OPTIONS_CLASSES[$format->value] ?? null]);
+        $others  = array_map(fn (string $class): FormatWriteOptions => new $class(), array_values($classes));
+        $mixed   = new WriteOptions(formats: [...$others, ...$own->formats]);
 
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage(isset(self::OPTIONS_CLASSES[$format->value]) ? ", got AssWriteOptions." : " takes no format options, got AssWriteOptions.");
-        if ($format === Format::Ass) {
-            $this->expectExceptionMessage("AssFormatter takes AssWriteOptions, got SccWriteOptions.");
-        }
-
-        self::subtitle($format)->toString($format, new WriteOptions(format: $other));
+        $this->assertSame(self::subtitle($format)->toString($format, $own), self::subtitle($format)->toString($format, $mixed));
     }
 
 
-    public function testCsvOptionsForSubRipThrow(): void
+    public function testTwoObjectsOfOneClassThrow(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("SubRipFormatter takes no format options, got CsvWriteOptions.");
+        $this->expectExceptionMessage("WriteOptions::\$formats holds 2 CsvWriteOptions objects. Pass at most one per class.");
 
-        self::subtitle(Format::SubRip)->toString(Format::SubRip, new WriteOptions(format: new CsvWriteOptions()));
+        new WriteOptions(formats: [new CsvWriteOptions(), new AssWriteOptions(), new CsvWriteOptions(delimiter: ";")]);
+    }
+
+
+    public function testAReadOptionsClassThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("WriteOptions::\$formats takes FormatWriteOptions objects, got SubtitleToolbox\\Parsers\\Options\\CsvReadOptions.");
+
+        new WriteOptions(formats: [new CsvReadOptions()]);
     }
 
 
@@ -209,7 +217,7 @@ class OutputOptionsTest extends TestCase
         }
 
         [, $arguments] = self::FORMAT_OPTIONS[$format->value] ?? [null, []];
-        $options       = new WriteOptions(format: new $class(...$arguments));
+        $options       = new WriteOptions(formats: [new $class(...$arguments)]);
 
         $this->assertNotSame("", self::subtitle($format)->toString($format, $options));
     }
@@ -219,7 +227,7 @@ class OutputOptionsTest extends TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "itt/real/fcp_23976_styles.itt"), Format::Itt);
 
-        $output = $subtitle->toString(Format::Itt, new WriteOptions(format: new IttWriteOptions(frameRate: 25)));
+        $output = $subtitle->toString(Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 25)]));
 
         $this->assertStringContainsString('ttp:frameRate="25"', $output);
         $this->assertStringContainsString('ttp:frameRateMultiplier="1 1"', $output);
@@ -231,7 +239,7 @@ class OutputOptionsTest extends TestCase
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "stl/real/harbour_open_30fps.stl"), Format::EbuStl);
         $this->assertSame("STL30.01", substr(file_get_contents(self::FILES . "stl/real/harbour_open_30fps.stl"), 3, 8));
 
-        $output = $subtitle->toString(Format::EbuStl, new WriteOptions(format: new EbuStlWriteOptions(frameRate: 25)));
+        $output = $subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 25)]));
 
         $this->assertSame("STL25.01", substr($output, 3, 8));
     }
@@ -242,7 +250,7 @@ class OutputOptionsTest extends TestCase
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "csv/real/excel_de_semicolon.csv"), Format::Csv);
         $first    = array_values($subtitle->getCues())[0];
 
-        $output = $subtitle->toString(Format::Csv, new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames, frameRate: 25)));
+        $output = $subtitle->toString(Format::Csv, new WriteOptions(formats: [new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames, frameRate: 25)]));
         $start  = sprintf("%02d:%02d:%02d:%02d", ...Timecode::clockSecondsAndFrames($first->getStart(), new FrameRate(25)));
 
         $this->assertStringContainsString("\n$start;", $output);
@@ -282,7 +290,7 @@ class OutputOptionsTest extends TestCase
         $format_  = self::FORMAT_OPTIONS[$format->value] ?? null;
         $options  = fn (bool $stripTags): WriteOptions => new WriteOptions(
             stripTags: $stripTags,
-            format: $format_ === null ? null : new $format_[0](...$format_[1]),
+            formats: $format_ === null ? [] : [new $format_[0](...$format_[1])],
         );
 
         $this->assertNotSame($subtitle->toString($format, $options(false)), $subtitle->toString($format, $options(true)));
@@ -310,7 +318,7 @@ class OutputOptionsTest extends TestCase
         return new WriteOptions(
             lineEnding: $lineEnding,
             bom: $bom,
-            format: $options === null ? null : new $options[0](...$options[1]),
+            formats: $options === null ? [] : [new $options[0](...$options[1])],
         );
     }
 

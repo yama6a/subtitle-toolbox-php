@@ -100,7 +100,7 @@ function imageFixtures(): array
     return [
         "text_1080p.ocr.srt" => (new PgsParser())->parse(file_get_contents("$files/pgs/text_1080p.sup"), new ReadOptions()),
         "text-pal.ocr.srt"   => (new VobSubParser())
-            ->parse(file_get_contents("$files/vobsub/text-pal.sub"), new ReadOptions(format: new VobSubReadOptions(file_get_contents("$files/vobsub/text-pal.idx")))),
+            ->parse(file_get_contents("$files/vobsub/text-pal.sub"), new ReadOptions(formats: [new VobSubReadOptions(file_get_contents("$files/vobsub/text-pal.idx"))])),
     ];
 }
 

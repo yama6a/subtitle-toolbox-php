@@ -131,7 +131,7 @@ class PgsFormatterTest extends TestCase
     public function testVobSubFixturesConvertToPgs(string $name, int $track): void
     {
         $original = (new VobSubParser())
-            ->parse(file_get_contents(self::FILES . "vobsub/$name.sub"), new ReadOptions(format: new VobSubReadOptions(file_get_contents(self::FILES . "vobsub/$name.idx"), track: $track)));
+            ->parse(file_get_contents(self::FILES . "vobsub/$name.sub"), new ReadOptions(formats: [new VobSubReadOptions(file_get_contents(self::FILES . "vobsub/$name.idx"), track: $track)]));
         $written  = self::pgsRoundTrip($original);
 
         $this->assertCount(count($original), $written);

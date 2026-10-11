@@ -45,7 +45,7 @@ class YouTubeTimedTextParserTest extends TestCase
     {
         $parser = new YouTubeTimedTextParser();
 
-        $this->assertSame($expected, $parser->parse($content, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)))->getCues()[0]->getText());
+        $this->assertSame($expected, $parser->parse($content, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]))->getCues()[0]->getText());
     }
 
 
@@ -142,7 +142,7 @@ class YouTubeTimedTextParserTest extends TestCase
         $json   = '{"events": [{"tStartMs": 0, "dDurationMs": 3000, "segs": [{"utf8": "one"}, {"utf8": "\ntwo", "tOffsetMs": 1500}]},
                                {"tStartMs": 3000, "dDurationMs": 1000, "segs": [{"utf8": "[Music]"}]}]}';
 
-        $cues = (new YouTubeTimedTextParser())->parse($json, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)))->getCues();
+        $cues = (new YouTubeTimedTextParser())->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]))->getCues();
 
         $this->assertSame(["<00:00:00.000>one", "<00:00:01.500>two"], $cues[0]->getLines());
         $this->assertSame("[Music]", $cues[1]->getText());

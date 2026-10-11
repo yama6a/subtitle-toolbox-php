@@ -148,7 +148,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
     public function testRetimeKeepsTheWordTimestamps(): void
     {
         copy(self::FILES . "resegmenting/own_whisper_long_segments.json", "$this->dir/lecture.json");
-        $expected = Subtitle::load("$this->dir/lecture.json", Format::Whisper, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)))
+        $expected = Subtitle::load("$this->dir/lecture.json", Format::Whisper, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]))
                             ->shift(1);
 
         $this->assertSame([0, $expected->toString(Format::WebVtt), ""],
@@ -272,7 +272,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
             case "--input-fps":
             case "--fps":
                 $variant = fn (string $text): string => Subtitle::fromString($text, Format::SubRip)
-                                                                ->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(25)));
+                                                                ->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(25)]));
                 $plain   = fn (string $text): string => "{1}{1}25\n" . $variant($text);
                 $input   = "station.sub";
                 break;
@@ -371,7 +371,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
 
         switch ($options[0]) {
             case "--output-fps":
-                $expected = Subtitle::fromString($srt, Format::SubRip)->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(25)));
+                $expected = Subtitle::fromString($srt, Format::SubRip)->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(25)]));
                 $this->assertSame(3, $this->runBinary(self::call($command, "station.srt", to: "microdvd"))[0]);
                 $this->assertSame([0, $expected], array_slice($this->runBinary([...self::call($command, "station.srt", to: "microdvd"), ...$options]), 0, 2));
                 break;
@@ -391,7 +391,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
                 file_put_contents("$this->dir/fit.srt", str_replace("Basel", "\u{160}ibenik", $station));
                 [, $fitSrt] = $this->runBinary(self::call($command, "fit.srt", "srt"));
                 $report     = (new SccFormatter())->formatWithReport(Subtitle::fromString($fitSrt, Format::SubRip),
-                                                                     new WriteOptions(format: new SccWriteOptions(fit: true)));
+                                                                     new WriteOptions(formats: [new SccWriteOptions(fit: true)]));
                 $changes    = implode("", array_map(fn (SccFitChange $change): string => "fit.srt: $change->message ({$change->action->value})\n", $report->changes));
                 $this->assertSame($command === "translate" ? 0 : 3, $this->runBinary(self::call($command, "fit.srt", to: "scc"))[0]);
                 [$code, $scc, $stderr] = $this->runBinary([...self::call($command, "fit.srt", to: "scc"), ...$options]);

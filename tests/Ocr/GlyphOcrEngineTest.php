@@ -52,7 +52,7 @@ class GlyphOcrEngineTest extends TestCase
             ],
             "VobSub 576p, 24 to 30 px" => [
                 fn (): Subtitle => (new VobSubParser())
-                    ->parse(file_get_contents(self::VOBSUB . "text-pal.sub"), new ReadOptions(format: new VobSubReadOptions(file_get_contents(self::VOBSUB . "text-pal.idx")))),
+                    ->parse(file_get_contents(self::VOBSUB . "text-pal.sub"), new ReadOptions(formats: [new VobSubReadOptions(file_get_contents(self::VOBSUB . "text-pal.idx"))])),
                 self::VOBSUB . "text-pal.ocr.srt",
                 array_column(TEXT_CUES, 2),
                 0.97,

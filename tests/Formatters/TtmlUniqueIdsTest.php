@@ -46,7 +46,7 @@ class TtmlUniqueIdsTest extends TestCase
 
     private function write(Subtitle $subtitle, Format $format): string
     {
-        $options  = $format === Format::Itt ? new WriteOptions(format: new IttWriteOptions(frameRate: 25)) : new WriteOptions();
+        $options  = $format === Format::Itt ? new WriteOptions(formats: [new IttWriteOptions(frameRate: 25)]) : new WriteOptions();
         $warnings = [];
         set_error_handler(function (int $level, string $message) use (&$warnings): bool {
             $warnings[] = $message;

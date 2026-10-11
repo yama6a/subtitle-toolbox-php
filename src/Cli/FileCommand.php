@@ -8,8 +8,6 @@ use SubtitleToolbox\Container\Containers;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\FormatRegistry;
-use SubtitleToolbox\OptionsCopy;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
@@ -184,6 +182,7 @@ abstract class FileCommand extends Command
         $this->readOptions = new ReadOptions(
             encoding: $arguments->value("encoding"),
             lenient: $arguments->has("lenient"),
+            formats: $this->formatOptions(),
         );
     }
 
@@ -440,23 +439,14 @@ abstract class FileCommand extends Command
             return Subtitle::loadTrack($path, $track, $this->readOptions);
         }
         if ($format !== null) {
-            return $this->parse(fn (): Subtitle => Subtitle::load($path, $format, $this->readOptionsFor($format)), fn (): Format => $format);
+            return $this->parse(fn (): Subtitle => Subtitle::load($path, $format, $this->readOptions), fn (): Format => $format);
         }
         if (Containers::detectFile($path) !== null) {
             return Subtitle::loadAutoDetectFormat($path, $this->readOptions);
         }
-        $detectFromFile = fn (): ?Format => $this->detectFormat((string) @file_get_contents($path), $path);
-        if (!$this->hasFormatOptions()) {
-            return $this->parse(fn (): Subtitle => Subtitle::loadAutoDetectFormat($path, $this->readOptions), $detectFromFile);
-        }
 
-        $content = @file_get_contents($path);
-        $format  = $content === false ? null : $this->detectFormat($content, $path);
-        if ($format === null || $format === Format::VobSub) {
-            return $this->parse(fn (): Subtitle => Subtitle::loadAutoDetectFormat($path, $this->readOptions), $detectFromFile);
-        }
-
-        return $this->parse(fn (): Subtitle => Subtitle::fromString($content, $format, $this->readOptionsFor($format)), fn (): Format => $format);
+        return $this->parse(fn (): Subtitle => Subtitle::loadAutoDetectFormat($path, $this->readOptions),
+                            fn (): ?Format => $this->detectFormat((string) @file_get_contents($path), $path));
     }
 
 
@@ -479,12 +469,6 @@ abstract class FileCommand extends Command
     }
 
 
-    private function hasFormatOptions(): bool
-    {
-        return $this->inputFps !== null || $this->wordTimestamps || $this->sccRollUp !== null;
-    }
-
-
     private function detectFormat(string $content, ?string $path): ?Format
     {
         try {
@@ -496,45 +480,19 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns the format of standard input without --from when --input-fps, word timestamps or --scc-roll-up apply to it.
-     * Returns null for format detection otherwise. The read then passes them in the read options of that format.
+     * Returns the read options of --input-fps for MicroDVD and CSV, of the word timestamps for the transcript formats and of --scc-roll-up for SCC.
+     * Each parser uses only the object of its own class.
+     *
+     * @return list<FormatReadOptions>
      */
-    private function stdinFormatWithOptions(string $content): ?Format
+    private function formatOptions(): array
     {
-        if (!$this->hasFormatOptions()) {
-            return null;
-        }
-        $format = $this->detectFormat($content, null);
-
-        return $format !== null && $this->formatOptions($format) !== null ? $format : null;
-    }
-
-
-    private function readOptionsFor(Format $format): ReadOptions
-    {
-        $formatOptions = $this->formatOptions($format);
-        if ($formatOptions === null) {
-            return $this->readOptions;
-        }
-
-        return OptionsCopy::with($this->readOptions, ["format" => $formatOptions]);
-    }
-
-
-    /**
-     * Returns --input-fps for the formats that read a frame rate, the word timestamps for the transcript formats and --scc-roll-up for SCC.
-     */
-    private function formatOptions(Format $format): ?FormatReadOptions
-    {
-        $class = FormatRegistry::readOptionsClass($format);
-
-        return match (true) {
-            $this->inputFps !== null && $class === MicroDvdReadOptions::class => new MicroDvdReadOptions($this->inputFps),
-            $this->inputFps !== null && $class === CsvReadOptions::class      => new CsvReadOptions(frameRate: $this->inputFps),
-            $this->wordTimestamps && $class === TranscriptReadOptions::class  => new TranscriptReadOptions(wordTimestamps: true),
-            $this->sccRollUp !== null && $class === SccReadOptions::class     => new SccReadOptions(rollUp: $this->sccRollUp),
-            default                                                           => null,
-        };
+        return array_values(array_filter([
+            $this->inputFps === null ? null : new MicroDvdReadOptions($this->inputFps),
+            $this->inputFps === null ? null : new CsvReadOptions(frameRate: $this->inputFps),
+            $this->wordTimestamps ? new TranscriptReadOptions(wordTimestamps: true) : null,
+            $this->sccRollUp === null ? null : new SccReadOptions(rollUp: $this->sccRollUp),
+        ]));
     }
 
 
@@ -556,10 +514,10 @@ abstract class FileCommand extends Command
             self::fail("VobSub needs the path of the .idx file. Standard input does not work.");
         }
 
-        $format = $this->fromFormat ?? $this->stdinFormatWithOptions($content);
+        $format = $this->fromFormat;
 
         return $format === null
             ? $this->parse(fn (): Subtitle => Subtitle::fromStringAutoDetectFormat($content, $this->readOptions), fn (): ?Format => $this->detectFormat($content, null))
-            : $this->parse(fn (): Subtitle => Subtitle::fromString($content, $format, $this->readOptionsFor($format)), fn (): Format => $format);
+            : $this->parse(fn (): Subtitle => Subtitle::fromString($content, $format, $this->readOptions), fn (): Format => $format);
     }
 }

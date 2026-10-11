@@ -40,8 +40,6 @@ final class SubRipFormatter extends SubtitleFormatter
     {
         $block = $this->formatNumberedCue($cue, $cueIndex, $options);
 
-        $this->rejectForeignOptions($options);
-
         return $this->applyLineEnding($block, $options);
     }
 

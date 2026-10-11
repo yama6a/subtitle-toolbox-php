@@ -59,7 +59,7 @@ class JsonRealFilesTest extends TestCase
     {
         $json = file_get_contents(self::DIR . $fileName);
 
-        $this->assertSame($json, Subtitle::fromStringAutoDetectFormat($json)->toString(Format::Json, new WriteOptions(format: new JsonWriteOptions(prettyPrint: true))));
+        $this->assertSame($json, Subtitle::fromStringAutoDetectFormat($json)->toString(Format::Json, new WriteOptions(formats: [new JsonWriteOptions(prettyPrint: true)])));
     }
 
 

@@ -10,7 +10,7 @@ use SubtitleToolbox\WriteOptions;
 
 $array = $subtitle->toArray();                     // toArray(false) leaves out the format data
 $copy  = Subtitle::fromArray($array);              // equal to $subtitle
-$json  = $subtitle->toString(Format::Json, new WriteOptions(format: new JsonWriteOptions(prettyPrint: true)));
+$json  = $subtitle->toString(Format::Json, new WriteOptions(formats: [new JsonWriteOptions(prettyPrint: true)]));
 $copy  = Subtitle::fromString($json, Format::Json);
 ```
 

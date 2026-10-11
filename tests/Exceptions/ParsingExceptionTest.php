@@ -55,7 +55,7 @@ class ParsingExceptionTest extends TestCase
     public static function parsersThatKnowTheLine(): array
     {
         return [
-            "MicroDVD line without frames" => [new MicroDvdParser(), "{0}{25}first\n\nsecond\n", 3, new ReadOptions(format: new MicroDvdReadOptions(25))],
+            "MicroDVD line without frames" => [new MicroDvdParser(), "{0}{25}first\n\nsecond\n", 3, new ReadOptions(formats: [new MicroDvdReadOptions(25)])],
             "ASS event with few fields"    => [new AssParser(), "[Events]\nFormat: Layer, Start, End, Text\n\nDialogue: 0\n", 4],
             "ASS event format without End" => [new AssParser(), "[Events]\nFormat: Start, Text\nDialogue: 0:00:01.00,text\n", 3],
             "MPSub unknown line"           => [new MpSubParser(), "FORMAT=TIME\n\n0 1\nfirst\n\nsecond\n", 6],

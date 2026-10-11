@@ -110,7 +110,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $latin1   = Subtitle::load('latin1.srt', Format::SubRip, new ReadOptions(encoding: 'Windows-1252'));
-$microDvd = Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(frameRate: 23.976)));
+$microDvd = Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 23.976)]));
 ```
 
 See [read-options.md](docs/read-options.md) for the options of each format.

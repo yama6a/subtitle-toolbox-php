@@ -22,7 +22,17 @@ TODO #771
 
 ## Read and write options
 
-TODO #709
+| 3.x | 4.0 |
+|:--- |:--- |
+| `new ReadOptions(format: new MicroDvdReadOptions(frameRate: 25))` | `new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 25)])` |
+| `new WriteOptions(format: new CsvWriteOptions(delimiter: ';'))` | `new WriteOptions(formats: [new CsvWriteOptions(delimiter: ';')])` |
+| `$options->format` | `$options->formats`, a list |
+| `catch (InvalidArgumentException $e)` around `fromStringAutoDetectFormat($srt, new ReadOptions(format: new MicroDvdReadOptions(frameRate: 25)))` | no exception. The SubRip parser ignores `MicroDvdReadOptions` |
+
+- **List of classes**: `ReadOptions::$formats` and `WriteOptions::$formats` replace `$format`. Each takes at most one object per class. `format:` is removed.
+- **Other formats**: each parser and formatter uses the object of its own class and ignores the others. In 3.x, the class of another format threw `InvalidArgumentException`.
+- **Mixed input**: one `ReadOptions` object can hold the settings of every format that detection may find, for example `MicroDvdReadOptions` and `CsvReadOptions` for a batch of `.sub` and `.csv` files.
+- **New errors**: 2 objects of one class throw `InvalidArgumentException`. So does a write class in `ReadOptions` or a read class in `WriteOptions`.
 
 ## Exceptions
 

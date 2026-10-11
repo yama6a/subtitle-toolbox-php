@@ -67,9 +67,9 @@ use SubtitleToolbox\Subtitle;
 
 $sub      = file_get_contents('movie.sub');
 $idx      = file_get_contents('movie.idx');
-$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions(idx: $idx)));                   // first track
-$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions(idx: $idx, language: 'de')));   // first track with "id: de"
-$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions(idx: $idx, track: 1)));         // track with "index: 1"
+$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions(idx: $idx)]));                   // first track
+$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions(idx: $idx, language: 'de')]));   // first track with "id: de"
+$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions(idx: $idx, track: 1)]));         // track with "index: 1"
 
 $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);  // "de", from the id line
 ```

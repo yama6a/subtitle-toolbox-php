@@ -54,7 +54,7 @@ class RubyFallbackTest extends TestCase
     public static function textFormatProvider(): array
     {
         return [
-            "MicroDVD"            => [Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25))],
+            "MicroDVD"            => [Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25)])],
             "MPL2"                => [Format::Mpl2, new WriteOptions()],
             "TMPlayer"            => [Format::TmPlayer, new WriteOptions()],
             "SubViewer"           => [Format::SubViewer, new WriteOptions()],
@@ -62,7 +62,7 @@ class RubyFallbackTest extends TestCase
             "TSV"                 => [Format::Tsv, new WriteOptions()],
             "MPSub"               => [Format::MpSub, new WriteOptions()],
             "LRC"                 => [Format::Lyrics, new WriteOptions()],
-            "iTT"                 => [Format::Itt, new WriteOptions(format: new IttWriteOptions(frameRate: 25))],
+            "iTT"                 => [Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 25)])],
             "HTML transcript"     => [Format::HtmlTranscript, new WriteOptions()],
             "Podcast transcript"  => [Format::PodcastTranscript, new WriteOptions()],
             "FFmetadata chapters" => [Format::FfMetadataChapters, new WriteOptions()],
