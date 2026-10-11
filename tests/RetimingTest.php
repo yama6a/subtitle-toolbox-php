@@ -77,41 +77,15 @@ class RetimingTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testSyncByTwoPoints(): void
+    public function testSyncByPointsWithTwoPoints(): void
     {
         $subtitle = TestSubtitles::fromTimes([[10, 12], [3130, 3132], [6260, 6262]]);
 
-        $this->assertSame($subtitle, $subtitle->syncByTwoPoints(10, 12, 6260, 6005));
+        $this->assertSame($subtitle, $subtitle->syncByPoints([new SyncPoint(10, 12), new SyncPoint(6260, 6005)]));
         $this->assertSame(
             [[12.0, 13.918], [3003.706, 3005.623], [6005.0, 6006.918]],
             TestSubtitles::times($subtitle)
         );
-    }
-
-
-    public function testSyncByTwoPointsClampsNegativeTimesToZero(): void
-    {
-        $subtitle = TestSubtitles::fromTimes([[1, 2], [10, 11]]);
-
-        $subtitle->syncByTwoPoints(10, 5, 20, 15);
-
-        $this->assertSame([[0.0, 0.0], [5.0, 6.0]], TestSubtitles::times($subtitle));
-    }
-
-
-    public function testSyncByTwoPointsWithEqualOldTimesThrowsException(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("The two old times must differ, got 10 twice.");
-        TestSubtitles::fromTimes([[1, 2]])->syncByTwoPoints(10, 12, 10, 15);
-    }
-
-
-    public function testSyncByTwoPointsWithReversedOrderThrowsException(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("The two new times must be in the same order as the two old times.");
-        TestSubtitles::fromTimes([[1, 2]])->syncByTwoPoints(10, 20, 30, 15);
     }
 
 
@@ -165,18 +139,6 @@ class RetimingTest extends \PHPUnit\Framework\TestCase
         $subtitle->syncByPoints([new SyncPoint(10, 12)]);
 
         $this->assertSame([[12.0, 14.5], [22.25, 24.0]], TestSubtitles::times($subtitle));
-    }
-
-
-    public function testSyncByPointsWithTwoPointsEqualsSyncByTwoPoints(): void
-    {
-        $expected = Subtitle::load(self::EDITING . "own_ferry_drift.vtt", Format::WebVtt)->syncByTwoPoints(10, 12, 1200, 1205);
-        $actual   = Subtitle::load(self::EDITING . "own_ferry_drift.vtt", Format::WebVtt)->syncByPoints([new SyncPoint(10, 12), new SyncPoint(1200, 1205)]);
-
-        $this->assertSame($expected->toString(Format::WebVtt), $actual->toString(Format::WebVtt));
-        foreach ($expected->getCues() as $index => $cue) {
-            $this->assertSame([$cue->getStart(), $cue->getEnd()], [$actual->getCues()[$index]->getStart(), $actual->getCues()[$index]->getEnd()]);
-        }
     }
 
 

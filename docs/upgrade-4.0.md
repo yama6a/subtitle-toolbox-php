@@ -20,7 +20,16 @@ TODO #710 #715
 
 ## Sync
 
-TODO #772
+`Subtitle::syncByTwoPoints()` is removed. `syncByPoints()` with 2 `SyncPoint` objects gives the same result.
+
+```php
+// 3.x
+$subtitle->syncByTwoPoints(10, 12, 6260, 6005);
+// 4.0
+$subtitle->syncByPoints([new SyncPoint(oldSeconds: 10, newSeconds: 12), new SyncPoint(oldSeconds: 6260, newSeconds: 6005)]);
+```
+
+`syncByTwoPoints()` took its 2 points in either order. `syncByPoints()` needs the old and new times to increase from point to point.
 
 ## CLI diff
 

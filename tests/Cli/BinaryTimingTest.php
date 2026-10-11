@@ -13,6 +13,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Sync\ReferenceSync;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Sync\SpeechReference;
+use SubtitleToolbox\SyncPoint;
 use SubtitleToolbox\Tests\Support\BinaryTestCase;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChanges;
@@ -114,10 +115,10 @@ class BinaryTimingTest extends BinaryTestCase
     }
 
 
-    public function testRetimeSyncFirstAndLastEqualsSyncByTwoPoints(): void
+    public function testRetimeSyncFirstAndLastEqualsSyncByPoints(): void
     {
         copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");
-        $expected = Subtitle::load(self::FILES . "editing/own_ferry_drift.vtt", Format::WebVtt)->syncByTwoPoints(5, 12.5, 1500, 6065)->toString(Format::WebVtt);
+        $expected = Subtitle::load(self::FILES . "editing/own_ferry_drift.vtt", Format::WebVtt)->syncByPoints([new SyncPoint(5, 12.5), new SyncPoint(1500, 6065)])->toString(Format::WebVtt);
 
         $this->assertSame([0, $expected, ""], $this->runBinary(["retime", "ferry.vtt", "--sync", "first=00:00:12.5", "--sync", "last=01:41:05"]));
         $this->assertSame([0, $expected, ""], $this->runBinary(["retime", "ferry.vtt", "--sync=#1=12.5", "--sync", "#5=6065"]));
