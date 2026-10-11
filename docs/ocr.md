@@ -48,7 +48,7 @@ file_put_contents('movie.synced.sup', $subtitle->toString(Format::Pgs));
 - **Cues**: each display set that shows objects gives one cue. It ends at the next display set. A display set that repeats the same image does not start a new cue. A last cue that no later display set ends lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **Image**: one PNG covers all objects of the display set on a transparent background. The parser applies cropping, windows and palette updates. Where objects overlap, the parser draws a later object over the earlier ones with alpha blending. A transparent pixel keeps the pixel below.
 - **Forced**: `forced` in the image data is true when at least one object of the display set has the forced flag.
-- **Alignment**: an image whose center is in the top third of the screen gets alignment 8.
+- **Alignment**: an image whose center is in the top third of the screen gets `Alignment::TopCenter`.
 - **Errors**: the parser skips segments of unknown types. It throws `ParsingException` for a segment without the `PG` bytes, a cut-off segment, and a bitmap with too few pixels.
 - **Formatter**: `PgsFormatter` writes image cues back to a `.sup` file. So you can retime, cut or filter a PGS file without OCR. It also converts VobSub to PGS. It does not render text, and throws `UnwritableContentException` for a cue without an image.
 - **Overlaps**: while 2 image cues overlap, the formatter shows both images in the same display sets, as 2 objects. PGS shows at most 2 objects at one time, so a third overlapping cue replaces the cue that started first. A cue that starts at the end of the previous cue replaces it. `PgsParser` reads the overlap back as one cue with one image of both objects.

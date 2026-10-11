@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\TtmlNamespaces;
@@ -113,7 +114,7 @@ final class TtmlFormatter extends SubtitleFormatter
 
         $cueData     = $cue->findFormatData(TtmlParser::FORMAT_DATA_KEY);
         $stored      = $cueData["attributes"] ?? [];
-        $realigned   = ($cueData["alignment"] ?? null) !== $cue->getAlignment();
+        $realigned   = ($cueData["alignment"] ?? Alignment::BottomCenter->value) !== $cue->getAlignment()->value;
         if ($realigned) {
             unset($stored["region"]);
         }
@@ -126,11 +127,11 @@ final class TtmlFormatter extends SubtitleFormatter
         }
         $stored      = $this->writableAttributes($context, $stored, ["xml:id", "begin", "end", "dur"]);
         if ($realigned) {
-            $stored = $this->withTextAlign($context, $styles, $containers, $stored, $cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT);
+            $stored = $this->withTextAlign($context, $styles, $containers, $stored, $cue->getAlignment());
         }
         $attributes .= $this->formatWritableAttributes($context, $stored);
-        if (!isset($stored["region"]) && ($cue->getAlignment() !== null || $isForeignSubtitle || $realigned)) {
-            $attributes .= $this->formatAttribute("region", TtmlHead::regionId($context, $cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT));
+        if (!isset($stored["region"]) && ($cue->getAlignment() !== Alignment::BottomCenter || $isForeignSubtitle || $realigned)) {
+            $attributes .= $this->formatAttribute("region", TtmlHead::regionId($context, $cue->getAlignment()));
         }
         if ($forced !== $cue->isForced() && $forcedName === null) {
             $attributes .= $this->formatAttribute($this->ittsPrefix($context) . ":forcedDisplay", $cue->isForced() ? "true" : "false");
@@ -160,13 +161,13 @@ final class TtmlFormatter extends SubtitleFormatter
      *
      * @param list<array<string, string>> $containers the style properties of <body> and <div>
      */
-    private function withTextAlign(TtmlContext $context, TtmlStyles $styles, array $containers, array $attributes, int $alignment): array
+    private function withTextAlign(TtmlContext $context, TtmlStyles $styles, array $containers, array $attributes, Alignment $alignment): array
     {
         $textAlign = null;
         foreach ([...$containers, $this->styleProperties($context, $styles, $attributes)] as $properties) {
             $textAlign = $properties["textAlign"] ?? $textAlign;
         }
-        $column = ["left", "center", "right"][($alignment - 1) % 3];
+        $column = ["left", "center", "right"][($alignment->value - 1) % 3];
         if ($textAlign !== null && trim($textAlign) !== $column) {
             $attributes["$context->tts:textAlign"] = $column;
         }

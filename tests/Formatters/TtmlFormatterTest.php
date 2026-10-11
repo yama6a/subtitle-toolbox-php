@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -81,8 +82,8 @@ class TtmlFormatterTest extends TestCase
     {
         $path     = __DIR__ . "/../files/ttml/real/pysubs2_regions.ttml";
         $subtitle = Subtitle::load($path, Format::Ttml);
-        $subtitle->getCues()[0]->setAlignment(2);
-        $subtitle->getCues()[1]->setAlignment(9);
+        $subtitle->getCues()[0]->setAlignment(Alignment::BottomCenter);
+        $subtitle->getCues()[1]->setAlignment(Alignment::TopRight);
 
         $output    = $subtitle->toString(Format::Ttml);
         $unchanged = Subtitle::load($path, Format::Ttml)->toString(Format::Ttml);
@@ -94,8 +95,8 @@ class TtmlFormatterTest extends TestCase
             array_slice(explode("\n", $output), -11)
         );
         $this->assertSame(
-            [2, 9, 8, 2],
-            array_map(fn (SubtitleCue $cue): ?int => $cue->getAlignment(), array_slice(Subtitle::fromString($output, Format::Ttml)->getCues(), 0, 4))
+            [Alignment::BottomCenter, Alignment::TopRight, Alignment::TopCenter, Alignment::BottomCenter],
+            array_map(fn (SubtitleCue $cue): Alignment => $cue->getAlignment(), array_slice(Subtitle::fromString($output, Format::Ttml)->getCues(), 0, 4))
         );
     }
 
@@ -103,16 +104,16 @@ class TtmlFormatterTest extends TestCase
     public function testOutputParsesBackToTheSameCues(): void
     {
         $subtitle = new Subtitle();
-        $subtitle->addCue((new SubtitleCue(1, 2, "<v Ann>one</v> <v Ben>two\n<b>bold <i>open"))->setAlignment(4));
+        $subtitle->addCue((new SubtitleCue(1, 2, "<v Ann>one</v> <v Ben>two\n<b>bold <i>open"))->setAlignment(Alignment::MiddleLeft));
         $subtitle->addCue(new SubtitleCue(3, 4, "<i>mis<b>nested</i>tags</b> &lt;3 <c.yellow>class</c> <00:00:03.500>word"));
 
         $reparsed = Subtitle::fromString($subtitle->toString(Format::Ttml), Format::Ttml);
         $cues     = $reparsed->getCues();
 
         $this->assertSame("<v Ann>one </v><v Ben>two\n<b>bold <i>open</i></b>", $cues[0]->getText());
-        $this->assertSame(4, $cues[0]->getAlignment());
+        $this->assertSame(Alignment::MiddleLeft, $cues[0]->getAlignment());
         $this->assertSame("<i>mis</i><b><i>nested</i>tags</b> &lt;3 <font color=\"#ffff00\">class</font> word", $cues[1]->getText());
-        $this->assertSame(2, $cues[1]->getAlignment());
+        $this->assertSame(Alignment::BottomCenter, $cues[1]->getAlignment());
     }
 
 

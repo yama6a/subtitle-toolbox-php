@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use DOMElement;
 use DOMNode;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\TtmlNamespaces;
@@ -18,13 +19,6 @@ use SubtitleToolbox\XmlLoader;
  */
 final class TtmlHead
 {
-    private const REGION_NAMES = [
-        1 => "bottomLeft", 2 => "bottomCenter", 3 => "bottomRight",
-        4 => "middleLeft", 5 => "middleCenter", 6 => "middleRight",
-        7 => "topLeft", 8 => "topCenter", 9 => "topRight",
-    ];
-
-
     public static function load(string $namespace, array $stored, string $headXml): TtmlContext
     {
         $namespaces = ["" => $namespace];
@@ -129,10 +123,10 @@ final class TtmlHead
     /**
      * Adds a region for the alignment, in the shape of the IMSC 1.1 examples with a safe area of 10%.
      */
-    public static function regionId(TtmlContext $context, int $alignment): string
+    public static function regionId(TtmlContext $context, Alignment $alignment): string
     {
-        if (isset($context->regionIds[$alignment])) {
-            return $context->regionIds[$alignment];
+        if (isset($context->regionIds[$alignment->value])) {
+            return $context->regionIds[$alignment->value];
         }
 
         $layout = null;
@@ -146,17 +140,17 @@ final class TtmlHead
             self::insertChild($context->head, $layout, null, 2);
         }
 
-        $id     = self::unusedId($context, self::REGION_NAMES[$alignment]);
+        $id     = self::unusedId($context, lcfirst($alignment->name));
         $region = $context->headDocument->createElementNS($context->namespace, "region");
         $region->setAttributeNS(TtmlNamespaces::XML, "xml:id", $id);
         $uri = $context->namespaces[$context->tts];
         $region->setAttributeNS($uri, "$context->tts:origin", "10% 10%");
         $region->setAttributeNS($uri, "$context->tts:extent", "80% 80%");
-        $region->setAttributeNS($uri, "$context->tts:displayAlign", ["after", "center", "before"][intdiv($alignment - 1, 3)]);
-        $region->setAttributeNS($uri, "$context->tts:textAlign", ["left", "center", "right"][($alignment - 1) % 3]);
+        $region->setAttributeNS($uri, "$context->tts:displayAlign", ["after", "center", "before"][intdiv($alignment->value - 1, 3)]);
+        $region->setAttributeNS($uri, "$context->tts:textAlign", ["left", "center", "right"][($alignment->value - 1) % 3]);
         self::insertChild($layout, $region, null, 3);
 
-        return $context->regionIds[$alignment] = $id;
+        return $context->regionIds[$alignment->value] = $id;
     }
 
 

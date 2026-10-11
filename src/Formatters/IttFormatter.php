@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\FrameRate;
@@ -136,7 +137,7 @@ final class IttFormatter extends SubtitleFormatter
                 ->setIdentifier($cue->getIdentifier())
                 ->setForced($cue->isForced());
             $copy->setFormatData(TtmlParser::FORMAT_DATA_KEY, [
-                "attributes" => ["region" => in_array($cue->getAlignment(), [7, 8, 9], true) ? "top" : "bottom"],
+                "attributes" => ["region" => in_array($cue->getAlignment(), [Alignment::TopLeft, Alignment::TopCenter, Alignment::TopRight], true) ? "top" : "bottom"],
             ]);
             $copies[] = $copy;
         }

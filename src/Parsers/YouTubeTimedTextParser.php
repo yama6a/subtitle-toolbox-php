@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use DOMElement;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
@@ -39,7 +40,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
             if ($cue->getLines() === []) {
                 continue;
             }
-            $cue->setAlignment($caption["alignment"]);
+            $cue->setAlignment(Alignment::from($caption["alignment"] ?? Alignment::BottomCenter->value));
             if ($caption["formatData"] !== []) {
                 $cue->setFormatData(self::FORMAT_DATA_KEY, $caption["formatData"]);
             }

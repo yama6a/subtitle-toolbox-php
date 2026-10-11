@@ -255,7 +255,7 @@ trait CueEditing
             $first = $last === null ? null : $groups[$last][0];
             if ($first !== null && !CueImage::isImageCue($first) && !CueImage::isImageCue($cue)
                 && $first->isForced() === $cue->isForced()
-                && ($first->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT) === ($cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT)
+                && $first->getAlignment() === $cue->getAlignment()
                 && abs(Timecode::roundToMilliseconds($cue->getStart() - $first->getStart())) <= $tolerance
                 && abs(Timecode::roundToMilliseconds($cue->getEnd() - $first->getEnd())) <= $tolerance) {
                 $groups[$last][] = $cue;

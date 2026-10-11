@@ -8,20 +8,6 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 final class SubtitleCue
 {
-    /**
-     * The alignment that formatters write for a cue without one: bottom center, 2 on the numpad.
-     *
-     * @internal
-     */
-    public const DEFAULT_ALIGNMENT = 2;
-
-    /**
-     * The alignment of a cue at the top of the screen: top center, 8 on the numpad.
-     *
-     * @internal
-     */
-    public const TOP_CENTER_ALIGNMENT = 8;
-
     private float $start = 0;
 
     private float $end = 0;
@@ -31,7 +17,7 @@ final class SubtitleCue
 
     private ?string $identifier = null;
 
-    private ?int $alignment = null;
+    private Alignment $alignment = Alignment::BottomCenter;
 
     private bool $forced = false;
 
@@ -184,21 +170,17 @@ final class SubtitleCue
     }
 
 
-    public function getAlignment(): ?int
+    /**
+     * Returns Alignment::BottomCenter for a cue without a position, the default of every format.
+     */
+    public function getAlignment(): Alignment
     {
         return $this->alignment;
     }
 
 
-    /**
-     * Sets the position from 1 to 9 in numeric keypad layout, or null for the format default.
-     */
-    public function setAlignment(?int $alignment): self
+    public function setAlignment(Alignment $alignment): self
     {
-        if ($alignment !== null && !OptionChecks::isAlignment($alignment)) {
-            throw new InvalidArgumentException("The alignment must be a number from 1 to 9, got $alignment.");
-        }
-
         $this->alignment = $alignment;
 
         return $this;

@@ -205,11 +205,11 @@ class ShortCueMergingTest extends TestCase
     public function testNeverJoinsDifferentAlignmentsForcedFlagsOrImageCues(): void
     {
         $subtitle = TestSubtitles::fromCues([[0, 0.5, "One"], [0.5, 1, "two"]]);
-        $subtitle->getCues()[1]->setAlignment(8);
+        $subtitle->getCues()[1]->setAlignment(Alignment::TopCenter);
         $this->assertCount(2, $subtitle->mergeShortCues(new MergeShortCuesOptions())->getCues());
 
         $subtitle = TestSubtitles::fromCues([[0, 0.5, "One"], [0.5, 1, "two"]]);
-        $subtitle->getCues()[1]->setAlignment(2);
+        $subtitle->getCues()[1]->setAlignment(Alignment::BottomCenter);
         $this->assertCount(1, $subtitle->mergeShortCues(new MergeShortCuesOptions())->getCues());
 
         $subtitle = TestSubtitles::fromCues([[0, 0.5, "One"], [0.5, 1, "two"]]);

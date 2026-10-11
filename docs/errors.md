@@ -47,7 +47,7 @@ try {
 ## Invalid arguments
 `InvalidArgumentException` covers these cases:
 
-- An invalid value, for example alignment 10, frame rate 0 or NAN in a number option.
+- An invalid value, for example frame rate 0 or NAN in a number option.
 - A missing MicroDVD output frame rate.
 - 2 objects of one class in `ReadOptions::$formats` or `WriteOptions::$formats`, or a write class in `ReadOptions` and a read class in `WriteOptions`.
 - A missing OCR engine, a missing `tesseract` program, a missing Tesseract language or a missing php-glyph-ocr package.

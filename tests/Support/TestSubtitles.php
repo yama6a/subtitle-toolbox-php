@@ -60,14 +60,14 @@ final class TestSubtitles
 
 
     /**
-     * @return list<array{float, float, string}>|list<array{float, float, string, ?int}> [start, end, text] of each
+     * @return list<array{float, float, string}>|list<array{float, float, string, int}> [start, end, text] of each
      *         cue, with the alignment as 4th value when $withAlignment is true
      */
     public static function describe(Subtitle $subtitle, bool $withAlignment = false): array
     {
         return array_map(
             fn (SubtitleCue $cue): array => $withAlignment
-                ? [$cue->getStart(), $cue->getEnd(), $cue->getText(), $cue->getAlignment()]
+                ? [$cue->getStart(), $cue->getEnd(), $cue->getText(), $cue->getAlignment()->value]
                 : [$cue->getStart(), $cue->getEnd(), $cue->getText()],
             array_values($subtitle->getCues())
         );

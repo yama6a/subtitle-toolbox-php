@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Image\CueImage;
@@ -242,7 +243,7 @@ final class PgsParser extends SubtitleParser
         $image = $this->shownImage["image"];
         $cue   = $image->toCue(new SubtitleCue($this->shownImage["start"], $end));
         if ((2 * $image->y + $image->height) * 3 < 2 * $image->screenHeight) {
-            $cue->setAlignment(SubtitleCue::TOP_CENTER_ALIGNMENT);
+            $cue->setAlignment(Alignment::TopCenter);
         }
 
         $this->cues[] = $cue;

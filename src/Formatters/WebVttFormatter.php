@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\WebVttParser;
@@ -182,7 +183,7 @@ final class WebVttFormatter extends SubtitleFormatter
     private function formatSettings(SubtitleCue $cue): string
     {
         $stored    = $cue->findFormatData(WebVttParser::FORMAT_DATA_KEY);
-        $unchanged = ($stored["alignment"] ?? null) === $cue->getAlignment();
+        $unchanged = ($stored["alignment"] ?? Alignment::BottomCenter->value) === $cue->getAlignment()->value;
         $names     = $unchanged ? WebVttParser::CUE_SETTINGS : array_diff(WebVttParser::CUE_SETTINGS, self::POSITION_SETTINGS);
         $settings  = [];
         foreach ($stored as $name => $value) {
@@ -190,11 +191,11 @@ final class WebVttFormatter extends SubtitleFormatter
                 $settings[] = "$name:$value";
             }
         }
-        if ($unchanged && $settings !== [] || $cue->getAlignment() === null) {
+        if ($unchanged && $settings !== [] || $cue->getAlignment() === Alignment::BottomCenter) {
             return implode(" ", $settings);
         }
 
-        $alignment = $cue->getAlignment() - 1;
+        $alignment = $cue->getAlignment()->value - 1;
         $settings  = [...$settings, self::ALIGNMENT_ROWS[intdiv($alignment, 3)], self::ALIGNMENT_COLUMNS[$alignment % 3 + 1]];
 
         return implode(" ", array_filter($settings, fn (string $setting): bool => $setting !== ""));

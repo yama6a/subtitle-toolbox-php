@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
@@ -108,7 +109,7 @@ class AssParserTest extends TestCase
 
         $this->assertSame(["<v Conductor>The train to the coast", "leaves from platform four."], $cues[1]->getLines());
         $this->assertSame(["Platform 4: <font color=\"#ffd700\">Coast Express</font>"], $cues[3]->getLines());
-        $this->assertSame(8, $cues[3]->getAlignment());
+        $this->assertSame(Alignment::TopCenter, $cues[3]->getAlignment());
         $this->assertSame(
             ["<b><00:00:13.500>The <00:00:13.900>train <00:00:14.250>leaves <00:00:14.750>at <00:00:15.350>noon</b>"],
             $cues[5]->getLines()
@@ -130,7 +131,7 @@ class AssParserTest extends TestCase
         $this->assertSame(["SUNNY", "25 °C"], $cues[2]->getLines());
         $this->assertSame("1", $cues[2]->findFormatData("ass")["fields"]["Layer"]);
         $this->assertSame([], $cues[3]->getLines());
-        $this->assertSame(7, $cues[3]->getAlignment());
+        $this->assertSame(Alignment::TopLeft, $cues[3]->getAlignment());
         $this->assertSame(["<v Reporter>Expect light rain,\u{00A0}mostly after 10\u{00A0}pm."], $cues[4]->getLines());
         $this->assertSame(["<b><i>Tomorrow:</i></b> dry and windy"], $cues[5]->getLines());
 
@@ -150,7 +151,7 @@ class AssParserTest extends TestCase
         $this->assertSame("V4 Styles", $data["stylesSection"]);
         $this->assertSame(AssFormatLines::SSA_EVENT_FORMAT, $data["eventFormat"]);
         $this->assertSame("-2147483640", $data["styles"][0]["BackColour"]);
-        $this->assertSame(8, $cues[1]->getAlignment());
+        $this->assertSame(Alignment::TopCenter, $cues[1]->getAlignment());
         $this->assertSame("Marked=1", $cues[2]->findFormatData("ass")["fields"]["Marked"]);
         $this->assertSame("!Effect", $cues[3]->findFormatData("ass")["fields"]["Effect"]);
         $this->assertEquals([new Comment("Timetable section", 1)], $subtitle->getComments());
@@ -162,12 +163,12 @@ class AssParserTest extends TestCase
         $cues = $this->parseFile("own_style_flags.ass")->getCues();
 
         $this->assertSame([
-            [["<v Driver>Last stop is the depot."], null],
-            [["<i>I should have taken the earlier bus.</i>"], 8],
-            [["<i>Maybe the driver</i> knows a shortcut."], 2],
-            [["<b><u><s>Depot closed for repairs</s></u></b>"], 7],
-            [["The bus turns left at the bridge."], null],
-            [["<i><b>Left</b></i><i> again</i><b><u><s> already</s></u></b>"], 8],
+            [["<v Driver>Last stop is the depot."], Alignment::BottomCenter],
+            [["<i>I should have taken the earlier bus.</i>"], Alignment::TopCenter],
+            [["<i>Maybe the driver</i> knows a shortcut."], Alignment::BottomCenter],
+            [["<b><u><s>Depot closed for repairs</s></u></b>"], Alignment::TopLeft],
+            [["The bus turns left at the bridge."], Alignment::BottomCenter],
+            [["<i><b>Left</b></i><i> again</i><b><u><s> already</s></u></b>"], Alignment::TopCenter],
         ], array_map(fn (SubtitleCue $cue): array => [$cue->getLines(), $cue->getAlignment()], $cues));
     }
 
@@ -188,7 +189,7 @@ class AssParserTest extends TestCase
             "[V4+ Styles]\nFormat: Name, Italic, Alignment\nStyle: Thoughts,-1,9\n"
         )->getCues()[0];
 
-        $this->assertSame([["<i>Hmm</i>"], 9], [$cue->getLines(), $cue->getAlignment()]);
+        $this->assertSame([["<i>Hmm</i>"], Alignment::TopRight], [$cue->getLines(), $cue->getAlignment()]);
     }
 
 
@@ -199,7 +200,7 @@ class AssParserTest extends TestCase
             "[Events]\nFormat: Marked, Start, End, Style, Text\nDialogue: Marked=0,0:00:01.00,0:00:02.00,Other,Hello\n"
         )->getCues()[0];
 
-        $this->assertSame([["<b>Hello</b>"], 8], [$cue->getLines(), $cue->getAlignment()]);
+        $this->assertSame([["<b>Hello</b>"], Alignment::TopCenter], [$cue->getLines(), $cue->getAlignment()]);
     }
 
 
@@ -262,18 +263,18 @@ class AssParserTest extends TestCase
     public static function alignments(): array
     {
         return [
-            "numpad"            => ["{\\an7}a", 7],
-            "first tag wins"    => ["{\\an7}a{\\an3}b", 7],
-            "legacy top center" => ["{\\a6}a", 8],
-            "legacy middle"     => ["{\\a9}a", 4],
-            "invalid legacy"    => ["{\\a4}a", null],
-            "none"              => ["a", null],
+            "numpad"            => ["{\\an7}a", Alignment::TopLeft],
+            "first tag wins"    => ["{\\an7}a{\\an3}b", Alignment::TopLeft],
+            "legacy top center" => ["{\\a6}a", Alignment::TopCenter],
+            "legacy middle"     => ["{\\a9}a", Alignment::MiddleLeft],
+            "invalid legacy"    => ["{\\a4}a", Alignment::BottomCenter],
+            "none"              => ["a", Alignment::BottomCenter],
         ];
     }
 
 
     #[DataProvider("alignments")]
-    public function testAlignmentTagsSetTheAlignment(string $text, ?int $alignment): void
+    public function testAlignmentTagsSetTheAlignment(string $text, Alignment $alignment): void
     {
         $this->assertSame($alignment, $this->parseText($text)->getAlignment());
     }

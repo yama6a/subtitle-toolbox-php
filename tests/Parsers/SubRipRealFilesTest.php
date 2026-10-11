@@ -136,8 +136,8 @@ class SubRipRealFilesTest extends TestCase
 
         $this->assertSame(["coordinates" => ["x1" => 0, "x2" => 0, "y1" => 50, "y2" => 100]], $cues[1]->findFormatData("srt"));
         $this->assertSame(
-            [null, null, 8, 4, 7, 8, 9, null, null, null],
-            array_map(fn(SubtitleCue $cue) => $cue->getAlignment(), $cues)
+            [2, 2, 8, 4, 7, 8, 9, 2, 2, 2],
+            array_map(fn(SubtitleCue $cue) => $cue->getAlignment()->value, $cues)
         );
         $this->assertSame(["Middle left from the", "middle of a line, the second tag is ignored"], $cues[3]->getLines());
         $this->assertSame(["<i>Italic</i> and <b>bold</b>", "<s>struck</s> and <u>underlined</u>"], $cues[7]->getLines());
@@ -245,8 +245,8 @@ class SubRipRealFilesTest extends TestCase
         $cues = $this->parseFile("language_subtitles_ssa_extensions.srt")->getCues();
 
         $this->assertSame(
-            [7, 8, 9, 4, 5, 6, 1, 2, 3, 1, 2, 3, 7, 8, 9, 4, 5, 6, null],
-            array_map(fn(SubtitleCue $cue) => $cue->getAlignment(), $cues)
+            [7, 8, 9, 4, 5, 6, 1, 2, 3, 1, 2, 3, 7, 8, 9, 4, 5, 6, 2],
+            array_map(fn(SubtitleCue $cue) => $cue->getAlignment()->value, $cues)
         );
         $this->assertSame(["[Deprecated] Middle-centre: \\a10"], $cues[16]->getLines());
     }
@@ -254,15 +254,12 @@ class SubRipRealFilesTest extends TestCase
 
     private function describeCue(SubtitleCue $cue): array
     {
-        // The formatter writes no tag for bottom center, so 2 comes back as the format default null.
-        $alignment = $cue->getAlignment() === 2 ? null : $cue->getAlignment();
-
         // The formatter strips tags outside the SubRip set, for example <foo></foo>.
         $lines = array_values(array_filter(
             explode("\n", Markup::keepTags($cue->getText(), ["b", "u", "i", "s", "font"])),
             fn(string $line) => trim($line) !== ""
         ));
 
-        return [$cue->getStart(), $cue->getEnd(), $lines, $alignment, $cue->findFormatData("srt")];
+        return [$cue->getStart(), $cue->getEnd(), $lines, $cue->getAlignment(), $cue->findFormatData("srt")];
     }
 }

@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
@@ -119,11 +120,23 @@ class AssFormatterTest extends TestCase
     }
 
 
+    public function testBottomCenterFromAnotherFormatGetsNoAlignmentTag(): void
+    {
+        $subtitle = Subtitle::load(__DIR__ . "/../files/vtt/real/w3c_cue_settings.vtt", Format::WebVtt);
+
+        $this->assertSame(Alignment::BottomCenter, $subtitle->getCues()[2]->getAlignment());
+        $this->assertStringEndsWith(
+            "Dialogue: 0,0:00:04.00,0:00:06.50,Default,,0,0,0,,What are you waiting for?\n",
+            $subtitle->toString(Format::Ass)
+        );
+    }
+
+
     public function testCuesFromOtherFormatsGetAMinimalHeader(): void
     {
         $subtitle = (new Subtitle())
             ->addCue(new SubtitleCue(1, 2.5, ["<i>Hello</i>", "world"]))
-            ->addCue((new SubtitleCue(3.004, 4.996, "Top"))->setAlignment(8));
+            ->addCue((new SubtitleCue(3.004, 4.996, "Top"))->setAlignment(Alignment::TopCenter));
 
         $this->assertSame(
             self::DEFAULT_HEADER .
@@ -299,7 +312,7 @@ class AssFormatterTest extends TestCase
         $subtitle = $this->parseFile("own_aegisub.ass");
         $cues     = $subtitle->getCues();
         $cues[2]->setLines(["<v Guard>Is it <i>late</i> today?"]);
-        $cues[3]->setAlignment(7);
+        $cues[3]->setAlignment(Alignment::TopLeft);
 
         $formatted = $subtitle->toString(Format::Ass);
 
@@ -314,7 +327,7 @@ class AssFormatterTest extends TestCase
         $cues     = $subtitle->getCues();
         $cues[1]->setLines(["<i>I should have taken the night bus.</i>"]);
         $cues[2]->setLines(["Upright now"]);
-        $cues[3]->setAlignment(null);
+        $cues[3]->setAlignment(Alignment::BottomCenter);
         $cues[5]->setLines(["<i>Left</i> again"]);
 
         $formatted = $subtitle->toString(Format::Ass);
@@ -333,7 +346,7 @@ class AssFormatterTest extends TestCase
     public function testSsaUsesLegacyAlignmentAndKeepsMarkedColumn(): void
     {
         $subtitle = $this->parseFile("own_ssa_v4.ssa");
-        $subtitle->getCues()[1]->setAlignment(4);
+        $subtitle->getCues()[1]->setAlignment(Alignment::MiddleLeft);
 
         $this->assertStringContainsString(
             "Dialogue: Marked=0,0:00:05.50,0:00:08.00,Notice,,0000,0000,0000,,{\\a9}Next ferry: 9:00\n",

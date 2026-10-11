@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
@@ -103,18 +104,18 @@ class EbuStlParserTest extends TestCase
     public static function positions(): array
     {
         return [
-            "teletext top left"      => ["1", 1, 1, 7],
-            "teletext middle right"  => ["1", 12, 3, 6],
-            "teletext bottom centre" => ["1", 22, 2, 2],
-            "unchanged presentation" => ["1", 22, 0, 2],
-            "open top"               => ["0", 0, 2, 8],
-            "open bottom of 23 rows" => ["0", 20, 2, 2],
+            "teletext top left"      => ["1", 1, 1, Alignment::TopLeft],
+            "teletext middle right"  => ["1", 12, 3, Alignment::MiddleRight],
+            "teletext bottom centre" => ["1", 22, 2, Alignment::BottomCenter],
+            "unchanged presentation" => ["1", 22, 0, Alignment::BottomCenter],
+            "open top"               => ["0", 0, 2, Alignment::TopCenter],
+            "open bottom of 23 rows" => ["0", 20, 2, Alignment::BottomCenter],
         ];
     }
 
 
     #[DataProvider("positions")]
-    public function testMapsPositionAndJustificationToAlignment(string $displayStandard, int $vertical, int $justification, int $alignment): void
+    public function testMapsPositionAndJustificationToAlignment(string $displayStandard, int $vertical, int $justification, Alignment $alignment): void
     {
         $subtitle = (new EbuStlParser())->parse(self::gsi(displayStandard: $displayStandard) .
             self::tti(1, "Text", vertical: $vertical, justification: $justification), new ReadOptions());

@@ -31,7 +31,7 @@ class ArrayConversionTest extends TestCase
             ->setMetadata(Subtitle::METADATA_TITLE, "Bakery")
             ->setMetadata(Subtitle::METADATA_LANGUAGE, "en")
             ->setFormatData("ass", ["styles" => [["Name" => "Default", "Fontsize" => "72"]]]);
-        $subtitle->addCue((new SubtitleCue(1.5, 4, ["Hello", "<i>world</i>"]))->setIdentifier("intro")->setAlignment(8));
+        $subtitle->addCue((new SubtitleCue(1.5, 4, ["Hello", "<i>world</i>"]))->setIdentifier("intro")->setAlignment(Alignment::TopCenter));
         $subtitle->addCue((new SubtitleCue(4.5, 6.25, "Fresh bread &amp; rolls"))->setFormatData("vtt", ["settings" => "line:0"]));
         $subtitle->addComment("Translated by Jane Doe", 0);
 

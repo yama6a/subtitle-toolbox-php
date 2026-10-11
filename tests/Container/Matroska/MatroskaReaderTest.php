@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Container\Matroska;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Container\ContainerFormat;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -86,7 +87,7 @@ class MatroskaReaderTest extends TestCase
             "Dialogue: 0,0:00:11.00,0:00:13.50,Default,Guard,0,0,0,,Bring an umbrella, it may rain later.\n",
             $subtitle->toString(Format::Ass, new WriteOptions(bom: false)),
         );
-        $this->assertSame(8, $subtitle->getCues()[0]->getAlignment());
+        $this->assertSame(Alignment::TopCenter, $subtitle->getCues()[0]->getAlignment());
         $this->assertFalse($subtitle->getCues()[0]->isForced());
     }
 
