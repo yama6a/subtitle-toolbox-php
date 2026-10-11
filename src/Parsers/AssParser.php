@@ -9,6 +9,7 @@ use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\MarkupColors;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -448,6 +449,6 @@ final class AssParser extends SubtitleParser
 
     private function fontTag(string $hex): string
     {
-        return "<font color=\"#" . strtolower(Markup::bgrToRgb(substr(str_pad($hex, 6, "0", STR_PAD_LEFT), -6))) . "\">";
+        return "<font color=\"#" . strtolower(MarkupColors::bgrToRgb(substr(str_pad($hex, 6, "0", STR_PAD_LEFT), -6))) . "\">";
     }
 }

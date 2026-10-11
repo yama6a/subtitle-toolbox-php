@@ -8,6 +8,7 @@ use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Formatters\Options\AssWriteOptions;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\MarkupColors;
 use SubtitleToolbox\Parsers\AssFormatLines;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\AssStyles;
@@ -239,7 +240,7 @@ final class AssFormatter extends SubtitleFormatter
             $parts[] = ["tag", $context->isSsa ? "\\a" . array_flip(SsaOverrideTags::SSA_ALIGNMENTS)[$alignment] : "\\an" . $alignment];
         }
 
-        $tokens = $context->stripTags ? [Markup::stripAllTags($text)] : Markup::splitTags(Markup::webVttColorsToFont($text));
+        $tokens = $context->stripTags ? [Markup::stripAllTags($text)] : Markup::splitTags(MarkupColors::webVttColorsToFont($text));
         if (!$context->stripTags) {
             foreach ($this->removeStyleTags($tokens, AssStyles::tags($style)) as $tagName) {
                 $parts[] = ["tag", "\\" . $tagName . "0"];
@@ -370,7 +371,7 @@ final class AssFormatter extends SubtitleFormatter
             } elseif (preg_match('/^<(\/?)([bius])>$/', $token, $matches)) {
                 $parts[] = ["tag", "\\" . $matches[2] . ($matches[1] === "" ? "1" : "0")];
             } elseif (preg_match('/^<font\b[^>]*>$/i', $token)) {
-                $color    = preg_match('/^#([0-9a-fA-F]{6})/', trim(Markup::fontColor($token) ?? ""), $matches) ? strtoupper($matches[1]) : null;
+                $color    = preg_match('/^#([0-9a-fA-F]{6})/', trim(MarkupColors::fontColor($token) ?? ""), $matches) ? strtoupper($matches[1]) : null;
                 $colors[] = $color;
                 if ($color !== null) {
                     $parts[] = ["tag", $this->colorTag($color)];
@@ -424,7 +425,7 @@ final class AssFormatter extends SubtitleFormatter
 
     private function colorTag(string $rgb): string
     {
-        return "\\c&H" . Markup::rgbToBgr($rgb) . "&";
+        return "\\c&H" . MarkupColors::rgbToBgr($rgb) . "&";
     }
 
 

@@ -8,7 +8,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
-use SubtitleToolbox\Markup;
+use SubtitleToolbox\MarkupColors;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\StyleRuns;
@@ -161,7 +161,7 @@ final class MicroDvdParser extends SubtitleParser
         }
 
         if ($letter === "c" && preg_match('/^\$([0-9A-Fa-f]{6})$/', $value, $bgr)) {
-            $style["color"] = "#" . strtolower(Markup::bgrToRgb($bgr[1]));
+            $style["color"] = "#" . strtolower(MarkupColors::bgrToRgb($bgr[1]));
 
             return $style;
         }

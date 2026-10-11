@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
-use SubtitleToolbox\Markup;
+use SubtitleToolbox\MarkupColors;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -127,7 +127,7 @@ class TextColorTest extends TestCase
     public function testTheEightColorClassesSurviveARoundTrip(Format $format): void
     {
         $vtt = "WEBVTT\n\n";
-        foreach (array_keys(Markup::WEBVTT_COLORS) as $index => $class) {
+        foreach (array_keys(MarkupColors::WEBVTT_COLORS) as $index => $class) {
             $vtt .= sprintf("00:00:%02d.000 --> 00:00:%02d.000\n<c.%s>Line %d</c>\n\n", $index + 1, $index + 2, $class, $index);
         }
         $original = Subtitle::fromString($vtt, Format::WebVtt);

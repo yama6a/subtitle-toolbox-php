@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\MarkupColors;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -166,7 +167,7 @@ final class WebVttFormatter extends SubtitleFormatter
         if ($options->stripTags) {
             $lines = Markup::stripAllTags($lines);
         } else {
-            [$lines, $dropped] = Markup::fontToWebVttColors($lines);
+            [$lines, $dropped] = MarkupColors::fontToWebVttColors($lines);
             foreach ($dropped as $color) {
                 $this->droppedColors[] = new WebVttDroppedColor($cueIndex, $color, "Cue #$cueIndex at {$cue->getStart()} s: "
                     . "dropped the color \"$color\", because WebVTT has classes for 8 colors only.");
