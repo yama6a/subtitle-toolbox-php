@@ -60,12 +60,13 @@ final class CommonErrorEdit extends Edit
             return null;
         }
 
+        $rules   = self::optionalRules();
+        $byName  = array_combine(array_map(strtolower(...), $rules), $rules);
         $enabled = [];
         foreach (array_filter(array_map("trim", explode(",", $arguments->value("errors-enable") ?? ""))) as $name) {
-            if (!in_array($name, self::optionalRules(), true)) {
-                Command::fail("Unknown rule \"$name\" in --errors-enable. The valid names are " . implode(", ", self::optionalRules()) . ".");
-            }
-            $enabled[$name] = true;
+            $rule = $byName[strtolower($name)]
+                ?? Command::fail("Unknown rule \"$name\" in --errors-enable. The valid names are " . implode(", ", $rules) . ".");
+            $enabled[$rule] = true;
         }
 
         return new self(

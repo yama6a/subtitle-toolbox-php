@@ -269,14 +269,6 @@ final class Arguments
 
     public function positiveInt(string $name): ?int
     {
-        $value = $this->value($name);
-        if ($value === null) {
-            return null;
-        }
-        if (!ctype_digit($value) || (int)$value === 0) {
-            Command::fail("The option --$name needs a whole number greater than 0, got \"$value\".");
-        }
-
-        return (int)$value;
+        return $this->int($name, 1);
     }
 }

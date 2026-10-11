@@ -36,7 +36,7 @@ class BinaryDiffDualHlsTest extends CliTestCase
             "diff --new-from docx"            => [["diff", "trip.srt", "frames.sub", "--new-from", "docx"], "diff",
                                                   "Unknown format \"docx\". Run \"subtitle-toolbox formats\" for the list."],
             "diff --new-track x"              => [["diff", "movie.mkv", "movie.mkv", "--track", "3", "--new-track", "x"], "diff",
-                                                  "The option --new-track needs a whole number greater than 0, got \"x\"."],
+                                                  "The option --new-track needs a whole number of 1 or more, got \"x\"."],
             "dual without --secondary"        => [["dual", "--primary", "en.srt"], "dual", "Pass --primary FILE and --secondary FILE."],
             "dual --mode side"                => [["dual", "--primary", "en.srt", "--secondary", "de.srt", "--mode", "side"], "dual",
                                                   "The option --mode must be stack or top-bottom, got \"side\"."],
