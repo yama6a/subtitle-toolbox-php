@@ -34,7 +34,7 @@ class WhisperJsonParserTest extends TestCase
 
     private static function withWords(string $json): Subtitle
     {
-        return (new WhisperJsonParser())->parse($json, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
+        return (new WhisperJsonParser())->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
     }
 
 

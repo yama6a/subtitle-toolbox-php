@@ -42,7 +42,7 @@ class HtmlTranscriptFormatterTest extends TestCase
 
     public function testStartsAParagraphAtTheGapOfTheOption(): void
     {
-        $html = $this->dialogue()->toString(Format::HtmlTranscript, new WriteOptions(format: new HtmlTranscriptWriteOptions(paragraphGap: 0.5)));
+        $html = $this->dialogue()->toString(Format::HtmlTranscript, new WriteOptions(formats: [new HtmlTranscriptWriteOptions(paragraphGap: 0.5)]));
 
         $this->assertStringStartsWith("<cite>Anna:</cite>\n<time>0:01</time>\n<p>Hello there.</p>\n<cite>Anna:</cite>\n<time>0:02</time>\n", $html);
     }

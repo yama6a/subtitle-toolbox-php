@@ -88,8 +88,6 @@ final class WebVttFormatter extends SubtitleFormatter
     {
         $block = $this->formatIdentifiedCue($cue, $cueIndex, $options);
 
-        $this->rejectForeignOptions($options);
-
         return $this->applyLineEnding($block, $options);
     }
 

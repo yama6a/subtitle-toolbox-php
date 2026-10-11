@@ -227,7 +227,7 @@ class BinaryTimingTest extends BinaryTestCase
 
     public function testRetimeChangesTheFrameRateAndTheFormat(): void
     {
-        $expected = Subtitle::fromString($this->file("frames.sub"), Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)))
+        $expected = Subtitle::fromString($this->file("frames.sub"), Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]))
             ->convertFrameRate(25, 23.976)
             ->toString(Format::WebVtt);
 
@@ -325,13 +325,13 @@ class BinaryTimingTest extends BinaryTestCase
         $garden = file_get_contents(self::FILES . "shot-changes/own_garden_24fps.srt");
         file_put_contents("$this->dir/garden.sub", Subtitle::fromString($garden, Format::SubRip)->toString(
             Format::MicroDvd,
-            new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)),
+            new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25)]),
         ));
         $shotChanges = ShotChanges::fromFfmpegLog($this->file("scenes.log"));
 
-        $expected = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
+        $expected = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
         ShotChangeTiming::apply($expected, new ShotChangeOptions(frameRate: 24, shotChanges: $shotChanges));
-        $readAt24 = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(24)));
+        $readAt24 = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(24)]));
         ShotChangeTiming::apply($readAt24, new ShotChangeOptions(frameRate: 24, shotChanges: $shotChanges));
 
         $this->assertNotSame($readAt24->toString(Format::SubRip), $expected->toString(Format::SubRip));

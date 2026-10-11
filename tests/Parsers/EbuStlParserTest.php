@@ -136,7 +136,7 @@ class EbuStlParserTest extends TestCase
     public function testSubtractedStartOfProgrammeDoesNotGoBelowZero(): void
     {
         $gsi = substr_replace(self::gsi(), "00000200", 256, 8);
-        $cue = (new EbuStlParser())->parse($gsi . self::tti(1, "Text"), new ReadOptions(format: new EbuStlReadOptions(subtractStartOfProgramme: true)))->getCues()[0];
+        $cue = (new EbuStlParser())->parse($gsi . self::tti(1, "Text"), new ReadOptions(formats: [new EbuStlReadOptions(subtractStartOfProgramme: true)]))->getCues()[0];
 
         $this->assertSame([0.0, 0.4], [$cue->getStart(), $cue->getEnd()]);
     }

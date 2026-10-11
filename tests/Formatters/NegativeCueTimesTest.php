@@ -33,7 +33,7 @@ class NegativeCueTimesTest extends TestCase
     #[DataProvider("formatProvider")]
     public function testANegativeTimeIsWrittenAsZero(Format $format, ?FormatWriteOptions $formatOptions = null): void
     {
-        $options  = new WriteOptions(format: $formatOptions);
+        $options  = new WriteOptions(formats: $formatOptions === null ? [] : [$formatOptions]);
         $negative = (new Subtitle())->addCues([new SubtitleCue(-2.5, -1.5, "One"), new SubtitleCue(-0.5, 1, "Two")]);
         $zero     = (new Subtitle())->addCues([new SubtitleCue(0, 0, "One"), new SubtitleCue(0, 1, "Two")]);
 

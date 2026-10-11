@@ -29,7 +29,7 @@ class WordHighlightTest extends TestCase
     private static function whisper(): Subtitle
     {
         return (new WhisperJsonParser())
-            ->parse(file_get_contents(self::FILES . "whisper/real/openai_whisper_word_timestamps.json"), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
+            ->parse(file_get_contents(self::FILES . "whisper/real/openai_whisper_word_timestamps.json"), new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
     }
 
 
@@ -328,12 +328,12 @@ class WordHighlightTest extends TestCase
     {
         $this->assertSame(
             file_get_contents(self::FILES . "karaoke/whisper_kf.ass"),
-            self::whisper()->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill)))
+            self::whisper()->toString(Format::Ass, new WriteOptions(formats: [new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill)]))
         );
 
         $subtitle = TestSubtitles::fromCues([new SubtitleCue(0, 1.6, "Oh <00:00:00.500>the <00:00:01.000>sea")]);
         $this->assertStringContainsString("{\\ko50}Oh {\\ko50}the {\\ko60}sea",
-                                          $subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(karaokeTag: AssKaraokeTag::Outline))));
+                                          $subtitle->toString(Format::Ass, new WriteOptions(formats: [new AssWriteOptions(karaokeTag: AssKaraokeTag::Outline)])));
         $this->assertStringContainsString("{\\k50}Oh {\\k50}the {\\k60}sea", $subtitle->toString(Format::Ass));
     }
 
@@ -343,7 +343,7 @@ class WordHighlightTest extends TestCase
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "ass/real/own_aegisub.ass"), Format::Ass);
 
         $this->assertStringContainsString("{\\k40}The {\\k35}train {\\k50}leaves {\\kf60}at {\\ko45}noon",
-                                          $subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill))));
+                                          $subtitle->toString(Format::Ass, new WriteOptions(formats: [new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill)])));
     }
 
 }

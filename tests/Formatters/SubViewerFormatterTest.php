@@ -42,7 +42,7 @@ class SubViewerFormatterTest extends TestCase
             "******** START SCRIPT ********\n" .
             "[00:00:02]\nFresh bread|every day\n[00:00:04]\n\n" .
             "[end]\n******** END SCRIPT ********\n",
-            $subtitle->toString(Format::SubViewer, new WriteOptions(format: new SubViewerWriteOptions(version: SubViewerVersion::V1)))
+            $subtitle->toString(Format::SubViewer, new WriteOptions(formats: [new SubViewerWriteOptions(version: SubViewerVersion::V1)]))
         );
     }
 
@@ -66,7 +66,7 @@ class SubViewerFormatterTest extends TestCase
 
         $this->assertStringStartsWith(
             "[TITLE]\n[AUTHOR]\n[DELAY]\n0\n******** START SCRIPT ********\n[00:00:04]\nHello\n[00:00:05]\n",
-            $subtitle->toString(Format::SubViewer, new WriteOptions(format: new SubViewerWriteOptions(version: SubViewerVersion::V1)))
+            $subtitle->toString(Format::SubViewer, new WriteOptions(formats: [new SubViewerWriteOptions(version: SubViewerVersion::V1)]))
         );
     }
 }

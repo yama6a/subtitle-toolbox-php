@@ -7,9 +7,11 @@ namespace SubtitleToolbox;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
+use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\Options\SamiReadOptions;
@@ -49,8 +51,8 @@ class ReadOptionsTest extends TestCase
     {
         $content = file_get_contents(self::FILES . $file);
 
-        $default = Subtitle::fromString($content, $format, new ReadOptions(format: $formatOptions))->getCues();
-        $longer  = Subtitle::fromString($content, $format, new ReadOptions(lastCueDuration: 7, format: $formatOptions))->getCues();
+        $default = Subtitle::fromString($content, $format, new ReadOptions(formats: $formatOptions === null ? [] : [$formatOptions]))->getCues();
+        $longer  = Subtitle::fromString($content, $format, new ReadOptions(lastCueDuration: 7, formats: $formatOptions === null ? [] : [$formatOptions]))->getCues();
 
         $this->assertSame([$start, round($start + 5, 3)], [end($default)->getStart(), end($default)->getEnd()]);
         $this->assertSame([$start, round($start + 7, 3)], [end($longer)->getStart(), end($longer)->getEnd()]);
@@ -61,7 +63,7 @@ class ReadOptionsTest extends TestCase
     public function testALastCueDurationOf0KeepsTheLastCue(Format $format, string $file, ?FormatReadOptions $formatOptions, float $start): void
     {
         $content = file_get_contents(self::FILES . $file);
-        $cues    = Subtitle::fromString($content, $format, new ReadOptions(lastCueDuration: 0, format: $formatOptions))->getCues();
+        $cues    = Subtitle::fromString($content, $format, new ReadOptions(lastCueDuration: 0, formats: $formatOptions === null ? [] : [$formatOptions]))->getCues();
 
         $this->assertSame([$start, $start], [end($cues)->getStart(), end($cues)->getEnd()]);
     }
@@ -79,7 +81,7 @@ class ReadOptionsTest extends TestCase
     public function testTheLastChapterEndsAtTheMediaDuration(): void
     {
         $content = file_get_contents(self::FILES . "chapters/youtube/real/video_description.txt");
-        $cues    = Subtitle::fromString($content, Format::YouTubeChapters, new ReadOptions(format: new ChapterReadOptions(mediaDuration: 3600)))->getCues();
+        $cues    = Subtitle::fromString($content, Format::YouTubeChapters, new ReadOptions(formats: [new ChapterReadOptions(mediaDuration: 3600)]))->getCues();
 
         $this->assertSame(3600.0, end($cues)->getEnd());
     }
@@ -91,13 +93,13 @@ class ReadOptionsTest extends TestCase
     public static function realFilesWithOptions(): array
     {
         return [
-            "MicroDVD frame rate"    => ["microdvd_subsrt_sample", Format::MicroDvd, "microdvd/real/subsrt_sample.sub", new ReadOptions(format: new MicroDvdReadOptions(23.976))],
+            "MicroDVD frame rate"    => ["microdvd_subsrt_sample", Format::MicroDvd, "microdvd/real/subsrt_sample.sub", new ReadOptions(formats: [new MicroDvdReadOptions(23.976)])],
             "encoding"               => ["french_windows_1252", Format::SubRip, "encoding/french-windows-1252.srt", new ReadOptions(encoding: "Windows-1252")],
-            "Whisper word times"     => ["whisper_word_timestamps", Format::Whisper, "whisper/real/openai_whisper_word_timestamps.json", new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true))],
-            "WhisperX speakers"      => ["whisperx_speaker_voices", Format::Whisper, "whisper/real/whisperx_diarize.json", new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true))],
-            "SAMI language class"    => ["sami_multi_language_frcc", Format::Sami, "sami/real/multi_language.smi", new ReadOptions(lastCueDuration: 10, format: new SamiReadOptions("FRCC"))],
-            "CSV delimiter"          => ["csv_excel_de_semicolon", Format::Csv, "csv/real/excel_de_semicolon.csv", new ReadOptions(lastCueDuration: 10, format: new CsvReadOptions(delimiter: ";"))],
-            "SCC channel"            => ["scc_rollup_news_ndf", Format::Scc, "scc/real/rollup_news_ndf.scc", new ReadOptions(lastCueDuration: 4, format: new SccReadOptions(channel: 1))],
+            "Whisper word times"     => ["whisper_word_timestamps", Format::Whisper, "whisper/real/openai_whisper_word_timestamps.json", new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)])],
+            "WhisperX speakers"      => ["whisperx_speaker_voices", Format::Whisper, "whisper/real/whisperx_diarize.json", new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)])],
+            "SAMI language class"    => ["sami_multi_language_frcc", Format::Sami, "sami/real/multi_language.smi", new ReadOptions(lastCueDuration: 10, formats: [new SamiReadOptions("FRCC")])],
+            "CSV delimiter"          => ["csv_excel_de_semicolon", Format::Csv, "csv/real/excel_de_semicolon.csv", new ReadOptions(lastCueDuration: 10, formats: [new CsvReadOptions(delimiter: ";")])],
+            "SCC channel"            => ["scc_rollup_news_ndf", Format::Scc, "scc/real/rollup_news_ndf.scc", new ReadOptions(lastCueDuration: 4, formats: [new SccReadOptions(channel: 1)])],
         ];
     }
 
@@ -112,11 +114,47 @@ class ReadOptionsTest extends TestCase
     }
 
 
-    public function testFormatOptionsOfAnotherFormatThrow(): void
+    #[DataProvider("realFilesWithOptions")]
+    public function testEachParserUsesItsOwnClassAndIgnoresTheOtherClassesOfTheList(string $golden, Format $format, string $file, ReadOptions $options): void
+    {
+        $classes = [ChapterReadOptions::class, CsvReadOptions::class, EbuStlReadOptions::class, MicroDvdReadOptions::class, SamiReadOptions::class,
+                    SccReadOptions::class, TranscriptReadOptions::class, VobSubReadOptions::class];
+        $given   = array_map(fn (FormatReadOptions $formatOptions): string => $formatOptions::class, $options->formats);
+        $others  = array_map(fn (string $class): FormatReadOptions => new $class(), array_values(array_diff($classes, $given)));
+        $mixed   = OptionsCopy::with($options, ["formats" => [...$others, ...$options->formats]]);
+
+        $this->testRealFilesGiveTheCuesOf1x($golden, $format, $file, $mixed);
+    }
+
+
+    public function testDetectionReadsEachFormatWithItsOwnClassOfOneList(): void
+    {
+        $options  = new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 25), new CsvReadOptions(delimiter: ";")]);
+        $srt      = "1\n00:00:01,000 --> 00:00:02,000\nHello\n";
+        $microDvd = file_get_contents(self::FILES . "microdvd/real/subsrt_sample.sub");
+
+        $this->assertSame(Subtitle::fromString($srt, Format::SubRip)->toArray(), Subtitle::fromStringAutoDetectFormat($srt, $options)->toArray());
+        $this->assertSame(
+            Subtitle::fromString($microDvd, Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 25)]))->toArray(),
+            Subtitle::fromStringAutoDetectFormat($microDvd, $options)->toArray(),
+        );
+    }
+
+
+    public function testTwoObjectsOfOneClassThrow(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("SubRipParser takes no format options, got CsvReadOptions.");
+        $this->expectExceptionMessage("ReadOptions::\$formats holds 2 TranscriptReadOptions objects. Pass at most one per class.");
 
-        Subtitle::fromString("1\n00:00:01,000 --> 00:00:02,000\nHello\n", Format::SubRip, new ReadOptions(format: new CsvReadOptions()));
+        new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true), new CsvReadOptions(), new TranscriptReadOptions(speakerVoices: true)]);
+    }
+
+
+    public function testAWriteOptionsClassThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("ReadOptions::\$formats takes FormatReadOptions objects, got SubtitleToolbox\\Formatters\\Options\\MicroDvdWriteOptions.");
+
+        new ReadOptions(formats: [new MicroDvdWriteOptions(frameRate: 25)]);
     }
 }

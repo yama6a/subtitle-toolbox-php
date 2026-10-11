@@ -172,9 +172,9 @@ class ArrayConversionTest extends TestCase
         $content   = file_get_contents(self::DIR . $file);
         $directory = explode("/", $file)[0];
         $subtitle  = match (true) {
-            str_starts_with($file, "microdvd/")            => (new MicroDvdParser())->parse($content, new ReadOptions(format: new MicroDvdReadOptions(25))),
-            $file === "csv/real/dubbing_script.csv"        => (new CsvParser())->parse($content, new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: "Start TC", speaker: "Character"), frameRate: 25))),
-            $file === "csv/real/excel_de_semicolon.csv"    => (new CsvParser())->parse($content, new ReadOptions(format: new CsvReadOptions(new CsvColumns(end: "Ende", speaker: "Sprecher")))),
+            str_starts_with($file, "microdvd/")            => (new MicroDvdParser())->parse($content, new ReadOptions(formats: [new MicroDvdReadOptions(25)])),
+            $file === "csv/real/dubbing_script.csv"        => (new CsvParser())->parse($content, new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(start: "Start TC", speaker: "Character"), frameRate: 25)])),
+            $file === "csv/real/excel_de_semicolon.csv"    => (new CsvParser())->parse($content, new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(end: "Ende", speaker: "Sprecher"))])),
             str_starts_with($file, "csv/")                 => (new CsvParser())->parse($content, new ReadOptions()),
             in_array($directory, self::CLOUD_SPEECH, true) => Subtitle::fromString($content, Format::from($directory)),
             default                                        => Subtitle::fromStringAutoDetectFormat($content),

@@ -55,7 +55,7 @@ class EbuStlFormatterTest extends TestCase
     public function testWritesThirtyFramesPerSecond(): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.5, 2.967, "Hello"));
-        $stl      = $subtitle->toString(Format::EbuStl, new WriteOptions(format: new EbuStlWriteOptions(frameRate: 30)));
+        $stl      = $subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 30)]));
 
         $this->assertSame("STL30.01", substr($stl, 3, 8));
         $this->assertSame("\x00\x00\x01\x0F\x00\x00\x02\x1D", substr(self::ttiBlocks($stl)[0], 5, 8));
@@ -67,7 +67,7 @@ class EbuStlFormatterTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("25 or 30 fps");
 
-        (new Subtitle())->toString(Format::EbuStl, new WriteOptions(format: new EbuStlWriteOptions(frameRate: 24)));
+        (new Subtitle())->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 24)]));
     }
 
 

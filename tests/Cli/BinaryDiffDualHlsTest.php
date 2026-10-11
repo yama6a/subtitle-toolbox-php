@@ -62,7 +62,7 @@ class BinaryDiffDualHlsTest extends BinaryTestCase
         $this->assertStringContainsString("Next stop: Central Station.", $expected);
         $this->assertSame([1, $expected, ""], $this->runBinary(["diff", "movie.mkv", "movie.mkv", "--track", "3", "--new-track", "8"]));
 
-        $frames   = Subtitle::load(self::FIXTURES . "frames.sub", Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
+        $frames   = Subtitle::load(self::FIXTURES . "frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
         $expected = SubtitleDiff::toText(SubtitleDiff::compare(Subtitle::load(self::FIXTURES . "trip.srt", Format::SubRip), $frames));
         $this->assertSame([1, $expected, ""], $this->runBinary(["diff", "trip.srt", "frames.sub", "--new-from", "microdvd", "--input-fps", "25"]));
         $this->assertSame([3, ""], array_slice($this->runBinary(["diff", "trip.srt", "frames.sub", "--new-from", "subviewer"]), 0, 2));
@@ -131,7 +131,7 @@ class BinaryDiffDualHlsTest extends BinaryTestCase
         copy(self::FILES . "mkv/text_tracks.mkv", "$this->dir/movie.mkv");
         $english = Subtitle::fromStringAutoDetectFormat($this->file("en.srt"));
         $german  = MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv")->extract(3);
-        $frames  = Subtitle::load(self::FIXTURES . "frames.sub", Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
+        $frames  = Subtitle::load(self::FIXTURES . "frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
 
         $this->assertSame([0, DualSubtitle::fromPair($english, $german, new DualSubtitleOptions())->toString(Format::SubRip), ""],
                           $this->runBinary(["dual", "--primary", "en.srt", "--secondary", "movie.mkv", "--secondary-track", "3"]));

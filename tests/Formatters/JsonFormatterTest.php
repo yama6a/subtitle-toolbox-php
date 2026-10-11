@@ -44,7 +44,7 @@ class JsonFormatterTest extends TestCase
 
     public function testPrettyPrintEndsWithANewLine(): void
     {
-        $json = (new Subtitle())->toString(Format::Json, new WriteOptions(lineEnding: LineEnding::Crlf, format: new JsonWriteOptions(prettyPrint: true)));
+        $json = (new Subtitle())->toString(Format::Json, new WriteOptions(lineEnding: LineEnding::Crlf, formats: [new JsonWriteOptions(prettyPrint: true)]));
 
         $this->assertSame("{\r\n    \"version\": 1,\r\n    \"metadata\": {},\r\n    \"comments\": [],\r\n    \"formatData\": {},\r\n    \"cues\": []\r\n}\r\n", $json);
     }
@@ -78,7 +78,7 @@ class JsonFormatterTest extends TestCase
 
         $this->assertSame(
             '{"version":1,"metadata":{},"comments":[],"cues":[{"start":1.0,"end":2.0,"lines":["Rain"],"identifier":null,"alignment":null}]}',
-            $subtitle->toString(Format::Json, new WriteOptions(format: new JsonWriteOptions(withFormatData: false)))
+            $subtitle->toString(Format::Json, new WriteOptions(formats: [new JsonWriteOptions(withFormatData: false)]))
         );
     }
 }

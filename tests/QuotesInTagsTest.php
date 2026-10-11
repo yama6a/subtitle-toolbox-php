@@ -82,7 +82,7 @@ class QuotesInTagsTest extends TestCase
         $subtitle = TestSubtitles::fromTexts(["<v O'Neil>We're out of rye.", '<v Mo "Baker>Two rolls.'], start: 1, step: 2);
 
         foreach ([false, true] as $stripTags) {
-            $output = $subtitle->toString($format, new WriteOptions(stripTags: $stripTags, format: $options));
+            $output = $subtitle->toString($format, new WriteOptions(stripTags: $stripTags, formats: $options === null ? [] : [$options]));
 
             $this->assertStringContainsString("We're out of rye.", $output);
             $this->assertStringContainsString("Two rolls.", $output);

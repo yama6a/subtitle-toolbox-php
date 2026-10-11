@@ -98,7 +98,7 @@ class WhisperJsonRealFilesTest extends TestCase
     {
         $parser = new WhisperJsonParser();
 
-        return $parser->parse(file_get_contents(self::DIR . $fileName), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
+        return $parser->parse(file_get_contents(self::DIR . $fileName), new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
     }
 
 

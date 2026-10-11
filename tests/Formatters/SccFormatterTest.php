@@ -203,7 +203,7 @@ class SccFormatterTest extends TestCase
         $this->assertStringContainsString("\n00:01:01;00\t942c 942c\n", $subtitle->toString(Format::Scc));
         $this->assertStringContainsString(
             "\n00:01:00:28\t942c 942c\n",
-            $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dropFrame: false)))
+            $subtitle->toString(Format::Scc, new WriteOptions(formats: [new SccWriteOptions(dropFrame: false)]))
         );
     }
 
@@ -213,7 +213,7 @@ class SccFormatterTest extends TestCase
         $subtitle = Subtitle::fromString(self::HEADER . "00:00:01:00\t9420 9420 9470 9470 c8e9 942f 942f\n\n00:00:03:00\t942c 942c\n", Format::Scc);
 
         $this->assertStringContainsString("\n00:00:03:00\t942c 942c\n", $subtitle->toString(Format::Scc));
-        $this->assertStringContainsString("\n00:00:03;00\t942c 942c\n", $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dropFrame: true))));
+        $this->assertStringContainsString("\n00:00:03;00\t942c 942c\n", $subtitle->toString(Format::Scc, new WriteOptions(formats: [new SccWriteOptions(dropFrame: true)])));
     }
 
 
@@ -277,7 +277,7 @@ class SccFormatterTest extends TestCase
     public function testFitChangesWhatSccCannotHoldAndReportsEachChange(): void
     {
         $subtitle = Subtitle::load(self::FIT_FILES . "own_ferry.srt", Format::SubRip);
-        $options  = new WriteOptions(format: new SccWriteOptions(fit: true));
+        $options  = new WriteOptions(formats: [new SccWriteOptions(fit: true)]);
         $report   = (new SccFormatter())->formatWithReport($subtitle, $options);
 
         $this->assertSame(file_get_contents(self::FIT_FILES . "own_ferry.scc"), $report->content);
@@ -316,7 +316,7 @@ class SccFormatterTest extends TestCase
 
     public function testFitThrowsForTextThatDoesNotFitAndACharacterWithoutReplacement(): void
     {
-        $options = new WriteOptions(format: new SccWriteOptions(fit: true));
+        $options = new WriteOptions(formats: [new SccWriteOptions(fit: true)]);
         try {
             $this->subtitle(new SubtitleCue(1.0, 8.0, implode(" ", array_fill(0, 20, "bakery"))))->toString(Format::Scc, $options);
             $this->fail("No exception");
@@ -333,7 +333,7 @@ class SccFormatterTest extends TestCase
     public function testFitKeepsTagsAndTextThatSccHolds(): void
     {
         $subtitle = $this->subtitle(new SubtitleCue(1.0, 3.0, ["<i>Caf\u{E9} \u{201C}Zagreb\u{201D}</i>", "<font color=\"red\">&lt;\u{160}&gt;</font>"]));
-        $options  = new WriteOptions(format: new SccWriteOptions(fit: true));
+        $options  = new WriteOptions(formats: [new SccWriteOptions(fit: true)]);
         $report   = (new SccFormatter())->formatWithReport($subtitle, $options);
 
         $this->assertSame(["Cue #0 at 1 s: replaced \"\u{160}\" with \"S\"."], array_column($report->changes, "message"));

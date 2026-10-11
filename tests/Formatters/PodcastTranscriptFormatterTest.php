@@ -44,7 +44,7 @@ class PodcastTranscriptFormatterTest extends TestCase
 
     public function testWritesOneSegmentPerWordTimestamp(): void
     {
-        $json     = $this->dialogue()->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptWriteOptions(wordSegments: true)));
+        $json     = $this->dialogue()->toString(Format::PodcastTranscript, new WriteOptions(formats: [new PodcastTranscriptWriteOptions(wordSegments: true)]));
         $segments = json_decode($json, true, 512, JSON_THROW_ON_ERROR)["segments"];
 
         $this->assertSame([
@@ -70,15 +70,15 @@ class PodcastTranscriptFormatterTest extends TestCase
             "{\r\n    \"version\": \"1.0.1\",\r\n    \"segments\": [\r\n        {\r\n            \"startTime\": 0.0,\r\n" .
             "            \"endTime\": 1.25,\r\n            \"body\": \"Hi\",\r\n            \"confidence\": 0.9\r\n        }\r\n" .
             "    ],\r\n    \"language\": \"en\"\r\n}\r\n",
-            $subtitle->toString(Format::PodcastTranscript, new WriteOptions(lineEnding: LineEnding::Crlf, format: new PodcastTranscriptWriteOptions(prettyPrint: true)))
+            $subtitle->toString(Format::PodcastTranscript, new WriteOptions(lineEnding: LineEnding::Crlf, formats: [new PodcastTranscriptWriteOptions(prettyPrint: true)]))
         );
     }
 
 
     public function testWritesWordSegmentsFromWhisperJson(): void
     {
-        $subtitle = (new WhisperJsonParser())->parse(file_get_contents(self::DIR . "whisper/real/openai_whisper_word_timestamps.json"), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
-        $json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptWriteOptions(wordSegments: true)));
+        $subtitle = (new WhisperJsonParser())->parse(file_get_contents(self::DIR . "whisper/real/openai_whisper_word_timestamps.json"), new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
+        $json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(formats: [new PodcastTranscriptWriteOptions(wordSegments: true)]));
 
         $this->assertSame(
             ["startTime" => 0.0, "endTime" => 0.24, "body" => "The"],

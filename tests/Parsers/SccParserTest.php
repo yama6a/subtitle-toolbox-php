@@ -56,7 +56,7 @@ class SccParserTest extends TestCase
      */
     private function lineCues(string ...$lines): array
     {
-        $options = new ReadOptions(format: new SccReadOptions(rollUp: SccRollUp::Lines));
+        $options = new ReadOptions(formats: [new SccReadOptions(rollUp: SccRollUp::Lines)]);
 
         return array_values(Subtitle::fromString("Scenarist_SCC V1.0\n\n" . implode("\n\n", $lines) . "\n", Format::Scc, $options)->getCues());
     }
@@ -418,7 +418,7 @@ class SccParserTest extends TestCase
                    . self::text("TWO") . " 1c2f 1c2f 942f 942f\n";
 
         $this->assertSame(["ONE"], Subtitle::fromString($content, Format::Scc)->getCues()[0]->getLines());
-        $this->assertSame(["TWO"], (new SccParser())->parse($content, new ReadOptions(format: new SccReadOptions(channel: 2)))->getCues()[0]->getLines());
+        $this->assertSame(["TWO"], (new SccParser())->parse($content, new ReadOptions(formats: [new SccReadOptions(channel: 2)]))->getCues()[0]->getLines());
     }
 
 

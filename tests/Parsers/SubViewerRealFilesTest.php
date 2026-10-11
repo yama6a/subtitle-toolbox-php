@@ -176,7 +176,7 @@ class SubViewerRealFilesTest extends TestCase
         return new WriteOptions(
             lineEnding: str_contains($content, "\r\n") ? LineEnding::Crlf : LineEnding::Lf,
             bom: StringHelpers::hasUtf8Bom($content),
-            format: new SubViewerWriteOptions(version: str_contains($content, SubViewerParser::START_SCRIPT) ? SubViewerVersion::V1 : SubViewerVersion::V2),
+            formats: [new SubViewerWriteOptions(version: str_contains($content, SubViewerParser::START_SCRIPT) ? SubViewerVersion::V1 : SubViewerVersion::V2)],
         );
     }
 }

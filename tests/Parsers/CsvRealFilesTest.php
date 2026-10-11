@@ -74,7 +74,7 @@ class CsvRealFilesTest extends TestCase
     #[DataProvider("realFiles")]
     public function testRealFileParses(string $fileName, CsvReadOptions $csvOptions, int $cueCount, array $firstCue, array $lastCue): void
     {
-        $cues = $this->parseFile($fileName, new ReadOptions(format: $csvOptions))->getCues();
+        $cues = $this->parseFile($fileName, new ReadOptions(formats: [$csvOptions]))->getCues();
 
         $this->assertSame($cueCount, count($cues));
         $this->assertSame($firstCue, [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
@@ -88,7 +88,7 @@ class CsvRealFilesTest extends TestCase
     {
         $content = file_get_contents(__DIR__ . "/../files/csv/real/$fileName");
 
-        $this->assertSame($content, $this->parseFile($fileName, new ReadOptions(format: $csvOptions))->toString(Format::Csv, new WriteOptions(
+        $this->assertSame($content, $this->parseFile($fileName, new ReadOptions(formats: [$csvOptions]))->toString(Format::Csv, new WriteOptions(
             lineEnding: LineEnding::from($options["lineEnding"]),
             bom: $options["bom"],
         )));
@@ -98,7 +98,7 @@ class CsvRealFilesTest extends TestCase
     #[DataProvider("realFiles")]
     public function testRealFileSurvivesARoundTripInTheDefaultLayout(string $fileName, CsvReadOptions $csvOptions): void
     {
-        $subtitle = $this->parseFile($fileName, new ReadOptions(format: $csvOptions))->setFormatData("csv", []);
+        $subtitle = $this->parseFile($fileName, new ReadOptions(formats: [$csvOptions]))->setFormatData("csv", []);
         $fresh    = (new CsvParser())->parse($subtitle->toString(Format::Csv), new ReadOptions());
 
         $this->assertSame(array_map($this->describeCue(...), $subtitle->getCues()), array_map($this->describeCue(...), $fresh->getCues()));
@@ -111,7 +111,7 @@ class CsvRealFilesTest extends TestCase
 
     public function testDubbingScriptKeepsTheNotesColumn(): void
     {
-        $cues = $this->parseFile("dubbing_script.csv", new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character"), frameRate: 25)))->getCues();
+        $cues = $this->parseFile("dubbing_script.csv", new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character"), frameRate: 25)]))->getCues();
 
         $this->assertSame(["columns" => ["Notes" => "warm tone"]], $cues[1]->findFormatData("csv"));
         $this->assertSame(36005.8, $cues[2]->getStart());
@@ -120,7 +120,7 @@ class CsvRealFilesTest extends TestCase
 
     public function testTsvKeepsTheIdentifiers(): void
     {
-        $cues = $this->parseFile("sheets_export.tsv", new ReadOptions(format: new CsvReadOptions()))->getCues();
+        $cues = $this->parseFile("sheets_export.tsv", new ReadOptions(formats: [new CsvReadOptions()]))->getCues();
 
         $this->assertSame(["intro", "platform", null, "end"], array_map(fn (SubtitleCue $cue): ?string => $cue->getIdentifier(), $cues));
     }

@@ -31,7 +31,7 @@ class MpSubFormatterTest extends TestCase
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/mpsub/valid_25fps.mpsub"),
-            $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubWriteOptions(frameRate: 25)))
+            $subtitle->toString(Format::MpSub, new WriteOptions(formats: [new MpSubWriteOptions(frameRate: 25)]))
         );
     }
 
@@ -43,7 +43,7 @@ class MpSubFormatterTest extends TestCase
             $subtitle->addCue(new SubtitleCue($i * 0.06, ($i + 1) * 0.06, "Cue $i"));
         }
 
-        $output = $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubWriteOptions(frameRate: 25)));
+        $output = $subtitle->toString(Format::MpSub, new WriteOptions(formats: [new MpSubWriteOptions(frameRate: 25)]));
 
         $this->assertStringContainsString("\n0 2\nCue 0\n\n0 1\nCue 1\n\n0 2\nCue 2\n\n0 1\nCue 3\n", $output);
     }

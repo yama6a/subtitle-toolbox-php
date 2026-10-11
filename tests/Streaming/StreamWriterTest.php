@@ -140,10 +140,12 @@ class StreamWriterTest extends TestCase
     }
 
 
-    public function testRejectsOptionsOfAnotherFormatBeforeItWrites(): void
+    public function testIgnoresTheOptionsOfOtherFormats(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $writer = new SubRipStreamWriter($this->path, new WriteOptions(bom: false, formats: [new CsvWriteOptions(delimiter: ";")]));
+        $writer->write(new SubtitleCue(1, 2, "A"));
+        $writer->close();
 
-        new SubRipStreamWriter($this->path, new WriteOptions(format: new CsvWriteOptions()));
+        $this->assertSame("1\n00:00:01,000 --> 00:00:02,000\nA\n", file_get_contents($this->path));
     }
 }

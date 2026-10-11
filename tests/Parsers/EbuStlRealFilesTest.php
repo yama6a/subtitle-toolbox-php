@@ -143,7 +143,7 @@ class EbuStlRealFilesTest extends TestCase
     public function testRealFileStartOfProgrammeCanBeSubtracted(): void
     {
         $raw      = file_get_contents(self::DIR . "bakery_teletext_25fps.stl");
-        $subtitle = (new EbuStlParser())->parse($raw, new ReadOptions(format: new EbuStlReadOptions(subtractStartOfProgramme: true)));
+        $subtitle = (new EbuStlParser())->parse($raw, new ReadOptions(formats: [new EbuStlReadOptions(subtractStartOfProgramme: true)]));
         $cues     = array_values($subtitle->getCues());
 
         $this->assertSame([1.0, 3.48], [$cues[0]->getStart(), $cues[0]->getEnd()]);

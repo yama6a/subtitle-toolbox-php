@@ -55,7 +55,7 @@ class SpeakerLabelsTest extends TestCase
     {
         $parser = new WhisperJsonParser();
 
-        return $parser->parse(file_get_contents(self::FILES . $path), new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true)));
+        return $parser->parse(file_get_contents(self::FILES . $path), new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]));
     }
 
 
@@ -385,7 +385,7 @@ class SpeakerLabelsTest extends TestCase
                   ' {"start": 3, "end": 4, "text": "Yes.", "speaker": 5}]}';
         $parser = new WhisperJsonParser();
 
-        $this->assertSame([["<v O'Neil &amp; &lt;Son&gt;><00:00:00.500>Hi."], ["Bye."], ["Yes."]], self::lines($parser->parse($json, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true, wordTimestamps: true)))));
+        $this->assertSame([["<v O'Neil &amp; &lt;Son&gt;><00:00:00.500>Hi."], ["Bye."], ["Yes."]], self::lines($parser->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true, wordTimestamps: true)]))));
     }
 
 

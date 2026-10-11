@@ -16,6 +16,7 @@ use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 
 class LoadSaveTest extends TestCase
@@ -263,7 +264,7 @@ class LoadSaveTest extends TestCase
 
     public function testMicroDvdWithTheFrameRateOfTheOptions(): void
     {
-        $subtitle = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
+        $subtitle = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
 
         $this->assertSame(Format::MicroDvd, $subtitle->getFormat());
         $this->assertSame(1.0, $subtitle->getCues()[0]->getStart());
@@ -276,7 +277,7 @@ class LoadSaveTest extends TestCase
         $idx = file_get_contents(self::FILES . "vobsub/text-pal.idx");
         $sub = file_get_contents(self::FILES . "vobsub/text-pal.sub");
 
-        $expected = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx)))->toArray();
+        $expected = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions($idx)]))->toArray();
 
         $this->assertSame($expected, Subtitle::load(self::FILES . "vobsub/text-pal.idx", Format::VobSub)->toArray());
         $this->assertSame($expected, Subtitle::load(self::FILES . "vobsub/text-pal.sub", Format::VobSub)->toArray());
@@ -293,22 +294,12 @@ class LoadSaveTest extends TestCase
         file_put_contents("$this->dir/other", $sub);
 
         $this->assertSame(
-            Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx)))->toArray(),
+            Subtitle::fromString($sub, Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions($idx)]))->toArray(),
             Subtitle::load("$this->dir/movie", Format::VobSub)->toArray()
         );
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("VobSub needs the .idx file next to $this->dir/other, but $this->dir/other.idx does not exist.");
         Subtitle::load("$this->dir/other", Format::VobSub);
-    }
-
-
-    public function testVobSubReportsTheOptionsOfAnotherFormatBeforeTheMissingSubFile(): void
-    {
-        file_put_contents("$this->dir/lone.idx", file_get_contents(self::FILES . "vobsub/text-pal.idx"));
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("VobSubParser takes VobSubReadOptions, got CsvReadOptions.");
-        Subtitle::load("$this->dir/lone.idx", Format::VobSub, new ReadOptions(format: new CsvReadOptions()));
     }
 
 
@@ -318,15 +309,15 @@ class LoadSaveTest extends TestCase
         $sub  = file_get_contents(self::FILES . "vobsub/two-tracks-pal.sub");
         $path = self::FILES . "vobsub/two-tracks-pal.idx";
 
-        $second = Subtitle::load($path, Format::VobSub, new ReadOptions(format: new VobSubReadOptions(track: 1)));
+        $second = Subtitle::load($path, Format::VobSub, new ReadOptions(formats: [new CsvReadOptions(), new VobSubReadOptions(track: 1), new SccReadOptions()]));
         $this->assertSame(
-            Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx, track: 1)))->toArray(),
+            Subtitle::fromString($sub, Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions($idx, track: 1)]))->toArray(),
             $second->toArray()
         );
         $this->assertNotSame(Subtitle::load($path, Format::VobSub)->toArray(), $second->toArray());
 
         $language = $second->findMetadata(Subtitle::METADATA_LANGUAGE);
-        $this->assertSame($second->toArray(), Subtitle::load($path, Format::VobSub, new ReadOptions(format: new VobSubReadOptions(language: $language)))->toArray());
+        $this->assertSame($second->toArray(), Subtitle::load($path, Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions(language: $language)]))->toArray());
     }
 
 
@@ -342,7 +333,7 @@ class LoadSaveTest extends TestCase
         $this->assertStringContainsString("\t", strtok(file_get_contents("$this->dir/x.tsv"), "\n"));
         $this->assertSame(
             file_get_contents("$this->dir/x.csv"),
-            $subtitle->toString(Format::Csv, new WriteOptions(format: new CsvWriteOptions(delimiter: ",")))
+            $subtitle->toString(Format::Csv, new WriteOptions(formats: [new CsvWriteOptions(delimiter: ",")]))
         );
 
         $semicolons = Subtitle::loadAutoDetectFormat(self::FILES . "csv/real/excel_de_semicolon.csv");
@@ -365,13 +356,13 @@ class LoadSaveTest extends TestCase
 
     public function testSaveMicroDvdTakesTheFrameRateFromTheOptionsThenFromTheFormatData(): void
     {
-        $withFrameRate = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
+        $withFrameRate = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
         $withFrameRate->save("$this->dir/x.sub");
         $this->assertSame(
-            $withFrameRate->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(25))),
+            $withFrameRate->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(25)])),
             file_get_contents("$this->dir/x.sub")
         );
-        $withFrameRate->save("$this->dir/y.sub", options: new WriteOptions(format: new MicroDvdWriteOptions(50)));
+        $withFrameRate->save("$this->dir/y.sub", options: new WriteOptions(formats: [new MicroDvdWriteOptions(50)]));
         $this->assertStringStartsWith("{50}{150}", file_get_contents("$this->dir/y.sub"));
 
         $this->expectException(InvalidArgumentException::class);

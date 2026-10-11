@@ -18,7 +18,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $chapters = Subtitle::fromString(file_get_contents('chapters.json'), Format::PodcastChapters,
-    new ReadOptions(format: new ChapterReadOptions(mediaDuration: 4980)));
+    new ReadOptions(formats: [new ChapterReadOptions(mediaDuration: 4980)]));
 $text     = $chapters->toString(Format::YouTubeChapters);       // for the video description
 $meta     = $chapters->toString(Format::FfMetadataChapters);    // ffmpeg -i in.mp4 -i meta.ffmeta -map_metadata 1 out.mp4
 $broken   = YouTubeChapters::check($chapters);                  // [] when YouTube shows the chapters

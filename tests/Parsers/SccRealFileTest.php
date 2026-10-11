@@ -155,7 +155,7 @@ class SccRealFileTest extends TestCase
 
     public function testRollUpFileReadByLinesGivesEachSpokenLineOnce(): void
     {
-        $options = new ReadOptions(format: new SccReadOptions(rollUp: SccRollUp::Lines));
+        $options = new ReadOptions(formats: [new SccReadOptions(rollUp: SccRollUp::Lines)]);
         $cues    = Subtitle::fromString(file_get_contents(self::DIR . "rollup_news_ndf.scc"), Format::Scc, $options)->getCues();
 
         $this->assertSame([

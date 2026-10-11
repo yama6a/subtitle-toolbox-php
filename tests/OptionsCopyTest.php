@@ -116,11 +116,11 @@ class OptionsCopyTest extends TestCase
 
     public function testKeepsEveryFieldOfTheBase(): void
     {
-        $write = OptionsCopy::with(new WriteOptions(LineEnding::Crlf, true, true, true), ["format" => new MicroDvdWriteOptions(frameRate: 25.0)]);
-        $this->assertEquals(new WriteOptions(LineEnding::Crlf, true, true, true, new MicroDvdWriteOptions(frameRate: 25.0)), $write);
+        $write = OptionsCopy::with(new WriteOptions(LineEnding::Crlf, true, true, true), ["formats" => [new MicroDvdWriteOptions(frameRate: 25.0)]]);
+        $this->assertEquals(new WriteOptions(LineEnding::Crlf, true, true, true, [new MicroDvdWriteOptions(frameRate: 25.0)]), $write);
 
-        $read = OptionsCopy::with(new ReadOptions("Windows-1252", true, 2.0), ["format" => new MicroDvdReadOptions(25.0)]);
-        $this->assertEquals(new ReadOptions("Windows-1252", true, 2.0, new MicroDvdReadOptions(25.0)), $read);
+        $read = OptionsCopy::with(new ReadOptions("Windows-1252", true, 2.0), ["formats" => [new MicroDvdReadOptions(25.0)]]);
+        $this->assertEquals(new ReadOptions("Windows-1252", true, 2.0, [new MicroDvdReadOptions(25.0)]), $read);
 
         $rules = OptionsCopy::with(ValidationRules::structure(), ["maxLinesPerCue" => 2]);
         $this->assertEquals(new ValidationRules(maxLinesPerCue: 2, noOverlap: true, requireCues: true, noUnsortedCues: true, noNegativeDuration: true), $rules);

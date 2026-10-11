@@ -425,6 +425,6 @@ abstract class WriteCommand extends FileCommand
             default                                                         => $this->commandFormatterOptions($outputFormat, $arguments),
         };
 
-        return OptionsCopy::with($this->writeOptions, ["format" => $format]);
+        return OptionsCopy::with($this->writeOptions, ["formats" => $format === null ? [] : [$format]]);
     }
 }

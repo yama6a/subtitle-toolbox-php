@@ -331,7 +331,7 @@ class BinaryOutputTest extends BinaryTestCase
     {
         copy(self::FILES . "scc/fit/own_ferry.srt", "$this->dir/ferry.srt");
         $report  = (new SccFormatter())->formatWithReport(Subtitle::load("$this->dir/ferry.srt", Format::SubRip),
-                                                          new WriteOptions(format: new SccWriteOptions(fit: true)));
+                                                          new WriteOptions(formats: [new SccWriteOptions(fit: true)]));
         $changes = implode("", array_map(fn (SccFitChange $change): string => "ferry.srt: $change->message ({$change->action->value})\n", $report->changes));
 
         $this->assertSame(3, $this->runBinary(["convert", "ferry.srt", "--to", "scc", "-o", "-"])[0]);
