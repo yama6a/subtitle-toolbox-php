@@ -34,6 +34,16 @@ final class XmlOutput
 
 
     /**
+     * Removes the characters that XML 1.0 forbids: the C0 controls except tab, line feed and carriage return, U+FFFE and U+FFFF.
+     *
+     * @throws UnwritableContentException when $text is not valid UTF-8.
+     */
+    public static function text(string $text): string
+    {
+        return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x{FFFE}\x{FFFF}]/u', "", self::requireUtf8($text));
+    }
+
+    /**
      * @throws UnwritableContentException when $xml is not well-formed.
      */
     public static function load(string $xml): DOMDocument
