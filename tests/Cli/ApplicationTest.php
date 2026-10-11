@@ -116,15 +116,15 @@ class ApplicationTest extends TestCase
     public function testUsageErrorsExitWith2(): void
     {
         $this->assertSame(
-            [2, "", "Error: Pass --shift SECONDS, --scale FACTOR, --sync OLD=NEW, or --from-fps RATE and --to-fps RATE.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            self::usageError("retime", "Pass --shift SECONDS, --scale FACTOR, --sync OLD=NEW, or --from-fps RATE and --to-fps RATE."),
             self::runApplication(["retime", "-"])
         );
         $this->assertSame(
-            [2, "", "Error: Pass --from-fps and --to-fps together.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            self::usageError("retime", "Pass --from-fps and --to-fps together."),
             self::runApplication(["retime", "-", "--from-fps", "25"])
         );
         $this->assertSame(
-            [2, "", "Error: Pass --shift with --shift-after.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            self::usageError("retime", "Pass --shift with --shift-after."),
             self::runApplication(["retime", "-", "--scale", "2", "--shift-after", "1"])
         );
     }
@@ -199,7 +199,9 @@ class ApplicationTest extends TestCase
             $this->assertSame($help, self::runApplication(["convert", "-h", "LICENSE"]));
             $this->assertSame($help, self::runApplication(["help", "convert", "out.srt"]));
             $this->assertSame(self::runApplication(["convert", "--help", "text"]), self::runApplication(["convert", "in.srt", "-h", "text"]));
-            $this->assertSame(2, self::runApplication(["convert", "in.srt", "-h", "out"])[0]);
+            $this->assertSame(self::usageError("convert", "Unknown option group \"out\". The groups are forced, ocr, errors, sdh, replace, text, structure, " .
+                                                          "retime, snap, timing, masking, karaoke, ass, and all for every option."),
+                              self::runApplication(["convert", "in.srt", "-h", "out"]));
         } finally {
             chdir($cwd);
         }
@@ -208,8 +210,8 @@ class ApplicationTest extends TestCase
 
     public function testConvertHelpOfAnUnknownGroupListsTheGroups(): void
     {
-        $expected = [2, "", "Error: Unknown option group \"timings\". The groups are forced, ocr, errors, sdh, replace, text, structure, " .
-                            "retime, snap, timing, masking, karaoke, ass, and all for every option.\nRun \"subtitle-toolbox help convert\" for the usage.\n"];
+        $expected = self::usageError("convert", "Unknown option group \"timings\". The groups are forced, ocr, errors, sdh, replace, text, structure, " .
+                                                "retime, snap, timing, masking, karaoke, ass, and all for every option.");
 
         $this->assertSame($expected, self::runApplication(["convert", "--help", "timings"]));
         $this->assertSame($expected, self::runApplication(["help", "convert", "timings"]));

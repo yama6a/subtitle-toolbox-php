@@ -43,12 +43,11 @@ class BinaryOutputTest extends CliTestCase
 
     public function testConvertNeedsToAlsoWithAnOutputFile(): void
     {
-        $usage = "\nRun \"subtitle-toolbox help convert\" for the usage.\n";
-        $toTip = "Error: Pass --to FORMAT, also when the format stays the same, for example --to srt.$usage";
+        $toTip = self::usageError("convert", "Pass --to FORMAT, also when the format stays the same, for example --to srt.");
 
-        $this->assertSame([2, "", $toTip], $this->runCli(["convert", "trip.srt", "-o", "trip.vtt"]));
-        $this->assertSame([2, "", $toTip], $this->runCli(["convert", "trip.srt", "trip.vtt"]));
-        $this->assertSame([2, "", $toTip], $this->runCli(["convert", "trip.srt", "--strip-tags"]));
+        $this->assertSame($toTip, $this->runCli(["convert", "trip.srt", "-o", "trip.vtt"]));
+        $this->assertSame($toTip, $this->runCli(["convert", "trip.srt", "trip.vtt"]));
+        $this->assertSame($toTip, $this->runCli(["convert", "trip.srt", "--strip-tags"]));
         $this->assertFileDoesNotExist("$this->dir/trip.vtt");
 
         $this->assertSame([0, $this->tripAs(Format::SubRip), ""], $this->runCli(["convert", "trip.srt", "--to", "srt"]));
@@ -60,11 +59,13 @@ class BinaryOutputTest extends CliTestCase
         copy(__DIR__ . "/../files/whisper/real/openai_whisper_german.json", "$this->dir/lecture.json");
 
         $this->assertSame(
-            [2, "", "Error: The extension of --output trip.vtt names the format vtt, not the --to format srt.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            self::usageError("convert", "The extension of --output trip.vtt names the format vtt, not the --to format srt."),
             $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "trip.vtt"])
         );
-        $this->assertSame(2, $this->runCli(["retime", "trip.srt", "--shift", "1", "--to", "vtt", "-o", "trip.ass"])[0]);
-        $this->assertSame(2, $this->runCli(["dual", "--primary", "trip.srt", "--secondary", "shop.vtt", "--to", "ass", "-o", "both.srt"])[0]);
+        $this->assertSame(self::usageError("retime", "The extension of --output trip.ass names the format ass, not the --to format vtt."),
+                          $this->runCli(["retime", "trip.srt", "--shift", "1", "--to", "vtt", "-o", "trip.ass"]));
+        $this->assertSame(self::usageError("dual", "The extension of --output both.srt names the format srt, not the --to format ass."),
+                          $this->runCli(["dual", "--primary", "trip.srt", "--secondary", "shop.vtt", "--to", "ass", "-o", "both.srt"]));
         $this->assertSame([], array_diff(scandir($this->dir), [".", "..", ...array_map("basename", glob(self::FIXTURES . "*")), "lecture.json"]));
 
         $this->assertSame([0, "lecture.json -> out.json\n", ""], $this->runCli(["convert", "lecture.json", "--to", "json", "-o", "out.json"]));
@@ -83,15 +84,14 @@ class BinaryOutputTest extends CliTestCase
     public function testConvertNeverOverwritesAFile(): void
     {
         file_put_contents("$this->dir/trip.vtt", "old");
-        $usage = "\nRun \"subtitle-toolbox help convert\" for the usage.\n";
 
         $this->assertSame(
-            [2, "", "Error: The output trip.vtt exists. The tool never overwrites a file. Remove it, or pass another output file or directory.$usage"],
+            self::usageError("convert", "The output trip.vtt exists. The tool never overwrites a file. Remove it, or pass another output file or directory."),
             $this->runCli(["convert", "trip.srt", "--to", "vtt", "-o", "trip.vtt"])
         );
         $this->assertSame("old", $this->file("trip.vtt"));
         $this->assertSame(
-            [2, "", "Error: The output trip.srt is a file that the command reads. Pass another output file or directory.$usage"],
+            self::usageError("convert", "The output trip.srt is a file that the command reads. Pass another output file or directory."),
             $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "trip.srt"])
         );
         $this->assertSame(file_get_contents(self::FIXTURES . "trip.srt"), $this->file("trip.srt"));
@@ -103,8 +103,7 @@ class BinaryOutputTest extends CliTestCase
         file_put_contents("$this->dir/keep.vtt", "old");
 
         $this->assertSame(
-            [2, "", "Error: The output new/../keep.vtt exists. The tool never overwrites a file. Remove it, or pass another output file or " .
-                    "directory.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            self::usageError("convert", "The output new/../keep.vtt exists. The tool never overwrites a file. Remove it, or pass another output file or directory."),
             $this->runCli(["convert", "trip.srt", "--to", "vtt", "-o", "new/../keep.vtt"])
         );
         $this->assertSame("old", $this->file("keep.vtt"));
@@ -119,8 +118,7 @@ class BinaryOutputTest extends CliTestCase
     public function testAnOutputThatEndsWithASlashIsAUsageError(): void
     {
         $this->assertSame(
-            [2, "", "Error: The output newdir/ ends with a slash. Pass a file name, or pass --output-dir newdir/.\n" .
-                    "Run \"subtitle-toolbox help convert\" for the usage.\n"],
+            self::usageError("convert", "The output newdir/ ends with a slash. Pass a file name, or pass --output-dir newdir/."),
             $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "newdir/"])
         );
         $this->assertDirectoryDoesNotExist("$this->dir/newdir");
@@ -131,8 +129,7 @@ class BinaryOutputTest extends CliTestCase
     {
         foreach (["newdir/." => ".", "newdir/.." => "..", "." => ".", ".." => ".."] as $output => $lastPart) {
             $this->assertSame(
-                [2, "", "Error: The output $output ends with \"$lastPart\". Pass a file name, or pass --output-dir $output.\n" .
-                        "Run \"subtitle-toolbox help convert\" for the usage.\n"],
+                self::usageError("convert", "The output $output ends with \"$lastPart\". Pass a file name, or pass --output-dir $output."),
                 $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", $output])
             );
         }
@@ -145,7 +142,7 @@ class BinaryOutputTest extends CliTestCase
         mkdir("$this->dir/out");
 
         $this->assertSame(
-            [2, "", "Error: The output out is a directory. Pass --output-dir out.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            self::usageError("convert", "The output out is a directory. Pass --output-dir out."),
             $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "out"])
         );
         $this->assertSame([], glob("$this->dir/out/*"));
@@ -156,7 +153,7 @@ class BinaryOutputTest extends CliTestCase
     {
         foreach ([["convert", "trip.srt", "--to", "srt"], ["hls", "trip.srt"]] as $call) {
             $this->assertSame(
-                [2, "", "Error: The --output-dir trip.srt is a file. Pass a directory.\nRun \"subtitle-toolbox help $call[0]\" for the usage.\n"],
+                self::usageError($call[0], "The --output-dir trip.srt is a file. Pass a directory."),
                 $this->runCli([...$call, "--output-dir", "trip.srt"])
             );
             $this->assertSame(file_get_contents(self::FIXTURES . "trip.srt"), $this->file("trip.srt"));
@@ -183,18 +180,17 @@ class BinaryOutputTest extends CliTestCase
         rename("$this->dir/trip.srt", "$this->dir/season1/trip.srt");
         rename("$this->dir/shop.vtt", "$this->dir/season1/shop.vtt");
         $shop  = $this->file("season1/shop.vtt");
-        $usage = "\nRun \"subtitle-toolbox help convert\" for the usage.\n";
 
         $this->assertSame(
-            [2, "", "Error: 2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE.$usage"],
+            self::usageError("convert", "2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE."),
             $this->runCli(["convert", "season1/shop.vtt", "season1/trip.srt", "--to", "ass"])
         );
         $this->assertSame(
-            [2, "", "Error: --output takes one input file, got 2. Pass --output-dir DIR for several files.$usage"],
+            self::usageError("convert", "--output takes one input file, got 2. Pass --output-dir DIR for several files."),
             $this->runCli(["convert", "season1/*", "--to", "ass", "-o", "both.ass"])
         );
         $this->assertSame(
-            [2, "", "Error: The output season1/shop.vtt is a file that the command reads. Pass another output file or directory.$usage"],
+            self::usageError("convert", "The output season1/shop.vtt is a file that the command reads. Pass another output file or directory."),
             $this->runCli(["convert", "season1/trip.srt", "season1/shop.vtt", "--to", "vtt", "--output-dir", "season1"])
         );
         $this->assertSame(["shop.vtt", "trip.srt"], array_values(array_diff(scandir("$this->dir/season1"), [".", ".."])));
@@ -220,7 +216,7 @@ class BinaryOutputTest extends CliTestCase
             ["hls", "trip.srt", "--output-dir", "out"],
         ] as $call) {
             foreach (["in-place", "force"] as $option) {
-                $this->assertSame([2, "", "Error: Unknown option --$option.\nRun \"subtitle-toolbox help $call[0]\" for the usage.\n"],
+                $this->assertSame(self::usageError($call[0], "Unknown option --$option."),
                                   $this->runCli([...$call, "--$option"]));
                 $this->assertDoesNotMatchRegularExpression("/--$option\\b/", $this->runCli([$call[0], "--help", "all"])[1]);
             }
@@ -237,15 +233,14 @@ class BinaryOutputTest extends CliTestCase
         copy("$this->dir/trip.srt", "$this->dir/a/trip.srt");
         copy("$this->dir/shop.vtt", "$this->dir/b/trip.vtt");
         copy("$this->dir/shop.vtt", "$this->dir/b/trip.txt");
-        $usage = "\nRun \"subtitle-toolbox help convert\" for the usage.\n";
 
         $this->assertSame(
-            [2, "", "Error: a/trip.srt and b/trip.vtt would both write out/trip.vtt. Pass them in two runs.$usage"],
+            self::usageError("convert", "a/trip.srt and b/trip.vtt would both write out/trip.vtt. Pass them in two runs."),
             $this->runCli(["convert", "a/trip.srt", "b/trip.vtt", "--to", "vtt", "--output-dir", "out"])
         );
         // .txt is no SubRip extension, so --to srt renames b/trip.txt to trip.srt.
         $this->assertSame(
-            [2, "", "Error: trip.srt and b/trip.txt would both write out/trip.srt. Pass them in two runs.$usage"],
+            self::usageError("convert", "trip.srt and b/trip.txt would both write out/trip.srt. Pass them in two runs."),
             $this->runCli(["convert", "trip.srt", "b/trip.txt", "--to", "srt", "--output-dir", "out"])
         );
         $this->assertDirectoryDoesNotExist("$this->dir/out");
@@ -258,10 +253,11 @@ class BinaryOutputTest extends CliTestCase
     public function testStandardInputTakesNoOutputDir(): void
     {
         $this->assertSame(
-            [2, "", "Error: Standard input has no file name for --output-dir. Pass -o FILE.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            self::usageError("convert", "Standard input has no file name for --output-dir. Pass -o FILE."),
             $this->runCli(["convert", "-", "--to", "vtt", "--output-dir", "out"], $this->file("trip.srt"))
         );
-        $this->assertSame(2, $this->runCli(["retime", "trip.srt", "-", "--shift", "1", "--output-dir", "out"], $this->file("trip.srt"))[0]);
+        $this->assertSame(self::usageError("retime", "Standard input has no file name for --output-dir. Pass -o FILE."),
+                          $this->runCli(["retime", "trip.srt", "-", "--shift", "1", "--output-dir", "out"], $this->file("trip.srt")));
         $this->assertDirectoryDoesNotExist("$this->dir/out");
     }
 
@@ -272,9 +268,9 @@ class BinaryOutputTest extends CliTestCase
         copy(self::FILES . "vobsub/text-pal.sub", "$this->dir/text.sub");
 
         foreach ([["-o", "text.sub"], ["--output-dir", "."]] as $output) {
-            [$code, , $stderr] = $this->runCli(["convert", "text.idx", "--to", "microdvd", "--fps", "25", "--skip-image-cues", ...$output]);
-            $this->assertSame([2, "Error: The output " . ($output[0] === "-o" ? "" : "./") . "text.sub is a file that the command reads. Pass another " .
-                                  "output file or directory.\nRun \"subtitle-toolbox help convert\" for the usage.\n"], [$code, $stderr]);
+            $this->assertSame(self::usageError("convert", "The output " . ($output[0] === "-o" ? "" : "./") . "text.sub is a file that the command reads. " .
+                                                          "Pass another output file or directory."),
+                              $this->runCli(["convert", "text.idx", "--to", "microdvd", "--fps", "25", "--skip-image-cues", ...$output]));
             $this->assertFileEquals(self::FILES . "vobsub/text-pal.sub", "$this->dir/text.sub");
         }
     }
@@ -450,25 +446,24 @@ class BinaryOutputTest extends CliTestCase
         file_put_contents("$this->dir/taken.$extension", "old");
         file_put_contents("$this->dir/taken/shop.vtt", "old");
         $before = $this->snapshot();
-        $usage  = "\nRun \"subtitle-toolbox help $call[0]\" for the usage.\n";
-        $exists = "exists. The tool never overwrites a file. Remove it, or pass another output file or directory.$usage";
-        $reads  = "is a file that the command reads. Pass another output file or directory.$usage";
+        $exists = "exists. The tool never overwrites a file. Remove it, or pass another output file or directory.";
+        $reads  = "is a file that the command reads. Pass another output file or directory.";
 
         $cases = [
-            "Error: 2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE.$usage" => [["trip.srt", "shop.vtt"]],
-            "Error: --output takes one input file, got 2. Pass --output-dir DIR for several files.$usage" => [["trip.srt", "shop.vtt"], "-o", "x.$extension"],
-            "Error: Standard input has no file name for --output-dir. Pass -o FILE.$usage"                 => [["-"], "--output-dir", "out"],
-            "Error: The output taken.$extension $exists"                                                   => [["trip.srt"], "-o", "taken.$extension"],
-            "Error: The output taken/shop.vtt $exists"                                                     => [["trip.srt", "shop.vtt"], "--output-dir", "taken"],
-            "Error: a/trip.srt and b/trip.srt would both write out/trip.$extension. Pass them in two runs.$usage" => [["a/trip.srt", "b/trip.srt"], "--output-dir", "out"],
-            "Error: The output shop.vtt $reads"                                                            => [["shop.vtt"], "-o", "shop.vtt"],
-            "Error: The output ./shop.vtt $reads"                                                          => [["shop.vtt"], "--output-dir", "."],
+            "2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE." => [["trip.srt", "shop.vtt"]],
+            "--output takes one input file, got 2. Pass --output-dir DIR for several files."             => [["trip.srt", "shop.vtt"], "-o", "x.$extension"],
+            "Standard input has no file name for --output-dir. Pass -o FILE."                            => [["-"], "--output-dir", "out"],
+            "The output taken.$extension $exists"                                                        => [["trip.srt"], "-o", "taken.$extension"],
+            "The output taken/shop.vtt $exists"                                                          => [["trip.srt", "shop.vtt"], "--output-dir", "taken"],
+            "a/trip.srt and b/trip.srt would both write out/trip.$extension. Pass them in two runs."     => [["a/trip.srt", "b/trip.srt"], "--output-dir", "out"],
+            "The output shop.vtt $reads"                                                                 => [["shop.vtt"], "-o", "shop.vtt"],
+            "The output ./shop.vtt $reads"                                                               => [["shop.vtt"], "--output-dir", "."],
         ];
         if ($call[0] === "sync") {
-            $cases["Error: The output ref.srt $reads"] = [["trip.srt"], "-o", "ref.srt"];
+            $cases["The output ref.srt $reads"] = [["trip.srt"], "-o", "ref.srt"];
         }
         foreach ($cases as $error => $case) {
-            $this->assertSame([2, "", $error], $this->runWrite($call, $case[0], ...array_slice($case, 1)), $error);
+            $this->assertSame(self::usageError($call[0], $error), $this->runWrite($call, $case[0], ...array_slice($case, 1)), $error);
             $this->assertSame($before, $this->snapshot(), $error);
         }
     }

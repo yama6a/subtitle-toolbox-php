@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
 use SubtitleToolbox\Format;
@@ -21,6 +22,28 @@ require_once __DIR__ . "/../files/mkv/generator/MkvFixtureWriter.php";
  */
 class BinaryInputTest extends CliTestCase
 {
+    /**
+     * @return array<string, array{list<string>, string, string}>
+     */
+    public static function inputUsageErrors(): array
+    {
+        return [
+            "--input-fps 0" => [["convert", "frames.sub", "--input-fps", "0", "--to", "srt", "-o", "-"], "convert", "The option --input-fps must be greater than 0."],
+            "--track x"     => [["convert", "movie.mkv", "--to", "srt", "--track", "x"], "convert", "The option --track needs a whole number greater than 0, got \"x\"."],
+        ];
+    }
+
+
+    /**
+     * @param list<string> $arguments
+     */
+    #[DataProvider("inputUsageErrors")]
+    public function testUsageError(array $arguments, string $command, string $message): void
+    {
+        $this->assertSame(self::usageError($command, $message), $this->runCli($arguments));
+    }
+
+
     public function testConvertReadsTheSubtitleFilesOfADirectory(): void
     {
         mkdir("$this->dir/in");
@@ -90,7 +113,7 @@ class BinaryInputTest extends CliTestCase
         $this->assertSame([3, "", str_replace("broken.srt", "stdin", $error) . $hint],
                           $this->runCli(["convert", "-", "--to", "vtt", "-o", "-"], $this->file("broken.srt")));
         $this->assertSame(0, $this->runCli(["convert", "broken.srt", "--to", "vtt", "-o", "lenient.vtt", "--lenient"])[0]);
-        $this->assertSame([2, "", "Error: The option --output-fps needs a number, got \"x\".\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+        $this->assertSame(self::usageError("convert", "The option --output-fps needs a number, got \"x\"."),
                           $this->runCli(["convert", "trip.srt", "--to", "vtt", "--output-fps", "x"]));
 
         [$code, $stdout, $stderr] = $this->runCli(["info", "broken.srt", "--json"]);
@@ -149,7 +172,7 @@ class BinaryInputTest extends CliTestCase
     public function testFromAndToAlwaysNameFormats(): void
     {
         $this->assertSame(
-            [2, "", "Error: Unknown format \"25\". Run \"subtitle-toolbox formats\" for the list.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            self::usageError("retime", "Unknown format \"25\". Run \"subtitle-toolbox formats\" for the list."),
             $this->runCli(["retime", "trip.srt", "--from", "25", "--to", "23.976"])
         );
         $this->assertSame([0, $this->tripAs(Format::WebVtt), ""], $this->runCli(["retime", "trip.srt", "--shift", "0", "--from", "srt", "--to", "vtt"]));
@@ -165,7 +188,6 @@ class BinaryInputTest extends CliTestCase
         $this->assertSame([0, "{25}{75}Hello from the frames.\n{100}{150}{y:i}Second line.\n", ""],
                           $this->runCli(["convert", "frames.sub", "--fps", "25", "--to", "microdvd", "-o", "-"]));
         $this->assertSame(3, $this->runCli(["convert", "frames.sub", "--output-fps", "25", "--to", "microdvd", "-o", "-"])[0]);
-        $this->assertSame(2, $this->runCli(["convert", "frames.sub", "--input-fps", "0", "--to", "srt", "-o", "-"])[0]);
     }
 
 
@@ -192,7 +214,6 @@ class BinaryInputTest extends CliTestCase
         $this->assertSame(3, $this->runCli(["convert", "movie.mkv", "--to", "srt", "--track", "7", "-o", "-"])[0]);
         $this->assertSame([3, "", "trip.srt: ParsingException (Error #100): The file is not a Matroska or WebM file.\n"],
                           $this->runCli(["convert", "trip.srt", "--to", "vtt", "--track", "3", "-o", "-"]));
-        $this->assertSame(2, $this->runCli(["convert", "movie.mkv", "--to", "srt", "--track", "x"])[0]);
     }
 
 
@@ -236,7 +257,7 @@ class BinaryInputTest extends CliTestCase
         $this->assertSame([0, $lines->toString(Format::SubRip), ""], $this->runCli(["convert", "-", "--to", "srt", "-o", "-", "--scc-roll-up", "lines"], $this->file("news.scc")));
         $this->assertSame([0, $screen->toString(Format::SubRip), ""], $this->runCli(["convert", "news.scc", "--to", "srt", "-o", "-", "--scc-roll-up", "screen"]));
         $this->assertSame([0, $this->tripAs(Format::WebVtt), ""], $this->runCli(["convert", "trip.srt", "--to", "vtt", "-o", "-", "--scc-roll-up", "lines"]));
-        $this->assertSame([2, "", "Error: The option --scc-roll-up must be screen or lines, got \"rows\".\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+        $this->assertSame(self::usageError("convert", "The option --scc-roll-up must be screen or lines, got \"rows\"."),
                           $this->runCli(["convert", "news.scc", "--to", "srt", "-o", "-", "--scc-roll-up", "rows"]));
     }
 

@@ -26,4 +26,16 @@ trait RunsApplication
 
         return [$code, stream_get_contents($streams[1]), stream_get_contents($streams[2])];
     }
+
+
+    /**
+     * Returns the result of a run that stops with a usage error: exit code 2, no output, and the message with the
+     * pointer to the help of the command.
+     *
+     * @return array{int, string, string} exit code, standard output, standard error
+     */
+    protected static function usageError(string $command, string $message): array
+    {
+        return [2, "", "Error: $message\nRun \"subtitle-toolbox help $command\" for the usage.\n"];
+    }
 }

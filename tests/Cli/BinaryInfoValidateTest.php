@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Tests\Support\CliTestCase;
@@ -15,6 +16,33 @@ use SubtitleToolbox\Validation\ValidationRules;
  */
 class BinaryInfoValidateTest extends CliTestCase
 {
+    /**
+     * @return array<string, array{list<string>, string, string}>
+     */
+    public static function validateUsageErrors(): array
+    {
+        return [
+            "--no-overlap"            => [["validate", self::FILES . "validation/own_netflix_checks.srt", "--no-overlap"], "validate", "Unknown option --no-overlap."],
+            "no rule"                 => [["validate", "shop.vtt"], "validate", "Pass --preset or at least one rule option."],
+            "unknown preset"          => [["validate", "shop.vtt", "--preset", "nope"], "validate", "The option --preset must be netflix-en or bbc, got \"nope\"."],
+            "frame rate as --from"    => [["validate", "checks.srt", "--preset", "netflix-en", "--from", "25"], "validate",
+                                          "Unknown format \"25\". Run \"subtitle-toolbox formats\" for the list."],
+            "invalid character class" => [["validate", "-", "--allowed-characters", "[z-a]"], "validate",
+                                          "The allowed characters \"[z-a]\" are no valid regular expression character class."],
+        ];
+    }
+
+
+    /**
+     * @param list<string> $arguments
+     */
+    #[DataProvider("validateUsageErrors")]
+    public function testUsageError(array $arguments, string $command, string $message): void
+    {
+        $this->assertSame(self::usageError($command, $message), $this->runCli($arguments));
+    }
+
+
     public function testInfoAsText(): void
     {
         [$code, $stdout, $stderr] = $this->runCli(["info", "trip.srt"]);
@@ -124,7 +152,6 @@ class BinaryInfoValidateTest extends CliTestCase
         $violations = json_decode($stdout, true)[0]["violations"];
         $this->assertSame(array_fill(0, count($expected), "noOverlap"), array_column($violations, "rule"));
         $this->assertSame(array_map(fn (ValidationViolation $violation): int => $violation->cueIndex, $expected), array_column($violations, "cueIndex"));
-        $this->assertSame(2, $this->runCli(["validate", $path, "--no-overlap"])[0]);
     }
 
 
@@ -148,8 +175,6 @@ class BinaryInfoValidateTest extends CliTestCase
             $this->runCli(["validate", "trip.srt", "shop.vtt", "--check-overlaps"])
         );
         $this->assertSame([0, "shop.vtt: no problems\n", ""], $this->runCli(["validate", "shop.vtt", "--preset", "netflix-en", "--max-cps", "30"]));
-        $this->assertSame(2, $this->runCli(["validate", "shop.vtt"])[0]);
-        $this->assertSame(2, $this->runCli(["validate", "shop.vtt", "--preset", "nope"])[0]);
     }
 
 
@@ -165,7 +190,6 @@ class BinaryInfoValidateTest extends CliTestCase
                                           $this->runCli(["validate", "checks.srt", "--preset", "netflix-en", "--fps", "25"])[1]);
         $this->assertStringNotContainsString("minGap",
                                              $this->runCli(["validate", "checks.srt", "--preset", "netflix-en", "--video-fps", "50"])[1]);
-        $this->assertSame(2, $this->runCli(["validate", "checks.srt", "--preset", "netflix-en", "--from", "25"])[0]);
     }
 
 
@@ -210,11 +234,9 @@ class BinaryInfoValidateTest extends CliTestCase
             "--check-leading-or-trailing-spaces", "--max-speakers", "2", "--allowed-characters", "[A-Za-z0-9 .,!?<>/\\-]",
         ], $vtt));
         $this->assertSame(
-            [2, "", "Error: The option --dialogue-dash must be a hyphen, an en dash or an em dash, with or without one space after it, got \"x\".\n" .
-                    "Run \"subtitle-toolbox help validate\" for the usage.\n"],
+            self::usageError("validate", "The option --dialogue-dash must be a hyphen, an en dash or an em dash, with or without one space after it, got \"x\"."),
             $this->runCli(["validate", "-", "--dialogue-dash", "x"], $vtt)
         );
-        $this->assertSame(2, $this->runCli(["validate", "-", "--allowed-characters", "[z-a]"], $vtt)[0]);
     }
 
 

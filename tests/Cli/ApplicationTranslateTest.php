@@ -222,37 +222,36 @@ class ApplicationTranslateTest extends TestCase
     public function testTranslateUsageErrorsExitWith2(): void
     {
         putenv("GOOGLE_TRANSLATE_API_KEY=google-key");
-        $usage = "\nRun \"subtitle-toolbox help translate\" for the usage.\n";
 
-        $this->assertSame([2, "", "Error: Pass --engine deepl, google or openai.$usage"],
+        $this->assertSame(self::usageError("translate", "Pass --engine deepl, google or openai."),
                           self::runApplication(["translate", "-", "--target-language", "de"]));
-        $this->assertSame([2, "", "Error: The option --engine must be deepl, google or openai, got \"bing\".$usage"],
+        $this->assertSame(self::usageError("translate", "The option --engine must be deepl, google or openai, got \"bing\"."),
                           self::runApplication(["translate", "-", "--engine", "bing", "--target-language", "de"]));
-        $this->assertSame([2, "", "Error: Pass --api-key or set the environment variable DEEPL_API_KEY.$usage"],
+        $this->assertSame(self::usageError("translate", "Pass --api-key or set the environment variable DEEPL_API_KEY."),
                           self::runApplication(["translate", "-", "--engine", "deepl", "--target-language", "de"]));
-        $this->assertSame([2, "", "Error: Pass --target-language, for example --target-language fr.$usage"],
+        $this->assertSame(self::usageError("translate", "Pass --target-language, for example --target-language fr."),
                           self::runApplication(["translate", "-", "--engine", "google"]));
-        $this->assertSame([2, "", "Error: The API key is empty. Pass --api-key or set DEEPL_API_KEY.$usage"],
+        $this->assertSame(self::usageError("translate", "The API key is empty. Pass --api-key or set DEEPL_API_KEY."),
                           self::runApplication(["translate", "-", "--engine", "deepl", "--api-key", "", "--target-language", "de"]));
         putenv("DEEPL_API_KEY= ");
-        $this->assertSame([2, "", "Error: The API key is empty. Pass --api-key or set DEEPL_API_KEY.$usage"],
+        $this->assertSame(self::usageError("translate", "The API key is empty. Pass --api-key or set DEEPL_API_KEY."),
                           self::runApplication(["translate", "-", "--engine", "deepl", "--target-language", "de"]));
-        $this->assertSame([2, "", "Error: The API key has a control character, or a space at the start or end. Pass the key without them.$usage"],
+        $this->assertSame(self::usageError("translate", "The API key has a control character, or a space at the start or end. Pass the key without them."),
                           self::runApplication(["translate", "-", "--engine", "google", "--api-key", "key\r", "--target-language", "de"]));
-        $this->assertSame([2, "", "Error: 2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE.$usage"],
+        $this->assertSame(self::usageError("translate", "2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE."),
                           self::runApplication(["translate", self::TRANSLATION . "own_station.srt", self::FILES . "cli/latin1.srt",
                                                 "--engine", "google", "--target-language", "fr"]));
-        $this->assertSame([2, "", "Error: Set the environment variable OPENAI_MODEL, for example OPENAI_MODEL=gpt-4o-mini.$usage"],
+        $this->assertSame(self::usageError("translate", "Set the environment variable OPENAI_MODEL, for example OPENAI_MODEL=gpt-4o-mini."),
                           self::runApplication(["translate", "-", "--engine", "openai", "--target-language", "de"]));
         putenv("OPENAI_MODEL= ");
-        $this->assertSame([2, "", "Error: The environment variable OPENAI_MODEL is empty. Set it to a model name, for example gpt-4o-mini.$usage"],
+        $this->assertSame(self::usageError("translate", "The environment variable OPENAI_MODEL is empty. Set it to a model name, for example gpt-4o-mini."),
                           self::runApplication(["translate", "-", "--engine", "openai", "--target-language", "de"]));
         putenv("OPENAI_MODEL=llama3");
         putenv("OPENAI_BASE_URL=localhost:11434/v1");
         putenv("SUBTITLE_TOOLBOX_TRANSLATE_URL");
-        $this->assertSame([2, "", "Error: The environment variable OPENAI_BASE_URL must start with http:// or https://, got \"localhost:11434/v1\".$usage"],
+        $this->assertSame(self::usageError("translate", "The environment variable OPENAI_BASE_URL must start with http:// or https://, got \"localhost:11434/v1\"."),
                           self::runApplication(["translate", "-", "--engine", "openai", "--target-language", "de"]));
-        $this->assertSame([2, "", "Error: The API key is empty. Pass --api-key or set OPENAI_API_KEY.$usage"],
+        $this->assertSame(self::usageError("translate", "The API key is empty. Pass --api-key or set OPENAI_API_KEY."),
                           self::runApplication(["translate", "-", "--engine", "openai", "--api-key", "", "--target-language", "de"]));
     }
 
@@ -304,8 +303,7 @@ class ApplicationTranslateTest extends TestCase
         $input  = self::TRANSLATION . "own_station.srt";
 
         $this->assertSame(
-            [2, "", "Error: PHP has no ext-curl, which the translation engines need. Install the PHP curl extension.\n" .
-                    "Run \"subtitle-toolbox help translate\" for the usage.\n"],
+            self::usageError("translate", "PHP has no ext-curl, which the translation engines need. Install the PHP curl extension."),
             WithoutCurl::run([$binary, "translate", $input, "--engine", "deepl", "--api-key", "key", "--target-language", "de"])
         );
         [$code, $stdout, $stderr] = WithoutCurl::run([$binary, "convert", $input, "--to", "vtt", "--output", "-"]);

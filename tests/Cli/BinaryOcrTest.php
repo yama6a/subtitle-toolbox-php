@@ -87,7 +87,7 @@ class BinaryOcrTest extends CliTestCase
         copy(__DIR__ . "/../files/pgs/text_1080p.sup", "$this->dir/text.sup");
         file_put_contents("$this->dir/broken.nocr", "no database");
 
-        $this->assertSame([2, "", "Error: Pass --ocr with --ocr-database.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+        $this->assertSame(self::usageError("convert", "Pass --ocr with --ocr-database."),
                           $this->runCli(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr-database", "broken.nocr"]));
         $this->assertSame([3, "", "Error: broken.nocr: Cannot read the glyph database - the data is not gzip-compressed!\n"],
                           $this->runCli(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-database", "broken.nocr"]));
@@ -153,23 +153,21 @@ class BinaryOcrTest extends CliTestCase
     public function testOcrEngineErrors(): void
     {
         copy(self::FILES . "pgs/text_1080p.sup", "$this->dir/text.sup");
-        $usage = "Run \"subtitle-toolbox help convert\" for the usage.\n";
 
-        $this->assertSame([2, "", "Error: The option --ocr-engine must be tesseract or glyph, got \"easyocr\".\n$usage"],
+        $this->assertSame(self::usageError("convert", "The option --ocr-engine must be tesseract or glyph, got \"easyocr\"."),
                           $this->runCli(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-engine", "easyocr"]));
-        $this->assertSame([2, "", "Error: Pass --ocr-engine glyph with --ocr-database.\n$usage"],
+        $this->assertSame(self::usageError("convert", "Pass --ocr-engine glyph with --ocr-database."),
                           $this->runCli(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-engine", "tesseract",
                                             "--ocr-database", "my.nocr"]));
-        $this->assertSame([2, "", "Error: Pass --ocr with --ocr-engine.\n$usage"],
+        $this->assertSame(self::usageError("convert", "Pass --ocr with --ocr-engine."),
                           $this->runCli(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr-engine", "glyph"]));
-        $this->assertSame([2, "", "Error: Pass --ocr with --ocr-language.\n$usage"],
+        $this->assertSame(self::usageError("convert", "Pass --ocr with --ocr-language."),
                           $this->runCli(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr-language", "deu"]));
-        $this->assertSame([2, "", "Error: Cannot run OCR with Tesseract: the program \"tesseract\" is missing. " .
-                                  TesseractOcrEngine::INSTALL_HINT . "\n$usage"],
+        $this->assertSame(self::usageError("convert", "Cannot run OCR with Tesseract: the program \"tesseract\" is missing. " . TesseractOcrEngine::INSTALL_HINT),
                           $this->runWithPath($this->dir, ["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-engine", "tesseract"]));
-        $this->assertSame([2, "", "Error: Cannot run OCR with Tesseract in the language \"fra\": the language data of " .
-                                  "fra is missing. Install it, for example with apt install tesseract-ocr-fra. The " .
-                                  "installed languages are: deu, eng, osd.\n$usage"],
+        $this->assertSame(self::usageError("convert", "Cannot run OCR with Tesseract in the language \"fra\": the language data of " .
+                                                      "fra is missing. Install it, for example with apt install tesseract-ocr-fra. The " .
+                                                      "installed languages are: deu, eng, osd."),
                           $this->runWithFakeTesseract(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-language", "fra"]));
         $this->assertFileDoesNotExist("$this->dir/text.srt");
     }

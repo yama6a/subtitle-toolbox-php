@@ -49,7 +49,7 @@ class BinaryEditTest extends CliTestCase
         copy(self::FILES . "transforms/own_rtl_fixed.srt", "$this->dir/fixed.srt");
         $this->assertSame([0, file_get_contents(self::FILES . "transforms/own_rtl.srt"), ""],
                           $this->runCli(["convert", "fixed.srt", "--to", "srt", "-o", "-", "--no-bom", "--rtl", "clean"]));
-        $this->assertSame([2, "", "Error: The option --rtl must be fix or clean, got \"left\".\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+        $this->assertSame(self::usageError("convert", "The option --rtl must be fix or clean, got \"left\"."),
                           $this->runCli(["convert", "rtl.srt", "--to", "srt", "-o", "-", "--rtl", "left"]));
     }
 
@@ -85,8 +85,7 @@ class BinaryEditTest extends CliTestCase
             $this->runCli(["convert", "labels.srt", "--to", "vtt", "-o", "-", "--no-bom", "--speakers", "from-prefix"])
         );
         $this->assertSame(
-            [2, "", "Error: The option --speakers must be prefix, dashes, colors or from-prefix, got \"names\".\n" .
-                    "Run \"subtitle-toolbox help convert\" for the usage.\n"],
+            self::usageError("convert", "The option --speakers must be prefix, dashes, colors or from-prefix, got \"names\"."),
             $this->runCli(["convert", "voices.vtt", "--to", "srt", "--speakers", "names"])
         );
     }
@@ -130,11 +129,6 @@ class BinaryEditTest extends CliTestCase
         ]));
         $this->assertStringContainsString("<font color=\"#ffff00\">istasyon kap\u{131}s\u{131} \u{131}\u{15f}\u{131}kl\u{131}.</font>",
                                           $this->runCli(["convert", "multi.srt", "--to", "srt", "-o", "-", "--case", "lower", "--language", "tr"])[1]);
-
-        foreach ([["--replace", "colour"], ["--replace", "=x"], ["--replace-regex", "--replace", "/(/=x"], ["--replace-regex"],
-                  ["--replace-ignore-case"], ["--case", "title"], ["--language", "tr"], ["--regex", "--replace", "a=b"], ["--case-language", "tr"]] as $options) {
-            $this->assertSame(2, $this->runCli(["convert", "caps.vtt", "--to", "vtt", "-o", "-", ...$options])[0], implode(" ", $options));
-        }
     }
 
 
@@ -162,8 +156,6 @@ class BinaryEditTest extends CliTestCase
             [0, $masked(ProfanityMask::Remove), ""],
             $this->runCli(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt", "--mask", "remove"])
         );
-        $this->assertSame(2, $this->runCli(["convert", "keys.srt", "--to", "srt", "--mask-words", "words.txt", "--mask", "beep"])[0]);
-        $this->assertSame(2, $this->runCli(["convert", "keys.srt", "--to", "srt", "--mask", "stars"])[0]);
         $this->assertSame(
             [3, "", "Error: missing.txt: The file does not exist.\n"],
             $this->runCli(["convert", "keys.srt", "--to", "srt", "--mask-words", "missing.txt"])
@@ -185,17 +177,14 @@ class BinaryEditTest extends CliTestCase
         $this->assertSame(MuteRange::toEdl($ranges), $this->file("radio.edl"));
         $this->assertSame("1.500 2.100 1\n6.200 6.800 1\n7.900 9.100 1\n", $this->file("radio.edl"));
         $this->assertSame(MuteRange::toFfmpegVolumeFilter($ranges) . "\n", $this->file("radio.af"));
-
-        [$code, $stdout, $stderr] = $this->runCli(["convert", "radio.vtt", "--to", "srt", "-o", "-", "--mask-words", "words.txt",
-                                                      "--mute-edl", "-"]);
-        $this->assertSame([2, ""], [$code, $stdout]);
-        $this->assertSame([2, "", "Error: The --mute-edl file radio.edl exists. The tool never overwrites a file. Remove it, or pass another output " .
-                                  "file or directory.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+        $this->assertSame(self::usageError("convert", "The --mute-edl file radio.edl exists. The tool never overwrites a file. Remove it, or pass " .
+                                                      "another output file or directory."),
                           $this->runCli(["convert", "radio.vtt", "--to", "srt", "-o", "new.srt", "--mask-words", "words.txt", "--mute-edl", "radio.edl"]));
         $this->assertFileDoesNotExist("$this->dir/new.srt");
-        $this->assertSame(2, $this->runCli(["convert", "radio.vtt", "--to", "srt", "--mute-edl", "new.edl"])[0]);
-        $this->assertSame(2, $this->runCli(["convert", "radio.vtt", "trip.srt", "--to", "vtt", "--output-dir", "out",
-                                               "--mask-words", "words.txt", "--mute-edl", "new.edl"])[0]);
+        $this->assertSame(self::usageError("convert", "Pass --mask-words with --mute-edl."),
+                          $this->runCli(["convert", "radio.vtt", "--to", "srt", "--mute-edl", "new.edl"]));
+        $this->assertSame(self::usageError("convert", "--mute-edl and --mute-filter take one input file, got 2."),
+                          $this->runCli(["convert", "radio.vtt", "trip.srt", "--to", "vtt", "--output-dir", "out", "--mask-words", "words.txt", "--mute-edl", "new.edl"]));
         $this->assertFileDoesNotExist("$this->dir/new.edl");
     }
 
@@ -204,16 +193,15 @@ class BinaryEditTest extends CliTestCase
     {
         copy(self::FILES . "profanity/radio.vtt", "$this->dir/radio.vtt");
         copy(self::FILES . "profanity/words.txt", "$this->dir/words.txt");
-        $usage = "\nRun \"subtitle-toolbox help convert\" for the usage.\n";
-        $run   = fn (string ...$options): array => $this->runCli(["convert", "radio.vtt", "--to", "srt", "--mask-words", "words.txt", ...$options]);
+        $run = fn (string ...$options): array => $this->runCli(["convert", "radio.vtt", "--to", "srt", "--mask-words", "words.txt", ...$options]);
 
-        $this->assertSame([2, "", "Error: The --mute-filter file radio.mute is also the output of --mute-edl.$usage"],
+        $this->assertSame(self::usageError("convert", "The --mute-filter file radio.mute is also the output of --mute-edl."),
                           $run("-o", "out.srt", "--mute-edl", "radio.mute", "--mute-filter", "radio.mute"));
-        $this->assertSame([2, "", "Error: The --mute-edl file out.srt is also the output of radio.vtt.$usage"],
+        $this->assertSame(self::usageError("convert", "The --mute-edl file out.srt is also the output of radio.vtt."),
                           $run("-o", "out.srt", "--mute-edl", "out.srt"));
-        $this->assertSame([2, "", "Error: The --mute-edl file radio.vtt is a file that the command reads. Pass another output file or directory.$usage"],
+        $this->assertSame(self::usageError("convert", "The --mute-edl file radio.vtt is a file that the command reads. Pass another output file or directory."),
                           $run("-o", "out.srt", "--mute-edl", "radio.vtt"));
-        $this->assertSame([2, "", "Error: The --mute-filter file ./words.txt is a file that the command reads. Pass another output file or directory.$usage"],
+        $this->assertSame(self::usageError("convert", "The --mute-filter file ./words.txt is a file that the command reads. Pass another output file or directory."),
                           $run("-o", "out.srt", "--mute-filter", "./words.txt"));
 
         $this->assertFileDoesNotExist("$this->dir/radio.mute");
@@ -241,39 +229,69 @@ class BinaryEditTest extends CliTestCase
     }
 
 
-    public function testKaraoke(): void
+    public function testKaraokeWritesOneCuePerWord(): void
     {
-        copy(self::FILES . "whisper/real/openai_whisper_word_timestamps.json", "$this->dir/song.json");
-        copy(self::FILES . "lrc/real/handwritten-enhanced.lrc", "$this->dir/song.lrc");
+        $this->copySongs();
 
         $this->assertSame([0, "song.json -> word.srt\n", ""], $this->runCli(["convert", "song.json", "--to", "srt", "-o", "word.srt", "--karaoke"]));
         $this->assertFileEquals(self::FILES . "karaoke/whisper_word.srt", "$this->dir/word.srt");
+    }
+
+
+    public function testKaraokeStyleSetsTheHighlightTag(): void
+    {
+        $this->copySongs();
         $expected = Subtitle::loadAutoDetectFormat("$this->dir/song.lrc");
         WordHighlight::apply($expected, new WordHighlightOptions(style: 'font color="#ffff00"'));
+
         $this->assertSame(
             [0, $expected->toString(Format::SubRip), ""],
             $this->runCli(["convert", "song.lrc", "--to", "srt", "-o", "-", "--karaoke", "--karaoke-style", 'font color="#ffff00"'])
         );
-        $this->assertSame([0, file_get_contents(self::FILES . "karaoke/whisper_kf.ass"), ""],
-                          $this->runCli(["convert", "song.json", "--to", "ass", "-o", "-", "--ass-karaoke-tag", "kf"]));
-
-        $this->assertSame([2, "", "Error: Pass --to ass with --ass-karaoke-tag.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
-                          $this->runCli(["convert", "song.json", "--to", "srt", "--ass-karaoke-tag", "kf", "--output-dir", "out"]));
-        $this->assertSame(2, $this->runCli(["convert", "song.json", "-o", "song.srt", "--ass-karaoke-tag", "kf"])[0]);
-        $this->assertStringContainsString("\nStyle: Default,Roboto,48,",
-                                          $this->runCli(["convert", "song.json", "--to", "ass", "-o", "-", "--ass-style", "Fontname=Roboto,Fontsize=48"])[1]);
-        $this->assertSame([2, "", "Error: Pass --to ass with --ass-karaoke-tag and --ass-style.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
-                          $this->runCli(["convert", "song.json", "--to", "srt", "-o", "-", "--ass-karaoke-tag", "kf", "--ass-style", "Fontsize=48"]));
-        $this->assertDirectoryDoesNotExist("$this->dir/out");
-        $this->assertFileDoesNotExist("$this->dir/song.srt");
-        foreach ([["--ass-karaoke-tag", "x"], ["--karaoke", "--ass-karaoke-tag", "k"], ["--karaoke-style", "b"], ["--karaoke", "--karaoke-style", "em"],
-                  ["--karaoke", "--karaoke-mode", "cumulative"], ["--karaoke", "--karaoke-words", "2"], ["--karaoke-tag", "k"]] as $options) {
-            $this->assertSame(2, $this->runCli(["convert", "song.json", "--to", "srt", "-o", "-", ...$options])[0], implode(" ", $options));
-        }
     }
 
 
-    public function testFix(): void
+    public function testAssKaraokeTagSetsTheTagOfAssOutput(): void
+    {
+        $this->copySongs();
+
+        $this->assertSame([0, file_get_contents(self::FILES . "karaoke/whisper_kf.ass"), ""],
+                          $this->runCli(["convert", "song.json", "--to", "ass", "-o", "-", "--ass-karaoke-tag", "kf"]));
+    }
+
+
+    public function testAssStyleSetsTheDefaultStyle(): void
+    {
+        $this->copySongs();
+
+        $this->assertStringContainsString("\nStyle: Default,Roboto,48,",
+                                          $this->runCli(["convert", "song.json", "--to", "ass", "-o", "-", "--ass-style", "Fontname=Roboto,Fontsize=48"])[1]);
+    }
+
+
+    public function testAssOptionsWithoutAssOutputWriteNothing(): void
+    {
+        $this->copySongs();
+
+        $this->assertSame(self::usageError("convert", "Pass --to ass with --ass-karaoke-tag."),
+                          $this->runCli(["convert", "song.json", "--to", "srt", "--ass-karaoke-tag", "kf", "--output-dir", "out"]));
+        $this->assertSame(self::usageError("convert", "Pass --to FORMAT, also when the format stays the same, for example --to srt."),
+                          $this->runCli(["convert", "song.json", "-o", "song.srt", "--ass-karaoke-tag", "kf"]));
+        $this->assertSame(self::usageError("convert", "Pass --to ass with --ass-karaoke-tag and --ass-style."),
+                          $this->runCli(["convert", "song.json", "--to", "srt", "-o", "-", "--ass-karaoke-tag", "kf", "--ass-style", "Fontsize=48"]));
+        $this->assertDirectoryDoesNotExist("$this->dir/out");
+        $this->assertFileDoesNotExist("$this->dir/song.srt");
+    }
+
+
+    private function copySongs(): void
+    {
+        copy(self::FILES . "whisper/real/openai_whisper_word_timestamps.json", "$this->dir/song.json");
+        copy(self::FILES . "lrc/real/handwritten-enhanced.lrc", "$this->dir/song.lrc");
+    }
+
+
+    public function testFixWrapsAndFixesTheTiming(): void
     {
         [$code, $stdout] = $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "-", "--timing-fix-overlaps", "--timing-min-gap", "0.1", "--timing-min-duration", "1", "--structure-wrap", "--structure-max-cpl", "30"]);
 
@@ -281,38 +299,6 @@ class BinaryEditTest extends CliTestCase
         $this->assertStringContainsString("00:00:01,000 --> 00:00:02,400\n", $stdout);
         $this->assertStringContainsString("[BELL RINGS] ANNA: We need two tickets\nfor the long ride to the coast.\n", $stdout);
         $this->assertStringContainsString("00:00:06,000 --> 00:00:07,000\n", $stdout);
-        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "-", "--structure-wrap", "--structure-max-cpl", "0"])[0]);
-        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "-", "--timing-min-gap", "-1"])[0]);
-    }
-
-
-    /**
-     * @return array<string, array{list<string>, string}>
-     */
-    public static function fixLimitsWithoutTheirFix(): array
-    {
-        return [
-            "max cpl"             => [["--structure-max-cpl", "30"],
-                                      "Pass --structure-wrap, --structure-resegment, --structure-merge-short or --structure-split-long with --structure-max-cpl."],
-            "max cpl with unwrap" => [["--structure-max-cpl", "30", "--structure-unwrap"],
-                                      "Pass --structure-wrap, --structure-resegment, --structure-merge-short or --structure-split-long with --structure-max-cpl."],
-            "max lines"           => [["--structure-max-lines", "1", "--timing-fix-overlaps"],
-                                      "Pass --structure-wrap, --structure-resegment, --structure-merge-short or --structure-split-long with --structure-max-lines."],
-            "min gap"             => [["--timing-min-gap", "0.1", "--structure-wrap"], "Pass --timing-fix-overlaps, --timing-min-duration, --timing-lead-in or --timing-lead-out with --timing-min-gap."],
-        ];
-    }
-
-
-    /**
-     * @param list<string> $options
-     */
-    #[DataProvider("fixLimitsWithoutTheirFix")]
-    public function testFixLimitWithoutItsFixIsAUsageError(array $options, string $message): void
-    {
-        $this->assertSame(
-            [2, "", "Error: $message\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
-            $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "-", ...$options])
-        );
     }
 
 
@@ -328,7 +314,6 @@ class BinaryEditTest extends CliTestCase
             $this->runCli(["convert", "speech.srt", "--to", "srt", "-o", "-", "--structure-merge-short"])
         );
         $this->assertSame([0, $narrow, ""], $this->runCli(["convert", "speech.srt", "--to", "srt", "-o", "-", "--structure-merge-short", "--structure-max-cpl", "20", "--structure-max-lines", "3"]));
-        $this->assertSame(2, $this->runCli(["convert", "speech.srt", "--to", "srt", "-o", "-", "--structure-merge-short", "--structure-max-cpl", "0"])[0]);
     }
 
 
@@ -370,9 +355,9 @@ class BinaryEditTest extends CliTestCase
         $this->assertStringStartsWith("pal.srt: cue 1: ", $stderr);
         $this->assertStringContainsString(": replaceList: ", $stderr);
 
-        $this->assertSame([2, "", "Error: Pass --case or --errors-fix with --language.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+        $this->assertSame(self::usageError("convert", "Pass --case or --errors-fix with --language."),
                           $this->runCli(["convert", "web.srt", "--to", "srt", "-o", "-", "--timing-fix-overlaps", "--language", "en"]));
-        $this->assertSame([2, "", "Error: Pass --errors-fix with --errors-list-fixes.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+        $this->assertSame(self::usageError("convert", "Pass --errors-fix with --errors-list-fixes."),
                           $this->runCli(["convert", "web.srt", "--to", "srt", "-o", "-", "--errors-list-fixes"]));
         $this->assertSame([3, "", "Error: missing.xml: The file does not exist.\n"],
                           $this->runCli(["convert", "web.srt", "--to", "srt", "-o", "-", "--errors-fix", "--errors-replace-list", "missing.xml"]));
@@ -389,10 +374,9 @@ class BinaryEditTest extends CliTestCase
                           $this->runCli(["convert", "optional.srt", "--to", "srt", "-o", "-", "--errors-fix", "--language", "en", "--errors-enable", $enable]));
         $this->assertSame([0, file_get_contents(self::FILES . "fixing/optional-rules.srt"), ""],
                           $this->runCli(["convert", "optional.srt", "--to", "srt", "-o", "-", "--errors-fix", "--language", "en", "--no-bom"]));
-        $this->assertSame([2, "", "Error: Unknown rule \"dialogOnOneLine\" in --errors-enable. The valid names are " . implode(", ", $names) . ".\n" .
-                                  "Run \"subtitle-toolbox help convert\" for the usage.\n"],
+        $this->assertSame(self::usageError("convert", "Unknown rule \"dialogOnOneLine\" in --errors-enable. The valid names are " . implode(", ", $names) . "."),
                           $this->runCli(["convert", "optional.srt", "--to", "srt", "-o", "-", "--errors-fix", "--errors-enable", "$enable,dialogOnOneLine"]));
-        $this->assertSame([2, "", "Error: Pass --errors-fix with --errors-enable.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+        $this->assertSame(self::usageError("convert", "Pass --errors-fix with --errors-enable."),
                           $this->runCli(["convert", "optional.srt", "--to", "srt", "-o", "-", "--errors-enable", $enable]));
     }
 
@@ -422,7 +406,6 @@ class BinaryEditTest extends CliTestCase
                           $this->runCli(["convert", "-", "--to", "vtt", "-o", "-", "--word-timestamps"], $this->file("lecture.json")));
         $this->assertSame(0, $this->runCli(["convert", "trip.srt", "--to", "vtt", "-o", "-", "--word-timestamps"])[0]);
         $this->assertStringNotContainsString("<00:", $this->runCli(["convert", "lecture.json", "--to", "vtt", "-o", "-"])[1]);
-        $this->assertSame(2, $this->runCli(["convert", "lecture.json", "--to", "srt", "-o", "-", "--timing-fix-overlaps", "--structure-max-word-gap", "1"])[0]);
     }
 
 
@@ -438,7 +421,68 @@ class BinaryEditTest extends CliTestCase
         [, $stdout] = $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "-", "--sdh", "--sdh-keep-parentheses", "--sdh-keep-speaker-labels"]);
         $this->assertStringContainsString("\nANNA: We need", $stdout);
         $this->assertStringContainsString("\n(sighs) Too late.\n", $stdout);
-        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "-", "--sdh", "--sdh-brackets", "{"])[0]);
-        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "-", "--sdh-lyrics"])[0]);
+    }
+
+
+    /**
+     * @return array<string, array{list<string>, string, string}>
+     */
+    public static function editUsageErrors(): array
+    {
+        $caps = ["convert", "caps.vtt", "--to", "vtt", "-o", "-"];
+        $song = ["convert", "song.json", "--to", "srt", "-o", "-"];
+        $trip = ["convert", "trip.srt", "--to", "srt", "-o", "-"];
+        $wrapLimits = "Pass --structure-wrap, --structure-resegment, --structure-merge-short or --structure-split-long with";
+
+        return [
+            "--replace without ="           => [[...$caps, "--replace", "colour"], "convert", "The option --replace needs FROM=TO, got \"colour\"."],
+            "--replace with empty FROM"     => [[...$caps, "--replace", "=x"], "convert", "The option --replace needs FROM=TO, got \"=x\"."],
+            "--replace-regex invalid"       => [[...$caps, "--replace-regex", "--replace", "/(/=x"], "convert", "The option --replace has the invalid regular expression \"/(/\"."],
+            "--replace-regex alone"         => [[...$caps, "--replace-regex"], "convert", "Pass --replace with --replace-regex."],
+            "--replace-ignore-case alone"   => [[...$caps, "--replace-ignore-case"], "convert", "Pass --replace with --replace-ignore-case."],
+            "--case title"                  => [[...$caps, "--case", "title"], "convert", "The option --case must be upper, lower or sentence, got \"title\"."],
+            "--language alone"              => [[...$caps, "--language", "tr"], "convert", "Pass --case or --errors-fix with --language."],
+            "--regex"                       => [[...$caps, "--regex", "--replace", "a=b"], "convert", "Unknown option --regex."],
+            "--case-language"               => [[...$caps, "--case-language", "tr"], "convert", "Unknown option --case-language."],
+            "--mask beep"                   => [["convert", "keys.srt", "--to", "srt", "--mask-words", "words.txt", "--mask", "beep"], "convert",
+                                                "The option --mask must be stars, first-letter, remove or none, got \"beep\"."],
+            "--mask without --mask-words"   => [["convert", "keys.srt", "--to", "srt", "--mask", "stars"], "convert", "Pass --mask-words with --mask."],
+            "--mute-edl to standard output" => [["convert", "radio.vtt", "--to", "srt", "-o", "-", "--mask-words", "words.txt", "--mute-edl", "-"], "convert",
+                                                "The option --mute-edl needs a file path."],
+            "--ass-karaoke-tag x"           => [[...$song, "--ass-karaoke-tag", "x"], "convert", "The option --ass-karaoke-tag must be k, kf or ko, got \"x\"."],
+            "--karaoke and --ass-karaoke-tag" => [[...$song, "--karaoke", "--ass-karaoke-tag", "k"], "convert", "Pass only one of --karaoke and --ass-karaoke-tag."],
+            "--karaoke-style alone"         => [[...$song, "--karaoke-style", "b"], "convert", "Pass --karaoke with --karaoke-style."],
+            "--karaoke-style em"            => [[...$song, "--karaoke", "--karaoke-style", "em"], "convert",
+                                                "The style em must be one of the core markup tags b, i, u, s or font, for example u or font color=\"#ffff00\"."],
+            "--karaoke-mode"                => [[...$song, "--karaoke", "--karaoke-mode", "cumulative"], "convert", "Unknown option --karaoke-mode."],
+            "--karaoke-words"               => [[...$song, "--karaoke", "--karaoke-words", "2"], "convert", "Unknown option --karaoke-words."],
+            "--karaoke-tag"                 => [[...$song, "--karaoke-tag", "k"], "convert", "Unknown option --karaoke-tag."],
+            "--structure-max-cpl 0"         => [[...$trip, "--structure-wrap", "--structure-max-cpl", "0"], "convert",
+                                                "The option --structure-max-cpl needs a whole number greater than 0, got \"0\"."],
+            "--timing-min-gap without fix"  => [[...$trip, "--timing-min-gap", "-1"], "convert",
+                                                "Pass --timing-fix-overlaps, --timing-min-duration, --timing-lead-in or --timing-lead-out with --timing-min-gap."],
+            "max cpl without fix"           => [[...$trip, "--structure-max-cpl", "30"], "convert", "$wrapLimits --structure-max-cpl."],
+            "max cpl with unwrap"           => [[...$trip, "--structure-max-cpl", "30", "--structure-unwrap"], "convert", "$wrapLimits --structure-max-cpl."],
+            "max lines without fix"         => [[...$trip, "--structure-max-lines", "1", "--timing-fix-overlaps"], "convert", "$wrapLimits --structure-max-lines."],
+            "min gap without fix"           => [[...$trip, "--timing-min-gap", "0.1", "--structure-wrap"], "convert",
+                                                "Pass --timing-fix-overlaps, --timing-min-duration, --timing-lead-in or --timing-lead-out with --timing-min-gap."],
+            "merge short --structure-max-cpl 0" => [["convert", "speech.srt", "--to", "srt", "-o", "-", "--structure-merge-short", "--structure-max-cpl", "0"], "convert",
+                                                    "The option --structure-max-cpl needs a whole number greater than 0, got \"0\"."],
+            "--structure-max-word-gap without resegment" => [["convert", "lecture.json", "--to", "srt", "-o", "-", "--timing-fix-overlaps", "--structure-max-word-gap", "1"],
+                                                             "convert", "Pass --structure-resegment with --structure-max-word-gap."],
+            "--sdh-brackets {"              => [[...$trip, "--sdh", "--sdh-brackets", "{"], "convert",
+                                                "The option --sdh-brackets needs two characters, an opening and a closing one, got \"{\"."],
+            "--sdh-lyrics without --sdh"    => [[...$trip, "--sdh-lyrics"], "convert", "Pass --sdh with --sdh-lyrics."],
+        ];
+    }
+
+
+    /**
+     * @param list<string> $arguments
+     */
+    #[DataProvider("editUsageErrors")]
+    public function testUsageError(array $arguments, string $command, string $message): void
+    {
+        $this->assertSame(self::usageError($command, $message), $this->runCli($arguments));
     }
 }

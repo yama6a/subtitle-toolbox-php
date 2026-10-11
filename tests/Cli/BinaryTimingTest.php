@@ -33,8 +33,6 @@ class BinaryTimingTest extends CliTestCase
         $this->assertSame([0, $expected, ""], $this->runCli(["retime", "trip.srt", "--shift=-0.5"]));
         $this->assertSame([0, "trip.srt -> shifted.srt\n", ""], $this->runCli(["retime", "trip.srt", "--shift", "-0.5", "-o", "shifted.srt"]));
         $this->assertSame($expected, $this->file("shifted.srt"));
-        $this->assertSame(2, $this->runCli(["retime", "trip.srt"])[0]);
-        $this->assertSame(2, $this->runCli(["retime", "trip.srt", "--shift", "soon"])[0]);
     }
 
 
@@ -67,11 +65,9 @@ class BinaryTimingTest extends CliTestCase
     public function testInvalidTimeIsAUsageErrorThatQuotesTheValue(): void
     {
         $this->assertSame(
-            [2, "", "Error: The option --shift needs seconds or a timecode such as 00:01:02.500, got \"1:2:3:4:5\".\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            self::usageError("retime", "The option --shift needs seconds or a timecode such as 00:01:02.500, got \"1:2:3:4:5\"."),
             $this->runCli(["retime", "trip.srt", "--shift", "1:2:3:4:5"])
         );
-        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "srt", "--timing-min-duration", "-00:00:01"])[0]);
-        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "srt", "--timing-fix-overlaps", "--timing-min-gap", "00:00:01:12"])[0]);
     }
 
 
@@ -88,10 +84,9 @@ class BinaryTimingTest extends CliTestCase
         $this->assertSame([0, (clone $asr)->addLeadInOut(0.5, 0, 0.1)->toString(Format::SubRip), ""],
                           $this->runCli(["convert", "asr.srt", "--to", "srt", "--timing-lead-in", "0.5", "--timing-min-gap", "0.1"]));
         $this->assertSame(
-            [2, "", "Error: The option --timing-lead-in must not be negative.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            self::usageError("convert", "The option --timing-lead-in must not be negative."),
             $this->runCli(["convert", "asr.srt", "--to", "srt", "--timing-lead-in=-0.2"])
         );
-        $this->assertSame(2, $this->runCli(["convert", "asr.srt", "--to", "srt", "--timing-lead-out", "soon"])[0]);
     }
 
 
@@ -109,7 +104,7 @@ class BinaryTimingTest extends CliTestCase
             "convert", "asr.srt", "--to", "srt", "--timing-max-duration", "2.5", "--timing-lead-out", "1", "--timing-min-duration", "3",
         ]));
         $this->assertSame(
-            [2, "", "Error: The option --timing-max-duration must be greater than 0.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            self::usageError("convert", "The option --timing-max-duration must be greater than 0."),
             $this->runCli(["convert", "long.srt", "--to", "srt", "--timing-max-duration", "0"])
         );
     }
@@ -140,34 +135,65 @@ class BinaryTimingTest extends CliTestCase
 
 
     /**
-     * @return array<string, array{list<string>, string}>
+     * @return array<string, array{list<string>, string, string}>
      */
-    public static function invalidSyncOptions(): array
+    public static function timingUsageErrors(): array
     {
+        $time   = "needs seconds or a timecode such as 00:01:02.500, got";
+        $retime = ["retime", "trip.srt"];
+        $garden = ["convert", "garden.srt", "--to", "srt", "-o", "-"];
+        $sync   = "Pass one of --reference FILE and --silence-log FILE.";
+
         return [
-            "with shift"    => [["--sync", "10=12", "--shift", "2"], "Pass --sync without --shift and --scale."],
-            "with scale"    => [["--sync", "10=12", "--scale", "2"], "Pass --sync without --shift and --scale."],
-            "no equals"     => [["--sync", "10"], "The option --sync needs OLD=NEW, got \"10\"."],
-            "bad old"       => [["--sync", "soon=12"], "The option --sync needs seconds or a timecode such as 00:01:02.500, got \"soon\"."],
-            "bad new"       => [["--sync", "first=1:2:3:4:5"], "The option --sync needs seconds or a timecode such as 00:01:02.500, got \"1:2:3:4:5\"."],
-            "cue 0"         => [["--sync", "#0=12"], "The option --sync needs a cue number from 1 after #, got \"#0=12\"."],
-            "same old"      => [["--sync", "10=12", "--sync", "10=15"], "The --sync points must increase in both times, got \"10=12\" before \"10=15\"."],
-            "old reverse"   => [["--sync", "600=610", "--sync", "10=12"], "The --sync points must increase in both times, got \"600=610\" before \"10=12\"."],
-            "new reverse"   => [["--sync", "10=20", "--sync", "first=5", "--sync", "30=15"], "The --sync points must increase in both times, got \"10=20\" before \"30=15\"."],
+            "retime without change"     => [$retime, "retime", "Pass --shift SECONDS, --scale FACTOR, --sync OLD=NEW, or --from-fps RATE and --to-fps RATE."],
+            "--shift soon"              => [[...$retime, "--shift", "soon"], "retime", "The option --shift $time \"soon\"."],
+            "--timing-min-duration negative" => [["convert", "trip.srt", "--to", "srt", "--timing-min-duration", "-00:00:01"], "convert",
+                                                 "The option --timing-min-duration must be greater than 0."],
+            "--timing-min-gap frames"   => [["convert", "trip.srt", "--to", "srt", "--timing-fix-overlaps", "--timing-min-gap", "00:00:01:12"], "convert",
+                                            "The option --timing-min-gap $time \"00:00:01:12\"."],
+            "--timing-lead-out soon"    => [["convert", "asr.srt", "--to", "srt", "--timing-lead-out", "soon"], "convert", "The option --timing-lead-out $time \"soon\"."],
+            "--sync with --shift"       => [[...$retime, "--sync", "10=12", "--shift", "2"], "retime", "Pass --sync without --shift and --scale."],
+            "--sync with --scale"       => [[...$retime, "--sync", "10=12", "--scale", "2"], "retime", "Pass --sync without --shift and --scale."],
+            "--sync without ="          => [[...$retime, "--sync", "10"], "retime", "The option --sync needs OLD=NEW, got \"10\"."],
+            "--sync bad old"            => [[...$retime, "--sync", "soon=12"], "retime", "The option --sync $time \"soon\"."],
+            "--sync bad new"            => [[...$retime, "--sync", "first=1:2:3:4:5"], "retime", "The option --sync $time \"1:2:3:4:5\"."],
+            "--sync cue 0"              => [[...$retime, "--sync", "#0=12"], "retime", "The option --sync needs a cue number from 1 after #, got \"#0=12\"."],
+            "--sync same old"           => [[...$retime, "--sync", "10=12", "--sync", "10=15"], "retime",
+                                            "The --sync points must increase in both times, got \"10=12\" before \"10=15\"."],
+            "--sync old reverse"        => [[...$retime, "--sync", "600=610", "--sync", "10=12"], "retime",
+                                            "The --sync points must increase in both times, got \"600=610\" before \"10=12\"."],
+            "--sync new reverse"        => [[...$retime, "--sync", "10=20", "--sync", "first=5", "--sync", "30=15"], "retime",
+                                            "The --sync points must increase in both times, got \"10=20\" before \"30=15\"."],
+            "--scale 0"                 => [["retime", "shop.vtt", "--scale", "0"], "retime", "The option --scale must be greater than 0."],
+            "--from-fps without --to-fps" => [["retime", "frames.sub", "--input-fps", "25", "--from-fps", "25"], "retime", "Pass --from-fps and --to-fps together."],
+            "sync without reference"    => [["sync", "de.srt"], "sync", $sync],
+            "sync offsets reversed"     => [["sync", "de.srt", "--reference", "en.srt", "--min-offset", "10", "--max-offset", "-10"], "sync",
+                                            "The minimum offset must not be greater than the maximum offset, got 10 and -10."],
+            "sync --max-splits two"     => [["sync", "de.srt", "--reference", "en.srt", "--max-splits", "two"], "sync",
+                                            "The option --max-splits needs a whole number from 0 to 10, got \"two\"."],
+            "--silence-log without duration" => [["sync", "de.srt", "--silence-log", "silence.log"], "sync", "Pass --media-duration with --silence-log."],
+            "--media-duration alone"    => [["sync", "de.srt", "--media-duration", "840"], "sync", $sync],
+            "--reference and --silence-log" => [["sync", "de.srt", "--reference", "trip.srt", "--silence-log", "silence.log", "--media-duration", "840"], "sync", $sync],
+            "--video-fps alone"         => [[...$garden, "--video-fps", "24"], "convert", "Pass --snap-shot-changes FILE with --video-fps."],
+            "--snap-shot-changes without rate" => [[...$garden, "--snap-shot-changes", "scenes.txt"], "convert",
+                                                   "Pass --video-fps RATE or --fps RATE with --snap-shot-changes."],
+            "--snap-window-frames with input fps" => [[...$garden, "--input-fps", "24", "--snap-window-frames", "6"], "convert",
+                                                      "Pass --video-fps RATE or --fps RATE with --snap-window-frames."],
+            "--no-snap-chain without shot changes" => [[...$garden, "--video-fps", "24", "--no-snap-chain"], "convert",
+                                                       "Pass --snap-shot-changes FILE. With --no-snap-chain and no shot changes, snapping changes nothing."],
+            "--snap-window-frames -1"   => [[...$garden, "--video-fps", "24", "--snap-window-frames", "-1"], "convert",
+                                            "The option --snap-window-frames needs a whole number of 0 or more, got \"-1\"."],
         ];
     }
 
 
     /**
-     * @param list<string> $options
+     * @param list<string> $arguments
      */
-    #[DataProvider("invalidSyncOptions")]
-    public function testInvalidRetimeSyncIsAUsageError(array $options, string $message): void
+    #[DataProvider("timingUsageErrors")]
+    public function testUsageError(array $arguments, string $command, string $message): void
     {
-        $this->assertSame(
-            [2, "", "Error: $message\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
-            $this->runCli(["retime", "trip.srt", ...$options])
-        );
+        $this->assertSame(self::usageError($command, $message), $this->runCli($arguments));
     }
 
 
@@ -192,11 +218,11 @@ class BinaryTimingTest extends CliTestCase
         $this->assertSame([0, $expected, ""], $this->runCli(["retime", "ferry.vtt", "--shift", "2", "--shift-after", "6", "--shift-before", "00:10:00"]));
         $this->assertSame([0, $expected, ""], $this->runCli(["convert", "ferry.vtt", "--to", "vtt", "--shift", "2", "--shift-after", "6", "--shift-before", "600"]));
         $this->assertSame(
-            [2, "", "Error: The option --shift-before must be after --shift-after.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            self::usageError("retime", "The option --shift-before must be after --shift-after."),
             $this->runCli(["retime", "ferry.vtt", "--shift", "2", "--shift-after", "600", "--shift-before", "600"])
         );
         $this->assertSame(
-            [2, "", "Error: Pass --shift with --shift-before.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            self::usageError("retime", "Pass --shift with --shift-before."),
             $this->runCli(["retime", "ferry.vtt", "--scale", "2", "--shift-before", "600"])
         );
     }
@@ -208,7 +234,6 @@ class BinaryTimingTest extends CliTestCase
 
         $this->assertSame(0, $code);
         $this->assertStringContainsString("00:00:20.000 --> 00:00:24.000", $stdout);
-        $this->assertSame(2, $this->runCli(["retime", "shop.vtt", "--scale", "0"])[0]);
     }
 
 
@@ -235,7 +260,6 @@ class BinaryTimingTest extends CliTestCase
 
         $this->assertSame([0, $expected, ""], [$code, $stdout, $stderr]);
         $this->assertStringContainsString("00:00:01.043 --> 00:00:03.128\nHello from the frames.\n", $stdout);
-        $this->assertSame(2, $this->runCli(["retime", "frames.sub", "--input-fps", "25", "--from-fps", "25"])[0]);
     }
 
 
@@ -262,9 +286,6 @@ class BinaryTimingTest extends CliTestCase
         $this->assertStringEndsWith("de.srt: the score is below 0.5, so the files likely do not match.\n", $stderr);
 
         $this->assertSame([3, "", "Error: missing.srt: The file does not exist.\n"], $this->runCli(["sync", "de.srt", "--reference", "missing.srt"]));
-        $this->assertSame(2, $this->runCli(["sync", "de.srt"])[0]);
-        $this->assertSame(2, $this->runCli(["sync", "de.srt", "--reference", "en.srt", "--min-offset", "10", "--max-offset", "-10"])[0]);
-        $this->assertSame(2, $this->runCli(["sync", "de.srt", "--reference", "en.srt", "--max-splits", "two"])[0]);
     }
 
 
@@ -279,10 +300,6 @@ class BinaryTimingTest extends CliTestCase
         $this->assertSame([0, $expected->toString(Format::SubRip), "de.srt: scale 1.04271, offset -2.3 s, score 0.78\n"],
                           [$code, $stdout, $stderr]);
 
-        foreach ([["--silence-log", "silence.log"], ["--media-duration", "840"], ["--reference", "trip.srt", "--silence-log", "silence.log",
-                  "--media-duration", "840"]] as $options) {
-            $this->assertSame(2, $this->runCli(["sync", "de.srt", ...$options])[0], implode(" ", $options));
-        }
         file_put_contents("$this->dir/mono.log", "[silencedetect @ 0x1] channel: 0 | silence_start: 1.5\n");
         $this->assertSame(3, $this->runCli(["sync", "de.srt", "--silence-log", "mono.log", "--media-duration", "840"])[0]);
     }
@@ -310,10 +327,6 @@ class BinaryTimingTest extends CliTestCase
         ShotChangeTiming::apply($chained, new ShotChangeOptions(24));
         $this->assertSame([0, $chained->toString(Format::SubRip), ""], $this->runCli(["convert", "garden.srt", "--to", "srt", "-o", "-", "--fps", "24", "--snap-min-gap-frames", "2"]));
 
-        foreach ([["--video-fps", "24"], ["--snap-shot-changes", "scenes.txt"], ["--input-fps", "24", "--snap-window-frames", "6"],
-                  ["--video-fps", "24", "--no-snap-chain"], ["--video-fps", "24", "--snap-window-frames", "-1"]] as $options) {
-            $this->assertSame(2, $this->runCli(["convert", "garden.srt", "--to", "srt", "-o", "-", ...$options])[0], implode(" ", $options));
-        }
         $this->assertSame([3, "", "Error: missing.txt: The file does not exist.\n"],
                           $this->runCli(["convert", "garden.srt", "--to", "srt", "-o", "-", "--video-fps", "24", "--snap-shot-changes", "missing.txt"]));
     }
