@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Diff\SubtitleDiff;
@@ -24,16 +25,74 @@ use SubtitleToolbox\Tests\Support\CliTestCase;
  */
 class BinaryDiffDualHlsTest extends CliTestCase
 {
-    public function testDiff(): void
+    /**
+     * @return array<string, array{list<string>, string, string}>
+     */
+    public static function usageErrors(): array
     {
-        copy(self::FILES . "diff/own_original.srt", "$this->dir/v1.srt");
-        copy(self::FILES . "diff/own_edited.srt", "$this->dir/v2.srt");
-        file_put_contents("$this->dir/v1.vtt", Subtitle::fromStringAutoDetectFormat($this->file("v1.srt"))->toString(Format::WebVtt));
+        return [
+            "diff with one file"              => [["diff", "v1.srt"], "diff", "Pass two files, the old one and the new one."],
+            "diff --time-tolerance -1"        => [["diff", "v1.srt", "v2.srt", "--time-tolerance", "-1"], "diff", "The option --time-tolerance must not be negative."],
+            "diff --new-from docx"            => [["diff", "trip.srt", "frames.sub", "--new-from", "docx"], "diff",
+                                                  "Unknown format \"docx\". Run \"subtitle-toolbox formats\" for the list."],
+            "diff --new-track x"              => [["diff", "movie.mkv", "movie.mkv", "--track", "3", "--new-track", "x"], "diff",
+                                                  "The option --new-track needs a whole number greater than 0, got \"x\"."],
+            "dual without --secondary"        => [["dual", "--primary", "en.srt"], "dual", "Pass --primary FILE and --secondary FILE."],
+            "dual --mode side"                => [["dual", "--primary", "en.srt", "--secondary", "de.srt", "--mode", "side"], "dual",
+                                                  "The option --mode must be stack or top-bottom, got \"side\"."],
+            "dual --secondary-alignment 0"    => [["dual", "--primary", "en.srt", "--secondary", "de.srt", "--secondary-alignment", "0"], "dual",
+                                                  "The option --secondary-alignment needs a whole number from 1 to 9, got \"0\"."],
+            "dual --secondary-style em"       => [["dual", "--primary", "en.srt", "--secondary", "de.srt", "--secondary-style", "em"], "dual",
+                                                  "The secondary style em must be a core markup tag such as i or font color=\"#ffff00\"."],
+            "dual --snap-tolerance -1"        => [["dual", "--primary", "en.srt", "--secondary", "de.srt", "--snap-tolerance", "-1"], "dual",
+                                                  "The option --snap-tolerance must not be negative."],
+            "dual --from"                     => [["dual", "--primary", "en.srt", "--secondary", "movie.mkv", "--from", "srt"], "dual", "Unknown option --from."],
+            "dual --track"                    => [["dual", "--primary", "en.srt", "--secondary", "movie.mkv", "--track", "3"], "dual", "Unknown option --track."],
+            "dual --new-from"                 => [["dual", "--primary", "en.srt", "--secondary", "movie.mkv", "--new-from", "srt"], "dual",
+                                                  "Unknown option --new-from."],
+            "dual --new-track"                => [["dual", "--primary", "en.srt", "--secondary", "movie.mkv", "--new-track", "3"], "dual",
+                                                  "Unknown option --new-track."],
+        ];
+    }
+
+
+    /**
+     * @param list<string> $arguments
+     */
+    #[DataProvider("usageErrors")]
+    public function testUsageError(array $arguments, string $command, string $message): void
+    {
+        $this->assertSame(self::usageError($command, $message), $this->runCli($arguments));
+    }
+
+
+    public function testDiffPrintsTheReportAndExitsWith1(): void
+    {
+        $this->copyDiffVersions();
 
         $this->assertSame([1, file_get_contents(self::FILES . "diff/own_report.txt"), ""], $this->runCli(["diff", "v1.srt", "v2.srt"]));
-        $this->assertSame([0, "", ""], $this->runCli(["diff", "v1.srt", "v1.vtt"]));
-        $this->assertSame(["oldFile" => "-", "newFile" => "v1.vtt"], array_slice(json_decode($this->runCli(["diff", "-", "v1.vtt", "--json"], $this->file("v1.srt"))[1], true)[0], 0, 2));
+    }
 
+
+    public function testDiffOfEqualFilesPrintsNothingAndExitsWith0(): void
+    {
+        $this->copyDiffVersions();
+
+        $this->assertSame([0, "", ""], $this->runCli(["diff", "v1.srt", "v1.vtt"]));
+    }
+
+
+    public function testDiffJsonNamesStandardInputAsDash(): void
+    {
+        $this->copyDiffVersions();
+
+        $this->assertSame(["oldFile" => "-", "newFile" => "v1.vtt"], array_slice(json_decode($this->runCli(["diff", "-", "v1.vtt", "--json"], $this->file("v1.srt"))[1], true)[0], 0, 2));
+    }
+
+
+    public function testDiffOptionsChangeTheJsonDifferences(): void
+    {
+        $this->copyDiffVersions();
         $options  = new SubtitleDiffOptions(timeTolerance: 0.5, ignoreFormatting: true, textOnly: true);
         $expected = SubtitleDiff::compare(Subtitle::fromStringAutoDetectFormat($this->file("v1.srt")), Subtitle::fromStringAutoDetectFormat($this->file("v2.srt")), $options);
         [$code, $stdout, $stderr] = $this->runCli(["diff", "v1.srt", "v2.srt", "--json", "--time-tolerance", "00:00:00.5", "--ignore-formatting", "--text-only"]);
@@ -46,10 +105,22 @@ class BinaryDiffDualHlsTest extends CliTestCase
         $this->assertEquals(["start" => $old->getStart(), "end" => $old->getEnd(), "lines" => $old->getLines(), "forced" => false],
                             $json["differences"][0]["old"]);
         $this->assertSame($expected[0]->oldIndex, $json["differences"][0]["oldIndex"]);
+    }
 
-        $this->assertSame(2, $this->runCli(["diff", "v1.srt"])[0]);
-        $this->assertSame(2, $this->runCli(["diff", "v1.srt", "v2.srt", "--time-tolerance", "-1"])[0]);
+
+    public function testDiffOfAMissingFileExitsWith3(): void
+    {
+        $this->copyDiffVersions();
+
         $this->assertSame([3, "", "missing.srt: The file does not exist.\n"], $this->runCli(["diff", "v1.srt", "missing.srt"]));
+    }
+
+
+    private function copyDiffVersions(): void
+    {
+        copy(self::FILES . "diff/own_original.srt", "$this->dir/v1.srt");
+        copy(self::FILES . "diff/own_edited.srt", "$this->dir/v2.srt");
+        file_put_contents("$this->dir/v1.vtt", Subtitle::fromStringAutoDetectFormat($this->file("v1.srt"))->toString(Format::WebVtt));
     }
 
 
@@ -67,20 +138,17 @@ class BinaryDiffDualHlsTest extends CliTestCase
         $expected = SubtitleDiff::toText(SubtitleDiff::compare(Subtitle::load(self::FIXTURES . "trip.srt", Format::SubRip), $frames));
         $this->assertSame([1, $expected, ""], $this->runCli(["diff", "trip.srt", "frames.sub", "--new-from", "microdvd", "--input-fps", "25"]));
         $this->assertSame([3, ""], array_slice($this->runCli(["diff", "trip.srt", "frames.sub", "--new-from", "subviewer"]), 0, 2));
-
-        $this->assertSame(2, $this->runCli(["diff", "trip.srt", "frames.sub", "--new-from", "docx"])[0]);
-        $this->assertSame(2, $this->runCli(["diff", "movie.mkv", "movie.mkv", "--track", "3", "--new-track", "x"])[0]);
     }
 
 
     public function testDiffDualAndHlsRejectKeepGoing(): void
     {
         copy(self::FILES . "hls/node-webvtt-subs1.vtt", "$this->dir/talk.vtt");
-        $error = fn (string $command): array => [2, "", "Error: Unknown option --keep-going.\nRun \"subtitle-toolbox help $command\" for the usage.\n"];
 
-        $this->assertSame($error("diff"), $this->runCli(["diff", "trip.srt", "trip.srt", "--keep-going"]));
-        $this->assertSame($error("dual"), $this->runCli(["dual", "--primary", "trip.srt", "--secondary", "shop.vtt", "--keep-going"]));
-        $this->assertSame($error("hls"), $this->runCli(["hls", "talk.vtt", "--output-dir", "out", "--keep-going"]));
+        $this->assertSame(self::usageError("diff", "Unknown option --keep-going."), $this->runCli(["diff", "trip.srt", "trip.srt", "--keep-going"]));
+        $this->assertSame(self::usageError("dual", "Unknown option --keep-going."),
+                          $this->runCli(["dual", "--primary", "trip.srt", "--secondary", "shop.vtt", "--keep-going"]));
+        $this->assertSame(self::usageError("hls", "Unknown option --keep-going."), $this->runCli(["hls", "talk.vtt", "--output-dir", "out", "--keep-going"]));
         $this->assertFileDoesNotExist("$this->dir/out");
     }
 
@@ -118,10 +186,9 @@ class BinaryDiffDualHlsTest extends CliTestCase
         mkdir("$this->dir/old");
         copy("$this->dir/trip.srt", "$this->dir/old/trip.srt");
         copy("$this->dir/shop.vtt", "$this->dir/old/shop.vtt");
-        $usage = "\nRun \"subtitle-toolbox help diff\" for the usage.\n";
 
-        $this->assertSame([2, "", "Error: The diff command takes one old file, got 2.$usage"], $this->runCli(["diff", "old", "trip.srt"]));
-        $this->assertSame([2, "", "Error: The diff command takes one old file, got 2.$usage"], $this->runCli(["diff", "old/*", "trip.srt"]));
+        $this->assertSame(self::usageError("diff", "The diff command takes one old file, got 2."), $this->runCli(["diff", "old", "trip.srt"]));
+        $this->assertSame(self::usageError("diff", "The diff command takes one old file, got 2."), $this->runCli(["diff", "old/*", "trip.srt"]));
         $this->assertSame([0, "", ""], $this->runCli(["diff", "old/t*", "trip.srt"]));
     }
 
@@ -142,10 +209,6 @@ class BinaryDiffDualHlsTest extends CliTestCase
                           $this->runCli(["dual", "--primary", "frames.sub", "--primary-from", "microdvd", "--secondary", "en.srt", "--input-fps", "25"]));
         $this->assertSame([3, ""], array_slice($this->runCli(["dual", "--primary", "en.srt", "--secondary", "frames.sub", "--secondary-from", "subviewer"]), 0, 2));
 
-        foreach (["from" => "srt", "track" => "3", "new-from" => "srt", "new-track" => "3"] as $option => $value) {
-            $this->assertSame([2, "", "Error: Unknown option --$option.\nRun \"subtitle-toolbox help dual\" for the usage.\n"],
-                              $this->runCli(["dual", "--primary", "en.srt", "--secondary", "movie.mkv", "--$option", $value]));
-        }
         preg_match_all('/^  --((?:primary|secondary)(?:-from|-track)?) /m', $this->runCli(["dual", "--help"])[1], $matches);
         $this->assertSame(["primary", "secondary", "primary-from", "primary-track", "secondary-from", "secondary-track"], $matches[1]);
     }
@@ -156,22 +219,21 @@ class BinaryDiffDualHlsTest extends CliTestCase
         copy(self::FILES . "dual/station_en.srt", "$this->dir/en.srt");
         copy(self::FILES . "dual/station_de.srt", "$this->dir/de.srt");
         file_put_contents("$this->dir/taken.srt", "old");
-        $usage = "\nRun \"subtitle-toolbox help dual\" for the usage.\n";
         $pair  = ["--primary", "en.srt", "--secondary", "de.srt"];
         $stack = file_get_contents(self::FILES . "dual/station_stack.srt");
         $before = $this->snapshot();
 
         foreach ([
-            "Error: dual takes no file arguments. Pass --primary FILE and --secondary FILE." => ["en.srt", "de.srt"],
-            "Error: dual takes no file arguments. Pass --primary FILE and --secondary FILE. " => ["en.srt", "--secondary", "de.srt"],
-            "Error: Pass --primary FILE and --secondary FILE."                                => ["--primary", "en.srt"],
-            "Error: --primary takes one file, got 2."                                         => ["--primary", "??.srt", "--secondary", "de.srt"],
-            "Error: The output de.srt is a file that the command reads. Pass another output file or directory." => [...$pair, "-o", "de.srt"],
-            "Error: The output en.srt is a file that the command reads. Pass another output file or directory." => [...$pair, "-o", "en.srt"],
-            "Error: The output ./en.srt is a file that the command reads. Pass another output file or directory." => [...$pair, "--output-dir", "."],
-            "Error: The output taken.srt exists. The tool never overwrites a file. Remove it, or pass another output file or directory." => [...$pair, "-o", "taken.srt"],
+            "dual takes no file arguments. Pass --primary FILE and --secondary FILE." => ["en.srt", "de.srt"],
+            "dual takes no file arguments. Pass --primary FILE and --secondary FILE. " => ["en.srt", "--secondary", "de.srt"],
+            "Pass --primary FILE and --secondary FILE."                                => ["--primary", "en.srt"],
+            "--primary takes one file, got 2."                                         => ["--primary", "??.srt", "--secondary", "de.srt"],
+            "The output de.srt is a file that the command reads. Pass another output file or directory." => [...$pair, "-o", "de.srt"],
+            "The output en.srt is a file that the command reads. Pass another output file or directory." => [...$pair, "-o", "en.srt"],
+            "The output ./en.srt is a file that the command reads. Pass another output file or directory." => [...$pair, "--output-dir", "."],
+            "The output taken.srt exists. The tool never overwrites a file. Remove it, or pass another output file or directory." => [...$pair, "-o", "taken.srt"],
         ] as $error => $options) {
-            $this->assertSame([2, "", rtrim($error) . $usage], $this->runCli(["dual", ...$options, "--secondary-style", "i"]), $error);
+            $this->assertSame(self::usageError("dual", rtrim($error)), $this->runCli(["dual", ...$options, "--secondary-style", "i"]), $error);
             $this->assertSame($before, $this->snapshot(), $error);
         }
 
@@ -182,30 +244,52 @@ class BinaryDiffDualHlsTest extends CliTestCase
     }
 
 
-    public function testDual(): void
+    public function testDualStacksTheSecondaryUnderThePrimary(): void
     {
-        copy(self::FILES . "dual/station_en.srt", "$this->dir/en.srt");
-        copy(self::FILES . "dual/station_de.srt", "$this->dir/de.srt");
+        $this->copyStationPair();
 
         $this->assertSame([0, file_get_contents(self::FILES . "dual/station_stack.srt"), ""],
                           $this->runCli(["dual", "--primary", "en.srt", "--secondary", "de.srt", "--secondary-style", "i"]));
+    }
+
+
+    public function testDualWritesWebVtt(): void
+    {
+        $this->copyStationPair();
+
         $this->assertSame([0, "en.srt -> both.vtt\n", ""],
                           $this->runCli(["dual", "--primary", "en.srt", "--secondary", "de.srt", "--secondary-style", "i", "--to", "vtt", "-o", "both.vtt"]));
         $this->assertFileEquals(self::FILES . "dual/station_stack.vtt", "$this->dir/both.vtt");
+    }
+
+
+    public function testDualTopBottomWritesAss(): void
+    {
+        $this->copyStationPair();
+
         $this->assertSame(
             [0, file_get_contents(self::FILES . "dual/station_top_bottom.ass"), ""],
             $this->runCli(["dual", "--primary", "en.srt", "--secondary", "de.srt", "--mode", "top-bottom", "--secondary-style", 'font color="#ffff00"', "--to", "ass"])
         );
+    }
+
+
+    public function testDualSnapToleranceAndSecondaryAlignment(): void
+    {
+        $this->copyStationPair();
 
         $merged = DualSubtitle::fromPair(Subtitle::fromStringAutoDetectFormat($this->file("en.srt")), Subtitle::fromStringAutoDetectFormat($this->file("de.srt")),
                                       new DualSubtitleOptions(mode: DualSubtitleMode::TopBottom, snapTolerance: 0.5, secondaryAlignment: Alignment::TopLeft));
         $this->assertSame([0, $merged->toString(Format::SubRip), ""], $this->runCli([
             "dual", "--primary", "en.srt", "--secondary", "de.srt", "--mode", "top-bottom", "--snap-tolerance", "00:00.5", "--secondary-alignment", "7",
         ]));
+    }
 
-        foreach ([[], ["--mode", "side"], ["--secondary-alignment", "0"], ["--secondary-style", "em"], ["--snap-tolerance", "-1"]] as $options) {
-            $this->assertSame(2, $this->runCli(["dual", "--primary", "en.srt", ...($options === [] ? [] : ["--secondary", "de.srt"]), ...$options])[0], implode(" ", $options));
-        }
+
+    private function copyStationPair(): void
+    {
+        copy(self::FILES . "dual/station_en.srt", "$this->dir/en.srt");
+        copy(self::FILES . "dual/station_de.srt", "$this->dir/de.srt");
     }
 
 
@@ -227,7 +311,8 @@ class BinaryDiffDualHlsTest extends CliTestCase
         }
         $this->assertCount(16, glob("$this->dir/out/*"));
 
-        $this->assertSame(2, $this->runCli(["hls", "talk.vtt", "--output-dir", "out", "--pattern", "part.vtt"])[0]);
+        $this->assertSame(self::usageError("hls", "The file name pattern must hold exactly one %d and no other placeholder, got \"part.vtt\"."),
+                          $this->runCli(["hls", "talk.vtt", "--output-dir", "out", "--pattern", "part.vtt"]));
         $this->assertCount(16, glob("$this->dir/out/*"));
 
         $this->assertSame([0, "stdin -> stdin/subs.m3u8, 15 segments\n", ""],
@@ -243,22 +328,21 @@ class BinaryDiffDualHlsTest extends CliTestCase
         file_put_contents("$this->dir/out/sub99.vtt", "old");
         file_put_contents("$this->dir/out/index.m3u8", "old");
         $before = $this->snapshot();
-        $usage  = "\nRun \"subtitle-toolbox help hls\" for the usage.\n";
-        $exists = "exists. The tool never overwrites a file. Remove the playlist and the segments, or pass another --output-dir.$usage";
+        $exists = "exists. The tool never overwrites a file. Remove the playlist and the segments, or pass another --output-dir.";
 
         foreach ([
-            "Error: Pass --output-dir DIR.$usage"                       => ["talk.vtt"],
-            "Error: The hls command takes one input file, got 2.$usage" => ["talk.vtt", "trip.srt", "--output-dir", "new"],
-            "Error: out/sub99.vtt $exists"                              => ["talk.vtt", "--output-dir", "out"],
-            "Error: out/index.m3u8 $exists"                             => ["talk.vtt", "--output-dir", "out/", "--playlist", "index.m3u8", "--pattern", "p%d.vtt"],
-            "Error: The option --segment needs a finite number, got \"1e999\".$usage"
-                                                                        => ["talk.vtt", "--output-dir", "new", "--segment", "1e999"],
-            "Error: The option --local needs a finite number, got \"1e999\".$usage"
-                                                                        => ["talk.vtt", "--output-dir", "new", "--local", "1e999"],
-            "Error: The option --local needs seconds or a timecode such as 00:01:02.500, got \"1:2:3:4:5\".$usage"
-                                                                        => ["talk.vtt", "--output-dir", "new", "--local", "1:2:3:4:5"],
+            "Pass --output-dir DIR."                       => ["talk.vtt"],
+            "The hls command takes one input file, got 2." => ["talk.vtt", "trip.srt", "--output-dir", "new"],
+            "out/sub99.vtt $exists"                        => ["talk.vtt", "--output-dir", "out"],
+            "out/index.m3u8 $exists"                       => ["talk.vtt", "--output-dir", "out/", "--playlist", "index.m3u8", "--pattern", "p%d.vtt"],
+            "The option --segment needs a finite number, got \"1e999\"."
+                                                           => ["talk.vtt", "--output-dir", "new", "--segment", "1e999"],
+            "The option --local needs a finite number, got \"1e999\"."
+                                                           => ["talk.vtt", "--output-dir", "new", "--local", "1e999"],
+            "The option --local needs seconds or a timecode such as 00:01:02.500, got \"1:2:3:4:5\"."
+                                                           => ["talk.vtt", "--output-dir", "new", "--local", "1:2:3:4:5"],
         ] as $error => $arguments) {
-            $this->assertSame([2, "", $error], $this->runCli(["hls", ...$arguments]), $error);
+            $this->assertSame(self::usageError("hls", $error), $this->runCli(["hls", ...$arguments]), $error);
             $this->assertSame($before, $this->snapshot(), $error);
         }
     }
@@ -269,8 +353,7 @@ class BinaryDiffDualHlsTest extends CliTestCase
         file_put_contents("$this->dir/keep.txt", "old");
 
         $this->assertSame(
-            [2, "", "Error: new/../keep.txt exists. The tool never overwrites a file. Remove the playlist and the segments, or pass another " .
-                    "--output-dir.\nRun \"subtitle-toolbox help hls\" for the usage.\n"],
+            self::usageError("hls", "new/../keep.txt exists. The tool never overwrites a file. Remove the playlist and the segments, or pass another --output-dir."),
             $this->runCli(["hls", "missing.srt", "--output-dir", "new", "--playlist", "../keep.txt"])
         );
         $this->assertSame("old", $this->file("keep.txt"));
@@ -288,16 +371,15 @@ class BinaryDiffDualHlsTest extends CliTestCase
         mkdir("$this->dir/out");
         copy("$this->dir/trip.srt", "$this->dir/out/sub1.vtt");
         copy("$this->dir/trip.srt", "$this->dir/out/subs.m3u8");
-        $usage = "\nRun \"subtitle-toolbox help hls\" for the usage.\n";
 
-        $this->assertSame([2, "", "Error: The playlist sub0.vtt has the name of a segment. Pass another --playlist or --pattern.$usage"],
+        $this->assertSame(self::usageError("hls", "The playlist sub0.vtt has the name of a segment. Pass another --playlist or --pattern."),
                           $this->runCli(["hls", "trip.srt", "--output-dir", "new", "--playlist", "sub0.vtt"]));
-        $this->assertSame([2, "", "Error: The playlist p007.vtt has the name of a segment. Pass another --playlist or --pattern.$usage"],
+        $this->assertSame(self::usageError("hls", "The playlist p007.vtt has the name of a segment. Pass another --playlist or --pattern."),
                           $this->runCli(["hls", "trip.srt", "--output-dir", "new", "--pattern", "p%03d.vtt", "--playlist", "p007.vtt"]));
         $this->assertDirectoryDoesNotExist("$this->dir/new");
 
         foreach (["out/sub1.vtt", "out/subs.m3u8"] as $input) {
-            $this->assertSame([2, "", "Error: The output would overwrite the input $input. Pass another --output-dir, --playlist or --pattern.$usage"],
+            $this->assertSame(self::usageError("hls", "The output would overwrite the input $input. Pass another --output-dir, --playlist or --pattern."),
                               $this->runCli(["hls", $input, "--output-dir", "out/"]));
             $this->assertSame($this->file("trip.srt"), $this->file($input));
         }

@@ -137,9 +137,8 @@ class ApplicationConvertTest extends TestCase
         }
 
         $this->assertSame(
-            [2, "", "Error: Cannot run OCR: neither Tesseract nor the package yama6a/php-glyph-ocr is installed. " .
-                    TesseractOcrEngine::INSTALL_HINT . " Or install php-glyph-ocr with: composer require yama6a/php-glyph-ocr\n" .
-                    "Run \"subtitle-toolbox help convert\" for the usage.\n"],
+            self::usageError("convert", "Cannot run OCR: neither Tesseract nor the package yama6a/php-glyph-ocr is installed. " .
+                                        TesseractOcrEngine::INSTALL_HINT . " Or install php-glyph-ocr with: composer require yama6a/php-glyph-ocr"),
             self::runApplication(["convert", __DIR__ . "/../files/pgs/text_1080p.sup", "--to", "srt", "--output", "-", "--ocr"])
         );
     }

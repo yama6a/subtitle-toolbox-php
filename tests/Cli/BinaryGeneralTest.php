@@ -226,38 +226,35 @@ class BinaryGeneralTest extends CliTestCase
     }
 
 
-    public function testUnknownCommandAndOptionAreUsageErrors(): void
+    public function testUnknownCommandIsAUsageError(): void
     {
         $this->assertSame([2, "", "Error: Unknown command \"merge\".\nRun \"subtitle-toolbox help\" for the usage.\n"], $this->runCli(["merge"]));
         $this->assertSame([2, "", "Error: Unknown command \"merge\".\nRun \"subtitle-toolbox help\" for the usage.\n"], $this->runCli(["help", "merge"]));
-        $this->assertSame(
-            [2, "", "Error: Unknown option --nope.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
-            $this->runCli(["convert", "trip.srt", "--to", "vtt", "--nope"])
-        );
-        $this->assertSame(
-            [2, "", "Error: Unknown format \"docx\". Run \"subtitle-toolbox formats\" for the list.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
-            $this->runCli(["convert", "trip.srt", "--to", "docx"])
-        );
-        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "vobsub"])[0]);
-        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--from", "txt", "--to", "vtt"])[0]);
-        $this->assertSame(2, $this->runCli(["convert", "--to", "vtt"])[0]);
-        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "vtt", "--line-ending", "cr"])[0]);
-        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "vtt", "--bom", "--no-bom"])[0]);
-        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "vtt", "-o", "a.vtt", "--output-dir", "out"])[0]);
-        $this->assertFileDoesNotExist("$this->dir/trip.vtt");
     }
 
 
     /**
      * @return array<string, array{list<string>, string, string}>
      */
-    public static function invalidOptionValues(): array
+    public static function usageErrors(): array
     {
         $convert = ["convert", "trip.srt", "--to", "srt", "-o", "-"];
         $dual    = ["dual", "--primary", "trip.srt", "--secondary", "shop.vtt"];
         $sync    = ["sync", "trip.srt", "--reference", "shop.vtt"];
+        $fps     = "--video-fps sets the frame rate of the netflix-en gap rule. Pass --preset netflix-en, or leave out --video-fps.";
 
         return [
+            "unknown option"      => [["convert", "trip.srt", "--to", "vtt", "--nope"], "convert", "Unknown option --nope."],
+            "unknown format"      => [["convert", "trip.srt", "--to", "docx"], "convert", "Unknown format \"docx\". Run \"subtitle-toolbox formats\" for the list."],
+            "read-only format"    => [["convert", "trip.srt", "--to", "vobsub"], "convert", "The format vobsub can be read but not written."],
+            "write-only format"   => [["convert", "trip.srt", "--from", "txt", "--to", "vtt"], "convert", "The format txt can be written but not read."],
+            "no input"            => [["convert", "--to", "vtt"], "convert", "Pass at least one input file, or - for standard input."],
+            "line ending cr"      => [["convert", "trip.srt", "--to", "vtt", "--line-ending", "cr"], "convert", "The option --line-ending must be lf or crlf, got \"cr\"."],
+            "bom and no bom"      => [["convert", "trip.srt", "--to", "vtt", "--bom", "--no-bom"], "convert", "Pass only one of --bom and --no-bom."],
+            "output and output dir" => [["convert", "trip.srt", "--to", "vtt", "-o", "a.vtt", "--output-dir", "out"], "convert",
+                                        "Pass only one of --output and --output-dir."],
+            "video fps with bbc"  => [["validate", "trip.srt", "--preset", "bbc", "--video-fps", "25"], "validate", $fps],
+            "video fps with rule" => [["validate", "trip.srt", "--max-cpl", "20", "--video-fps", "25"], "validate", $fps],
             "alignment 0"         => [[...$dual, "--secondary-alignment", "0"], "dual", "The option --secondary-alignment needs a whole number from 1 to 9, got \"0\"."],
             "alignment 10"        => [[...$dual, "--secondary-alignment", "10"], "dual", "The option --secondary-alignment needs a whole number from 1 to 9, got \"10\"."],
             "mode"                => [[...$dual, "--mode", "side"], "dual", "The option --mode must be stack or top-bottom, got \"side\"."],
@@ -283,10 +280,10 @@ class BinaryGeneralTest extends CliTestCase
     /**
      * @param list<string> $arguments
      */
-    #[DataProvider("invalidOptionValues")]
-    public function testInvalidOptionValuesAreUsageErrors(array $arguments, string $command, string $message): void
+    #[DataProvider("usageErrors")]
+    public function testUsageError(array $arguments, string $command, string $message): void
     {
-        $this->assertSame([2, "", "Error: $message\nRun \"subtitle-toolbox help $command\" for the usage.\n"], $this->runCli($arguments));
+        $this->assertSame(self::usageError($command, $message), $this->runCli($arguments));
     }
 
 
@@ -307,24 +304,27 @@ class BinaryGeneralTest extends CliTestCase
     }
 
 
-    public function testExitCodesTellResultsUsageErrorsAndFileErrorsApart(): void
+    public function testValidateAndDiffResultsExitWith1(): void
     {
-        file_put_contents("$this->dir/blocker", "a file, not a directory");
-        mkdir("$this->dir/empty");
-        $usage = fn (string $command): string => "\nRun \"subtitle-toolbox help $command\" for the usage.\n";
-
         $this->assertSame(1, $this->runCli(["validate", "trip.srt", "--max-cpl", "20"])[0]);
         $this->assertSame(1, $this->runCli(["diff", "trip.srt", "shop.vtt"])[0]);
-
-        $this->assertSame([2, "", "Error: The directory empty holds no file with a known subtitle extension.{$usage("convert")}"],
-                          $this->runCli(["convert", "empty", "--to", "vtt"]));
-        foreach ([["--preset", "bbc"], ["--max-cpl", "20"]] as $rules) {
-            $this->assertSame([2, "", "Error: --video-fps sets the frame rate of the netflix-en gap rule. Pass --preset netflix-en, or leave out " .
-                                      "--video-fps.{$usage("validate")}"],
-                              $this->runCli(["validate", "trip.srt", ...$rules, "--video-fps", "25"]));
-        }
         $this->assertSame(1, $this->runCli(["validate", "trip.srt", "--preset", "netflix-en", "--video-fps", "25"])[0]);
         $this->assertSame(1, $this->runCli(["validate", "trip.srt", "--preset", "bbc", "--fps", "25"])[0]);
+    }
+
+
+    public function testDirectoryWithoutSubtitlesIsAUsageError(): void
+    {
+        mkdir("$this->dir/empty");
+
+        $this->assertSame(self::usageError("convert", "The directory empty holds no file with a known subtitle extension."),
+                          $this->runCli(["convert", "empty", "--to", "vtt"]));
+    }
+
+
+    public function testFileErrorsExitWith3(): void
+    {
+        file_put_contents("$this->dir/blocker", "a file, not a directory");
 
         $this->assertSame([3, "", "missing.srt: The file does not exist.\n"], $this->runCli(["convert", "missing.srt", "--to", "vtt"]));
         $this->assertSame([3, "", "Error: Cannot create the directory " . realpath($this->dir) . "/blocker/out.\n"],
@@ -479,8 +479,7 @@ class BinaryGeneralTest extends CliTestCase
     #[DataProvider("sideFileOptions")]
     public function testUsageErrorComesBeforeAMissingSideFile(array $arguments, string $command): void
     {
-        $this->assertSame([2, "", "Error: 2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE.\n" .
-                                  "Run \"subtitle-toolbox help $command\" for the usage.\n"],
+        $this->assertSame(self::usageError($command, "2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE."),
                           $this->runCli($arguments));
     }
 

@@ -159,7 +159,8 @@ class BinaryOptionCoverageTest extends CliTestCase
         $this->assertSame([0, $expected->toString(Format::SubRip)], [$code, $stdout]);
         $this->assertStringNotContainsString("from 414.32 s", $stderr);
         $this->assertStringNotEqualsFile(self::FILES . "sync/own_target_de_split_synced.srt", $stdout);
-        $this->assertSame(2, $this->runCli(["sync", "de.srt", "--reference", "tv.srt", "--split-penalty", "-1"])[0]);
+        $this->assertSame(self::usageError("sync", "The option --split-penalty must not be negative."),
+                          $this->runCli(["sync", "de.srt", "--reference", "tv.srt", "--split-penalty", "-1"]));
     }
 
 
