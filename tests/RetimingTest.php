@@ -98,6 +98,16 @@ class RetimingTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testShiftWithARangeSortsAMovedCueBeforeTheEarlierCues(): void
+    {
+        $subtitle = Subtitle::load(self::EDITING . "harbour_tour.vtt", Format::WebVtt);
+
+        $subtitle->shift(-12.5, fromTime: 17.5);
+
+        $this->assertStringEqualsFile(self::EDITING . "harbour_tour_shifted_back.vtt", $subtitle->toString(Format::WebVtt));
+    }
+
+
     public function testShiftWithOnlyAnEndTimeMovesTheCuesThatStartBeforeIt(): void
     {
         $subtitle = TestSubtitles::fromTimes([[10, 12.5], [20, 22], [30, 31]]);
