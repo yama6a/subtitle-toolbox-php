@@ -81,7 +81,7 @@ final class GoogleSpeechParser extends SubtitleParser
             $previousEnd = $resultEnd;
 
             $formatData = array_diff_key($result, ["alternatives" => true]) + array_diff_key($alternative ?? [], ["transcript" => true]);
-            $cue        = $this->cue($start, $end, $text, $words, null, $formatData);
+            $cue        = $this->cue($start, $end, $text, $words, null, $formatData, $index, $result);
             if ($cue !== null) {
                 $cues[] = $cue;
             }

@@ -39,9 +39,9 @@ final class WhisperJsonParser extends SubtitleParser
         };
 
         $cues = [];
-        foreach ($segments as [$start, $end, $text, $words, $formatData]) {
+        foreach ($segments as [$start, $end, $text, $words, $formatData, $index, $segment]) {
             $speaker = is_string($formatData["speaker"] ?? null) ? $formatData["speaker"] : null;
-            $cue     = $this->cue($start, $end, $text, $words, $speaker, $formatData);
+            $cue     = $this->cue($start, $end, $text, $words, $speaker, $formatData, $index, $segment);
             if ($cue !== null) {
                 $cues[] = $cue;
             }
@@ -100,7 +100,7 @@ final class WhisperJsonParser extends SubtitleParser
                 continue;
             }
 
-            $result[] = [$start, $end, $text, $timedWords, array_diff_key($segment, array_flip(["start", "end", "text"]))];
+            $result[] = [$start, $end, $text, $timedWords, array_diff_key($segment, array_flip(["start", "end", "text"])), $index, $segment];
         }
 
         return $result;
@@ -150,6 +150,8 @@ final class WhisperJsonParser extends SubtitleParser
                 $text,
                 array_map(fn (array $word): array => ["text" => trim($word["text"]), "start" => $word["start"]], $words),
                 array_diff_key($segment, array_flip(["timestamps", "offsets", "text"])),
+                $index,
+                $segment,
             ];
         }
 

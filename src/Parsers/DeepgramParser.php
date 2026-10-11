@@ -95,7 +95,8 @@ final class DeepgramParser extends SubtitleParser
                 $sentenceWords = self::wordsBetween($words, $wordIndex, $start, $end);
                 $formatData    = ["channel" => $channelIndex] + ($speaker === null ? [] : ["speaker" => $paragraph["speaker"]]);
                 $cue           = $this->cue($start, $end, $text, $sentenceWords, $speaker,
-                                            $formatData + ["words" => array_merge([], ...array_column($sentenceWords, "data"))]);
+                                            $formatData + ["words" => array_merge([], ...array_column($sentenceWords, "data"))],
+                                            $sentenceIndex, $sentence);
                 if ($cue !== null) {
                     $cues[] = $cue;
                 }

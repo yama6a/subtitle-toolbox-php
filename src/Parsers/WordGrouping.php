@@ -122,7 +122,7 @@ trait WordGrouping
             }
 
             $formatData = array_diff_key($utterance, array_flip(["start", "end", $textKey]));
-            $cue        = $this->cue($start, $end, $text, $words, self::speaker($utterance["speaker"] ?? null), $formatData);
+            $cue        = $this->cue($start, $end, $text, $words, self::speaker($utterance["speaker"] ?? null), $formatData, $index, $utterance);
             if ($cue !== null) {
                 $cues[] = $cue;
             }
@@ -219,14 +219,17 @@ trait WordGrouping
     private function cuesFromWords(array $words, string $wordsKey, array $formatData = []): array
     {
         $cues = [];
-        foreach ($this->groupWords($words) as $group) {
-            $cue = $this->cue(
+        foreach ($this->groupWords($words) as $index => $group) {
+            $source = array_merge(...array_column($group, "data"));
+            $cue    = $this->cue(
                 $group[0]["start"],
                 $group[count($group) - 1]["end"],
                 implode(" ", array_column($group, "text")),
                 $group,
                 $group[0]["speaker"],
-                $formatData + [$wordsKey => array_merge(...array_column($group, "data"))]
+                $formatData + [$wordsKey => $source],
+                $index,
+                $source
             );
             if ($cue !== null) {
                 $cues[] = $cue;
@@ -237,10 +240,22 @@ trait WordGrouping
     }
 
 
-    private function cue(float $start, float $end, string $text, array $words, ?string $speaker, array $formatData): ?SubtitleCue
+    /**
+     * Returns the cue, or null for an empty text. $index and $source name the segment, utterance or word group in a warning.
+     * A cue that ends before it starts throws in strict mode. In lenient mode, it is swapped or skipped with a warning.
+     */
+    private function cue(float $start, float $end, string $text, array $words, ?string $speaker, array $formatData, int $index, mixed $source): ?SubtitleCue
     {
         $text = trim($text);
         if ($text === "") {
+            return null;
+        }
+
+        try {
+            [$start, $end] = $this->orderedTimes($start, $end, null, $index, [RawJson::encode($source)]);
+        } catch (ParsingException $exception) {
+            $this->fail($exception, null, $index, [RawJson::encode($source)]);
+
             return null;
         }
 
