@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
+use Closure;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\CueNotFoundException;
 use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class CueEditingTest extends TestCase
@@ -242,11 +244,35 @@ class CueEditingTest extends TestCase
     }
 
 
-    public function testSplitUnknownCueThrowsException(): void
+    /**
+     * @return array<string, array{Closure(Subtitle): mixed, string}>
+     */
+    public static function missingCueEdits(): array
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot edit cue 3: the cue does not exist.");
-        TestSubtitles::fromCues([[0, 6, "a\nb"]])->splitCue(3, 3, 1);
+        return [
+            "split cue 9"       => [fn (Subtitle $subtitle) => $subtitle->splitCue(9, 3, 1), "Cannot split cue 9: the cue does not exist."],
+            "split cue -1"      => [fn (Subtitle $subtitle) => $subtitle->splitCue(-1, 3, 1), "Cannot split cue -1: the cue does not exist."],
+            "join cues 0 to 9"  => [fn (Subtitle $subtitle) => $subtitle->joinCues(0, 9), "Cannot join cue 9: the cue does not exist."],
+            "join cues -1 to 2" => [fn (Subtitle $subtitle) => $subtitle->joinCues(-1, 2), "Cannot join cue -1: the cue does not exist."],
+            "join cues 9 to 2"  => [fn (Subtitle $subtitle) => $subtitle->joinCues(9, 2), "Cannot join cue 9: the cue does not exist."],
+            "remove cue 9"      => [fn (Subtitle $subtitle) => $subtitle->removeCue(9), "Cannot remove cue 9: the cue does not exist."],
+        ];
+    }
+
+
+    #[DataProvider("missingCueEdits")]
+    public function testEditOfAMissingCueThrowsCueNotFoundAndKeepsTheSubtitle(Closure $edit, string $message): void
+    {
+        $subtitle = $this->parseHarbourTour();
+        $before   = $subtitle->toString(Format::WebVtt);
+
+        try {
+            $edit($subtitle);
+            $this->fail("The edit of a missing cue did not throw.");
+        } catch (CueNotFoundException $exception) {
+            $this->assertSame($message, $exception->getMessage());
+        }
+        $this->assertSame($before, $subtitle->toString(Format::WebVtt));
     }
 
 
@@ -289,14 +315,6 @@ class CueEditingTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("Cannot join cues 1 to 1: the first index must be lower than the last index.");
         TestSubtitles::fromCues([[0, 1, "zero"], [1, 2, "one"]])->joinCues(1, 1);
-    }
-
-
-    public function testJoinUnknownCueThrowsException(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot edit cue 2: the cue does not exist.");
-        TestSubtitles::fromCues([[0, 1, "zero"], [1, 2, "one"]])->joinCues(0, 2);
     }
 
 

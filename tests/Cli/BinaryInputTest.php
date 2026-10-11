@@ -187,7 +187,7 @@ class BinaryInputTest extends BinaryTestCase
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "movie.mkv", "--to", "srt", "-o", "-"]);
         $this->assertSame([3, ""], [$code, $stdout]);
-        $this->assertStringStartsWith("movie.mkv: InvalidParserException (Error #102): The MKV or WebM file has 6 subtitle tracks. Pass --track N with one of them:\n" .
+        $this->assertStringStartsWith("movie.mkv: UnsupportedFormatException (Error #102): The MKV or WebM file has 6 subtitle tracks. Pass --track N with one of them:\n" .
                                       "  3: S_TEXT/UTF8, de, \"Deutsch (Forced)\", forced\n  4: S_TEXT/ASS, eng, \"English\", default\n", $stderr);
         $this->assertSame(3, $this->runBinary(["convert", "movie.mkv", "--to", "srt", "--track", "7", "-o", "-"])[0]);
         $this->assertSame([3, "", "trip.srt: ParsingException (Error #100): The file is not a Matroska or WebM file.\n"],
@@ -293,7 +293,7 @@ class BinaryInputTest extends BinaryTestCase
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "movie.mp4", "--track", "5", "--to", "srt", "-o", "-"]);
         $this->assertSame([3, "", "movie.mp4: ParsingException (Error #100): Track 5 has the codec enct and is encrypted.\n"], [$code, $stdout, $stderr]);
         [$code, , $stderr] = $this->runBinary(["convert", "movie.mp4", "--from", "srt", "--to", "vtt", "-o", "-"]);
-        $this->assertSame([3, "movie.mp4: InvalidParserException (Error #102): The input is an MP4 file. Pass --track N.\n"],
+        $this->assertSame([3, "movie.mp4: UnsupportedFormatException (Error #102): The input is an MP4 file. Pass --track N.\n"],
                           [$code, $stderr]);
     }
 

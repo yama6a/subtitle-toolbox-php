@@ -63,7 +63,7 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 - **MKV, WebM and MP4**: `load()` throws for them. `loadAutoDetectFormat()` reads a file with exactly 1 subtitle track and throws with the track list for other files.
 - **`getFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV or MP4 track, it is the format of the codec, for example `Format::SubRip`.
 - **`findSourceEncoding()`**: the encoding that the load call read the text from, for example `Windows-1252`. See [encodings.md](encodings.md#order-of-the-checks).
-- **`save()`**: writes the format argument. Without it, `save()` writes the format of the extension. It throws `InvalidFormatterException` for an unknown extension.
+- **`save()`**: writes the format argument. Without it, `save()` writes the format of the extension. It throws `UnsupportedFormatException` for an unknown extension.
 - **Frame rate**: MicroDVD output takes the frame rate from `MicroDvdWriteOptions::$frameRate`. Without it, the frame rate comes from a MicroDVD input. iTT output takes it from `IttWriteOptions::$frameRate`. Without it, the frame rate comes from an iTT input. Without either, `toString()` and `save()` throw `InvalidArgumentException`.
 - **CSV and TSV**: TSV output has tabs. CSV output from a TSV input has commas. A `CsvWriteOptions::$delimiter` wins.
 

@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
-use SubtitleToolbox\Exceptions\InvalidFormatterException;
-use SubtitleToolbox\Exceptions\InvalidParserException;
+use SubtitleToolbox\Exceptions\UnsupportedFormatException;
 use SubtitleToolbox\Validation\ValidationRule;
 use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
@@ -148,7 +147,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
     public function testFromStringThrowsForAFormatWithoutParser(): void
     {
-        $this->expectException(InvalidParserException::class);
+        $this->expectException(UnsupportedFormatException::class);
         $this->expectExceptionMessage("The format txt can be written but not read.");
         Subtitle::fromString("text", Format::PlainText);
     }
@@ -156,7 +155,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
     public function testToStringThrowsForAFormatWithoutFormatter(): void
     {
-        $this->expectException(InvalidFormatterException::class);
+        $this->expectException(UnsupportedFormatException::class);
         $this->expectExceptionMessage("The format whisper can be read but not written.");
         (new Subtitle())->toString(Format::Whisper);
     }
@@ -164,7 +163,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
     public function testFromStringAutoDetectFormatSkipsFormatsThatAreNotAutoDetected(): void
     {
-        $this->expectException(InvalidParserException::class);
+        $this->expectException(UnsupportedFormatException::class);
         Subtitle::fromStringAutoDetectFormat(file_get_contents(__DIR__ . "/files/chapters/ffmetadata/real/m4b_audiobook.ffmeta"));
     }
 

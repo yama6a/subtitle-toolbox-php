@@ -6,8 +6,8 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Exceptions\UnsupportedFormatException;
 
 class FormatDetectorTest extends TestCase
 {
@@ -370,7 +370,7 @@ class FormatDetectorTest extends TestCase
 
     public function testAutoDetectionThrowsForUnknownContent(): void
     {
-        $this->expectException(InvalidParserException::class);
+        $this->expectException(UnsupportedFormatException::class);
         $this->expectExceptionMessage("Format detection found no subtitle format.");
 
         Subtitle::fromStringAutoDetectFormat("Just some text.");
