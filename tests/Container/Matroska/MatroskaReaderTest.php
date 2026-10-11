@@ -39,6 +39,27 @@ class MatroskaReaderTest extends TestCase
     }
 
 
+    public static function producerFiles(): array
+    {
+        return [
+            "mkvmerge S_TEXT/UTF8"      => ["mkvmerge.mkv", 2, "srt"],
+            "mkvmerge S_TEXT/ASS"       => ["mkvmerge.mkv", 3, "ass"],
+            "ffmpeg S_TEXT/UTF8"        => ["ffmpeg_srt.mkv", 2, "srt"],
+            "ffmpeg D_WEBVTT/SUBTITLES" => ["ffmpeg_webvtt.webm", 2, "vtt"],
+        ];
+    }
+
+
+    #[DataProvider("producerFiles")]
+    public function testExtractsTheTracksOfMkvmergeAndFfmpegFilesAsTheGoldenFiles(string $file, int $track, string $extension): void
+    {
+        $subtitle = MatroskaReader::open(self::DIR . $file)->extract($track);
+
+        $this->assertStringEqualsFile(self::DIR . "expected/$file.$track.$extension",
+                                      $subtitle->toString($subtitle->getFormat(), new WriteOptions(bom: false)));
+    }
+
+
     public function testReadsTheWebmWebVttCodecsExceptMetadata(): void
     {
         $tracks = "";

@@ -319,6 +319,26 @@ class BinaryInputTest extends CliTestCase
     }
 
 
+    public static function containerGoldens(): array
+    {
+        return [
+            "mkvmerge S_TEXT/UTF8 to SubRip"        => ["mkv/mkvmerge.mkv", 2, "srt"],
+            "ffmpeg D_WEBVTT/SUBTITLES to WebVTT" => ["mkv/ffmpeg_webvtt.webm", 2, "vtt"],
+            "ffmpeg mov_text to SubRip"           => ["mp4/ffmpeg_mov_text.mp4", 2, "srt"],
+        ];
+    }
+
+
+    #[DataProvider("containerGoldens")]
+    public function testConvertWritesAContainerTrackAsTheGoldenFile(string $file, int $track, string $to): void
+    {
+        $expected = self::FILES . dirname($file) . "/expected/" . basename($file) . ".$track.to.$to";
+
+        $this->assertSame([0, file_get_contents($expected), ""],
+                          $this->runBinary(["convert", self::FILES . $file, "--track", (string) $track, "--to", $to, "-o", "-"]));
+    }
+
+
     public function testInfoListsTheTracksOfAnMkvFileOnStandardInput(): void
     {
         $this->assertSame(

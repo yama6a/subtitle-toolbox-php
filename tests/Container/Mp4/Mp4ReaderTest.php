@@ -13,6 +13,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 require_once __DIR__ . "/../../files/mp4/generator/Mp4Fixtures.php";
 
@@ -31,6 +32,14 @@ class Mp4ReaderTest extends TestCase
     public function testFixturesMatchTheGenerator(string $method): void
     {
         $this->assertSame(file_get_contents(self::DIR . array_search($method, Mp4Fixtures::FILES, true)), Mp4Fixtures::$method());
+    }
+
+
+    public function testExtractsTheTrackOfAnFfmpegFileAsTheGoldenFile(): void
+    {
+        $subtitle = Mp4Reader::open(self::DIR . "ffmpeg_mov_text.mp4")->extract(2);
+
+        $this->assertStringEqualsFile(self::DIR . "expected/ffmpeg_mov_text.mp4.2.srt", $subtitle->toString(Format::SubRip, new WriteOptions(bom: false)));
     }
 
 
