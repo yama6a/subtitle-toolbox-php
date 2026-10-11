@@ -181,6 +181,90 @@ class Mp4ReaderTest extends TestCase
     }
 
 
+    public static function brokenFiles(): array
+    {
+        return [
+            "stts with fewer samples than stsz" => [
+                fn () => self::oneTrack(["boxes" => ["stts" => Mp4FixtureWriter::fullBox("stts", 0, 0, pack("N", 0))]])->extract(1),
+                "The stts box of track 1 has fewer samples than the sample size box.",
+            ],
+            "timescale of 0"                    => [
+                fn () => self::oneTrack(["timescale" => 0]),
+                "Track 1 has a timescale of 0.",
+            ],
+            "stco with fewer entries than its count" => [
+                fn () => self::oneTrack(["boxes" => ["stco" => Mp4FixtureWriter::fullBox("stco", 0, 0, pack("NN", 5, 0))]])->extract(1),
+                "The stco box of track 1 holds fewer entries than its count of 5.",
+            ],
+            "stz2 with a field size of 3 bits"  => [
+                fn () => self::oneTrack(["boxes" => ["stsz" => Mp4FixtureWriter::fullBox("stz2", 0, 0, "\0\0\0\x03" . pack("N", 1) . "\0")]])->extract(1),
+                "The stz2 box of track 1 is not valid.",
+            ],
+            "stz2 with fewer sizes than its count" => [
+                fn () => self::oneTrack(["boxes" => ["stsz" => Mp4FixtureWriter::fullBox("stz2", 0, 0, "\0\0\0\x10" . pack("N", 2) . "\0\x05")]])->extract(1),
+                "The stz2 box of track 1 is not valid.",
+            ],
+            "no stsz and no stz2"               => [
+                fn () => self::oneTrack(["boxes" => ["stsz" => ""]])->extract(1),
+                "Track 1 has no stsz or stz2 box.",
+            ],
+            "no stco and no co64"               => [
+                fn () => self::oneTrack(["boxes" => ["stco" => ""]])->extract(1),
+                "Track 1 has no stco box.",
+            ],
+            "tx3g text longer than the sample"  => [
+                fn () => self::oneTrack([], pack("n", 50) . "The shop")->extract(1),
+                "The text of the sample of track 1 at byte 529 is longer than the sample.",
+            ],
+            "tx3g text that is not UTF-8"       => [
+                fn () => self::oneTrack([], Mp4FixtureWriter::textSample("Caf\xE9"))->extract(1),
+                "The text of the sample of track 1 at byte 529 is not valid UTF-8.",
+            ],
+            "no moov box"                       => [
+                fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp() . Mp4FixtureWriter::box("mdat", "abc"))),
+                "The MP4 file has no moov box.",
+            ],
+            "mdhd too short"                    => [
+                fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp() . Mp4FixtureWriter::box("moov", Mp4FixtureWriter::box("trak",
+                    Mp4FixtureWriter::fullBox("tkhd", 0, 0, str_repeat("\0", 80)) . Mp4FixtureWriter::box("mdia",
+                    Mp4FixtureWriter::fullBox("mdhd", 0, 0, "") . Mp4FixtureWriter::fullBox("hdlr", 0, 0, pack("N", 0) . "sbtl")))))),
+                "The box \"mdhd\" at byte 152 is too short.",
+            ],
+        ];
+    }
+
+
+    #[DataProvider("brokenFiles")]
+    public function testThrowsForABrokenFile(\Closure $read, string $message): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage($message);
+
+        $read();
+    }
+
+
+    public function testThrowsForAStreamThatIsNotSeekable(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The stream must be seekable.");
+
+        Mp4Reader::open(fopen("php://output", "wb"));
+    }
+
+
+    /**
+     * Opens a file with one tx3g track 1 that holds $sample, with the given track fields.
+     */
+    private static function oneTrack(array $track = [], ?string $sample = null): Mp4Reader
+    {
+        return Mp4Reader::open(self::stream(Mp4FixtureWriter::file([$track + [
+            "id" => 1, "handler" => "sbtl", "entry" => Mp4FixtureWriter::tx3gEntry(), "perChunk" => 1,
+            "samples" => [[1000, $sample ?? Mp4FixtureWriter::textSample("The shop is closed.")]],
+        ]], true)));
+    }
+
+
     public function testLeavesAStreamOpen(): void
     {
         $stream = fopen(self::DIR . "one_track.mp4", "rb");
