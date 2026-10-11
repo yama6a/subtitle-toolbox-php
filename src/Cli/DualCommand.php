@@ -79,7 +79,7 @@ final class DualCommand extends WriteCommand
 
     protected function fileOptionNames(): array
     {
-        return ["from" => "primary-from", "track" => "primary-track", "from2" => "secondary-from", "track2" => "secondary-track"];
+        return ["from" => "primary-from", "track" => "primary-track", "secondFrom" => "secondary-from", "secondTrack" => "secondary-track"];
     }
 
 

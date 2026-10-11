@@ -105,11 +105,11 @@ abstract class FileCommand extends Command
     /**
      * Returns the names of the format and track options of the input and of the second file.
      *
-     * @return array{from: string, track: string, from2: string, track2: string}
+     * @return array{from: string, track: string, secondFrom: string, secondTrack: string}
      */
     protected function fileOptionNames(): array
     {
-        return ["from" => "from", "track" => "track", "from2" => "from2", "track2" => "track2"];
+        return ["from" => "from", "track" => "track", "secondFrom" => "secondary-from", "secondTrack" => "secondary-track"];
     }
 
 
@@ -136,6 +136,12 @@ abstract class FileCommand extends Command
     }
 
 
+    protected function secondFileInherits(): bool
+    {
+        return false;
+    }
+
+
     /**
      * Returns the format and track options of the second file, for a command that reads one.
      *
@@ -146,8 +152,8 @@ abstract class FileCommand extends Command
         $names = $this->fileOptionNames();
 
         return [
-            Option::value($names["from2"], "FORMAT", "Format of the $file file. Default: as for --$names[from]."),
-            Option::value($names["track2"], "NUMBER", "Subtitle track of an MKV, WebM or MP4 $file file. Needed when the file has 2 or more subtitle tracks."),
+            Option::value($names["secondFrom"], "FORMAT", "Format of the $file file. Default: as for --$names[from]."),
+            Option::value($names["secondTrack"], "NUMBER", "Subtitle track of an MKV, WebM or MP4 $file file. Needed when the file has 2 or more subtitle tracks."),
         ];
     }
 
@@ -163,12 +169,12 @@ abstract class FileCommand extends Command
         $this->sccRollUp      = $sccRollUp === null ? null : SccRollUp::from($sccRollUp);
         $names                = $this->fileOptionNames();
         $this->inputTrack     = $arguments->positiveInt($names["track"]);
-        $this->secondTrack    = $arguments->positiveInt($names["track2"]);
+        $this->secondTrack    = $arguments->positiveInt($names["secondTrack"]) ?? ($this->secondFileInherits() ? $this->inputTrack : null);
 
         $from               = $arguments->value($names["from"]);
         $this->fromFormat   = $from === null ? null : FormatArgument::readable($from);
-        $from2              = $arguments->value($names["from2"]);
-        $this->secondFormat = $from2 === null ? null : FormatArgument::readable($from2);
+        $second             = $arguments->value($names["secondFrom"]);
+        $this->secondFormat = $second === null ? ($this->secondFileInherits() ? $this->fromFormat : null) : FormatArgument::readable($second);
 
         $this->readOptions = new ReadOptions(
             encoding: $arguments->value("encoding"),
@@ -369,7 +375,7 @@ abstract class FileCommand extends Command
         $names              = $this->fileOptionNames();
         $this->failureLabel = $path;
         $subtitle           = $this->loadOtherFile($path, $console, $this->secondFormat, $this->secondTrack,
-                                                   "--" . $names["track2"], "--" . $names["from2"]);
+                                                   "--" . $names["secondTrack"], "--" . $names["secondFrom"]);
         $this->failureLabel = null;
 
         return $subtitle;
