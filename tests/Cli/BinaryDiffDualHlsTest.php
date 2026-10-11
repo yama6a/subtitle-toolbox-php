@@ -100,6 +100,18 @@ class BinaryDiffDualHlsTest extends BinaryTestCase
     }
 
 
+    public function testDiffIgnoresAnInheritedTrackForAFileWithoutTracks(): void
+    {
+        copy(self::FILES . "mkv/text_tracks.mkv", "$this->dir/movie.mkv");
+        $track3 = MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv")->extract(3);
+        $trip   = Subtitle::load(self::FIXTURES . "trip.srt", Format::SubRip);
+
+        $this->assertSame([1, SubtitleDiff::toText(SubtitleDiff::compare($track3, $trip)), ""], $this->runBinary(["diff", "movie.mkv", "trip.srt", "--track", "3"]));
+        $this->assertSame(3, $this->runBinary(["diff", "movie.mkv", "trip.srt", "--track", "3", "--new-track", "3"])[0]);
+        $this->assertSame(3, $this->runBinary(["diff", "trip.srt", "movie.mkv", "--track", "3"])[0]);
+    }
+
+
     public function testDiffTakesOneOldFile(): void
     {
         mkdir("$this->dir/old");

@@ -56,4 +56,4 @@ subtitle-toolbox diff a.json b.json --from deepgram
 subtitle-toolbox diff old.mkv new.mkv --track 3 --new-track 8
 ```
 
-A file that is not MKV, WebM or MP4 cannot take `--track`. For `diff old.mkv new.srt --track 3`, the new file fails. 
+`--track` applies to the new file only when the new file is an MKV, WebM or MP4 file. For `diff old.mkv new.srt --track 3`, `diff` reads track 3 of `old.mkv` and ignores `--track` for `new.srt`. 

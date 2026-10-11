@@ -397,7 +397,7 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 |:--- |:--- |
 | `--time-tolerance SECONDS` | `timeTolerance`. The value is a [time](#times) |
 | `--ignore-formatting`, `--ignore-whitespace`, `--text-only` | `ignoreFormatting`, `ignoreWhitespace`, `textOnly` |
-| `--new-from FORMAT`, `--new-track NUMBER` | the format and the MKV or WebM track of the new file. Without them, `--from` and `--track` apply to the new file as well. `--encoding` always applies to both files |
+| `--new-from FORMAT`, `--new-track NUMBER` | the format and the MKV or WebM track of the new file. Without them, `--from` and `--track` apply to the new file as well. `--track` is ignored for a new file that has no tracks, such as an SRT file. `--encoding` always applies to both files |
 | `--json` | prints JSON, see [JSON output](#json-output) |
 
 - **New file**: a new file that is missing or does not parse fails with exit code 3. The message names only the new file, for example `episode1_v2.srt: The file does not exist.`
