@@ -58,7 +58,21 @@ class BinaryOptionCoverageTest extends CliTestCase
     }
 
 
-    public function testConvertSdhKeepOptions(): void
+    /**
+     * @return array<string, array{string, HearingImpairedOptions}>
+     */
+    public static function sdhKeepOptions(): array
+    {
+        return [
+            "--sdh-keep-square-brackets" => ["--sdh-keep-square-brackets", new HearingImpairedOptions(squareBrackets: false)],
+            "--sdh-keep-music-lines"     => ["--sdh-keep-music-lines", new HearingImpairedOptions(musicOnlyLines: false)],
+            "--sdh-any-case-labels"      => ["--sdh-any-case-labels", new HearingImpairedOptions(speakerLabelsUpperCaseOnly: false)],
+        ];
+    }
+
+
+    #[DataProvider("sdhKeepOptions")]
+    public function testConvertSdhKeepOption(string $option, HearingImpairedOptions $options): void
     {
         copy(self::FILES . "hearing-impaired/own_sdh.srt", "$this->dir/sdh.srt");
         $expected = function (HearingImpairedOptions $options): string {
@@ -67,51 +81,67 @@ class BinaryOptionCoverageTest extends CliTestCase
 
             return $subtitle->toString(Format::SubRip);
         };
-        $default = $expected(new HearingImpairedOptions());
 
-        foreach ([
-            "--sdh-keep-square-brackets" => new HearingImpairedOptions(squareBrackets: false),
-            "--sdh-keep-music-lines"     => new HearingImpairedOptions(musicOnlyLines: false),
-            "--sdh-any-case-labels"      => new HearingImpairedOptions(speakerLabelsUpperCaseOnly: false),
-        ] as $option => $options) {
-            $this->assertNotSame($default, $expected($options), $option);
-            $this->assertSame([0, $expected($options), ""], $this->runCli(["convert", "sdh.srt", "--to", "srt", "-o", "-", "--sdh", $option]), $option);
-        }
+        $this->assertNotSame($expected(new HearingImpairedOptions()), $expected($options));
+        $this->assertSame([0, $expected($options), ""], $this->runCli(["convert", "sdh.srt", "--to", "srt", "-o", "-", "--sdh", $option]));
     }
 
 
-    public function testConvertRetimesLikeRetime(): void
+    /**
+     * @return array<string, array{list<string>}>
+     */
+    public static function retimeOptions(): array
     {
-        foreach ([["--shift", "2", "--shift-after", "4"], ["--from-fps", "25", "--to-fps", "23.976"]] as $options) {
-            [$code, $expected] = $this->runCli(["retime", "shop.vtt", "--to", "srt", ...$options]);
-            $this->assertSame(0, $code);
-            $this->assertNotSame($this->runCli(["retime", "shop.vtt", "--to", "srt", "--shift", "0"])[1], $expected);
-            $this->assertSame([0, $expected, ""], $this->runCli(["convert", "shop.vtt", "--to", "srt", "-o", "-", ...$options]));
-        }
+        return [
+            "--shift --shift-after" => [["--shift", "2", "--shift-after", "4"]],
+            "--from-fps --to-fps"   => [["--from-fps", "25", "--to-fps", "23.976"]],
+        ];
     }
 
 
-    public function testValidateRuleOptions(): void
+    /**
+     * @param list<string> $options
+     */
+    #[DataProvider("retimeOptions")]
+    public function testConvertRetimesLikeRetime(array $options): void
     {
-        copy(self::FILES . "validation/own_netflix_checks.srt", "$this->dir/checks.srt");
-        $subtitle = Subtitle::load("$this->dir/checks.srt", Format::SubRip);
+        [$code, $expected] = $this->runCli(["retime", "shop.vtt", "--to", "srt", ...$options]);
+        $this->assertSame(0, $code);
+        $this->assertNotSame($this->runCli(["retime", "shop.vtt", "--to", "srt", "--shift", "0"])[1], $expected);
+        $this->assertSame([0, $expected, ""], $this->runCli(["convert", "shop.vtt", "--to", "srt", "-o", "-", ...$options]));
+    }
 
-        foreach ([
+
+    /**
+     * @return array<string, array{list<string>, ValidationRules}>
+     */
+    public static function validateRuleOptions(): array
+    {
+        return [
             "--max-lines"        => [["--max-lines", "1"], new ValidationRules(maxLinesPerCue: 1)],
             "--min-duration"     => [["--min-duration", "00:00:01.5"], new ValidationRules(minDuration: 1.5)],
             "--max-duration"     => [["--max-duration", "0:00:02"], new ValidationRules(maxDuration: 2)],
             "--min-gap"          => [["--min-gap", "00:00.5"], new ValidationRules(minGap: 0.5)],
             "--check-empty-cues" => [["--check-empty-cues"], new ValidationRules(noEmptyCues: true)],
-        ] as $option => [$options, $rules]) {
-            $expected = array_map(fn (ValidationViolation $violation): array => [$violation->rule->value, $violation->cueIndex],
-                                 $subtitle->validate($rules));
-            $this->assertNotSame([], $expected, $option);
+        ];
+    }
 
-            [$code, $stdout, $stderr] = $this->runCli(["validate", "checks.srt", "--json", ...$options]);
-            $violations = json_decode($stdout, true)[0]["violations"];
-            $this->assertSame([1, ""], [$code, $stderr], $option);
-            $this->assertSame($expected, array_map(fn (array $violation): array => [$violation["rule"], $violation["cueIndex"]], $violations), $option);
-        }
+
+    /**
+     * @param list<string> $options
+     */
+    #[DataProvider("validateRuleOptions")]
+    public function testValidateRuleOption(array $options, ValidationRules $rules): void
+    {
+        copy(self::FILES . "validation/own_netflix_checks.srt", "$this->dir/checks.srt");
+        $expected = array_map(fn (ValidationViolation $violation): array => [$violation->rule->value, $violation->cueIndex],
+                             Subtitle::load("$this->dir/checks.srt", Format::SubRip)->validate($rules));
+        $this->assertNotSame([], $expected);
+
+        [$code, $stdout, $stderr] = $this->runCli(["validate", "checks.srt", "--json", ...$options]);
+        $violations = json_decode($stdout, true)[0]["violations"];
+        $this->assertSame([1, ""], [$code, $stderr]);
+        $this->assertSame($expected, array_map(fn (array $violation): array => [$violation["rule"], $violation["cueIndex"]], $violations));
     }
 
 
@@ -192,244 +222,400 @@ class BinaryOptionCoverageTest extends CliTestCase
 
 
     /**
-     * @return array<string, array{string, list<string>}>
+     * @return array<string, array{string}>
      */
-    public static function inputOptions(): array
+    public static function encodingCommands(): array
     {
         return [
-            "retime --encoding"         => ["retime", ["--encoding", "UTF-32LE"]],
-            "retime --lenient"          => ["retime", ["--lenient"]],
-            "retime --word-timestamps"  => ["retime", ["--word-timestamps"]],
-            "retime --scc-roll-up" => ["retime", ["--scc-roll-up", "screen"]],
-            "retime --track"            => ["retime", ["--track", "3"]],
-            "info --encoding"           => ["info", ["--encoding", "UTF-32LE"]],
-            "info --fps"                => ["info", ["--fps", "25"]],
-            "info --word-timestamps"    => ["info", ["--word-timestamps"]],
-            "info --scc-roll-up" => ["info", ["--scc-roll-up", "screen"]],
-            "validate --encoding"       => ["validate", ["--encoding", "UTF-32LE"]],
-            "validate --input-fps"      => ["validate", ["--input-fps", "25"]],
-            "validate --word-timestamps" => ["validate", ["--word-timestamps"]],
-            "validate --scc-roll-up" => ["validate", ["--scc-roll-up", "screen"]],
-            "validate --track"          => ["validate", ["--track", "3"]],
-            "sync --from"               => ["sync", ["--from", "srt"]],
-            "sync --encoding"           => ["sync", ["--encoding", "UTF-32LE"]],
-            "sync --lenient"            => ["sync", ["--lenient"]],
-            "sync --input-fps"          => ["sync", ["--input-fps", "25"]],
-            "sync --fps"                => ["sync", ["--fps", "25"]],
-            "sync --word-timestamps"    => ["sync", ["--word-timestamps"]],
-            "sync --scc-roll-up" => ["sync", ["--scc-roll-up", "screen"]],
-            "sync --track"              => ["sync", ["--track", "3"]],
-            "diff --from"               => ["diff", ["--from", "srt"]],
-            "diff --encoding"           => ["diff", ["--encoding", "UTF-32LE"]],
-            "diff --fps"                => ["diff", ["--fps", "25"]],
-            "diff --word-timestamps"    => ["diff", ["--word-timestamps"]],
-            "diff --scc-roll-up" => ["diff", ["--scc-roll-up", "screen"]],
-            "translate --from"          => ["translate", ["--from", "srt"]],
-            "translate --lenient"       => ["translate", ["--lenient"]],
-            "translate --input-fps"     => ["translate", ["--input-fps", "25"]],
-            "translate --fps"           => ["translate", ["--fps", "25"]],
-            "translate --word-timestamps" => ["translate", ["--word-timestamps"]],
-            "translate --scc-roll-up" => ["translate", ["--scc-roll-up", "screen"]],
-            "translate --track"         => ["translate", ["--track", "3"]],
-            "dual --encoding"           => ["dual", ["--encoding", "UTF-32LE"]],
-            "dual --lenient"            => ["dual", ["--lenient"]],
-            "dual --fps"                => ["dual", ["--fps", "25"]],
-            "dual --word-timestamps"    => ["dual", ["--word-timestamps"]],
-            "dual --scc-roll-up" => ["dual", ["--scc-roll-up", "screen"]],
-            "hls --from"                => ["hls", ["--from", "srt"]],
-            "hls --encoding"            => ["hls", ["--encoding", "UTF-32LE"]],
-            "hls --lenient"             => ["hls", ["--lenient"]],
-            "hls --input-fps"           => ["hls", ["--input-fps", "25"]],
-            "hls --fps"                 => ["hls", ["--fps", "25"]],
-            "hls --word-timestamps"     => ["hls", ["--word-timestamps"]],
-            "hls --scc-roll-up" => ["hls", ["--scc-roll-up", "screen"]],
-            "hls --track"               => ["hls", ["--track", "3"]],
+            "retime --encoding"   => ["retime"],
+            "info --encoding"     => ["info"],
+            "validate --encoding" => ["validate"],
+            "sync --encoding"     => ["sync"],
+            "diff --encoding"     => ["diff"],
+            "dual --encoding"     => ["dual"],
+            "hls --encoding"      => ["hls"],
+        ];
+    }
+
+
+    #[DataProvider("encodingCommands")]
+    public function testEncodingOption(string $command): void
+    {
+        $utf32 = fn (string $text): string => mb_convert_encoding(ltrim($text, self::BOM), "UTF-32LE", "UTF-8");
+
+        [$without, $with] = $this->runWithAndWithoutOption($command, ["--encoding", "UTF-32LE"], $utf32);
+
+        $this->assertSame(3, $this->runCli(self::commandLine($command, "station.srt"))[0]);
+        $with[1] = str_replace("Encoding:              UTF-32LE", "Encoding:              UTF-8", $with[1]);
+        $this->assertSame($without, $with);
+    }
+
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function frameRateOptions(): array
+    {
+        return [
+            "info --fps"            => ["info", "--fps"],
+            "validate --input-fps"  => ["validate", "--input-fps"],
+            "sync --input-fps"      => ["sync", "--input-fps"],
+            "sync --fps"            => ["sync", "--fps"],
+            "diff --fps"            => ["diff", "--fps"],
+            "translate --input-fps" => ["translate", "--input-fps"],
+            "translate --fps"       => ["translate", "--fps"],
+            "dual --fps"            => ["dual", "--fps"],
+            "hls --input-fps"       => ["hls", "--input-fps"],
+            "hls --fps"             => ["hls", "--fps"],
         ];
     }
 
 
     /**
-     * Runs the command with the option on input that needs it, and without the option on the plain input. Both runs
-     * must give the same result. --from, --word-timestamps and --scc-roll-up run on the plain input.
+     * Compares MicroDVD input without a frame rate line and the option to MicroDVD input with a frame rate line.
+     */
+    #[DataProvider("frameRateOptions")]
+    public function testFrameRateOption(string $command, string $option): void
+    {
+        $microDvd = fn (string $text): string => Subtitle::fromString($text, Format::SubRip)
+                                                         ->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(25)]));
+        $withFrameRateLine = fn (string $text): string => "{1}{1}25\n" . $microDvd($text);
+
+        [$without, $with] = $this->runWithAndWithoutOption($command, [$option, "25"], $microDvd, $withFrameRateLine, "station.sub");
+
+        $this->assertSame(3, $this->runCli(self::commandLine($command, "station.sub", "sub"))[0]);
+        $this->assertSame($without, $with);
+    }
+
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function lenientCommands(): array
+    {
+        return [
+            "retime --lenient"    => ["retime"],
+            "sync --lenient"      => ["sync"],
+            "translate --lenient" => ["translate"],
+            "dual --lenient"      => ["dual"],
+            "hls --lenient"       => ["hls"],
+        ];
+    }
+
+
+    #[DataProvider("lenientCommands")]
+    public function testLenientOption(string $command): void
+    {
+        $broken = fn (string $text): string => rtrim($text) . "\n\n99\n00:01:00,000 => 00:01:02,000\nBroken\n";
+
+        [$without, $with] = $this->runWithAndWithoutOption($command, ["--lenient"], $broken);
+
+        $this->assertStringContainsString("Block #", $with[2]);
+        [$with[2], $without[2]] = ["", ""];
+        $this->assertSame(3, $this->runCli(self::commandLine($command, "station.srt"))[0]);
+        $this->assertSame($without, $with);
+    }
+
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function trackCommands(): array
+    {
+        return [
+            "retime --track"    => ["retime"],
+            "validate --track"  => ["validate"],
+            "sync --track"      => ["sync"],
+            "translate --track" => ["translate"],
+            "hls --track"       => ["hls"],
+        ];
+    }
+
+
+    #[DataProvider("trackCommands")]
+    public function testTrackOption(string $command): void
+    {
+        file_put_contents("$this->dir/station.mkv", self::mkv(file_get_contents(self::STATION)));
+
+        [$without, $with] = $this->runWithAndWithoutOption($command, ["--track", "3"], variantInput: "station.mkv");
+
+        $this->assertSame(3, $this->runCli(self::commandLine($command, "station.mkv"))[0]);
+        $this->assertSame($without, $with);
+    }
+
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function fromCommands(): array
+    {
+        return [
+            "sync --from"      => ["sync"],
+            "diff --from"      => ["diff"],
+            "translate --from" => ["translate"],
+            "hls --from"       => ["hls"],
+        ];
+    }
+
+
+    #[DataProvider("fromCommands")]
+    public function testFromOption(string $command): void
+    {
+        [$without, $with] = $this->runWithAndWithoutOption($command, ["--from", "srt"]);
+
+        $this->assertSame(3, $this->runCli([...self::commandLine($command, "station.srt"), "--from", "microdvd"])[0]);
+        $this->assertSame($without, $with);
+    }
+
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function wordTimestampsCommands(): array
+    {
+        return [
+            "retime --word-timestamps"    => ["retime"],
+            "info --word-timestamps"      => ["info"],
+            "validate --word-timestamps"  => ["validate"],
+            "sync --word-timestamps"      => ["sync"],
+            "diff --word-timestamps"      => ["diff"],
+            "translate --word-timestamps" => ["translate"],
+            "dual --word-timestamps"      => ["dual"],
+            "hls --word-timestamps"       => ["hls"],
+        ];
+    }
+
+
+    /**
+     * The option changes nothing on SubRip input.
+     */
+    #[DataProvider("wordTimestampsCommands")]
+    public function testWordTimestampsOption(string $command): void
+    {
+        [$without, $with] = $this->runWithAndWithoutOption($command, ["--word-timestamps"]);
+
+        $this->assertSame($without, $with);
+    }
+
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function sccRollUpCommands(): array
+    {
+        return [
+            "retime --scc-roll-up"    => ["retime"],
+            "info --scc-roll-up"      => ["info"],
+            "validate --scc-roll-up"  => ["validate"],
+            "sync --scc-roll-up"      => ["sync"],
+            "diff --scc-roll-up"      => ["diff"],
+            "translate --scc-roll-up" => ["translate"],
+            "dual --scc-roll-up"      => ["dual"],
+            "hls --scc-roll-up"       => ["hls"],
+        ];
+    }
+
+
+    /**
+     * The option changes nothing on SubRip input.
+     */
+    #[DataProvider("sccRollUpCommands")]
+    public function testSccRollUpOption(string $command): void
+    {
+        [$without, $with] = $this->runWithAndWithoutOption($command, ["--scc-roll-up", "screen"]);
+
+        $this->assertSame($without, $with);
+    }
+
+
+    /**
+     * Runs the command without the option on the plain input, then with the option on the variant input. Each run
+     * first writes the station fixture, its edited copy and its late copy through the transform of the run. Returns
+     * both results with the input name replaced by INPUT, and for hls with the written segment files.
      *
      * @param list<string> $options
+     *
+     * @return array{list<mixed>, list<mixed>} the result without and the result with the option
      */
-    #[DataProvider("inputOptions")]
-    public function testInputOption(string $command, array $options): void
+    private function runWithAndWithoutOption(string $command, array $options, ?callable $variant = null, ?callable $plain = null,
+                                             string $input = "station.srt", ?string $variantInput = null): array
     {
         $this->prepareCommand($command);
-        $station = file_get_contents(self::STATION);
-        $edited  = str_replace("Basel", "Bern", $station);
-        $late    = Subtitle::fromString($station, Format::SubRip)->shift(2)->toString(Format::SubRip);
-        $input   = "station.srt";
-        $plain   = fn (string $text): string => $text;
-        $variant = $plain;
-
-        switch ($options[0]) {
-            case "--encoding":
-                $variant = fn (string $text): string => mb_convert_encoding(ltrim($text, self::BOM), "UTF-32LE", "UTF-8");
-                break;
-            case "--input-fps":
-            case "--fps":
-                $variant = fn (string $text): string => Subtitle::fromString($text, Format::SubRip)
-                                                                ->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(25)]));
-                $plain   = fn (string $text): string => "{1}{1}25\n" . $variant($text);
-                $input   = "station.sub";
-                break;
-            case "--lenient":
-                $variant = fn (string $text): string => rtrim($text) . "\n\n99\n00:01:00,000 => 00:01:02,000\nBroken\n";
-                break;
-            case "--track":
-                file_put_contents("$this->dir/station.mkv", self::mkv($station));
-                break;
-        }
-
-        $files     = ["station" => $station, "edited" => $edited, "late" => $late];
+        $unchanged = fn (string $text): string => $text;
         $extension = pathinfo($input, PATHINFO_EXTENSION);
-        $run       = function (callable $transform, string $input, array $options) use ($command, $files, $extension): array {
-            foreach ($files as $name => $text) {
-                file_put_contents("$this->dir/$name.$extension", $transform($text));
-            }
+        $writeInputsAndRun = function (callable $transform, string $input, array $options) use ($command, $extension): array {
+            $this->writeStationInputs($transform, $extension);
             $result = array_map(fn (int|string $value): int|string => is_string($value) ? str_replace($input, "INPUT", $value) : $value,
-                                $this->runCli([...self::call($command, $input, $extension), ...$options]));
+                                $this->runCli([...self::commandLine($command, $input, $extension), ...$options]));
 
             return $command === "hls" ? [...$result, $this->takeDirectory("hls")] : $result;
         };
-        $variantInput = $options[0] === "--track" ? "station.mkv" : $input;
 
-        $expected = $run($plain, $input, []);
-        $actual   = $run($variant, $variantInput, $options);
+        $without = $writeInputsAndRun($plain ?? $unchanged, $input, []);
+        $with    = $writeInputsAndRun($variant ?? $unchanged, $variantInput ?? $input, $options);
+        $this->assertContains($without[0], [0, 1], $without[2]);
 
-        $this->assertContains($expected[0], [0, 1], $expected[2]);
-        if ($options[0] === "--lenient") {
-            $this->assertStringContainsString("Block #", $actual[2]);
-            [$actual[2], $expected[2]] = ["", ""];
-        }
-        if ($options[0] === "--from") {
-            $this->assertSame(3, $this->runCli([...self::call($command, $input), "--from", "microdvd"])[0]);
-        } elseif (!in_array($options[0], ["--word-timestamps", "--scc-roll-up"], true)) {
-            $this->assertSame(3, $this->runCli(self::call($command, $variantInput, $extension))[0]);
-        }
-        if ($options[0] === "--encoding") {
-            $actual[1] = str_replace("Encoding:              UTF-32LE", "Encoding:              UTF-8", $actual[1]);
-        }
-        $this->takeDirectory("hls");
-        $this->assertSame($expected, $actual);
+        return [$without, $with];
     }
 
 
     /**
-     * @return array<string, array{string, list<string>}>
+     * @return array<string, array{string}>
      */
-    public static function outputOptions(): array
+    public static function writingCommands(): array
     {
         return [
-            "retime --output-fps"      => ["retime", ["--output-fps", "25"]],
-            "retime --line-ending"     => ["retime", ["--line-ending", "crlf"]],
-            "retime --bom"             => ["retime", ["--bom"]],
-            "retime --no-bom"          => ["retime", ["--no-bom"]],
-            "retime --skip-image-cues" => ["retime", ["--skip-image-cues"]],
-            "retime --scc-fit"          => ["retime", ["--scc-fit"]],
-            "sync --output-fps"        => ["sync", ["--output-fps", "25"]],
-            "sync --line-ending"       => ["sync", ["--line-ending", "crlf"]],
-            "sync --bom"               => ["sync", ["--bom"]],
-            "sync --no-bom"            => ["sync", ["--no-bom"]],
-            "sync --skip-image-cues"   => ["sync", ["--skip-image-cues"]],
-            "sync --scc-fit"          => ["sync", ["--scc-fit"]],
-            "translate --output-fps"   => ["translate", ["--output-fps", "25"]],
-            "translate --line-ending"  => ["translate", ["--line-ending", "crlf"]],
-            "translate --bom"          => ["translate", ["--bom"]],
-            "translate --no-bom"       => ["translate", ["--no-bom"]],
-            "translate --skip-image-cues" => ["translate", ["--skip-image-cues"]],
-            "translate --scc-fit"          => ["translate", ["--scc-fit"]],
-            "dual --output-fps"        => ["dual", ["--output-fps", "25"]],
-            "dual --line-ending"       => ["dual", ["--line-ending", "crlf"]],
-            "dual --bom"               => ["dual", ["--bom"]],
-            "dual --no-bom"            => ["dual", ["--no-bom"]],
-            "dual --skip-image-cues"   => ["dual", ["--skip-image-cues"]],
-            "dual --scc-fit"          => ["dual", ["--scc-fit"]],
+            "retime"    => ["retime"],
+            "sync"      => ["sync"],
+            "translate" => ["translate"],
+            "dual"      => ["dual"],
+        ];
+    }
+
+
+    #[DataProvider("writingCommands")]
+    public function testOutputFpsWritesMicroDvdAtThatRate(string $command): void
+    {
+        $srt      = $this->runOnStation($command);
+        $expected = Subtitle::fromString($srt, Format::SubRip)->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(25)]));
+
+        $this->assertSame(3, $this->runCli(self::commandLine($command, "station.srt", to: "microdvd"))[0]);
+        $this->assertSame([0, $expected],
+                          array_slice($this->runCli([...self::commandLine($command, "station.srt", to: "microdvd"), "--output-fps", "25"]), 0, 2));
+    }
+
+
+    #[DataProvider("writingCommands")]
+    public function testLineEndingCrlfWritesCrlf(string $command): void
+    {
+        $srt = $this->runOnStation($command);
+
+        $this->assertSame([0, str_replace("\n", "\r\n", $srt)],
+                          array_slice($this->runCli([...self::commandLine($command, "station.srt", "srt"), "--line-ending", "crlf"]), 0, 2));
+    }
+
+
+    #[DataProvider("writingCommands")]
+    public function testNoBomDropsTheBomOfSubRip(string $command): void
+    {
+        $srt = $this->runOnStation($command);
+
+        $this->assertStringStartsWith(self::BOM, $srt);
+        $this->assertSame([0, substr($srt, 3)], array_slice($this->runCli([...self::commandLine($command, "station.srt", "srt"), "--no-bom"]), 0, 2));
+    }
+
+
+    #[DataProvider("writingCommands")]
+    public function testBomAddsABomToJson(string $command): void
+    {
+        $this->runOnStation($command);
+
+        [, $json] = $this->runCli(self::commandLine($command, "station.srt", to: "json"));
+        $this->assertStringStartsWith("{", $json);
+        $this->assertSame([0, self::BOM . $json], array_slice($this->runCli([...self::commandLine($command, "station.srt", to: "json"), "--bom"]), 0, 2));
+    }
+
+
+    /**
+     * @return array<string, array{string, int, bool}>
+     */
+    public static function sccFitCommands(): array
+    {
+        return [
+            "retime"    => ["retime", 3, true],
+            "sync"      => ["sync", 3, true],
+            "translate" => ["translate", 0, false],
+            "dual"      => ["dual", 3, true],
         ];
     }
 
 
     /**
-     * Compares the output of the command with the option to its SubRip output without the option.
-     *
-     * @param list<string> $options
+     * The fake translation server returns a fixed German text that SCC can hold, so translate needs no --scc-fit.
      */
-    #[DataProvider("outputOptions")]
-    public function testOutputOption(string $command, array $options): void
+    #[DataProvider("sccFitCommands")]
+    public function testSccFitPrintsEachChangeAndWritesTheFittedScc(string $command, int $codeWithoutFit, bool $transliterates): void
+    {
+        $this->runOnStation($command);
+        file_put_contents("$this->dir/fit.srt", str_replace("Basel", "\u{160}ibenik", file_get_contents(self::STATION)));
+        [, $fitSrt] = $this->runCli(self::commandLine($command, "fit.srt", "srt"));
+        $report     = (new SccFormatter())->formatWithReport(Subtitle::fromString($fitSrt, Format::SubRip),
+                                                             new WriteOptions(formats: [new SccWriteOptions(fit: true)]));
+        $changes    = implode("", array_map(fn (SccFitChange $change): string => "fit.srt: $change->message ({$change->action->value})\n", $report->changes));
+
+        $this->assertSame($codeWithoutFit, $this->runCli(self::commandLine($command, "fit.srt", to: "scc"))[0]);
+        [$code, $scc, $stderr] = $this->runCli([...self::commandLine($command, "fit.srt", to: "scc"), "--scc-fit"]);
+        $this->assertSame([0, $report->content], [$code, $scc]);
+        $this->assertTrue(str_ends_with($stderr, $changes), $stderr);
+        if ($transliterates) {
+            $this->assertStringContainsString("replaced \"\u{160}\" with \"S\". (transliterated)\n", $changes);
+        }
+        $this->assertSame(0, $this->runCli([...self::commandLine($command, "station.srt", "srt"), "--scc-fit"])[0]);
+    }
+
+
+    #[DataProvider("writingCommands")]
+    public function testSkipImageCuesDropsTheImageCues(string $command): void
+    {
+        $srt  = $this->runOnStation($command);
+        $data = json_decode(Subtitle::fromString(file_get_contents(self::STATION), Format::SubRip)->toString(Format::Json), true);
+        $image = json_decode(file_get_contents(self::FILES . "json/real/own_image_cues.json"), true);
+        $data["cues"] = [...$data["cues"], ...array_values(array_filter($image["cues"], fn (array $cue): bool => $cue["lines"] === []))];
+        file_put_contents("$this->dir/images.json", json_encode($data));
+
+        $this->assertSame(3, $this->runCli(self::commandLine($command, "images.json", "srt"))[0]);
+        $this->assertSame([0, $srt], array_slice($this->runCli([...self::commandLine($command, "images.json", "srt"), "--skip-image-cues"]), 0, 2));
+    }
+
+
+    /**
+     * Writes the station fixture and its copies, runs the command on it without options and returns the SubRip output.
+     */
+    private function runOnStation(string $command): string
     {
         $this->prepareCommand($command);
-        $station = file_get_contents(self::STATION);
-        file_put_contents("$this->dir/station.srt", $station);
-        file_put_contents("$this->dir/edited.srt", str_replace("Basel", "Bern", $station));
-        file_put_contents("$this->dir/late.srt", Subtitle::fromString($station, Format::SubRip)->shift(2)->toString(Format::SubRip));
+        $this->writeStationInputs(fn (string $text): string => $text, "srt");
 
-        [$code, $srt, $stderr] = $this->runCli(self::call($command, "station.srt", "srt"));
+        [$code, $srt, $stderr] = $this->runCli(self::commandLine($command, "station.srt", "srt"));
         $this->assertSame(0, $code, $stderr);
 
-        switch ($options[0]) {
-            case "--output-fps":
-                $expected = Subtitle::fromString($srt, Format::SubRip)->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(25)]));
-                $this->assertSame(3, $this->runCli(self::call($command, "station.srt", to: "microdvd"))[0]);
-                $this->assertSame([0, $expected], array_slice($this->runCli([...self::call($command, "station.srt", to: "microdvd"), ...$options]), 0, 2));
-                break;
-            case "--line-ending":
-                $this->assertSame([0, str_replace("\n", "\r\n", $srt)], array_slice($this->runCli([...self::call($command, "station.srt", "srt"), ...$options]), 0, 2));
-                break;
-            case "--no-bom":
-                $this->assertStringStartsWith(self::BOM, $srt);
-                $this->assertSame([0, substr($srt, 3)], array_slice($this->runCli([...self::call($command, "station.srt", "srt"), ...$options]), 0, 2));
-                break;
-            case "--bom":
-                [, $json] = $this->runCli(self::call($command, "station.srt", to: "json"));
-                $this->assertStringStartsWith("{", $json);
-                $this->assertSame([0, self::BOM . $json], array_slice($this->runCli([...self::call($command, "station.srt", to: "json"), ...$options]), 0, 2));
-                break;
-            case "--scc-fit":
-                file_put_contents("$this->dir/fit.srt", str_replace("Basel", "\u{160}ibenik", $station));
-                [, $fitSrt] = $this->runCli(self::call($command, "fit.srt", "srt"));
-                $report     = (new SccFormatter())->formatWithReport(Subtitle::fromString($fitSrt, Format::SubRip),
-                                                                     new WriteOptions(formats: [new SccWriteOptions(fit: true)]));
-                $changes    = implode("", array_map(fn (SccFitChange $change): string => "fit.srt: $change->message ({$change->action->value})\n", $report->changes));
-                $this->assertSame($command === "translate" ? 0 : 3, $this->runCli(self::call($command, "fit.srt", to: "scc"))[0]);
-                [$code, $scc, $stderr] = $this->runCli([...self::call($command, "fit.srt", to: "scc"), ...$options]);
-                $this->assertSame([0, $report->content], [$code, $scc]);
-                $this->assertTrue(str_ends_with($stderr, $changes), $stderr);
-                if ($command !== "translate") {
-                    $this->assertStringContainsString("replaced \"\u{160}\" with \"S\". (transliterated)\n", $changes);
-                }
-                $this->assertSame(0, $this->runCli([...self::call($command, "station.srt", "srt"), ...$options])[0]);
-                break;
-            case "--skip-image-cues":
-                $data  = json_decode(Subtitle::fromString($station, Format::SubRip)->toString(Format::Json), true);
-                $image = json_decode(file_get_contents(self::FILES . "json/real/own_image_cues.json"), true);
-                $data["cues"] = [...$data["cues"], ...array_values(array_filter($image["cues"], fn (array $cue): bool => $cue["lines"] === []))];
-                file_put_contents("$this->dir/images.json", json_encode($data));
-                $this->assertSame(3, $this->runCli(self::call($command, "images.json", "srt"))[0]);
-                $this->assertSame([0, $srt], array_slice($this->runCli([...self::call($command, "images.json", "srt"), ...$options]), 0, 2));
-                break;
+        return $srt;
+    }
+
+
+    /**
+     * Writes the station fixture as station, its copy with one changed word as edited, and its copy 2 s later as late.
+     */
+    private function writeStationInputs(callable $transform, string $extension): void
+    {
+        $station = file_get_contents(self::STATION);
+        $files   = [
+            "station" => $station,
+            "edited"  => str_replace("Basel", "Bern", $station),
+            "late"    => Subtitle::fromString($station, Format::SubRip)->shift(2)->toString(Format::SubRip),
+        ];
+        foreach ($files as $name => $text) {
+            file_put_contents("$this->dir/$name.$extension", $transform($text));
         }
     }
 
 
     /**
-     * Returns the arguments of a call of $command on $input. $second is the extension of the second file of diff and
-     * dual and of the reference of sync. $to is the output format of a command that writes a subtitle.
+     * Returns the arguments of a call of $command on $input. $secondExtension is the extension of the second file of
+     * diff and dual and of the reference of sync. $to is the output format of a command that writes a subtitle.
      *
      * @return list<string>
      */
-    private static function call(string $command, string $input, string $second = "srt", string $to = "srt"): array
+    private static function commandLine(string $command, string $input, string $secondExtension = "srt", string $to = "srt"): array
     {
         return match ($command) {
             "retime"    => ["retime", $input, "--shift", "1", "--to", $to],
             "info"      => ["info", $input],
             "validate"  => ["validate", $input, "--preset", "bbc"],
-            "sync"      => ["sync", $input, "--reference", "late.$second", "--to", $to],
-            "diff"      => ["diff", $input, "edited.$second"],
+            "sync"      => ["sync", $input, "--reference", "late.$secondExtension", "--to", $to],
+            "diff"      => ["diff", $input, "edited.$secondExtension"],
             "translate" => ["translate", $input, "--engine", "deepl", "--api-key", "key", "--target-language", "de", "--to", $to],
-            "dual"      => ["dual", "--primary", $input, "--secondary", "edited.$second", "--to", $to],
+            "dual"      => ["dual", "--primary", $input, "--secondary", "edited.$secondExtension", "--to", $to],
             "hls"       => ["hls", $input, "--output-dir", "hls"],
         };
     }
