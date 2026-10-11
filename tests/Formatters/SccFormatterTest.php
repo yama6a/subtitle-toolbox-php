@@ -102,6 +102,28 @@ class SccFormatterTest extends TestCase
     }
 
 
+    /**
+     * @return array<string, array{string, int, list<string>}>
+     */
+    public static function stylesOverTwoLines(): array
+    {
+        return [
+            "italics"                => ["srt/real/own_styled.srt", 6, ["<i>Italics over two lines</i>", "<i>that close on the second line</i>"]],
+            "italics that stay open" => ["fixing/web-errors.srt", 2, ["<i>The station was closed,</i>", "<i>so we walked.</i>"]],
+            "color that stays open"  => ["fixing/web-errors.srt", 10, ["<font color=\"#ffff00\">Next stop:</font>", "<font color=\"#ffff00\">the harbour</font>"]],
+        ];
+    }
+
+
+    #[DataProvider("stylesOverTwoLines")]
+    public function testStyleThatSpansTwoLinesStylesBoth(string $file, int $index, array $lines): void
+    {
+        $scc = Subtitle::load(__DIR__ . "/../files/$file", Format::fromPath($file))->toString(Format::Scc, new WriteOptions(formats: [new SccWriteOptions(fit: true)]));
+
+        $this->assertSame($lines, Subtitle::fromString($scc, Format::Scc)->getCues()[$index]->getLines());
+    }
+
+
     public function testDropsTagsThatCea608CannotShow(): void
     {
         $output = $this->subtitle(new SubtitleCue(2.0, 4.0, "<b>Bold</b> <v Ann>and <font color=\"#123456\">grey</font>"))->toString(Format::Scc);

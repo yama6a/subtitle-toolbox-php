@@ -148,7 +148,7 @@ final class SccFormatter extends SubtitleFormatter
             $text = $this->fitText($text, $cue, $index);
         }
         $lines = [];
-        foreach ($text as $line) {
+        foreach (Markup::carryOpenTags($text) as $line) {
             $characters = Cea608Encoder::styledCharacters($line);
             if ($characters !== []) {
                 $lines[] = $characters;
