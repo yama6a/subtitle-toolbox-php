@@ -9,10 +9,12 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 /**
- * Runs bin/subtitle-toolbox as a separate process in a temporary directory with copies of the fixtures.
+ * Runs the CLI in a temporary directory with copies of the fixtures.
  */
-abstract class BinaryTestCase extends TestCase
+abstract class CliTestCase extends TestCase
 {
+    use RunsApplication;
+
     protected const BIN = __DIR__ . "/../../bin/subtitle-toolbox";
 
     protected const FIXTURES = __DIR__ . "/../files/cli/";
@@ -20,6 +22,11 @@ abstract class BinaryTestCase extends TestCase
     protected const FILES = __DIR__ . "/../files/";
 
     protected const BOM = "\xEF\xBB\xBF";
+
+    private const ERROR_TYPES = [
+        E_WARNING => "Warning", E_USER_WARNING => "Warning", E_NOTICE => "Notice", E_USER_NOTICE => "Notice",
+        E_DEPRECATED => "Deprecated", E_USER_DEPRECATED => "Deprecated",
+    ];
 
     protected string $dir;
 
@@ -48,6 +55,43 @@ abstract class BinaryTestCase extends TestCase
 
 
     /**
+     * Runs the CLI in the test process, in the temporary directory. A PHP warning, notice or deprecation goes to
+     * standard error as in bin/subtitle-toolbox, so a test that compares standard error fails on it. PHPUnit lowers
+     * the error reporting level while its own error handler runs, so this method raises it for the run.
+     *
+     * @param list<string> $arguments
+     *
+     * @return array{int, string, string} exit code, standard output, standard error
+     */
+    protected function runCli(array $arguments, string $stdin = ""): array
+    {
+        $errors    = "";
+        $reporting = error_reporting(E_ALL);
+        set_error_handler(static function (int $type, string $message, string $file, int $line) use (&$errors): bool {
+            if ((error_reporting() & $type) === 0) {
+                return false;
+            }
+            $errors .= (self::ERROR_TYPES[$type] ?? "Error") . ": $message in $file on line $line\n";
+
+            return true;
+        });
+        $cwd = getcwd();
+        chdir($this->dir);
+        try {
+            [$code, $stdout, $stderr] = self::runApplication($arguments, $stdin);
+        } finally {
+            chdir($cwd);
+            restore_error_handler();
+            error_reporting($reporting);
+        }
+
+        return [$code, $stdout, $errors . $stderr];
+    }
+
+
+    /**
+     * Runs bin/subtitle-toolbox as a separate process, in the temporary directory.
+     *
      * @param list<string> $arguments
      * @param string ...$phpOptions options of the php binary, such as "-d", "memory_limit=32M"
      *

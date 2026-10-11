@@ -18,14 +18,14 @@ use SubtitleToolbox\Profanity\ProfanityOptions;
 use SubtitleToolbox\Resegmenting\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
-use SubtitleToolbox\Tests\Support\BinaryTestCase;
+use SubtitleToolbox\Tests\Support\CliTestCase;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\WriteOptions;
 
 /**
  * Runs the commands that every run shares: help, version, usage errors, exit codes and the formats list.
  */
-class BinaryGeneralTest extends BinaryTestCase
+class BinaryGeneralTest extends CliTestCase
 {
     private const COMMANDS = ["convert", "retime", "info", "validate", "sync", "diff", "dual", "hls", "formats"];
 
@@ -96,7 +96,7 @@ class BinaryGeneralTest extends BinaryTestCase
     {
         $found = [];
         foreach (self::COMMANDS as $command) {
-            $help = self::unwrapHelp($this->runBinary([$command, "--help", ...($command === "convert" ? ["all"] : [])])[1]);
+            $help = self::unwrapHelp($this->runCli([$command, "--help", ...($command === "convert" ? ["all"] : [])])[1]);
             preg_match_all('/^  (?:-\w, )?--([\w-]+)\N*? Default: (.+?)\.(?: |$)/m', $help, $matches, PREG_SET_ORDER);
             foreach ($matches as [, $option, $default]) {
                 $found[$option] = true;
@@ -147,19 +147,19 @@ class BinaryGeneralTest extends BinaryTestCase
 
     public function testVersionPrintsTheVersionAlone(): void
     {
-        [$code, $stdout, $stderr] = $this->runBinary(["--version"]);
+        [$code, $stdout, $stderr] = $this->runCli(["--version"]);
 
         $this->assertSame(0, $code);
         $this->assertSame(Version::get() . "\n", $stdout);
         $this->assertMatchesRegularExpression('/^(dev|\d+\.\d+\.\d+\S*)\n$/', $stdout);
         $this->assertSame("", $stderr);
-        $this->assertSame([0, $stdout, ""], $this->runBinary(["-V"]));
+        $this->assertSame([0, $stdout, ""], $this->runCli(["-V"]));
     }
 
 
     public function testWithoutArgumentsPrintsTheHelp(): void
     {
-        [$code, $stdout, $stderr] = $this->runBinary([]);
+        [$code, $stdout, $stderr] = $this->runCli([]);
 
         $this->assertSame(0, $code);
         $this->assertStringContainsString("Usage: subtitle-toolbox <command>", $stdout);
@@ -167,9 +167,9 @@ class BinaryGeneralTest extends BinaryTestCase
             $this->assertMatchesRegularExpression("/^  $command +\S/m", $stdout);
         }
         $this->assertSame("", $stderr);
-        $this->assertSame([0, $stdout, ""], $this->runBinary(["--help"]));
-        $this->assertSame([0, $stdout, ""], $this->runBinary(["help"]));
-        $this->assertSame([0, $stdout, ""], $this->runBinary(["help", "help"]));
+        $this->assertSame([0, $stdout, ""], $this->runCli(["--help"]));
+        $this->assertSame([0, $stdout, ""], $this->runCli(["help"]));
+        $this->assertSame([0, $stdout, ""], $this->runCli(["help", "help"]));
     }
 
 
@@ -188,20 +188,20 @@ class BinaryGeneralTest extends BinaryTestCase
     #[DataProvider("commands")]
     public function testEveryCommandHasHelp(string $command): void
     {
-        [$code, $stdout, $stderr] = $this->runBinary([$command, "--help"]);
+        [$code, $stdout, $stderr] = $this->runCli([$command, "--help"]);
 
         $this->assertSame(0, $code);
         $this->assertStringStartsWith("Usage: subtitle-toolbox ", $stdout);
         $this->assertStringContainsString("  -h, --help ", $stdout);
         $this->assertSame("", $stderr);
-        $this->assertSame([0, $stdout, ""], $this->runBinary(["help", $command]));
-        $this->assertSame([0, $stdout, ""], $this->runBinary([$command, "-h"]));
+        $this->assertSame([0, $stdout, ""], $this->runCli(["help", $command]));
+        $this->assertSame([0, $stdout, ""], $this->runCli([$command, "-h"]));
     }
 
 
     public function testHelpTextsDescribeWhatTheOptionsDo(): void
     {
-        $convert = self::unwrapHelp($this->runBinary(["convert", "--help"])[1]);
+        $convert = self::unwrapHelp($this->runCli(["convert", "--help"])[1]);
         $this->assertMatchesRegularExpression('/^  --lenient +Skip or repair broken cues and print a warning for each\. ' .
                                               'SCC, PGS, VobSub and chapter input ignore it\.$/m', $convert);
         $this->assertMatchesRegularExpression('/^  --encoding NAME +.*It replaces code page detection\. A BOM, valid UTF-8 and UTF-16 input win over it\.$/m', $convert);
@@ -212,14 +212,14 @@ class BinaryGeneralTest extends BinaryTestCase
         $this->assertMatchesRegularExpression('/^  --to FORMAT +Output format\./m', $convert);
         $this->assertStringNotContainsString("SubRip, WebVTT and SBV", $convert);
 
-        $structure = self::unwrapHelp($this->runBinary(["convert", "--help", "structure"])[1]);
+        $structure = self::unwrapHelp($this->runCli(["convert", "--help", "structure"])[1]);
         $this->assertMatchesRegularExpression('/^  --structure-split-long +.*at sentence ends, clause ends or spaces\.$/m', $structure);
         $this->assertMatchesRegularExpression('/^  --structure-merge-short +.*at most 0\.25 s away.*$/m', $structure);
-        $info = self::unwrapHelp($this->runBinary(["info", "--help"])[1]);
+        $info = self::unwrapHelp($this->runCli(["info", "--help"])[1]);
         $this->assertDoesNotMatchRegularExpression('/--output-fps|--video-fps/', $info);
         $this->assertMatchesRegularExpression('/^  --fps RATE +Same as --input-fps\.$/m', $info);
 
-        $validate = self::unwrapHelp($this->runBinary(["validate", "--help"])[1]);
+        $validate = self::unwrapHelp($this->runCli(["validate", "--help"])[1]);
         $this->assertMatchesRegularExpression('/^  --video-fps RATE +Frame rate of the video, for the 2-frame gap of netflix-en\. Default: 23\.976\.$/m', $validate);
         $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps and --video-fps\. A specific option wins over --fps\.$/m', $validate);
         $this->assertDoesNotMatchRegularExpression('/--output-fps/', $validate);
@@ -228,22 +228,22 @@ class BinaryGeneralTest extends BinaryTestCase
 
     public function testUnknownCommandAndOptionAreUsageErrors(): void
     {
-        $this->assertSame([2, "", "Error: Unknown command \"merge\".\nRun \"subtitle-toolbox help\" for the usage.\n"], $this->runBinary(["merge"]));
-        $this->assertSame([2, "", "Error: Unknown command \"merge\".\nRun \"subtitle-toolbox help\" for the usage.\n"], $this->runBinary(["help", "merge"]));
+        $this->assertSame([2, "", "Error: Unknown command \"merge\".\nRun \"subtitle-toolbox help\" for the usage.\n"], $this->runCli(["merge"]));
+        $this->assertSame([2, "", "Error: Unknown command \"merge\".\nRun \"subtitle-toolbox help\" for the usage.\n"], $this->runCli(["help", "merge"]));
         $this->assertSame(
             [2, "", "Error: Unknown option --nope.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
-            $this->runBinary(["convert", "trip.srt", "--to", "vtt", "--nope"])
+            $this->runCli(["convert", "trip.srt", "--to", "vtt", "--nope"])
         );
         $this->assertSame(
             [2, "", "Error: Unknown format \"docx\". Run \"subtitle-toolbox formats\" for the list.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
-            $this->runBinary(["convert", "trip.srt", "--to", "docx"])
+            $this->runCli(["convert", "trip.srt", "--to", "docx"])
         );
-        $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--to", "vobsub"])[0]);
-        $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--from", "txt", "--to", "vtt"])[0]);
-        $this->assertSame(2, $this->runBinary(["convert", "--to", "vtt"])[0]);
-        $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--to", "vtt", "--line-ending", "cr"])[0]);
-        $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--to", "vtt", "--bom", "--no-bom"])[0]);
-        $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--to", "vtt", "-o", "a.vtt", "--output-dir", "out"])[0]);
+        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "vobsub"])[0]);
+        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--from", "txt", "--to", "vtt"])[0]);
+        $this->assertSame(2, $this->runCli(["convert", "--to", "vtt"])[0]);
+        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "vtt", "--line-ending", "cr"])[0]);
+        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "vtt", "--bom", "--no-bom"])[0]);
+        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "vtt", "-o", "a.vtt", "--output-dir", "out"])[0]);
         $this->assertFileDoesNotExist("$this->dir/trip.vtt");
     }
 
@@ -286,7 +286,7 @@ class BinaryGeneralTest extends BinaryTestCase
     #[DataProvider("invalidOptionValues")]
     public function testInvalidOptionValuesAreUsageErrors(array $arguments, string $command, string $message): void
     {
-        $this->assertSame([2, "", "Error: $message\nRun \"subtitle-toolbox help $command\" for the usage.\n"], $this->runBinary($arguments));
+        $this->assertSame([2, "", "Error: $message\nRun \"subtitle-toolbox help $command\" for the usage.\n"], $this->runCli($arguments));
     }
 
 
@@ -300,9 +300,9 @@ class BinaryGeneralTest extends BinaryTestCase
             [["validate", "trip.srt", "--preset", "bbc"], ["validate", "trip.srt", "--preset", "BBC"]],
         ];
         foreach ($pairs as [$lower, $mixed]) {
-            $expected = $this->runBinary($lower);
+            $expected = $this->runCli($lower);
             $this->assertNotSame(2, $expected[0]);
-            $this->assertSame($expected, $this->runBinary($mixed));
+            $this->assertSame($expected, $this->runCli($mixed));
         }
     }
 
@@ -313,24 +313,24 @@ class BinaryGeneralTest extends BinaryTestCase
         mkdir("$this->dir/empty");
         $usage = fn (string $command): string => "\nRun \"subtitle-toolbox help $command\" for the usage.\n";
 
-        $this->assertSame(1, $this->runBinary(["validate", "trip.srt", "--max-cpl", "20"])[0]);
-        $this->assertSame(1, $this->runBinary(["diff", "trip.srt", "shop.vtt"])[0]);
+        $this->assertSame(1, $this->runCli(["validate", "trip.srt", "--max-cpl", "20"])[0]);
+        $this->assertSame(1, $this->runCli(["diff", "trip.srt", "shop.vtt"])[0]);
 
         $this->assertSame([2, "", "Error: The directory empty holds no file with a known subtitle extension.{$usage("convert")}"],
-                          $this->runBinary(["convert", "empty", "--to", "vtt"]));
+                          $this->runCli(["convert", "empty", "--to", "vtt"]));
         foreach ([["--preset", "bbc"], ["--max-cpl", "20"]] as $rules) {
             $this->assertSame([2, "", "Error: --video-fps sets the frame rate of the netflix-en gap rule. Pass --preset netflix-en, or leave out " .
                                       "--video-fps.{$usage("validate")}"],
-                              $this->runBinary(["validate", "trip.srt", ...$rules, "--video-fps", "25"]));
+                              $this->runCli(["validate", "trip.srt", ...$rules, "--video-fps", "25"]));
         }
-        $this->assertSame(1, $this->runBinary(["validate", "trip.srt", "--preset", "netflix-en", "--video-fps", "25"])[0]);
-        $this->assertSame(1, $this->runBinary(["validate", "trip.srt", "--preset", "bbc", "--fps", "25"])[0]);
+        $this->assertSame(1, $this->runCli(["validate", "trip.srt", "--preset", "netflix-en", "--video-fps", "25"])[0]);
+        $this->assertSame(1, $this->runCli(["validate", "trip.srt", "--preset", "bbc", "--fps", "25"])[0]);
 
-        $this->assertSame([3, "", "missing.srt: The file does not exist.\n"], $this->runBinary(["convert", "missing.srt", "--to", "vtt"]));
+        $this->assertSame([3, "", "missing.srt: The file does not exist.\n"], $this->runCli(["convert", "missing.srt", "--to", "vtt"]));
         $this->assertSame([3, "", "Error: Cannot create the directory " . realpath($this->dir) . "/blocker/out.\n"],
-                          $this->runBinary(["convert", "trip.srt", "--to", "vtt", "-o", "blocker/out/trip.vtt"]));
-        $this->assertSame(3, $this->runBinary(["validate", "trip.srt", "missing.srt", "--max-cpl", "20", "--keep-going"])[0]);
-        $this->assertSame(3, $this->runBinary(["diff", "trip.srt", "missing.srt"])[0]);
+                          $this->runCli(["convert", "trip.srt", "--to", "vtt", "-o", "blocker/out/trip.vtt"]));
+        $this->assertSame(3, $this->runCli(["validate", "trip.srt", "missing.srt", "--max-cpl", "20", "--keep-going"])[0]);
+        $this->assertSame(3, $this->runCli(["diff", "trip.srt", "missing.srt"])[0]);
     }
 
 
@@ -400,7 +400,7 @@ class BinaryGeneralTest extends BinaryTestCase
         copy(self::FILES . "deepgram/real/pool_utterances_diarize.json", "$this->dir/call.json");
         copy(self::FILES . "csv/own_frame_times.csv", "$this->dir/frames.csv");
 
-        [$code, $stdout, $actual] = $this->runBinary($arguments, $stdin === "" ? "" : $this->file($stdin));
+        [$code, $stdout, $actual] = $this->runCli($arguments, $stdin === "" ? "" : $this->file($stdin));
 
         $this->assertSame([3, ""], [$code, $stdout]);
         $this->assertStringStartsWith($stderr, $actual);
@@ -445,7 +445,7 @@ class BinaryGeneralTest extends BinaryTestCase
         file_put_contents("$this->dir/bad.txt", "Not a time.\n");
         file_put_contents("$this->dir/bad.nocr", "Not a glyph database.");
 
-        [$code, $stdout, $stderr] = $this->runBinary([...$arguments, "--output-dir", "out", "--keep-going"]);
+        [$code, $stdout, $stderr] = $this->runCli([...$arguments, "--output-dir", "out", "--keep-going"]);
 
         $this->assertSame([3, ""], [$code, $stdout]);
         $this->assertStringStartsWith("Error: $message", $stderr);
@@ -481,7 +481,7 @@ class BinaryGeneralTest extends BinaryTestCase
     {
         $this->assertSame([2, "", "Error: 2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE.\n" .
                                   "Run \"subtitle-toolbox help $command\" for the usage.\n"],
-                          $this->runBinary($arguments));
+                          $this->runCli($arguments));
     }
 
 
@@ -507,7 +507,7 @@ class BinaryGeneralTest extends BinaryTestCase
     {
         file_put_contents("$this->dir/bad.srt", "Not a subtitle.\n");
 
-        [$code, $stdout, $stderr] = $this->runBinary($arguments);
+        [$code, $stdout, $stderr] = $this->runCli($arguments);
 
         $this->assertSame([3, ""], [$code, $stdout]);
         $this->assertStringStartsWith($message, $stderr);
@@ -517,7 +517,7 @@ class BinaryGeneralTest extends BinaryTestCase
 
     public function testFormatsListsTheRegistry(): void
     {
-        [$code, $stdout, $stderr] = $this->runBinary(["formats"]);
+        [$code, $stdout, $stderr] = $this->runCli(["formats"]);
 
         $this->assertSame(0, $code);
         $this->assertMatchesRegularExpression('/\AName +Extensions +Read  Write\n/', $stdout);

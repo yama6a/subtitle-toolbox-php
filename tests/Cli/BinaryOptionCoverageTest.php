@@ -21,7 +21,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Sync\ReferenceSync;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
-use SubtitleToolbox\Tests\Support\BinaryTestCase;
+use SubtitleToolbox\Tests\Support\CliTestCase;
 use SubtitleToolbox\Validation\ValidationRules;
 use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\WriteOptions;
@@ -32,7 +32,7 @@ require_once __DIR__ . "/../files/mkv/generator/MkvFixtureWriter.php";
 /**
  * Checks the command options that the other CLI tests do not use, each against the same call without the option.
  */
-class BinaryOptionCoverageTest extends BinaryTestCase
+class BinaryOptionCoverageTest extends CliTestCase
 {
     private const STATION = __DIR__ . "/../files/translation/own_station.srt";
 
@@ -75,7 +75,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
             "--sdh-any-case-labels"      => new HearingImpairedOptions(speakerLabelsUpperCaseOnly: false),
         ] as $option => $options) {
             $this->assertNotSame($default, $expected($options), $option);
-            $this->assertSame([0, $expected($options), ""], $this->runBinary(["convert", "sdh.srt", "--to", "srt", "-o", "-", "--sdh", $option]), $option);
+            $this->assertSame([0, $expected($options), ""], $this->runCli(["convert", "sdh.srt", "--to", "srt", "-o", "-", "--sdh", $option]), $option);
         }
     }
 
@@ -83,10 +83,10 @@ class BinaryOptionCoverageTest extends BinaryTestCase
     public function testConvertRetimesLikeRetime(): void
     {
         foreach ([["--shift", "2", "--shift-after", "4"], ["--from-fps", "25", "--to-fps", "23.976"]] as $options) {
-            [$code, $expected] = $this->runBinary(["retime", "shop.vtt", "--to", "srt", ...$options]);
+            [$code, $expected] = $this->runCli(["retime", "shop.vtt", "--to", "srt", ...$options]);
             $this->assertSame(0, $code);
-            $this->assertNotSame($this->runBinary(["retime", "shop.vtt", "--to", "srt", "--shift", "0"])[1], $expected);
-            $this->assertSame([0, $expected, ""], $this->runBinary(["convert", "shop.vtt", "--to", "srt", "-o", "-", ...$options]));
+            $this->assertNotSame($this->runCli(["retime", "shop.vtt", "--to", "srt", "--shift", "0"])[1], $expected);
+            $this->assertSame([0, $expected, ""], $this->runCli(["convert", "shop.vtt", "--to", "srt", "-o", "-", ...$options]));
         }
     }
 
@@ -107,7 +107,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
                                  $subtitle->validate($rules));
             $this->assertNotSame([], $expected, $option);
 
-            [$code, $stdout, $stderr] = $this->runBinary(["validate", "checks.srt", "--json", ...$options]);
+            [$code, $stdout, $stderr] = $this->runCli(["validate", "checks.srt", "--json", ...$options]);
             $violations = json_decode($stdout, true)[0]["violations"];
             $this->assertSame([1, ""], [$code, $stderr], $option);
             $this->assertSame($expected, array_map(fn (array $violation): array => [$violation["rule"], $violation["cueIndex"]], $violations), $option);
@@ -123,13 +123,13 @@ class BinaryOptionCoverageTest extends BinaryTestCase
         ReferenceSync::apply($expected, new ReferenceSyncOptions(Subtitle::load("$this->dir/tv.srt", Format::SubRip), -180, 180, maxSplits: 2,
                                                                   splitPenalty: 5));
 
-        [$code, $stdout, $stderr] = $this->runBinary(["sync", "de.srt", "--reference", "tv.srt", "--min-offset", "-180", "--max-offset", "180",
+        [$code, $stdout, $stderr] = $this->runCli(["sync", "de.srt", "--reference", "tv.srt", "--min-offset", "-180", "--max-offset", "180",
                                                       "--max-splits", "2", "--split-penalty", "5"]);
 
         $this->assertSame([0, $expected->toString(Format::SubRip)], [$code, $stdout]);
         $this->assertStringNotContainsString("from 414.32 s", $stderr);
         $this->assertStringNotEqualsFile(self::FILES . "sync/own_target_de_split_synced.srt", $stdout);
-        $this->assertSame(2, $this->runBinary(["sync", "de.srt", "--reference", "tv.srt", "--split-penalty", "-1"])[0]);
+        $this->assertSame(2, $this->runCli(["sync", "de.srt", "--reference", "tv.srt", "--split-penalty", "-1"])[0]);
     }
 
 
@@ -141,7 +141,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
 
         $this->assertNotSame(SubtitleDiff::toText(SubtitleDiff::compare($old, $new)), $expected);
         $this->assertSame([1, $expected, ""],
-                          $this->runBinary(["diff", self::FILES . "diff/own_original.srt", self::FILES . "diff/own_edited.srt", "--ignore-whitespace"]));
+                          $this->runCli(["diff", self::FILES . "diff/own_original.srt", self::FILES . "diff/own_edited.srt", "--ignore-whitespace"]));
     }
 
 
@@ -152,8 +152,8 @@ class BinaryOptionCoverageTest extends BinaryTestCase
                             ->shift(1);
 
         $this->assertSame([0, $expected->toString(Format::WebVtt), ""],
-                          $this->runBinary(["retime", "lecture.json", "--shift", "1", "--to", "vtt", "--word-timestamps"]));
-        $this->assertStringNotContainsString("<00:", $this->runBinary(["retime", "lecture.json", "--shift", "1", "--to", "vtt"])[1]);
+                          $this->runCli(["retime", "lecture.json", "--shift", "1", "--to", "vtt", "--word-timestamps"]));
+        $this->assertStringNotContainsString("<00:", $this->runCli(["retime", "lecture.json", "--shift", "1", "--to", "vtt"])[1]);
     }
 
 
@@ -182,10 +182,10 @@ class BinaryOptionCoverageTest extends BinaryTestCase
                            "broken.srt: ParsingException (Error #100): Block #1 has no timing line on its second line. The line is \"00:00:03,000 => 00:00:04,000\". (line 6)\n" .
                            FileCommand::LENIENT_HINT . "\n" .
                            "Stopped at the first failure. Pass --keep-going to process the other files.\n"],
-                          $this->runBinary([$command, "broken.srt", "station.srt", ...$options, "--output-dir", "out"]));
+                          $this->runCli([$command, "broken.srt", "station.srt", ...$options, "--output-dir", "out"]));
         $this->assertDirectoryDoesNotExist("$this->dir/out");
 
-        [$code, $stdout] = $this->runBinary([$command, "broken.srt", "station.srt", ...$options, "--output-dir", "out", "--keep-going"]);
+        [$code, $stdout] = $this->runCli([$command, "broken.srt", "station.srt", ...$options, "--output-dir", "out", "--keep-going"]);
         $this->assertSame([3, "station.srt -> out/station.srt\n2 files: 1 succeeded, 1 failed.\n"], [$code, $stdout]);
         $this->assertFileExists("$this->dir/out/station.srt");
     }
@@ -291,7 +291,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
                 file_put_contents("$this->dir/$name.$extension", $transform($text));
             }
             $result = array_map(fn (int|string $value): int|string => is_string($value) ? str_replace($input, "INPUT", $value) : $value,
-                                $this->runBinary([...self::call($command, $input, $extension), ...$options]));
+                                $this->runCli([...self::call($command, $input, $extension), ...$options]));
 
             return $command === "hls" ? [...$result, $this->takeDirectory("hls")] : $result;
         };
@@ -306,9 +306,9 @@ class BinaryOptionCoverageTest extends BinaryTestCase
             [$actual[2], $expected[2]] = ["", ""];
         }
         if ($options[0] === "--from") {
-            $this->assertSame(3, $this->runBinary([...self::call($command, $input), "--from", "microdvd"])[0]);
+            $this->assertSame(3, $this->runCli([...self::call($command, $input), "--from", "microdvd"])[0]);
         } elseif (!in_array($options[0], ["--word-timestamps", "--scc-roll-up"], true)) {
-            $this->assertSame(3, $this->runBinary(self::call($command, $variantInput, $extension))[0]);
+            $this->assertSame(3, $this->runCli(self::call($command, $variantInput, $extension))[0]);
         }
         if ($options[0] === "--encoding") {
             $actual[1] = str_replace("Encoding:              UTF-32LE", "Encoding:              UTF-8", $actual[1]);
@@ -366,49 +366,49 @@ class BinaryOptionCoverageTest extends BinaryTestCase
         file_put_contents("$this->dir/edited.srt", str_replace("Basel", "Bern", $station));
         file_put_contents("$this->dir/late.srt", Subtitle::fromString($station, Format::SubRip)->shift(2)->toString(Format::SubRip));
 
-        [$code, $srt, $stderr] = $this->runBinary(self::call($command, "station.srt", "srt"));
+        [$code, $srt, $stderr] = $this->runCli(self::call($command, "station.srt", "srt"));
         $this->assertSame(0, $code, $stderr);
 
         switch ($options[0]) {
             case "--output-fps":
                 $expected = Subtitle::fromString($srt, Format::SubRip)->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(25)]));
-                $this->assertSame(3, $this->runBinary(self::call($command, "station.srt", to: "microdvd"))[0]);
-                $this->assertSame([0, $expected], array_slice($this->runBinary([...self::call($command, "station.srt", to: "microdvd"), ...$options]), 0, 2));
+                $this->assertSame(3, $this->runCli(self::call($command, "station.srt", to: "microdvd"))[0]);
+                $this->assertSame([0, $expected], array_slice($this->runCli([...self::call($command, "station.srt", to: "microdvd"), ...$options]), 0, 2));
                 break;
             case "--line-ending":
-                $this->assertSame([0, str_replace("\n", "\r\n", $srt)], array_slice($this->runBinary([...self::call($command, "station.srt", "srt"), ...$options]), 0, 2));
+                $this->assertSame([0, str_replace("\n", "\r\n", $srt)], array_slice($this->runCli([...self::call($command, "station.srt", "srt"), ...$options]), 0, 2));
                 break;
             case "--no-bom":
                 $this->assertStringStartsWith(self::BOM, $srt);
-                $this->assertSame([0, substr($srt, 3)], array_slice($this->runBinary([...self::call($command, "station.srt", "srt"), ...$options]), 0, 2));
+                $this->assertSame([0, substr($srt, 3)], array_slice($this->runCli([...self::call($command, "station.srt", "srt"), ...$options]), 0, 2));
                 break;
             case "--bom":
-                [, $json] = $this->runBinary(self::call($command, "station.srt", to: "json"));
+                [, $json] = $this->runCli(self::call($command, "station.srt", to: "json"));
                 $this->assertStringStartsWith("{", $json);
-                $this->assertSame([0, self::BOM . $json], array_slice($this->runBinary([...self::call($command, "station.srt", to: "json"), ...$options]), 0, 2));
+                $this->assertSame([0, self::BOM . $json], array_slice($this->runCli([...self::call($command, "station.srt", to: "json"), ...$options]), 0, 2));
                 break;
             case "--scc-fit":
                 file_put_contents("$this->dir/fit.srt", str_replace("Basel", "\u{160}ibenik", $station));
-                [, $fitSrt] = $this->runBinary(self::call($command, "fit.srt", "srt"));
+                [, $fitSrt] = $this->runCli(self::call($command, "fit.srt", "srt"));
                 $report     = (new SccFormatter())->formatWithReport(Subtitle::fromString($fitSrt, Format::SubRip),
                                                                      new WriteOptions(formats: [new SccWriteOptions(fit: true)]));
                 $changes    = implode("", array_map(fn (SccFitChange $change): string => "fit.srt: $change->message ({$change->action->value})\n", $report->changes));
-                $this->assertSame($command === "translate" ? 0 : 3, $this->runBinary(self::call($command, "fit.srt", to: "scc"))[0]);
-                [$code, $scc, $stderr] = $this->runBinary([...self::call($command, "fit.srt", to: "scc"), ...$options]);
+                $this->assertSame($command === "translate" ? 0 : 3, $this->runCli(self::call($command, "fit.srt", to: "scc"))[0]);
+                [$code, $scc, $stderr] = $this->runCli([...self::call($command, "fit.srt", to: "scc"), ...$options]);
                 $this->assertSame([0, $report->content], [$code, $scc]);
                 $this->assertTrue(str_ends_with($stderr, $changes), $stderr);
                 if ($command !== "translate") {
                     $this->assertStringContainsString("replaced \"\u{160}\" with \"S\". (transliterated)\n", $changes);
                 }
-                $this->assertSame(0, $this->runBinary([...self::call($command, "station.srt", "srt"), ...$options])[0]);
+                $this->assertSame(0, $this->runCli([...self::call($command, "station.srt", "srt"), ...$options])[0]);
                 break;
             case "--skip-image-cues":
                 $data  = json_decode(Subtitle::fromString($station, Format::SubRip)->toString(Format::Json), true);
                 $image = json_decode(file_get_contents(self::FILES . "json/real/own_image_cues.json"), true);
                 $data["cues"] = [...$data["cues"], ...array_values(array_filter($image["cues"], fn (array $cue): bool => $cue["lines"] === []))];
                 file_put_contents("$this->dir/images.json", json_encode($data));
-                $this->assertSame(3, $this->runBinary(self::call($command, "images.json", "srt"))[0]);
-                $this->assertSame([0, $srt], array_slice($this->runBinary([...self::call($command, "images.json", "srt"), ...$options]), 0, 2));
+                $this->assertSame(3, $this->runCli(self::call($command, "images.json", "srt"))[0]);
+                $this->assertSame([0, $srt], array_slice($this->runCli([...self::call($command, "images.json", "srt"), ...$options]), 0, 2));
                 break;
         }
     }
