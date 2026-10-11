@@ -7,6 +7,8 @@ A PHP library and command line tool that reads, edits and writes subtitles, tran
 
 Upgrading from 2.x? The package has a new name. See the [upgrade guide](docs/upgrade-3.0.md).
 
+Upgrading from 3.x? See the [4.0 upgrade guide](docs/upgrade-4.0.md).
+
 ## Install
 ```sh
 composer require yama6a/subtitle-toolbox-php

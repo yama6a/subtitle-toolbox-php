@@ -16,7 +16,7 @@ composer require yama6a/subtitle-toolbox-php:^4.0
 
 - **WebVTT**: the formatter drops the stored `line`, `position` and `align` settings and writes the settings of the new alignment. It keeps `size`, `vertical` and `region`.
 - **TTML**: the formatter also writes `tts:textAlign` on the `<p>` when a style of the `<p>`, `<div>` or `<body>` sets another column.
-- **Format data**: the `vtt` and `ttml` cue format data hold the key `alignment`, the alignment that the parser read. The JSON output of a WebVTT or TTML file holds it too. A cue whose alignment equals this value keeps its stored position.
+- **Format data**: the `vtt` and `ttml` cue format data hold the key `alignment`, the alignment that the parser read. The JSON output of a WebVTT or TTML file holds it too. A cue whose alignment equals this value keeps its stored position. JSON from 3.x has no such key. `fromArray()` and the JSON reader then take the cue alignment as the stored value, so the cues keep their positions.
 
 The `Alignment` enum replaces the alignment numbers from 1 to 9 and `null`.
 
@@ -49,7 +49,7 @@ The `Alignment` enum replaces the alignment numbers from 1 to 9 and `null`.
 | Call | 3.x | 4.0 | To keep the 3.x result |
 |:--- |:--- |:--- |:--- |
 | `toString(Format::Ass)` on the WebVTT cue `00:00:04.000 --> 00:00:06.500 align:center` | `{\an2}` before the text | no tag | no option |
-| `toString(Format::Json)` on the same cue | `"alignment":2` | `"alignment":null` | no option |
+| `toString(Format::Json)` or `toArray()` on the same cue | `alignment` 2 | `alignment` `null` | no option |
 
 ## Read and write options
 
@@ -106,5 +106,10 @@ subtitle-toolbox diff old.mkv new.mkv --track 3 --track2 8
 subtitle-toolbox diff a.json b.json --from deepgram
 subtitle-toolbox diff old.mkv new.mkv --track 3 --new-track 8
 ```
+
+| Call | 3.x | 4.0 | 4.0 call for the 3.x result |
+|:--- |:--- |:--- |:--- |
+| `diff a.srt b.vtt --from srt` | exit code 1, `--from` reads `a.srt` only | exit code 3, `--from` reads `b.vtt` as SubRip too | `diff a.srt b.vtt --from srt --new-from vtt` |
+| `diff text_tracks.mkv seek_head.mkv --track 3`, where `seek_head.mkv` has only track 2 | exit code 1, `--track` reads `text_tracks.mkv` only | exit code 3, `seek_head.mkv` has no track 3 | `diff text_tracks.mkv seek_head.mkv --track 3 --new-track 2` |
 
 `--track` applies to the new file only when the new file is an MKV, WebM or MP4 file. For `diff old.mkv new.srt --track 3`, `diff` reads track 3 of `old.mkv` and ignores `--track` for `new.srt`. 

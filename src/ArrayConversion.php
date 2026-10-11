@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Parsers\TtmlParser;
+use SubtitleToolbox\Parsers\WebVttParser;
 
 /**
  * @internal
@@ -229,6 +231,11 @@ trait ArrayConversion
             ->setForced($forced);
         foreach (self::arrayConversionMap($cueData, "formatData", "$path.") as $format => $formatData) {
             self::arrayConversionCheckFormatData($format, $formatData, "$path.formatData.$format", true);
+            // JSON from 3.x has no stored alignment. Without it, the formatters would drop the stored position.
+            if (in_array($format, [WebVttParser::FORMAT_DATA_KEY, TtmlParser::FORMAT_DATA_KEY], true)
+                && $formatData !== [] && !array_key_exists("alignment", $formatData) && $alignment !== Alignment::BottomCenter) {
+                $formatData["alignment"] = $alignment->value;
+            }
             $cue->setFormatData($format, $formatData);
         }
 

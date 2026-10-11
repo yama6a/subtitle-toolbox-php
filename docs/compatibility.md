@@ -10,6 +10,8 @@ The library follows semantic versioning. A 4.x minor or patch release does not b
 | Parameter names | every parameter name. Call options constructors with named arguments, for example `new WriteOptions(bom: true)` |
 | Exceptions | the exception classes, their codes and the parents that [errors.md](errors.md) lists, including the SPL parents |
 | CLI | the commands, the options, the meaning of each exit code and the `--json` shapes of the binary `subtitle-toolbox`. The CLI never overwrites a file |
+| Library JSON | version 1 of the JSON that `toString(Format::Json)` and `toArray()` write, and that `Format::Json` and `fromArray()` read. See [json.md](json.md) |
+| Format data | the keys and the value types of the format data that `findFormatData()` returns. See [formats.md](formats.md) |
 
 ## Changes a minor or patch release can make
 - **Bug fixes and new formats**: a bug fix or a new format can change the written bytes, the parsed cues and the detection result of a file. The release notes list each change.
