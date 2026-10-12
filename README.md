@@ -66,7 +66,7 @@ The command line tool also comes as a PHAR file and as two container images. The
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
 | Cloud speech-to-text JSON: [AWS Transcribe](https://docs.aws.amazon.com/transcribe/latest/dg/how-it-works.html), [Deepgram](https://developers.deepgram.com/reference/speech-to-text/listen-pre-recorded), [AssemblyAI](https://www.assemblyai.com/docs/api-reference/transcripts/get), [Google Speech-to-Text](https://cloud.google.com/speech-to-text/docs/reference/rest/v1/speech/recognize) | `AwsTranscribe`, `Deepgram`, `AssemblyAi`, `GoogleSpeech` | `aws-transcribe`, `deepgram`, `assemblyai`, `google-speech` | `.json` | ✅ | ✅ | not detected from the content |
 | [HTML transcript](https://podcasting2.org/docs/podcast-namespace/tags/transcript) | `HtmlTranscript` | `html` | `.html`, `.htm` | ✅ | ✅ | the Podcasting 2.0 HTML format |
-| [Plain text](https://en.wikipedia.org/wiki/Plain_text) | `PlainText` | `txt` | `.txt` | ❌ | ✅ | transcript |
+| [Plain text](docs/transcripts.md#plain-text) | `PlainText` | `txt` | `.txt` | ❌ | ✅ | transcript |
 | [Podcasting 2.0 transcript JSON](https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/examples/transcripts/transcripts.md) | `PodcastTranscript` | `podcast-transcript` | `.json` | ✅ | ✅ | |
 | [Whisper JSON](https://platform.openai.com/docs/api-reference/audio/verbose_json_object) | `Whisper` | `whisper` | `.json` | ✅ | ✅ | OpenAI API, openai-whisper, faster-whisper, WhisperX, whisper.cpp |
 
