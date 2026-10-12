@@ -288,6 +288,19 @@ class BinaryOutputTest extends CliTestCase
     }
 
 
+    public function testAnUnreadableInputWithOutputDirFailsWithoutAPhpWarning(): void
+    {
+        chmod("$this->dir/trip.srt", 0);
+        if (is_readable("$this->dir/trip.srt")) {
+            $this->markTestSkipped("The user of the test can read a file without permissions.");
+        }
+
+        $this->assertSame([3, "", "trip.srt: Cannot read the file trip.srt.\n"],
+                          $this->runCli(["retime", "trip.srt", "--shift", "1", "--output-dir", "out"]));
+        $this->assertFileDoesNotExist("$this->dir/out");
+    }
+
+
     public function testContentThatTheOutputFormatCannotHoldFailsThatFileWithExitCode3(): void
     {
         file_put_contents("$this->dir/five.srt", "1\n00:00:01,000 --> 00:00:03,000\nA\nB\nC\nD\nE\n");
