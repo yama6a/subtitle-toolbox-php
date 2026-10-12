@@ -140,7 +140,7 @@ abstract class SubtitleParser
 
     private static function invalidUtf8Message(int $offset): string
     {
-        return "The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding.";
+        return "The content is not valid UTF-8. The first bad byte is at offset $offset. Set ReadOptions::\$encoding to the source encoding.";
     }
 
 

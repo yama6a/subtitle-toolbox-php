@@ -85,7 +85,7 @@ abstract class ReportCommand extends FileCommand
         return array_map(fn (ParseWarning $warning): array => [
             "lineNumber" => $warning->lineNumber,
             "blockIndex" => $warning->blockIndex,
-            "message"    => $warning->message,
+            "message"    => CliMessages::reword($warning->message, null, null),
             "action"     => $warning->action->value,
         ], $warnings);
     }
