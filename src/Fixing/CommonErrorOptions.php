@@ -55,4 +55,33 @@ final class CommonErrorOptions
         public readonly bool $unneededPeriods = false,
     ) {
     }
+
+
+    /**
+     * Tells if these options turn $rule on for $language, the result of CommonErrorFixer::language().
+     *
+     * @internal
+     */
+    public function enables(CommonErrorRule $rule, ?string $language): bool
+    {
+        return match ($rule) {
+            CommonErrorRule::ReplaceList                  => $this->replaceList !== null,
+            CommonErrorRule::UnbalancedTags               => $this->unbalancedTags,
+            CommonErrorRule::EmptyTags                    => $this->emptyTags,
+            CommonErrorRule::DoubleApostrophes            => $this->doubleApostrophes,
+            CommonErrorRule::OcrPipe                      => $this->ocrPipe,
+            CommonErrorRule::OcrZeroInWords               => $this->ocrZeroInWords,
+            CommonErrorRule::OcrLowercaseL                => $this->ocrLowercaseL,
+            CommonErrorRule::LoneLowercaseI               => $this->loneLowercaseI && $language === "en",
+            CommonErrorRule::Ellipsis                     => $this->ellipsis,
+            CommonErrorRule::UnneededPeriods              => $this->unneededPeriods,
+            CommonErrorRule::DoubleSpaces                 => $this->doubleSpaces,
+            CommonErrorRule::SpaceBeforePunctuation       => $this->spaceBeforePunctuation,
+            CommonErrorRule::MissingSpaceAfterPunctuation => $this->missingSpaceAfterPunctuation,
+            CommonErrorRule::DialogueOnOneLine            => $this->dialogueOnOneLine,
+            CommonErrorRule::DialogueDashes               => $this->dialogueDashes,
+            CommonErrorRule::MusicNotes                   => $this->musicNotes,
+            CommonErrorRule::SentenceStartCase            => $this->sentenceStartCase,
+        };
+    }
 }

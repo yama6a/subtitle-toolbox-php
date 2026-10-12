@@ -12,11 +12,6 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\TextCase;
 
-/**
- * The replace list rules port GetReplaceWord(), StripAffixes(), ReplaceWord() and SkipAddLineEnding() of
- * OcrFixReplaceList2.cs of Subtitle Edit, MIT license, at commit e1b8546:
- * https://github.com/SubtitleEdit/subtitleedit/blob/e1b854665b40bf6e04271c2ec64084947060e632/src/libuilogic/Ocr/FixEngine/OcrFixReplaceList2.cs
- */
 final class CommonErrorFixer
 {
     // A next cue that starts within 0.6 s and with a lowercase letter continues the sentence of the cue before it.
@@ -26,7 +21,6 @@ final class CommonErrorFixer
     private const WORD_ENDS    = '(?![\p{L}\p{N}\'\x{2019}])';
     private const SPACES       = '[ \t\x{00A0}]';
     private const SENTENCE_END = '/(?:(?<!\.)\.|[?!])[\p{Pe}\p{Pf}"\']*$/u';
-    private const BOUNDARY     = '/^[\p{P}\s<>`\x{00B4}\x{266A}]$/u';
     private const L_CONSONANTS = [
         "en" => "bcdfghjkmnpqrstvwxz",
         "de" => "bcdfghjkmnpqrstvwxz",
@@ -57,13 +51,14 @@ final class CommonErrorFixer
 
     private static function run(Subtitle $subtitle, CommonErrorOptions $options, bool $change): CommonErrorReport
     {
-        $language  = self::language($options->language ?? $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
-        $cues      = $subtitle->getCues();
-        $indexes   = array_keys($cues);
-        $positions = array_flip($indexes);
-        $fixes     = [];
-        $turkic    = TextCase::isTurkic($options->language ?? $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
-        $ends      = $options->sentenceStartCase ? array_map(fn (SubtitleCue $cue): bool =>
+        $languageCode = $options->language ?? $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);
+        $language     = self::language($languageCode);
+        $turkic       = TextCase::isTurkic($languageCode);
+        $cues         = $subtitle->getCues();
+        $indexes      = array_keys($cues);
+        $positions    = array_flip($indexes);
+        $fixes        = [];
+        $ends         = $options->sentenceStartCase ? array_map(fn (SubtitleCue $cue): bool =>
             preg_match(self::SENTENCE_END, Markup::visibleText(implode("\n", $cue->getLines()))) === 1, $cues) : [];
 
         $fixCue = function (SubtitleCue $cue, int $index)
@@ -76,10 +71,14 @@ final class CommonErrorFixer
             $next      = $cues[$indexes[$positions[$index] + 1] ?? -1] ?? null;
             $continues = $next !== null && $next->getStart() - $cue->getEnd() <= self::CONTINUATION_GAP
                          && preg_match('/^\p{Ll}/u', implode("\n", Markup::plainLines($next->getLines()))) === 1;
-            $starts    = $positions[$index] === 0 || ($ends[$indexes[$positions[$index] - 1]] ?? false);
-            $original  = $lines;
+            $startsSentence = $positions[$index] === 0 || ($ends[$indexes[$positions[$index] - 1]] ?? false);
+            $context        = new CueFixContext($language, $turkic, $continues, $startsSentence);
+            $original       = $lines;
             foreach (CommonErrorRule::cases() as $rule) {
-                $fixed = self::applyRule($rule, $lines, $options, $language, $continues, $starts, $turkic);
+                if (!$options->enables($rule, $language)) {
+                    continue;
+                }
+                $fixed = self::applyRule($rule, $lines, $options, $context);
                 if ($fixed !== $lines) {
                     $fixes[] = new AppliedFix($index, $rule, implode("\n", $lines), implode("\n", $fixed));
                     $lines   = $fixed;
@@ -98,34 +97,12 @@ final class CommonErrorFixer
      * @param list<string> $lines
      * @return list<string>
      */
-    private static function applyRule(CommonErrorRule $rule, array $lines, CommonErrorOptions $options, ?string $language,
-                                      bool $continues, bool $starts, bool $turkic): array
+    private static function applyRule(CommonErrorRule $rule, array $lines, CommonErrorOptions $options, CueFixContext $context): array
     {
-        $enabled = match ($rule) {
-            CommonErrorRule::ReplaceList                  => $options->replaceList !== null,
-            CommonErrorRule::UnbalancedTags               => $options->unbalancedTags,
-            CommonErrorRule::EmptyTags                    => $options->emptyTags,
-            CommonErrorRule::DoubleApostrophes            => $options->doubleApostrophes,
-            CommonErrorRule::OcrPipe                      => $options->ocrPipe,
-            CommonErrorRule::OcrZeroInWords               => $options->ocrZeroInWords,
-            CommonErrorRule::OcrLowercaseL                => $options->ocrLowercaseL,
-            CommonErrorRule::LoneLowercaseI               => $options->loneLowercaseI && $language === "en",
-            CommonErrorRule::Ellipsis                     => $options->ellipsis,
-            CommonErrorRule::UnneededPeriods              => $options->unneededPeriods,
-            CommonErrorRule::DoubleSpaces                 => $options->doubleSpaces,
-            CommonErrorRule::SpaceBeforePunctuation       => $options->spaceBeforePunctuation,
-            CommonErrorRule::MissingSpaceAfterPunctuation => $options->missingSpaceAfterPunctuation,
-            CommonErrorRule::DialogueOnOneLine            => $options->dialogueOnOneLine,
-            CommonErrorRule::DialogueDashes               => $options->dialogueDashes,
-            CommonErrorRule::MusicNotes                   => $options->musicNotes,
-            CommonErrorRule::SentenceStartCase            => $options->sentenceStartCase,
-        };
-        if (!$enabled) {
-            return $lines;
-        }
+        $language = $context->language;
 
         return match ($rule) {
-            CommonErrorRule::ReplaceList     => self::replaceList($lines, $options->replaceList, $continues),
+            CommonErrorRule::ReplaceList     => OcrReplaceListFixer::replaceList($lines, $options->replaceList, $context->continues),
             CommonErrorRule::UnbalancedTags  => self::unbalancedTags($lines),
             CommonErrorRule::EmptyTags       => array_map(fn (string $line): string =>
                 Markup::removeEmptyTagPairs($line, ignoreCase: true, withSpaces: true), $lines),
@@ -147,7 +124,7 @@ final class CommonErrorFixer
             CommonErrorRule::DialogueDashes  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string =>
                 $first ? self::dialogueDash($text, $options->dialogueDashStyle) : $text),
             CommonErrorRule::MusicNotes      => array_map(self::musicNotes(...), $lines),
-            CommonErrorRule::SentenceStartCase => self::sentenceStartCase($lines, $starts, $turkic),
+            CommonErrorRule::SentenceStartCase => self::sentenceStartCase($lines, $context->startsSentence, $context->turkic),
         };
     }
 
@@ -413,165 +390,6 @@ final class CommonErrorFixer
         $text = self::replace('/(?<=\p{L}\p{L})\.(?=\p{Lu}\p{Ll})/u', ". ", $text);
 
         return self::replace('/(?<=\p{L})(\.\.\.|\x{2026})(?=\p{L})/u', '$1 ', $text);
-    }
-
-
-    /**
-     * @param list<string> $lines
-     * @return list<string>
-     */
-    private static function replaceList(array $lines, OcrReplaceList $list, bool $continues): array
-    {
-        $lastLine = count($lines) - 1;
-        foreach ($lines as $lineIndex => $line) {
-            $lines[$lineIndex] = Markup::mapTextRuns([$line], function (string $text, bool $first, bool $last)
-                use ($list, $continues, $lineIndex, $lastLine): string {
-                if ($first && $last && isset($list->wholeLines[$text])) {
-                    return $list->wholeLines[$text];
-                }
-
-                $text = implode(" ", array_map(fn (string $word): string => self::replaceWord($word, $list), explode(" ", $text)));
-                if ($first) {
-                    $text = self::replaceBeginLines($text, $list->beginLines);
-                }
-                if ($last && $lineIndex === $lastLine) {
-                    $text = self::replaceEndLines($text, $list->endLines, $continues);
-                }
-
-                return self::replacePartial($text, $list);
-            })[0];
-        }
-
-        return $lines;
-    }
-
-
-    /**
-     * Replaces the end of the last line. When the cue continues, a replacement does not add a full stop.
-     *
-     * @param array<string, string> $endLines
-     */
-    private static function replaceEndLines(string $text, array $endLines, bool $continues): string
-    {
-        foreach ($endLines as $from => $to) {
-            $from = (string)$from;
-            if (str_ends_with($text, $from) && !($continues && str_ends_with($to, ".") && !str_ends_with($from, "."))) {
-                $text = substr($text, 0, -strlen($from)) . $to;
-            }
-        }
-
-        return $text;
-    }
-
-
-    /**
-     * Runs the partial line and the regular expression replacements of $list.
-     */
-    private static function replacePartial(string $text, OcrReplaceList $list): string
-    {
-        foreach ($list->partialLines as $from => $to) {
-            $text = self::replaceBetweenBoundaries($text, (string)$from, $to);
-        }
-        foreach ($list->partialLinesAlways as $from => $to) {
-            $text = str_replace((string)$from, $to, $text);
-        }
-        foreach ($list->regularExpressions as $pattern => $replacement) {
-            $text = self::replace((string)$pattern, $replacement, $text);
-        }
-
-        return $text;
-    }
-
-
-    private static function replaceWord(string $word, OcrReplaceList $list): string
-    {
-        $result = self::lookUpWord($word, $list->wholeWords);
-        if ($result !== null) {
-            return $result;
-        }
-
-        foreach ($list->partialWordsAlways as $from => $to) {
-            $word = str_replace((string)$from, $to, $word);
-        }
-
-        return self::lookUpWord($word, $list->wholeWords) ?? $word;
-    }
-
-
-    /**
-     * Looks up the word with and without the punctuation around it, as GetReplaceWord() of Subtitle Edit does.
-     *
-     * @param array<string, string> $wholeWords
-     */
-    private static function lookUpWord(string $word, array $wholeWords): ?string
-    {
-        preg_match('/^((?:-(?=.))*(?:\.(?=.))*(?:"(?=.))*(?:\((?=.))?)(.*?)((?<=.)["\.,!?)\]:;]*)$/s', $word, $parts);
-        [, $pre, $core, $post] = $parts + ["", "", $word, ""];
-        if ($core === "") {
-            return null;
-        }
-
-        return $wholeWords[$pre . $core . $post] ?? (isset($wholeWords[$pre . $core]) ? $wholeWords[$pre . $core] . $post : null)
-            ?? (isset($wholeWords[$core . $post]) ? $pre . $wholeWords[$core . $post] : null)
-            ?? (isset($wholeWords[$core]) ? $pre . $wholeWords[$core] . $post : null);
-    }
-
-
-    /**
-     * @param array<string, string> $beginLines
-     */
-    private static function replaceBeginLines(string $text, array $beginLines): string
-    {
-        preg_match('/^[ "\'\[(\x{00B6}' . DialogueDash::CHARACTERS . ']*/u', $text, $prefix);
-        $prefix = $prefix[0] ?? "";
-        $rest   = substr($text, strlen($prefix));
-        foreach ($beginLines as $from => $to) {
-            $from = (string)$from;
-            if (str_starts_with($rest, $from)) {
-                $rest = $to . substr($rest, strlen($from));
-            }
-            $rest = str_replace([". $from", "! $from", "? $from"], [". $to", "! $to", "? $to"], $rest);
-        }
-
-        return $prefix . $rest;
-    }
-
-
-    /**
-     * Replaces $from where it starts and ends at punctuation, whitespace or the text edge, as ReplaceWord() of Subtitle Edit does.
-     */
-    private static function replaceBetweenBoundaries(string $text, string $from, string $to): string
-    {
-        $result = "";
-        $offset = 0;
-        while ($from !== "" && ($position = strpos($text, $from, $offset)) !== false) {
-            $end     = $position + strlen($from);
-            $startOk = $position === 0 || str_starts_with($from, " ")
-                       || preg_match(self::BOUNDARY, self::lastCharacter(substr($text, 0, $position))) === 1;
-            $endOk   = $end === strlen($text) || str_ends_with($to, " ")
-                       || preg_match(self::BOUNDARY, self::firstCharacter(substr($text, $end))) === 1;
-            if ($startOk && $endOk) {
-                $result .= substr($text, $offset, $position - $offset) . $to;
-                $offset  = $end;
-            } else {
-                $result .= substr($text, $offset, $position - $offset + 1);
-                $offset  = $position + 1;
-            }
-        }
-
-        return $result . substr($text, $offset);
-    }
-
-
-    private static function lastCharacter(string $text): string
-    {
-        return preg_match('/.$/su', $text, $match) === 1 ? $match[0] : substr($text, -1);
-    }
-
-
-    private static function firstCharacter(string $text): string
-    {
-        return preg_match('/^./su', $text, $match) === 1 ? $match[0] : substr($text, 0, 1);
     }
 
 
