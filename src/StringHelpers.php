@@ -19,6 +19,10 @@ final class StringHelpers
     // Skips each valid UTF-8 sequence and matches each other byte from 0x80.
     private const INVALID_UTF8 = '/' . self::UTF8_SEQUENCE . '(*SKIP)(*FAIL)|[\x80-\xFF]/';
 
+    private const UTF16_SAMPLE_BYTES   = 1024;
+    private const UTF16_MIN_ZERO_SHARE = 0.4;
+    private const UTF16_MAX_ZERO_SHARE = 0.05;
+
     // UTF-32 LE comes before UTF-16 LE because their BOMs share the first two bytes.
     private const UNICODE_BOMS = [
         "\x00\x00\xFE\xFF" => "UTF-32BE",
@@ -187,12 +191,13 @@ final class StringHelpers
 
 
     /**
-     * Returns UTF-16LE or UTF-16BE when at least 40 % of the first 512 byte pairs have a zero byte on one side and
-     * at most 5 % on the other. ASCII text in UTF-16 has a zero byte in each pair. UTF-32 has zero bytes on both sides.
+     * Returns UTF-16LE or UTF-16BE when at least UTF16_MIN_ZERO_SHARE of the byte pairs in the first UTF16_SAMPLE_BYTES
+     * have a zero byte on one side and at most UTF16_MAX_ZERO_SHARE on the other.
+     * ASCII text in UTF-16 has a zero byte in each pair. UTF-32 has zero bytes on both sides.
      */
     private static function detectUtf16(string $str): ?string
     {
-        $sample = substr($str, 0, 1024);
+        $sample = substr($str, 0, self::UTF16_SAMPLE_BYTES);
         $pairs  = intdiv(strlen($sample), 2);
         if ($pairs === 0 || strlen($str) % 2 !== 0) {
             return null;
@@ -206,9 +211,9 @@ final class StringHelpers
         }
 
         return match (true) {
-            $zeros[1] >= 0.4 * $pairs && $zeros[0] <= 0.05 * $pairs => "UTF-16LE",
-            $zeros[0] >= 0.4 * $pairs && $zeros[1] <= 0.05 * $pairs => "UTF-16BE",
-            default                                                  => null,
+            $zeros[1] >= self::UTF16_MIN_ZERO_SHARE * $pairs && $zeros[0] <= self::UTF16_MAX_ZERO_SHARE * $pairs => "UTF-16LE",
+            $zeros[0] >= self::UTF16_MIN_ZERO_SHARE * $pairs && $zeros[1] <= self::UTF16_MAX_ZERO_SHARE * $pairs => "UTF-16BE",
+            default                                                                                              => null,
         };
     }
 

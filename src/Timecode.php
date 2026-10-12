@@ -19,6 +19,7 @@ final class Timecode
     public const EPSILON = 1e-9;
 
     private const SECONDS_PER_MINUTE = 60;
+    private const SECONDS_PER_HOUR   = 3600;
 
     /**
      * The parsers, the Matroska reader, parse() and the CLI time options reject a time from this many hours.
@@ -69,7 +70,7 @@ final class Timecode
         if (preg_match(self::CLOCK_REGEX, $timecode, $matches)) {
             $hours   = $matches[1] === "" ? "0" : $matches[1];
             $minutes = $matches[1] === "" ? $matches[3] : $matches[2];
-            if ((float) $hours * 3600 + (float) $minutes * 60 < self::MAX_HOURS * 3600) {
+            if ((float) $hours * self::SECONDS_PER_HOUR + (float) $minutes * self::SECONDS_PER_MINUTE < self::MAX_HOURS * self::SECONDS_PER_HOUR) {
                 return self::toSeconds((int) $hours, (int) $minutes, (int) $matches[4], $matches[5] ?? "");
             }
 
@@ -212,7 +213,7 @@ final class Timecode
      */
     public static function toSeconds(int $hours, int $minutes, int $seconds, string $fraction = ""): float
     {
-        $whole = $hours * 3600 + $minutes * 60 + $seconds;
+        $whole = self::wholeSeconds($hours, $minutes, $seconds);
 
         return $fraction === "" ? (float) $whole : (float) "$whole.$fraction";
     }
@@ -226,7 +227,14 @@ final class Timecode
      */
     public static function toSecondsFromFrames(int $hours, int $minutes, int $seconds, int $frames, FrameRate $frameRate): float
     {
-        return $hours * 3600 + $minutes * 60 + $seconds + $frameRate->framesToSeconds($frames);
+        return self::wholeSeconds($hours, $minutes, $seconds) + $frameRate->framesToSeconds($frames);
+    }
+
+
+    // A parser can pass a huge hour count. The sum then overflows to float, and the caller rejects it.
+    private static function wholeSeconds(int $hours, int $minutes, int $seconds): int|float
+    {
+        return $hours * self::SECONDS_PER_HOUR + $minutes * self::SECONDS_PER_MINUTE + $seconds;
     }
 
 
@@ -262,6 +270,11 @@ final class Timecode
         $total   = max(0, $total);
         $seconds = intdiv($total, $perSecond);
 
-        return [intdiv($seconds, 3600), intdiv($seconds, 60) % 60, $seconds % 60, $total % $perSecond];
+        return [
+            intdiv($seconds, self::SECONDS_PER_HOUR),
+            intdiv($seconds % self::SECONDS_PER_HOUR, self::SECONDS_PER_MINUTE),
+            $seconds % self::SECONDS_PER_MINUTE,
+            $total % $perSecond,
+        ];
     }
 }
