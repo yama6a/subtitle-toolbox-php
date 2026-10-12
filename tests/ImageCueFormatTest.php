@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\FakeOcrEngine;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 require_once __DIR__ . "/Ocr/FakeOcrEngine.php";
 
@@ -17,7 +18,7 @@ class ImageCueFormatTest extends TestCase
     {
         $image = new CueImage("png", 0, 0, 1, 1, 720, 576);
 
-        return $subtitle->addCue($image->toCue(new SubtitleCue($start, $end)));
+        return $subtitle->addCue(TestSubtitles::imageCue($image, new SubtitleCue($start, $end)));
     }
 
 

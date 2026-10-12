@@ -38,14 +38,14 @@ class ReferenceSyncSplitTest extends TestCase
 
         $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference, -180, 180, maxSplits: 2));
 
-        $segments = $result->getSegments();
+        $segments = $result->segments;
         $this->assertCount(2, $segments);
-        $this->assertSame([0.0, 414.32], [$segments[0]["from"], $segments[0]["to"]]);
-        $this->assertSame([414.32, INF], [$segments[1]["from"], $segments[1]["to"]]);
-        $this->assertEqualsWithDelta(-2.3, $segments[0]["offset"], 0.02);
-        $this->assertEqualsWithDelta(147.7, $segments[1]["offset"], 0.02);
-        $this->assertEqualsWithDelta(25 / 23.976, $segments[1]["scale"], 0.00001);
-        $this->assertSame($segments[0]["offset"], $result->offset);
+        $this->assertSame([0.0, 414.32], [$segments[0]->from, $segments[0]->to]);
+        $this->assertSame([414.32, INF], [$segments[1]->from, $segments[1]->to]);
+        $this->assertEqualsWithDelta(-2.3, $segments[0]->offset, 0.02);
+        $this->assertEqualsWithDelta(147.7, $segments[1]->offset, 0.02);
+        $this->assertEqualsWithDelta(25 / 23.976, $segments[1]->scale, 0.00001);
+        $this->assertSame($segments[0]->offset, $result->offset);
         $this->assertGreaterThan(0.8, $result->score);
         $this->assertNotSame($before, TestSubtitles::times($target));
     }
@@ -80,7 +80,7 @@ class ReferenceSyncSplitTest extends TestCase
         $result = ReferenceSync::apply($target, new ReferenceSyncOptions($this->load("own_reference_en_tv_break.srt"), -180, 180,
                                                                          maxSplits: 2, splitPenalty: 5));
 
-        $this->assertCount(1, $result->getSegments());
+        $this->assertCount(1, $result->segments);
         $this->assertStringEqualsFile(__DIR__ . "/../files/sync/own_target_de_split_penalty_synced.srt", $target->toString(Format::SubRip));
     }
 
@@ -90,7 +90,7 @@ class ReferenceSyncSplitTest extends TestCase
         $result = ReferenceSync::apply($this->load("own_target_de_25fps.srt"),
                                        new ReferenceSyncOptions($this->load("own_reference_en_tv_break.srt"), -180, 180));
 
-        $this->assertCount(1, $result->getSegments());
+        $this->assertCount(1, $result->segments);
         $this->assertLessThan(0.5, $result->score);
     }
 
@@ -101,7 +101,7 @@ class ReferenceSyncSplitTest extends TestCase
                                        new ReferenceSyncOptions($this->load("own_reference_en_tv_break.srt"), -180, 180,
                                                                 maxSplits: 2, splitPenalty: 0.5));
 
-        $this->assertCount(1, $result->getSegments());
+        $this->assertCount(1, $result->segments);
     }
 
 
@@ -126,14 +126,13 @@ class ReferenceSyncSplitTest extends TestCase
 
     public function testSegmentsWithoutSplit(): void
     {
-        $this->assertSame([["from" => 0.0, "to" => INF, "scale" => 1.04, "offset" => -2.5]],
-                          (new ReferenceSyncReport(-2.5, 1.04, 0.9))->getSegments());
+        $this->assertEquals([new SyncSegment(0.0, INF, 1.04, -2.5)], (new ReferenceSyncReport(-2.5, 1.04, 0.9))->segments);
     }
 
 
     private static function retimeSegments(Subtitle $subtitle, ReferenceSyncReport $result): void
     {
-        (new \ReflectionMethod(ReferenceSync::class, "retimeSegments"))->invoke(null, $subtitle, $result->getSegments());
+        (new \ReflectionMethod(ReferenceSync::class, "retimeSegments"))->invoke(null, $subtitle, $result->segments);
     }
 
 
@@ -175,12 +174,12 @@ class ReferenceSyncSplitTest extends TestCase
         $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference, maxSplits: 2));
 
         $this->assertLessThan(15, microtime(true) - $start);
-        $segments = $result->getSegments();
-        $this->assertSame([0.0, $splits[0], $splits[1]], array_column($segments, "from"));
+        $segments = $result->segments;
+        $this->assertSame([0.0, $splits[0], $splits[1]], array_map(fn (SyncSegment $segment): float => $segment->from, $segments));
         $this->assertEqualsWithDelta(25 / 23.976, $result->scale, 0.00001);
-        $this->assertEqualsWithDelta(-12.4 * 25 / 23.976, $segments[0]["offset"], 0.02);
-        $this->assertEqualsWithDelta(-12.4 * 25 / 23.976 + 30, $segments[1]["offset"], 0.02);
-        $this->assertEqualsWithDelta(-12.4 * 25 / 23.976 + 10, $segments[2]["offset"], 0.02);
+        $this->assertEqualsWithDelta(-12.4 * 25 / 23.976, $segments[0]->offset, 0.02);
+        $this->assertEqualsWithDelta(-12.4 * 25 / 23.976 + 30, $segments[1]->offset, 0.02);
+        $this->assertEqualsWithDelta(-12.4 * 25 / 23.976 + 10, $segments[2]->offset, 0.02);
         $this->assertEqualsWithDelta(1, $result->score, 0.001);
     }
 }

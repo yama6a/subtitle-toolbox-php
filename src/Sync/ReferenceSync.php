@@ -27,7 +27,7 @@ final class ReferenceSync
     public static function apply(Subtitle $subtitle, ReferenceSyncOptions $options): ReferenceSyncReport
     {
         $report   = self::find($subtitle, $options);
-        $segments = $report->getSegments();
+        $segments = $report->segments;
         if (count($segments) > 1) {
             self::retimeSegments($subtitle, $segments);
 
@@ -48,14 +48,14 @@ final class ReferenceSync
     /**
      * Scales and then shifts each cue with the segment that holds its start. An earlier cue ends before a later segment starts.
      *
-     * @param list<array{from: float, to: float, scale: float, offset: float}> $segments
+     * @param list<SyncSegment> $segments
      */
     private static function retimeSegments(Subtitle $target, array $segments): void
     {
         $segmentCues = array_fill(0, count($segments), []);
         foreach ($target->getCues() as $cue) {
             $index = count($segments) - 1;
-            while ($index > 0 && $cue->getStart() < $segments[$index]["from"]) {
+            while ($index > 0 && $cue->getStart() < $segments[$index]->from) {
                 $index--;
             }
             $segmentCues[$index][] = $cue;
@@ -63,7 +63,7 @@ final class ReferenceSync
 
         foreach ($segmentCues as $index => $cues) {
             foreach ($cues as $cue) {
-                $cue->mapTimes(fn (float $time): float => $time * $segments[$index]["scale"] + $segments[$index]["offset"]);
+                $cue->mapTimes(fn (float $time): float => $time * $segments[$index]->scale + $segments[$index]->offset);
             }
         }
 

@@ -233,7 +233,7 @@ class TranslationRunnerTest extends TestCase
     {
         $subtitle = TestSubtitles::fromTexts(["\u{266A}\u{266B}", "1984", "...", "<i>\u{266A}</i>", "Hello."], start: 1, step: 2);
         $image    = new CueImage("png", 0, 0, 1, 1, 1, 1);
-        $subtitle->addCue($image->toCue(new SubtitleCue(20, 21)));
+        $subtitle->addCue(TestSubtitles::imageCue($image, new SubtitleCue(20, 21)));
         $engine   = new FakeTranslationEngine();
 
         (new TranslationRunner($engine))->translate($translated = $subtitle, "en", "de");

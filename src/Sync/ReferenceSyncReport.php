@@ -6,6 +6,10 @@ namespace SubtitleToolbox\Sync;
 
 final class ReferenceSyncReport
 {
+    /** @var list<SyncSegment> the parts of the subtitle in time order. Without a split, one part from 0 to INF */
+    public readonly array $segments;
+
+
     /**
      * @internal
      *
@@ -18,29 +22,13 @@ final class ReferenceSyncReport
         public readonly float $offset,
         public readonly float $scale,
         public readonly float $score,
-        private readonly array $splitParts = [],
+        array $splitParts = [],
     ) {
-    }
-
-
-    /**
-     * Returns the parts of the subtitle, each with its range of subtitle cue start times, the scale and the offset.
-     *
-     * @return list<array{from: float, to: float, scale: float, offset: float}>
-     */
-    public function getSegments(): array
-    {
-        $parts    = $this->splitParts === [] ? [["from" => 0.0, "offset" => $this->offset]] : $this->splitParts;
+        $parts    = $splitParts === [] ? [["from" => 0.0, "offset" => $offset]] : $splitParts;
         $segments = [];
         foreach ($parts as $index => $part) {
-            $segments[] = [
-                "from"   => $part["from"],
-                "to"     => $parts[$index + 1]["from"] ?? INF,
-                "scale"  => $this->scale,
-                "offset" => $part["offset"],
-            ];
+            $segments[] = new SyncSegment($part["from"], $parts[$index + 1]["from"] ?? INF, $scale, $part["offset"]);
         }
-
-        return $segments;
+        $this->segments = $segments;
     }
 }

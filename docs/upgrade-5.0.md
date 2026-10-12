@@ -99,4 +99,20 @@ TODO #970
 
 ## Options and results
 
-TODO #972
+| 4.x | 5.0 |
+|:--- |:--- |
+| `new CommonErrorOptions(unicodeEllipsis: true)` | `new CommonErrorOptions(ellipsis: EllipsisStyle::Unicode)` |
+| `new CommonErrorOptions(ellipsis: false)` | `new CommonErrorOptions(ellipsis: null)` |
+| `new SpeakerLabelOptions(to: SpeakerStyle::Prefix)` | `new SpeakerLabelOptions(style: SpeakerStyle::Prefix)` |
+| `new SpeakerLabelOptions(readPrefixes: true, readUpperCaseOnly: false)` | `new SpeakerLabelOptions(speakerLabels: true, speakerLabelsUpperCaseOnly: false)` |
+| `$report->getSegments()[1]['offset']` | `$report->segments[1]->offset` |
+| `$cue = $image->toCue(new SubtitleCue(1, 2));` | `$cue = new SubtitleCue(1, 2);` and then `$image->applyTo($cue);` |
+| `$subtitle->recognizeText(OcrEngineChooser::create(null, 'deu'));` | `$subtitle->recognizeText(OcrEngineChooser::create(), 'deu');` |
+| `OcrEngineChooser::create(null, 'eng', '/opt/bin/tesseract')` | `OcrEngineChooser::create(null, '/opt/bin/tesseract')` |
+
+- `EllipsisStyle` is in `SubtitleToolbox\Fixing`. Its cases are `ThreeDots` for `...`, the default, and `Unicode` for U+2026.
+- `HearingImpairedOptions` keeps `speakerLabels` and `speakerLabelsUpperCaseOnly`. `SpeakerLabelOptions` now uses the same 2 names.
+- `ReferenceSyncReport::$segments` is a list of `SyncSegment` objects with the fields `from`, `to`, `scale` and `offset`.
+- `CueImage::applyTo()` returns nothing. It still changes the cue that you pass.
+- `OcrEngineChooser::create()` makes Tesseract read English. Pass another language to `recognizeText()`, or build a `TesseractOcrEngine` with `TesseractOcrOptions::$language`.
+- The CLI options are the same. The output of all these calls is the same.

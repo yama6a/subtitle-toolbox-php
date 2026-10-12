@@ -20,6 +20,7 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Tests\Support\RealFiles;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 require_once __DIR__ . "/../files/pgs/generator/PgsFixtures.php";
 require_once __DIR__ . "/../Ocr/FakeOcrEngine.php";
@@ -146,10 +147,10 @@ class PgsParserTest extends TestCase
 
     public function testDrawsALaterObjectOverAnEarlierObjectThatItOverlaps(): void
     {
-        $black    = (new CueImage(PngEncoder::encode(3, 1, [0x000000FF, 0x000000FF, 0x000000FF]), 10, 20, 3, 1, 720, 576))
-            ->toCue(new SubtitleCue(1, 3));
-        $white    = (new CueImage(PngEncoder::encode(3, 1, [0x00000000, 0xFFFFFF80, 0xFFFFFFFF]), 11, 20, 3, 1, 720, 576))
-            ->toCue(new SubtitleCue(1, 3));
+        $black    = TestSubtitles::imageCue(new CueImage(PngEncoder::encode(3, 1, [0x000000FF, 0x000000FF, 0x000000FF]), 10, 20, 3, 1, 720, 576),
+                                             new SubtitleCue(1, 3));
+        $white    = TestSubtitles::imageCue(new CueImage(PngEncoder::encode(3, 1, [0x00000000, 0xFFFFFF80, 0xFFFFFFFF]), 11, 20, 3, 1, 720, 576),
+                                             new SubtitleCue(1, 3));
         $subtitle = Subtitle::fromString((new Subtitle())->addCues([$black, $white])->toString(Format::Pgs), Format::Pgs);
 
         $image = CueImage::fromCue($subtitle->getCues()[0]);

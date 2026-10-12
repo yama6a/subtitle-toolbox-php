@@ -223,7 +223,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --output-dir fixed/ --errors-f
 | `--replace FROM=TO` | [`replaceText()`](text.md#transforms) on the text between tags. Repeatable. The first `=` ends FROM |
 | `--replace-regex` | reads each FROM as a regular expression with delimiters, for example `--replace '/\.{4,}/=...'` |
 | `--replace-ignore-case` | matches FROM in any case |
-| `--speakers MODE` | `prefix`, `dashes`, `colors` or `from-prefix`. Calls `SpeakerLabels::apply()` with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors`, or with `readPrefixes: true`, and the other options at their defaults, see [Speakers](text.md#speakers) |
+| `--speakers MODE` | `prefix`, `dashes`, `colors` or `from-prefix`. Calls `SpeakerLabels::apply()` with `style: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors`, or with `speakerLabels: true`, and the other options at their defaults, see [Speakers](text.md#speakers) |
 | `--case MODE` | `upper`, `lower` or `sentence`, with `changeCase()` |
 | `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
 | `--rtl MODE` | `fix` calls [`fixRightToLeft()`](text.md#transforms), which wraps right-to-left lines in Unicode embedding marks. `clean` calls `removeBidiControls()`, which removes them and all other bidi controls |

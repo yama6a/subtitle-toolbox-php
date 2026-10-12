@@ -278,7 +278,7 @@ class ThrowSitesTest extends TestCase
         $unwritable  = [\RuntimeException::class, UnwritableContentException::class];
         $unsupported = [\RuntimeException::class, UnsupportedFormatException::class];
         $unknown     = [UnsupportedFormatException::class, UnknownFormatException::class];
-        $imageCue   = (new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2));
+        $imageCue   = TestSubtitles::imageCue(new CueImage("png", 0, 0, 1, 1, 1, 1), new SubtitleCue(1, 2));
 
         $cue = ["start" => 1, "end" => 2, "lines" => ["text"]];
 
@@ -406,12 +406,12 @@ class ThrowSitesTest extends TestCase
                 return $subtitle->toString(Format::GoogleSpeech);
             }, ...$unwritable],
             "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->toString(Format::Pgs), ...$unwritable],
-            "Formatters/PgsFormatter.php: negative x"       => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), -1, 0, 1, 1, 9, 9))
-                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
-            "Formatters/PgsFormatter.php: PNG size"         => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 2, 1, 9, 9))
-                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
-            "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 1, 1, 9, 9))
-                ->toCue(new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$unwritable],
+            "Formatters/PgsFormatter.php: negative x"       => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage(self::png(), -1, 0, 1, 1, 9, 9),
+                new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
+            "Formatters/PgsFormatter.php: PNG size"         => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage(self::png(), 0, 0, 2, 1, 9, 9),
+                new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
+            "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage(self::png(), 0, 0, 1, 1, 9, 9),
+                new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/SccFormatter.php: 5 lines"          => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, ["1", "2", "3", "4", "5"]))
                 ->toString(Format::Scc), ...$unwritable],
             "Formatters/SccFormatter.php: 33 characters"    => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 33)))

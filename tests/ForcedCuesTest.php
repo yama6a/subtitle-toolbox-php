@@ -16,6 +16,7 @@ use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\VobSubParser;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 require_once __DIR__ . "/Ocr/FakeOcrEngine.php";
 
@@ -133,8 +134,8 @@ class ForcedCuesTest extends TestCase
     {
         $image = new CueImage("png", 0, 0, 1, 1, 10, 10, true);
 
-        $this->assertTrue($image->toCue(new SubtitleCue(1, 2))->isForced());
-        $this->assertFalse((new CueImage("png", 0, 0, 1, 1, 10, 10))->toCue((new SubtitleCue(1, 2))->setForced(true))->isForced());
+        $this->assertTrue(TestSubtitles::imageCue($image, new SubtitleCue(1, 2))->isForced());
+        $this->assertFalse(TestSubtitles::imageCue(new CueImage("png", 0, 0, 1, 1, 10, 10), (new SubtitleCue(1, 2))->setForced(true))->isForced());
     }
 
 

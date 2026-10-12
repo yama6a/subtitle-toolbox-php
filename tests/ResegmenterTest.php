@@ -280,7 +280,7 @@ class ResegmenterTest extends TestCase
     {
         $subtitle = (new Subtitle())
             ->addCue(new SubtitleCue(0, 20, "Supercalifragilisticexpialidocious"))
-            ->addCue((new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(20, 40, self::LONG_TENSOR_SENTENCE)));
+            ->addCue(TestSubtitles::imageCue(new CueImage("png", 0, 0, 1, 1, 1, 1), new SubtitleCue(20, 40, self::LONG_TENSOR_SENTENCE)));
 
         foreach ([ResegmentMode::SplitLong, ResegmentMode::ByWords] as $mode) {
             $this->assertSame([[0.0, 20.0, "Supercalifragilisticexpialidocious"], [20.0, 40.0, self::LONG_TENSOR_SENTENCE]],
