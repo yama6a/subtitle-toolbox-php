@@ -43,15 +43,16 @@ class BinaryOutputTest extends CliTestCase
 
     public function testConvertWithoutToKeepsTheInputFormat(): void
     {
-        copy(__DIR__ . "/../files/whisper/real/openai_whisper_german.json", "$this->dir/lecture.json");
         $trip = Subtitle::fromStringAutoDetectFormat($this->file("trip.srt"));
 
         $this->assertSame([0, (clone $trip)->shift(2)->toString(Format::SubRip), ""], $this->runCli(["convert", "trip.srt", "--shift", "2"]));
         $this->assertSame([0, "shop.vtt -> out/shop.vtt\n", ""], $this->runCli(["convert", "shop.vtt", "--output-dir", "out"]));
         $this->assertSame(Subtitle::fromStringAutoDetectFormat($this->file("shop.vtt"))->toString(Format::WebVtt), $this->file("out/shop.vtt"));
-        $this->assertSame([3, "", "lecture.json: The format whisper can be read but not written. Pass --to with another format.\n"],
-                          $this->runCli(["convert", "lecture.json", "-o", "out.json"]));
-        $this->assertFileDoesNotExist("$this->dir/out.json");
+        copy(__DIR__ . "/../files/vobsub/text-pal.idx", "$this->dir/text.idx");
+        copy(__DIR__ . "/../files/vobsub/text-pal.sub", "$this->dir/text.sub");
+        $this->assertSame([3, "", "text.idx: The format vobsub can be read but not written. Pass --to with another format.\n"],
+                          $this->runCli(["convert", "text.idx", "-o", "out.idx"]));
+        $this->assertFileDoesNotExist("$this->dir/out.idx");
     }
 
 
