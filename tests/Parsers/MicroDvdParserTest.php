@@ -59,7 +59,7 @@ class MicroDvdParserTest extends TestCase
         $this->assertSame(4, count($cues));
         $this->assertSame(1.001, $cues[0]->getStart());
         $this->assertSame(3.003, $cues[0]->getEnd());
-        $this->assertSame(["frameRate" => 23.976], $subtitle->findFormatData("microdvd"));
+        $this->assertSame(["frameRate" => 23.976, "frameRateLine" => true], $subtitle->findFormatData("microdvd"));
     }
 
 

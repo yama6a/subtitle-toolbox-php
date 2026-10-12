@@ -110,7 +110,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWri
 - **Ruby**: WebVTT keeps ruby. JSON keeps the text as it is. Every other text formatter writes `<ruby>漢<rt>kan</rt></ruby>` as `漢 (kan)`, with or without `stripTags`.
 - **Image cues**: see [ocr.md](ocr.md#image-cues).
 - **Negative times**: `new SubtitleCue(-0.5, 1)` and `setStart(-0.5)` keep a negative time. Every formatter except JSON writes it as 0.
-- **Precedence**: a field that you set wins over the format data of the subtitle. For example, `IttWriteOptions(frameRate: 25)` wins over the frame rate that `IttParser` stored. A field left at `null` takes the stored value, for example `MicroDvdWriteOptions(writeFrameRateLine: true)` with a MicroDVD input.
+- **Precedence**: a field that you set wins over the format data of the subtitle. For example, `IttWriteOptions(frameRate: 25)` wins over the frame rate that `IttParser` stored. A field left at `null` takes the stored value, for example `MicroDvdWriteOptions::$frameRate` with a MicroDVD input.
 - **Frame rate**: every `frameRate` field is a `float`. Each format checks the values it can write, for example 25 or 30 for EBU STL.
 - **Several formats**: `WriteOptions::$formats` takes at most one object per class. Each formatter uses the object of its own class and ignores the others. So `new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25), new CsvWriteOptions(delimiter: ';')])` works for every output format.
 - **Errors**: 2 objects of one class in `formats` throw `InvalidArgumentException`. Each options class checks its values when you create it, so `new CsvWriteOptions(delimiter: '|')` throws at once.
@@ -317,6 +317,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWri
 
 - **Frame rate**: `MicroDvdReadOptions::$frameRate` wins over a `{1}{1}<fps>` first line. The parser never reads that line as a cue. Without either, the parser throws `ParsingException` in strict mode. Lenient mode uses 23.976 fps, as pysubs2 and mantas-done/subtitles do, and adds a `ParseWarning`. The format data holds this `frameRate`.
 - `$subtitle->findFormatData('microdvd')['frameRate']` returns the frame rate that the parser used.
+- **Frame rate line**: the format data holds `frameRateLine: true` when the file starts with `{1}{1}<fps>`. The formatter then writes that line with the frame rate of the output, so the file reads back at the same frame rate. `MicroDvdWriteOptions(writeFrameRateLine: true)` writes the line for any input. To drop the line of a MicroDVD input, remove `frameRateLine` from the format data.
 - **Control codes**: `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` become core markup. The parser reads the codes at the start of each `|`-separated line. A code later in the line stays text. A lower-case code styles one line. An upper-case code styles the whole cue. The `microdvd` format data keeps other control codes.
 - **Output**: the formatter writes control codes only for tags that wrap a whole line. It strips other tags. An unchanged cue keeps its original control codes. With `stripTags`, the formatter writes no control codes, also not the stored font and size codes such as `{f:Arial}` and `{s:30}`.
 
