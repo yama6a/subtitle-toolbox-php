@@ -9,8 +9,24 @@ namespace SubtitleToolbox;
  */
 final class LineWrapper
 {
+    // Han, Hiragana, Katakana, CJK punctuation, and the full-width and half-width forms without half-width Hangul.
+    private const CJK = '\p{Han}\p{Hiragana}\p{Katakana}\x{3000}-\x{303F}\x{30FB}\x{30FC}\x{FF01}-\x{FF9F}\x{FFE0}-\x{FFEF}';
+
+    // The line start rule of JIS X 4051: closing brackets and quotes, stops, commas, middle dots, small kana, the long vowel mark
+    // and iteration marks. UAX #14 adds the ideographic space.
+    private const NO_LINE_START = '\x{3000}\x{3001}\x{3002}\x{3005}\x{3009}\x{300B}\x{300D}\x{300F}\x{3011}\x{3015}\x{3017}\x{3019}\x{301B}'
+        . '\x{301C}\x{301E}\x{301F}\x{303B}\x{3041}\x{3043}\x{3045}\x{3047}\x{3049}\x{3063}\x{3083}\x{3085}\x{3087}\x{308E}'
+        . '\x{3095}\x{3096}\x{309B}-\x{309E}\x{30A0}\x{30A1}\x{30A3}\x{30A5}\x{30A7}\x{30A9}\x{30C3}\x{30E3}\x{30E5}\x{30E7}'
+        . '\x{30EE}\x{30F5}\x{30F6}\x{30FB}-\x{30FE}\x{31F0}-\x{31FF}\x{FF01}\x{FF09}\x{FF0C}\x{FF0E}\x{FF1A}\x{FF1B}\x{FF1F}'
+        . '\x{FF3D}\x{FF5D}\x{FF60}\x{FF61}\x{FF63}-\x{FF65}\x{FF67}-\x{FF70}\x{FF9E}\x{FF9F}';
+
+    // The line end rule of JIS X 4051: opening brackets and quotes.
+    private const NO_LINE_END = '\x{3008}\x{300A}\x{300C}\x{300E}\x{3010}\x{3014}\x{3016}\x{3018}\x{301A}\x{301D}\x{FF08}\x{FF3B}\x{FF5B}\x{FF5F}\x{FF62}';
+
+
     /**
      * Wraps the lines into at most $maxLinesPerCue lines of at most $maxCharactersPerLine visible characters where the words allow it.
+     * A line breaks at a space, or between 2 CJK characters where JIS X 4051 allows it.
      * With $keepDialogueLines, each line that starts with a dialogue dash stays a line of its own.
      * With 2 or more dialogue lines, no line wraps. A single dialogue line wraps like other text.
      *
@@ -21,27 +37,26 @@ final class LineWrapper
     public static function wrap(array $lines, int $maxCharactersPerLine, int $maxLinesPerCue, bool $keepDialogueLines = false): array
     {
         $segments = [];
-        foreach ($keepDialogueLines ? $lines : [implode(" ", $lines)] as $line) {
-            $words = self::measuredWords($line);
-            if ($words === []) {
+        foreach ($lines as $line) {
+            if (self::measuredWords($line) === []) {
                 continue;
             }
 
             $startsWithDash = preg_match('/^(?:\s|' . Markup::TAG . ')*[' . DialogueDash::CHARACTERS . ']/u', $line) === 1;
-            if ($segments === [] || $startsWithDash) {
-                $segments[] = $words;
+            if ($segments === [] || ($keepDialogueLines && $startsWithDash)) {
+                $segments[] = $line;
             } else {
-                $segments[count($segments) - 1] = [...$segments[count($segments) - 1], ...$words];
+                $segments[count($segments) - 1] = self::joinLine($segments[count($segments) - 1], $line);
             }
         }
 
         if (count($segments) > 1) {
-            return array_map(fn (array $words): string => implode(" ", array_column($words, "text")), $segments);
+            return array_map(fn (string $segment): string => implode(" ", array_column(self::measuredWords($segment), "text")), $segments);
         }
 
-        $words = $segments[0] ?? [];
+        $parts = self::breakableParts($segments[0] ?? "");
 
-        return self::joinLines($words, self::findBreaks($words, $maxCharactersPerLine, $maxLinesPerCue));
+        return self::joinLines($parts, self::findBreaks($parts, $maxCharactersPerLine, $maxLinesPerCue));
     }
 
 
@@ -56,39 +71,42 @@ final class LineWrapper
      */
     public static function wrapTurns(array $lines, int $maxCharactersPerLine, int $maxLinesPerCue): array
     {
-        $words      = [];
-        $turnStarts = [];
+        $turns = [];
         foreach ($lines as $line) {
             $lineWords = self::measuredWords($line);
             foreach ($lineWords as $index => $word) {
                 $startsTurn = $index === 0
-                    ? $words === [] || preg_match(DialogueDash::REGEX, Markup::visibleText($line)) === 1
+                    ? $turns === [] || preg_match(DialogueDash::REGEX, Markup::visibleText($line)) === 1
                     : self::startsInlineTurn($lineWords[$index - 1], $word, $lineWords[$index + 1] ?? null);
                 if ($startsTurn) {
-                    $turnStarts[] = count($words);
+                    $turns[] = $word["text"];
+                } else {
+                    $turn                     = $turns[count($turns) - 1];
+                    $turns[count($turns) - 1] = $index === 0 ? self::joinLine($turn, $word["text"]) : "$turn {$word["text"]}";
                 }
-                $words[] = $word;
             }
         }
 
-        if (count($turnStarts) < 2) {
+        if (count($turns) < 2) {
             return self::wrap($lines, $maxCharactersPerLine, $maxLinesPerCue);
         }
 
+        $parts      = [];
         $lineStarts = [];
-        foreach ($turnStarts as $turn => $start) {
-            $turnWords = array_slice($words, $start, ($turnStarts[$turn + 1] ?? count($words)) - $start);
-            foreach (self::findBreaks($turnWords, $maxCharactersPerLine, $maxLinesPerCue) as $break) {
-                $lineStarts[] = $start + $break;
+        foreach ($turns as $turn) {
+            $turnParts = self::breakableParts($turn);
+            foreach (self::findBreaks($turnParts, $maxCharactersPerLine, $maxLinesPerCue) as $break) {
+                $lineStarts[] = count($parts) + $break;
             }
+            $parts = [...$parts, ...$turnParts];
         }
 
-        return self::joinLines($words, $lineStarts);
+        return self::joinLines($parts, $lineStarts);
     }
 
 
     /**
-     * Joins the lines of each dialogue turn with a space. A turn starts at the first line and at each line with a dialogue dash.
+     * Joins the lines of each dialogue turn with a space, or without one between 2 CJK characters. A turn starts at the first line and at each line with a dialogue dash.
      *
      * @param list<string> $lines
      *
@@ -99,7 +117,7 @@ final class LineWrapper
         $turns = [];
         foreach ($lines as $line) {
             if ($turns !== [] && preg_match(DialogueDash::REGEX, Markup::visibleText($line)) !== 1) {
-                $turns[count($turns) - 1] .= " $line";
+                $turns[count($turns) - 1] = self::joinLine($turns[count($turns) - 1], $line);
             } else {
                 $turns[] = $line;
             }
@@ -253,53 +271,57 @@ final class LineWrapper
 
 
     /**
-     * Uses the fewest lines up to $maxLinesPerCue that fit, and among those the breaks with the most equal line lengths.
+     * Uses the fewest lines up to $maxLinesPerCue that fit, then the fewest breaks inside a phrase,
+     * and among those the breaks with the most equal line lengths.
      *
-     * @param list<array{text: string, length: int}> $words
+     * @param list<array{text: string, length: int, spaceBefore: bool, midPhrase: bool}> $parts
      *
-     * @return list<int> the index of the first word of each line
+     * @return list<int> the index of the first part of each line
      */
-    private static function findBreaks(array $words, int $maxCharactersPerLine, int $maxLinesPerCue): array
+    private static function findBreaks(array $parts, int $maxCharactersPerLine, int $maxLinesPerCue): array
     {
-        $wordCount = count($words);
-        if ($wordCount === 0) {
+        $partCount = count($parts);
+        if ($partCount === 0) {
             return [];
         }
 
-        // $offsets[$i] is the length of words 0 to $i - 1 without spaces.
-        $offsets = [0];
-        foreach ($words as $index => $word) {
-            $offsets[$index + 1] = $offsets[$index] + $word["length"];
+        // On one long line, part $i starts at column $starts[$i], and part $i - 1 ends at column $ends[$i].
+        $starts = [0];
+        $ends   = [0];
+        foreach ($parts as $index => $part) {
+            $ends[$index + 1]   = $starts[$index] + $part["length"];
+            $starts[$index + 1] = $ends[$index + 1] + (int) ($parts[$index + 1]["spaceBefore"] ?? false);
         }
 
-        // $best[$lineCount][$end] holds [overflow, sum of squared lengths, line starts] for words 0 to $end - 1.
-        $best = [0 => [0 => [0, 0, []]]];
-        for ($lineCount = 1; $lineCount <= min($maxLinesPerCue, $wordCount); $lineCount++) {
-            for ($end = $lineCount; $end <= $wordCount; $end++) {
-                $ending = self::bestLastLine($best[$lineCount - 1], $offsets, $lineCount - 1, $end, $maxCharactersPerLine);
+        // $best[$lineCount][$end] holds [overflow, breaks inside a phrase, sum of squared lengths, line starts] for parts 0 to $end - 1.
+        $best = [0 => [0 => [0, 0, 0, []]]];
+        for ($lineCount = 1; $lineCount <= min($maxLinesPerCue, $partCount); $lineCount++) {
+            for ($end = $lineCount; $end <= $partCount; $end++) {
+                $ending = self::bestLastLine($best[$lineCount - 1], $parts, $starts, $ends[$end], $lineCount - 1, $end, $maxCharactersPerLine);
                 if ($ending !== null) {
                     $best[$lineCount][$end] = $ending;
                 }
             }
 
-            if ($best[$lineCount][$wordCount][0] === 0) {
-                return $best[$lineCount][$wordCount][2];
+            if ($best[$lineCount][$partCount][0] === 0) {
+                return $best[$lineCount][$partCount][3];
             }
         }
 
-        return $best[min($maxLinesPerCue, $wordCount)][$wordCount][2];
+        return $best[min($maxLinesPerCue, $partCount)][$partCount][3];
     }
 
 
     /**
-     * Returns the best breaks for the words before $end when the last line starts at $firstStart or later.
+     * Returns the best breaks for the parts before $end when the last line starts at $firstStart or later.
      * Returns null when no earlier breaks reach such a start. The first start wins a tie.
      *
-     * @param array<int, array{int, int, list<int>}> $previous the best breaks with one line fewer, by their end
-     * @param list<int>                              $offsets  the length of the words before each index, without spaces
-     * @return array{int, int, list<int>}|null
+     * @param array<int, array{int, int, int, list<int>}>                                  $previous the best breaks with one line fewer, by their end
+     * @param list<array{text: string, length: int, spaceBefore: bool, midPhrase: bool}> $parts
+     * @param list<int>                                                                   $starts   the column where each part starts on one long line
+     * @return array{int, int, int, list<int>}|null
      */
-    private static function bestLastLine(array $previous, array $offsets, int $firstStart, int $end, int $maxCharactersPerLine): ?array
+    private static function bestLastLine(array $previous, array $parts, array $starts, int $endColumn, int $firstStart, int $end, int $maxCharactersPerLine): ?array
     {
         $best = null;
         for ($start = $firstStart; $start < $end; $start++) {
@@ -307,34 +329,39 @@ final class LineWrapper
                 continue;
             }
 
-            $length   = $offsets[$end] - $offsets[$start] + $end - $start - 1;
-            $overflow = $previous[$start][0] + max(0, $length - $maxCharactersPerLine);
-            $squares  = $previous[$start][1] + $length ** 2;
-            if ($best === null || $overflow < $best[0] || ($overflow === $best[0] && $squares < $best[1])) {
-                $best = [$overflow, $squares, $start];
+            $length = $endColumn - $starts[$start];
+            $cost   = [
+                $previous[$start][0] + max(0, $length - $maxCharactersPerLine),
+                $previous[$start][1] + (int) $parts[$start]["midPhrase"],
+                $previous[$start][2] + $length ** 2,
+            ];
+            if ($best === null || $cost < array_slice($best, 0, 3)) {
+                $best = [...$cost, $start];
             }
         }
 
-        return $best === null ? null : [$best[0], $best[1], [...$previous[$best[2]][2], $best[2]]];
+        return $best === null ? null : [$best[0], $best[1], $best[2], [...$previous[$best[3]][3], $best[3]]];
     }
 
 
     /**
      * Closes the core markup tags that are open at the end of a line and opens them again on the next line.
      *
-     * @param list<array{text: string, length: int}> $words
-     * @param list<int>                              $lineStarts
+     * @param list<array{text: string, length: int, spaceBefore: bool, midPhrase: bool}> $parts
+     * @param list<int>                                                                  $lineStarts
      *
      * @return list<string>
      */
-    private static function joinLines(array $words, array $lineStarts): array
+    private static function joinLines(array $parts, array $lineStarts): array
     {
         $lines    = [];
         $openTags = [];
         foreach ($lineStarts as $lineIndex => $start) {
-            $end   = $lineStarts[$lineIndex + 1] ?? count($words);
-            $line  = implode("", array_column($openTags, "tag"));
-            $line .= implode(" ", array_column(array_slice($words, $start, $end - $start), "text"));
+            $end  = $lineStarts[$lineIndex + 1] ?? count($parts);
+            $line = implode("", array_column($openTags, "tag"));
+            foreach (array_slice($parts, $start, $end - $start) as $index => $part) {
+                $line .= ($index > 0 && $part["spaceBefore"] ? " " : "") . $part["text"];
+            }
 
             $openTags = Markup::openCoreTags($line);
             if (isset($lineStarts[$lineIndex + 1])) {
@@ -344,5 +371,81 @@ final class LineWrapper
         }
 
         return $lines;
+    }
+
+
+    /**
+     * Splits the text at spaces and between 2 CJK characters where a line may break.
+     * A break between 2 CJK characters is inside a phrase unless CJK punctuation or an ideographic space comes before it.
+     *
+     * @return list<array{text: string, length: int, spaceBefore: bool, midPhrase: bool}>
+     */
+    private static function breakableParts(string $text): array
+    {
+        $parts = [];
+        foreach (self::measuredWords($text) as $word) {
+            $pieces = self::splitBetweenCjkCharacters($word["text"]);
+            foreach ($pieces as $index => $piece) {
+                $parts[] = [
+                    "text"        => $piece,
+                    "length"      => count($pieces) === 1 ? $word["length"] : self::length(self::measuredWords($piece)),
+                    "spaceBefore" => $index === 0,
+                    "midPhrase"   => $index > 0 && preg_match('/[\p{P}\x{3000}]$/u', Markup::visibleText($pieces[$index - 1])) !== 1,
+                ];
+            }
+        }
+
+        return $parts;
+    }
+
+
+    /**
+     * Splits a word without spaces where a line may break between 2 CJK characters.
+     * A closing tag stays with the character before the break. Other tags go with the character after it.
+     *
+     * @return list<string>
+     */
+    private static function splitBetweenCjkCharacters(string $word): array
+    {
+        $cjk = '[' . self::CJK . ']';
+        if (preg_match("/$cjk/u", $word) !== 1
+            || preg_match_all('/' . Markup::TAG . '|' . Markup::ENTITY . '|\X/u', $word, $matches, PREG_OFFSET_CAPTURE) === false) {
+            return [$word];
+        }
+
+        $pieces     = [];
+        $pieceStart = 0;
+        $breakAt    = 0;
+        $canEndLine = false;
+        foreach ($matches[0] as [$token, $offset]) {
+            if (preg_match('/^' . Markup::TAG . '$/', $token) === 1) {
+                if ($breakAt === $offset && str_starts_with($token, "</")) {
+                    $breakAt += strlen($token);
+                }
+                continue;
+            }
+
+            if ($canEndLine && preg_match('/^(?![' . self::NO_LINE_START . "])$cjk/u", $token) === 1) {
+                $pieces[]   = substr($word, $pieceStart, $breakAt - $pieceStart);
+                $pieceStart = $breakAt;
+            }
+            $canEndLine = preg_match('/^(?![' . self::NO_LINE_END . "])$cjk/u", $token) === 1;
+            $breakAt    = $offset + strlen($token);
+        }
+        $pieces[] = substr($word, $pieceStart);
+
+        return $pieces;
+    }
+
+
+    /**
+     * Joins 2 lines with a space, or without one when a CJK character ends the first line and starts the second.
+     */
+    private static function joinLine(string $text, string $line): string
+    {
+        $cjk               = '[' . self::CJK . ']';
+        $joinsWithoutSpace = preg_match("/$cjk\$/u", Markup::visibleText($text)) === 1 && preg_match("/^$cjk/u", Markup::visibleText($line)) === 1;
+
+        return $text . ($joinsWithoutSpace ? "" : " ") . $line;
     }
 }

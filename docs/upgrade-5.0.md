@@ -46,7 +46,16 @@ Image cues without text now throw `UnwritableContentException`, like all other c
 
 ## Line wrapping of Chinese and Japanese
 
-TODO #944
+`wrapLines()` breaks Chinese and Japanese lines between 2 characters. 4.x broke only at spaces, so it kept such a line long. The call stays the same.
+
+| Call | 4.x | 5.0 |
+|:--- |:--- |:--- |
+| `wrapLines(16)` on `我们明天早上八点在火车站见面，然后一起坐车去北京看望奶奶。` | 1 line of 29 characters | `我们明天早上八点在火车站见面，` and `然后一起坐车去北京看望奶奶。` |
+| `unwrapLines()` on `我们明天早上八点在火车站见面，` and `然后一起坐车去北京看望奶奶。` | joins them with a space | joins them without a space |
+
+- `--structure-wrap`, `mergeShortCues()` and `Resegmenter` with `ResegmentMode::SplitLong` measure lines as `wrapLines()` wraps them. So `mergeShortCues()` can join more Chinese and Japanese cues, and `SplitLong` splits fewer.
+- Korean text and text with spaces keep their line breaks.
+- [editing.md](editing.md#overlaps-short-cues-and-line-breaks) lists the break rules.
 
 ## Public API cleanup
 

@@ -434,12 +434,33 @@ class FixesTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testWrapLinesDoesNotBreakTextWithoutSpaces(): void
+    public function testWrapLinesBreaksTextWithoutSpacesBetweenCharacters(): void
     {
-        $text = "これは字幕の長い行で、画面に収まりません。これは字幕の長い行です。";
-
-        $this->assertSame([$text], $this->wrap($text, 16));
+        $this->assertSame(["これは字幕の長い行で、", "画面に収まりません。"], $this->wrap("これは字幕の長い行で、画面に収まりません。", 16));
         $this->assertSame(["これは字幕の長い行で、", "画面に収まりません。"], $this->wrap("これは字幕の長い行で、\n画面に収まりません。", 16));
+    }
+
+
+    #[DataProvider('cjkFiles')]
+    public function testWrapLinesBreaksChineseAndJapaneseLinesOfARealFile(string $name, int $maxCharactersPerLine): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/files/fixes/$name.srt"), Format::SubRip);
+
+        $subtitle->wrapLines($maxCharactersPerLine);
+
+        $this->assertSame(file_get_contents(__DIR__ . "/files/fixes/{$name}_wrapped.srt"), $subtitle->toString(Format::SubRip));
+
+        $unwrapped = Subtitle::fromString(file_get_contents(__DIR__ . "/files/fixes/$name.srt"), Format::SubRip)->unwrapLines();
+        $this->assertSame($unwrapped->toString(Format::SubRip), $subtitle->unwrapLines()->toString(Format::SubRip));
+    }
+
+
+    public static function cjkFiles(): array
+    {
+        return [
+            "Simplified Chinese at the Netflix limit" => ["own_zh_long_lines", 16],
+            "Japanese at the Netflix limit"           => ["own_ja_long_lines", 13],
+        ];
     }
 
 
