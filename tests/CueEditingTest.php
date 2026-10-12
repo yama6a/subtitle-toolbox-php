@@ -69,18 +69,18 @@ class CueEditingTest extends TestCase
     }
 
 
-    public function testMergeFilmPartsWithOffset(): void
+    public function testAppendFilmPartsWithOffset(): void
     {
         $part1 = Subtitle::fromString(file_get_contents(self::DIR . "film_part1.srt"), Format::SubRip);
         $part2 = Subtitle::fromString(file_get_contents(self::DIR . "film_part2.srt"), Format::SubRip);
 
-        $this->assertSame($part1, $part1->merge($part2, 3130));
+        $this->assertSame($part1, $part1->append($part2, 3130));
         $this->assertSame(file_get_contents(self::DIR . "film_merged.srt"), $part1->toString(Format::SubRip));
         $this->assertSame(1.25, $part2->getCues()[0]->getStart());
     }
 
 
-    public function testMergeKeepsMetadataCommentsAndFormatDataOfThisOnConflict(): void
+    public function testAppendKeepsMetadataCommentsAndFormatDataOfThisOnConflict(): void
     {
         $subtitle = TestSubtitles::fromCues([[1, 2, "one"], [3, 4, "two"]])
             ->setMetadata(Subtitle::METADATA_TITLE, "Part one")
@@ -95,7 +95,7 @@ class CueEditingTest extends TestCase
             ->addComment("start of part two", 0)
             ->addComment("end of part two", 1);
 
-        $subtitle->merge($other, 10);
+        $subtitle->append($other, 10);
 
         $this->assertSame([[1.0, 2.0, "one"], [3.0, 4.0, "two"], [11.0, 12.0, "three"]], TestSubtitles::describe($subtitle));
         $this->assertSame(["title" => "Part one", "language" => "en"], $subtitle->getAllMetadata());
@@ -110,12 +110,12 @@ class CueEditingTest extends TestCase
     }
 
 
-    public function testMergeSortsOverlappingCuesAndKeepsCommentsWithTheirCues(): void
+    public function testAppendSortsOverlappingCuesAndKeepsCommentsWithTheirCues(): void
     {
         $subtitle = TestSubtitles::fromCues([[1, 2, "one"], [5, 6, "three"]])->addComment("about three", 1);
         $other    = TestSubtitles::fromCues([[3, 4, "two"]])->addComment("about two", 0);
 
-        $subtitle->merge($other);
+        $subtitle->append($other);
 
         $this->assertSame(["one", "two", "three"], array_column(TestSubtitles::describe($subtitle), 2));
         $this->assertSame([["about two", "two"], ["about three", "three"]], $this->getCommentsByCueText($subtitle));
@@ -127,21 +127,21 @@ class CueEditingTest extends TestCase
     {
         return [
             "huge" => [1e300, "The retimed cue 1 would end at 1.0E+300 s. Cue times must be below 100000 hours."],
-            "NAN"  => [NAN, "The merge offset must be a finite number of seconds, got NAN."],
-            "INF"  => [INF, "The merge offset must be a finite number of seconds, got INF."],
+            "NAN"  => [NAN, "The append offset must be a finite number of seconds, got NAN."],
+            "INF"  => [INF, "The append offset must be a finite number of seconds, got INF."],
         ];
     }
 
 
     #[DataProvider("offsetsBeyondTheTimeLimit")]
-    public function testMergeBeyondTheTimeLimitThrowsAndKeepsTheSubtitle(float $offset, string $message): void
+    public function testAppendBeyondTheTimeLimitThrowsAndKeepsTheSubtitle(float $offset, string $message): void
     {
         $part1  = Subtitle::fromString(file_get_contents(self::DIR . "film_part1.srt"), Format::SubRip);
         $part2  = Subtitle::fromString(file_get_contents(self::DIR . "film_part2.srt"), Format::SubRip);
         $before = $part1->toString(Format::SubRip);
 
         try {
-            $part1->merge($part2, $offset);
+            $part1->append($part2, $offset);
             $this->fail("No exception.");
         } catch (InvalidArgumentException $exception) {
             $this->assertSame($message, $exception->getMessage());
@@ -150,9 +150,9 @@ class CueEditingTest extends TestCase
     }
 
 
-    public function testMergeClampsNegativeTimesToZero(): void
+    public function testAppendClampsNegativeTimesToZero(): void
     {
-        $subtitle = (new Subtitle())->merge(TestSubtitles::fromCues([[1, 3, "one"]]), -2);
+        $subtitle = (new Subtitle())->append(TestSubtitles::fromCues([[1, 3, "one"]]), -2);
 
         $this->assertSame([[0.0, 1.0, "one"]], TestSubtitles::describe($subtitle));
     }
@@ -566,7 +566,7 @@ class CueEditingTest extends TestCase
                 $subtitle->mergeSameTimeCues($tolerance);
                 $this->fail("mergeSameTimeCues() accepted the tolerance $tolerance.");
             } catch (InvalidArgumentException $exception) {
-                $this->assertSame("The tolerance must be a finite number of 0 or more seconds, got " . OptionChecks::text($tolerance) . ".",
+                $this->assertSame("The time tolerance must be a finite number of 0 or more seconds, got " . OptionChecks::text($tolerance) . ".",
                                   $exception->getMessage());
             }
             $this->assertCount(2, $subtitle->getCues());
