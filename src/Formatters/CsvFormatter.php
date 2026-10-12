@@ -45,21 +45,22 @@ final class CsvFormatter extends SubtitleFormatter
 
         $cues               = array_values($subtitle->getCues());
         $speakerAndText     = array_map($this->splitSpeaker(...), $cues);
-        [$columns, $header] = $this->columns($fileData, $cues, $speakerAndText);
+        [$columns, $header, $quotedColumns] = $this->columns($fileData, $cues, $speakerAndText);
         $secondTexts        = [];
         if ($secondSubtitle !== null) {
             $this->insertSecondTextColumn($columns, $header, $formatOptions->secondTextHeader);
             $secondTexts = $this->secondTexts($cues, array_values($secondSubtitle->getCues()));
         }
 
-        $records = $fileData === [] || $fileData["header"] !== null ? [$header] : [];
+        $quotedPositions = array_keys(array_filter($columns, fn (array $column): bool => in_array($column, $quotedColumns, true)));
+        $lines           = $fileData === [] || $fileData["header"] !== null ? [$this->line($header, $delimiter, $formatOptions->escapeFormulas, [])] : [];
         foreach ($cues as $index => $cue) {
-            $records[] = $this->record($cue, $columns, $speakerAndText[$index], $secondTexts[$index] ?? "", $timeFormat, $frameRate);
+            $record  = $this->record($cue, $columns, $speakerAndText[$index], $secondTexts[$index] ?? "", $timeFormat, $frameRate);
+            $lines[] = $this->line($record, $delimiter, $formatOptions->escapeFormulas, $quotedPositions);
         }
 
         // In-cell line breaks stay LF, as in Excel, so the records get the line ending here.
         $lineEnding = $options->lineEnding->value;
-        $lines      = array_map(fn (array $record): string => $this->line($record, $delimiter, $formatOptions->escapeFormulas), $records);
 
         return $this->applyBom(implode($lineEnding, $lines) . $lineEnding, $options);
     }
@@ -100,31 +101,42 @@ final class CsvFormatter extends SubtitleFormatter
 
     /**
      * @param list<string> $record
+     * @param list<int>    $quotedPositions the positions of the cells that get quotes even when they need none
      */
-    private function line(array $record, string $delimiter, bool $escapeFormulas): string
+    private function line(array $record, string $delimiter, bool $escapeFormulas, array $quotedPositions): string
     {
-        return implode($delimiter, array_map(
-            fn (string $cell): string => $this->quote($escapeFormulas ? $this->escapeFormula($cell) : $cell, $delimiter),
-            $record
-        ));
+        $cells = [];
+        foreach ($record as $position => $cell) {
+            $cells[] = $this->quote($escapeFormulas ? $this->escapeFormula($cell) : $cell, $delimiter, in_array($position, $quotedPositions, true));
+        }
+
+        return implode($delimiter, $cells);
     }
 
 
     /**
+     * Returns the columns, the header and the columns whose cells the parsed table quoted in every row.
+     *
      * @param list<SubtitleCue>           $cues
      * @param list<array{string, string}> $speakerAndText
      *
-     * @return array{list<array{CsvColumnRole, string|int|null}>, list<string>}
+     * @return array{list<array{CsvColumnRole, string|int|null}>, list<string>, list<array{CsvColumnRole, string|int|null}>}
      */
     private function columns(array $fileData, array $cues, array $speakerAndText): array
     {
-        $columns = [];
-        $header  = [];
+        $columns       = [];
+        $header        = [];
+        $quotedColumns = [];
         if ($fileData !== []) {
             for ($index = 0; $index < $fileData["width"]; $index++) {
                 $role      = array_search($index, $fileData["roles"], true);
                 $columns[] = $role === false ? [CsvColumnRole::Other, $fileData["header"][$index] ?? $index] : [CsvColumnRole::from($role), null];
                 $header[]  = $fileData["header"][$index] ?? "";
+            }
+            foreach ($fileData["quotedColumns"] ?? [] as $index) {
+                if (isset($columns[$index])) {
+                    $quotedColumns[] = $columns[$index];
+                }
             }
         } else {
             $hasIdentifier = array_filter($cues, fn (SubtitleCue $cue): bool => $cue->getIdentifier() !== null) !== [];
@@ -151,7 +163,7 @@ final class CsvFormatter extends SubtitleFormatter
             array_splice($header, $position, 0, [CsvColumnRole::Speaker->value]);
         }
 
-        return [$columns, $header];
+        return [$columns, $header, $quotedColumns];
     }
 
 
@@ -228,8 +240,8 @@ final class CsvFormatter extends SubtitleFormatter
     }
 
 
-    private function quote(string $cell, string $delimiter): string
+    private function quote(string $cell, string $delimiter, bool $always): string
     {
-        return strpbrk($cell, "\"\r\n$delimiter") === false ? $cell : '"' . str_replace('"', '""', $cell) . '"';
+        return !$always && strpbrk($cell, "\"\r\n$delimiter") === false ? $cell : '"' . str_replace('"', '""', $cell) . '"';
     }
 }
