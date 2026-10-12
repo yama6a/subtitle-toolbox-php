@@ -13,15 +13,6 @@ use SubtitleToolbox\Format;
  */
 final class FormatArgument
 {
-    // The 1.x names of the chapter formats, kept so that 1.x scripts still run.
-    private const ALIASES = [
-        "ytchapter" => Format::YouTubeChapters,
-        "podcast"   => Format::PodcastChapters,
-        "ogm"       => Format::OgmChapters,
-        "ffmeta"    => Format::FfMetadataChapters,
-    ];
-
-
     /**
      * Returns the format for a format name or a file extension such as "SRT" or ".ssa".
      */
@@ -29,7 +20,7 @@ final class FormatArgument
     {
         $key = strtolower(ltrim($nameOrExtension, "."));
 
-        return Format::tryFrom($key) ?? self::ALIASES[$key] ?? Format::fromPath("file.$key")
+        return Format::tryFrom($key) ?? Format::fromPath("file.$key")
             ?? Command::fail("Unknown format \"$nameOrExtension\". Run \"" . Application::NAME . " formats\" for the list.");
     }
 
