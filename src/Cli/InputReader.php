@@ -141,7 +141,7 @@ final class InputReader
                 return $this->fromFormat;
             }
 
-            return $this->detectFormat((string)file_get_contents($input), $input);
+            return $this->detectFormat((string) @file_get_contents($input), $input);
         } catch (SubtitleToolboxException) {
             return null;
         }
