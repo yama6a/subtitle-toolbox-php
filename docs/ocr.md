@@ -53,7 +53,8 @@ file_put_contents('movie.synced.sup', $subtitle->toString(Format::Pgs));
 - **Formatter**: `PgsFormatter` writes image cues back to a `.sup` file. So you can retime, cut or filter a PGS file without OCR. It also converts VobSub to PGS. It does not render text, and throws `UnwritableContentException` for a cue without an image.
 - **Overlaps**: while 2 image cues overlap, the formatter shows both images in the same display sets, as 2 objects. PGS shows at most 2 objects at one time, so a third overlapping cue replaces the cue that started first. A cue that starts at the end of the previous cue replaces it. `PgsParser` reads the overlap back as one cue with one image of both objects.
 - **Colors**: the formatter reduces an image with more than 255 colors. A color channel can change by 1.
-- **Round trip**: a PGS file that `PgsParser` reads and `PgsFormatter` writes gives the same pixels, positions and times to 1 ms. Two cues with the same image, where the second starts at the end of the first, come back as one cue.
+- **Round trip**: a PGS file that `PgsParser` reads and `PgsFormatter` writes gives the same pixels, positions and times to 1 ms. The colors outside RGB below are the one exception. Two cues with the same image, where the second starts at the end of the first, come back as one cue.
+- **Colors outside RGB**: a palette entry can hold a Y, Cr, Cb code that decodes to a channel below 0 or above 255. The parser clamps that channel. The formatter can then write a code that reads back with one channel 1 off. For example, Y 37, Cr 127, Cb 64 in a 1920x1080 file reads as RGB 23, 39, 0 and comes back as 24, 39, 0. Palettes that an authoring tool converts from RGB do not hold such codes.
 - **Speed**: parsing or writing a file of 2,000 cues of 640x90 pixels takes about 3 s on PHP 8.5.
 
 ## VobSub
