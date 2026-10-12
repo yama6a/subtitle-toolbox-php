@@ -45,7 +45,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 ## Other formats
 | Parser | Skipped with a warning | `blockIndex` counts |
 |:--- |:--- |:--- |
-| ASS, SSA | a `Dialogue:` or `Comment:` line with too few fields or a bad time. A file without a `Format:` line is not an error. The parser then uses the default fields. A time without a fraction, with 4 fraction digits, or with `,` or `:` before the fraction gets a `repaired` warning, for example `0:00:01`, `0:00:01.5000` or `0:00:01,50`. The parser rounds it to milliseconds. Such a time with minutes or seconds of 60 or more is a bad time | events |
+| ASS, SSA | a `Dialogue:` or `Comment:` line with too few fields or a bad time. A file without a `Format:` line is not an error. The parser then uses the default fields. A time without a fraction, with 4 fraction digits, or with `,` or `:` before the fraction gets a `repaired` warning, for example `0:00:01`, `0:00:01.5000` or `0:00:01,50`. The parser rounds it to milliseconds. Such a time with minutes or seconds of 60 or more is a bad time. A number as a field name in the `[Events]` `Format:` line, such as `1`, throws in strict mode. Lenient mode gives a `repaired` warning with `blockIndex` null, and the parser drops the values of that field | events |
 | MicroDVD | a line without `{start}{end}` frames, also before the `{1}{1}<fps>` line. A file without a frame rate gets a `repaired` warning with `lineNumber` and `blockIndex` null, and the parser uses 23.976 fps | non-empty lines |
 | MPL2 | a line without `[start][end]` | non-empty lines |
 | TMPlayer | a line without a time | non-empty lines |
