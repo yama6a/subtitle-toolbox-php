@@ -11,13 +11,6 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
  */
 trait TextTransforms
 {
-    private const TEXT_TRANSFORMS_SENTENCE_GAP = 2.0;
-
-    /** Abbreviations whose period ends no sentence when a comma or a lower case word follows. */
-    private const TEXT_TRANSFORMS_ABBREVIATIONS = ["i.e", "e.g", "etc", "vs"];
-
-    private const TEXT_TRANSFORMS_ASCII_SPACES = [" ", "\t", "\n", "\r", "\v", "\f"];
-
     private const TEXT_TRANSFORMS_BIDI_CONTROLS = [
         "\u{200E}", "\u{200F}", "\u{202A}", "\u{202B}", "\u{202C}", "\u{202D}", "\u{202E}", "\u{2066}", "\u{2067}", "\u{2068}", "\u{2069}",
     ];
@@ -111,13 +104,12 @@ trait TextTransforms
      */
     public function changeCase(CaseMode $mode, ?string $language = null): self
     {
-        $primary = StringHelpers::primaryLanguage($language);
-        $turkic  = in_array($primary, ["tr", "az"], true);
+        $turkic = TextCase::isTurkic($language);
 
         return match ($mode) {
-            CaseMode::Upper    => $this->textTransformsMapRuns(fn (string $text): string => self::textTransformsUpper($text, $turkic)),
-            CaseMode::Lower    => $this->textTransformsMapRuns(fn (string $text): string => self::textTransformsLower($text, $turkic)),
-            CaseMode::Sentence => $this->textTransformsSentenceCase($turkic, $primary === "en" || $language === null),
+            CaseMode::Upper    => $this->textTransformsMapRuns(fn (string $text): string => TextCase::upper($text, $turkic)),
+            CaseMode::Lower    => $this->textTransformsMapRuns(fn (string $text): string => TextCase::lower($text, $turkic)),
+            CaseMode::Sentence => $this->textTransformsSentenceCase($turkic, $language === null || StringHelpers::primaryLanguage($language) === "en"),
         };
     }
 
@@ -129,7 +121,7 @@ trait TextTransforms
      */
     public static function toUpperOrLower(string $text, bool $upper): string
     {
-        return $upper ? self::textTransformsUpper($text, false) : self::textTransformsLower($text, false);
+        return $upper ? TextCase::upper($text, false) : TextCase::lower($text, false);
     }
 
 
@@ -177,128 +169,9 @@ trait TextTransforms
 
     private function textTransformsSentenceCaseRuns(bool $turkic): self
     {
-        $currentCue       = null;
-        $previousEnd      = null;
-        $endsSentence     = true;
-        $capitalizeNext   = true;
-        $afterPunctuation = false;
+        $caser = new SentenceCaser($turkic);
 
-        return $this->textTransformsMapRuns(
-            function (string $text, SubtitleCue $cue, bool $startsLine)
-                use (&$currentCue, &$previousEnd, &$endsSentence, &$capitalizeNext, &$afterPunctuation, $turkic): string {
-                if ($cue !== $currentCue) {
-                    $currentCue       = $cue;
-                    $visible          = Markup::visibleText(implode("\n", $cue->getLines()));
-                    $capitalizeNext   = $endsSentence || self::textTransformsStartsAnnotation($visible) || ($previousEnd !== null
-                        && $cue->getStart() - $previousEnd >= self::TEXT_TRANSFORMS_SENTENCE_GAP - Timecode::EPSILON);
-                    $afterPunctuation = false;
-                    $previousEnd      = $cue->getEnd();
-                    $endsSentence     = self::textTransformsEndsSentence($visible);
-                }
-                if ($startsLine && ($afterPunctuation || self::textTransformsStartsTurn($text))) {
-                    $capitalizeNext = true;
-                }
-
-                return self::textTransformsSentenceCaseRun($text, $turkic, $capitalizeNext, $afterPunctuation);
-            }
-        );
-    }
-
-
-    /**
-     * Lowers a text run and capitalizes its first letter or digit after the start of a sentence.
-     */
-    private static function textTransformsSentenceCaseRun(string $text, bool $turkic, bool &$capitalizeNext, bool &$afterPunctuation): string
-    {
-        $chars        = Markup::characters(self::textTransformsLower($text, $turkic));
-        $original     = Markup::characters($text);
-        $word         = "";
-        $abbreviation = false;
-        $result       = "";
-        foreach ($chars as $index => $char) {
-            if (preg_match('/^[\p{L}\p{N}]$/u', $char) === 1) {
-                if ($capitalizeNext) {
-                    $char = self::textTransformsTitle($char, $turkic);
-                }
-                $capitalizeNext   = false;
-                $afterPunctuation = false;
-                $word            .= $char;
-            } elseif (in_array($char, [".", "!", "?", "\u{2026}"], true)) {
-                $afterPunctuation = true;
-                $abbreviation     = $char === "." && in_array(strtolower($word), self::TEXT_TRANSFORMS_ABBREVIATIONS, true);
-                $word             = $char === "." && $word !== "" ? "$word." : "";
-            } else {
-                $word = "";
-                if ($afterPunctuation && $char === ",") {
-                    $afterPunctuation = false;
-                } elseif ($afterPunctuation && in_array($char, self::TEXT_TRANSFORMS_ASCII_SPACES, true)) {
-                    // Lowering İ adds a combining dot, so the original case is known only when the counts match.
-                    $lowerCaseFollows = count($chars) === count($original) && self::textTransformsLowerCaseFollows($original, $index);
-                    $afterPunctuation = !($abbreviation && $lowerCaseFollows);
-                    $capitalizeNext   = $capitalizeNext || $afterPunctuation;
-                }
-            }
-            $result .= $char;
-        }
-
-        return $result;
-    }
-
-
-    /**
-     * Tells if the first letter after $index in $chars is a lower case letter.
-     *
-     * @param list<string> $chars
-     */
-    private static function textTransformsLowerCaseFollows(array $chars, int $index): bool
-    {
-        foreach (array_slice($chars, $index + 1) as $char) {
-            if (preg_match('/^\p{L}$/u', $char) === 1) {
-                return preg_match('/^\p{Ll}$/u', $char) === 1;
-            }
-            if (!in_array($char, self::TEXT_TRANSFORMS_ASCII_SPACES, true)) {
-                return false;
-            }
-        }
-
-        return false;
-    }
-
-
-    /**
-     * Tells if $text starts with the CEA-608 speaker change ">>" or a dialogue dash.
-     */
-    private static function textTransformsStartsTurn(string $text): bool
-    {
-        $text = ltrim($text);
-
-        return str_starts_with($text, ">>") || preg_match(DialogueDash::REGEX, $text) === 1;
-    }
-
-
-    /**
-     * Tells if $text ends a sentence, or ends with a sound description, a music note or a speaker label.
-     * Text that is not valid UTF-8 makes the Unicode regex fail, so an ASCII regex decides then.
-     */
-    private static function textTransformsEndsSentence(string $text): bool
-    {
-        $match = preg_match('/(?:[.!?\x{2026}][\p{Pe}\p{Pi}\p{Pf}"\']*|[\])\x{266A}:])$/u', $text);
-        if ($match === false) {
-            $match = preg_match('/[.!?][)\]}"\']*$|[\]):]$|\xE2\x99\xAA$/', $text);
-        }
-
-        return $match === 1;
-    }
-
-
-    /**
-     * Tells if $text starts with a sound description or a music note.
-     */
-    private static function textTransformsStartsAnnotation(string $text): bool
-    {
-        $text = ltrim($text);
-
-        return str_starts_with($text, "[") || str_starts_with($text, "(") || str_starts_with($text, "\u{266A}");
+        return $this->textTransformsMapRuns($caser->run(...));
     }
 
 
@@ -346,38 +219,5 @@ trait TextTransforms
         $this->setLinesAndRemoveEmptied(fn (SubtitleCue $cue): array => $fn($cue));
 
         return $this;
-    }
-
-
-    private static function textTransformsUpper(string $text, bool $turkic): string
-    {
-        if (!StringHelpers::canUseMultibyte($text)) {
-            return strtoupper($text);
-        }
-
-        return mb_strtoupper($turkic ? str_replace("i", "İ", $text) : $text, "UTF-8");
-    }
-
-
-    private static function textTransformsLower(string $text, bool $turkic): string
-    {
-        if (!StringHelpers::canUseMultibyte($text)) {
-            return strtolower($text);
-        }
-
-        $lower = mb_strtolower($turkic ? str_replace(["İ", "I"], ["i", "ı"], $text) : $text, "UTF-8");
-
-        // PHP 8.2 lacks the Unicode Final_Sigma rule, which PHP 8.3 added to mb_strtolower().
-        return preg_replace('/(?<=\p{L})σ(?!\p{L})/u', "ς", $lower);
-    }
-
-
-    private static function textTransformsTitle(string $char, bool $turkic): string
-    {
-        if (!StringHelpers::canUseMultibyte($char)) {
-            return strtoupper($char);
-        }
-
-        return mb_convert_case($turkic && $char === "i" ? "İ" : $char, MB_CASE_TITLE, "UTF-8");
     }
 }

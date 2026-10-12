@@ -10,6 +10,7 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\TextCase;
 
 /**
  * The replace list rules port GetReplaceWord(), StripAffixes(), ReplaceWord() and SkipAddLineEnding() of
@@ -61,8 +62,7 @@ final class CommonErrorFixer
         $indexes   = array_keys($cues);
         $positions = array_flip($indexes);
         $fixes     = [];
-        $turkic    = in_array(StringHelpers::primaryLanguage($options->language ?? $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE)),
-                              ["tr", "az"], true);
+        $turkic    = TextCase::isTurkic($options->language ?? $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $ends      = $options->sentenceStartCase ? array_map(fn (SubtitleCue $cue): bool =>
             preg_match(self::SENTENCE_END, Markup::visibleText(implode("\n", $cue->getLines()))) === 1, $cues) : [];
 
