@@ -51,6 +51,7 @@ final class FormatDataSchema
         CsvTimeFormat::Dot->value,
         CsvTimeFormat::Comma->value,
         CsvTimeFormat::Frames->value,
+        CsvTimeFormat::Milliseconds->value,
     ];
 
     private const ATTRIBUTES = ["names", "string"];

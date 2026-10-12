@@ -12,7 +12,9 @@ use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\ReadGoldens;
 use SubtitleToolbox\Tests\Support\RealFiles;
+use SubtitleToolbox\Tests\Support\TestFiles;
 use SubtitleToolbox\WriteOptions;
 
 class CsvRealFilesTest extends TestCase
@@ -67,6 +69,14 @@ class CsvRealFilesTest extends TestCase
                 [10.0, 12.0, "Have a safe trip."],
                 ["lineEnding" => "\n", "bom" => false],
             ],
+            "openai-whisper TSV" => [
+                "own_openai_whisper.tsv",
+                new CsvReadOptions(),
+                6,
+                [0.0, 2.34, "Good morning and welcome to the harbour tour."],
+                [17.02, 19.3, "Thank you, and enjoy the trip!"],
+                ["lineEnding" => "\n", "bom" => false],
+            ],
         ];
     }
 
@@ -106,6 +116,32 @@ class CsvRealFilesTest extends TestCase
             array_map(fn (SubtitleCue $cue): ?string => $cue->getIdentifier(), $subtitle->getCues()),
             array_map(fn (SubtitleCue $cue): ?string => $cue->getIdentifier(), $fresh->getCues())
         );
+    }
+
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function whisperFiles(): array
+    {
+        return [
+            "openai-whisper TSV" => ["own_openai_whisper.tsv"],
+            "whisper.cpp CSV"    => ["own_whisper_cpp.csv"],
+        ];
+    }
+
+
+    #[DataProvider("whisperFiles")]
+    public function testWhisperFileMatchesItsReadGolden(string $fileName): void
+    {
+        $this->assertStringEqualsFile(TestFiles::DIR . "csv/real/expected/$fileName.json", ReadGoldens::render("csv/real/$fileName", Format::Csv, new ReadOptions()));
+    }
+
+
+    #[DataProvider("whisperFiles")]
+    public function testWhisperFileConvertsToItsSubRipGolden(string $fileName): void
+    {
+        $this->assertStringEqualsFile(TestFiles::DIR . "csv/real/expected/$fileName.to.srt.srt", $this->parseFile($fileName)->toString(Format::SubRip));
     }
 
 
