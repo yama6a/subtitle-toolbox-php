@@ -663,6 +663,7 @@ class ThrowSitesTest extends TestCase
             "Retiming.php: no sync points"                  => [fn () => self::subtitle()->syncByPoints([]), ...$invalid],
             "Retiming.php: sync point of another type"      => [fn () => self::subtitle()->syncByPoints([[1, 2]]), ...$invalid],
             "Retiming.php: sync points out of order"        => [fn () => self::subtitle()->syncByPoints([new SyncPoint(2, 2), new SyncPoint(1, 3)]), ...$invalid],
+            "Retiming.php: time beyond the limit"           => [fn () => self::subtitle()->scale(1e300), ...$invalid],
             "Speakers/SpeakerLabelOptions.php: invalid color" => [fn () => new SpeakerLabelOptions(colors: ["yellow"]), ...$invalid],
             "Streaming/Streams.php: no stream"              => [fn () => iterator_to_array((new SubRipStreamReader())->read(5)), ...$invalid],
             "Streaming/Streams.php: missing file"           => [fn () => iterator_to_array((new SubRipStreamReader())->read(__DIR__ . "/missing.srt")),

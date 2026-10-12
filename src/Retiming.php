@@ -17,10 +17,12 @@ trait Retiming
      * The cues are then sorted by start time again, and each comment stays before its cue.
      * The word timestamps in the cue text move with the cue. A time that becomes negative becomes 0, and the cue stays.
      *
-     * @throws InvalidArgumentException when $toTime is not after $fromTime.
+     * @throws InvalidArgumentException when $seconds is not finite, $toTime is not after $fromTime,
+     *         or a cue would end at Timecode::MAX_HOURS or later.
      */
     public function shift(float $seconds, ?float $fromTime = null, ?float $toTime = null): self
     {
+        OptionChecks::finite($seconds, "The shift must be a finite number of seconds, got %s.");
         if ($fromTime !== null && $toTime !== null && !($toTime > $fromTime)) {
             throw new InvalidArgumentException("The end time of the shift must be after its start time, got $fromTime to $toTime.");
         }
@@ -33,6 +35,8 @@ trait Retiming
 
     /**
      * Multiplies the start and end time and the word timestamps of every cue by $factor.
+     *
+     * @throws InvalidArgumentException when $factor is not above 0, or a cue would end at Timecode::MAX_HOURS or later.
      */
     public function scale(float $factor): self
     {
@@ -44,6 +48,8 @@ trait Retiming
 
     /**
      * Converts the cue times from a video at the frame rate $from to the same video at the frame rate $to.
+     *
+     * @throws InvalidArgumentException when a frame rate is not above 0, or a cue would end at Timecode::MAX_HOURS or later.
      */
     public function convertFrameRate(float $from, float $to): self
     {
@@ -57,7 +63,8 @@ trait Retiming
      * A time that becomes negative becomes 0, and the cue stays.
      *
      * @param list<SyncPoint> $points sorted by old time
-     * @throws InvalidArgumentException when $points is empty, holds another type, or its old or new times do not increase strictly.
+     * @throws InvalidArgumentException when $points is empty, holds another type, its old or new times do not increase strictly,
+     *         or a cue would end at Timecode::MAX_HOURS or later.
      */
     public function syncByPoints(array $points): self
     {
@@ -67,21 +74,19 @@ trait Retiming
         }
 
         $segments = self::retimingPointSegments($points);
-        foreach ($this->getCues() as $cue) {
-            $cue->mapTimes(function (float $time) use ($segments): float {
-                $segment = $segments[0];
-                foreach ($segments as $candidate) {
-                    if ($time < $candidate["from"]) {
-                        break;
-                    }
-                    $segment = $candidate;
+        $map      = function (float $time) use ($segments): float {
+            $segment = $segments[0];
+            foreach ($segments as $candidate) {
+                if ($time < $candidate["from"]) {
+                    break;
                 }
+                $segment = $candidate;
+            }
 
-                return $time * $segment["factor"] + $segment["offset"];
-            });
-        }
+            return $time * $segment["factor"] + $segment["offset"];
+        };
 
-        return $this;
+        return $this->retimingMapTimes($this->getCues(), $map);
     }
 
 
@@ -137,12 +142,34 @@ trait Retiming
 
     private function retimingApplyLinearCorrection(float $factor, float $offset, ?float $fromTime = null, ?float $toTime = null): self
     {
-        foreach ($this->getCues() as $cue) {
-            if (($fromTime !== null && $cue->getStart() < $fromTime) || ($toTime !== null && $cue->getStart() >= $toTime)) {
-                continue;
-            }
+        $cues = array_filter(
+            $this->getCues(),
+            fn (SubtitleCue $cue): bool => ($fromTime === null || $cue->getStart() >= $fromTime) && ($toTime === null || $cue->getStart() < $toTime)
+        );
 
-            $cue->mapTimes(fn (float $time): float => $time * $factor + $offset);
+        return $this->retimingMapTimes($cues, fn (float $time): float => $time * $factor + $offset);
+    }
+
+
+    /**
+     * Checks every cue before it changes one, so that the subtitle keeps its times when it throws.
+     * The formatters cast times to int milliseconds, which fails far above MAX_HOURS.
+     *
+     * @param array<int, SubtitleCue> $cues
+     * @param callable(float): float $map increases with the time
+     */
+    private function retimingMapTimes(array $cues, callable $map): self
+    {
+        foreach ($cues as $index => $cue) {
+            $end = $map(max($cue->getStart(), $cue->getEnd()));
+            if (!($end < Timecode::MAX_HOURS * 3600)) {
+                throw new InvalidArgumentException(
+                    "The retimed cue " . ($index + 1) . " would end at $end s. Cue times must be below " . Timecode::MAX_HOURS . " hours."
+                );
+            }
+        }
+        foreach ($cues as $cue) {
+            $cue->mapTimes($map);
         }
 
         return $this;
