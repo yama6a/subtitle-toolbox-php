@@ -85,6 +85,20 @@ final class CodePageDetector
 
     private const SAMPLE_BYTES = 65536;
 
+    // sample() looks for lines with a byte from 0x80 in this many bytes from the start.
+    private const SCAN_BYTES = 16 * self::SAMPLE_BYTES;
+
+    // Each non-ASCII letter or symbol adds this score when the language or the punctuation list has it, and the other score when not.
+    private const KNOWN_CHARACTER_SCORE   = 1;
+    private const UNKNOWN_CHARACTER_SCORE = -2;
+
+    // Each case change inside a word, lowercase line start and change between Latin and another script costs this.
+    private const CASE_PENALTY = 2;
+
+    private const SYMBOL_IN_WORD_PENALTY = 3;
+
+    private const MIN_SCORE_PER_CHARACTER = 0.5;
+
     /** @var array<string, array<string, true>>|null */
     private static ?array $letters = null;
 
@@ -131,7 +145,7 @@ final class CodePageDetector
     /** Returns the lines with a byte from 0x80, up to SAMPLE_BYTES. */
     private static function sample(string $str): string
     {
-        preg_match_all('/^[^\n]*[\x80-\xFF][^\n]*$/m', substr($str, 0, 16 * self::SAMPLE_BYTES), $lines);
+        preg_match_all('/^[^\n]*[\x80-\xFF][^\n]*$/m', substr($str, 0, self::SCAN_BYTES), $lines);
 
         return substr(implode("\n", $lines[0]), 0, self::SAMPLE_BYTES);
     }
@@ -139,7 +153,7 @@ final class CodePageDetector
 
     /**
      * Returns the score of $sample decoded as $encoding, or null when a byte is undefined or decodes to a C1 control.
-     * A score of at most half the count of non-ASCII characters marks implausible text and returns 0.
+     * A score of at most MIN_SCORE_PER_CHARACTER per non-ASCII character marks implausible text and returns 0.
      */
     private static function score(string $sample, string $encoding): ?float
     {
@@ -149,29 +163,64 @@ final class CodePageDetector
         }
 
         preg_match_all('/[^\x00-\x7F]/u', $text, $matches);
-        $counts = array_count_values($matches[0]);
-        $total  = count($matches[0]);
+        $counts  = array_count_values($matches[0]);
+        $letters = self::letterCounts($counts);
+        $score   = self::letterScore($letters, $encoding) + self::symbolScore(array_diff_key($counts, $letters)) - self::penalty($text);
 
-        $letters = [];
-        $other   = 0.0;
-        foreach ($counts as $char => $count) {
-            if (preg_match('/[\p{L}\p{M}]/u', $char) === 1) {
-                $letters[$char] = $count;
-            } else {
-                $other += (isset(self::punctuation()[$char]) ? 1 : -2) * $count;
-            }
-        }
+        return $score > self::MIN_SCORE_PER_CHARACTER * count($matches[0]) ? $score : 0.0;
+    }
 
-        $language = $letters === [] ? 0.0 : -INF;
+
+    /**
+     * @param array<string, int> $counts the count of each non-ASCII character
+     * @return array<string, int> the counts of the letters and marks
+     */
+    private static function letterCounts(array $counts): array
+    {
+        return array_filter($counts, fn (string $char): bool => preg_match('/[\p{L}\p{M}]/u', $char) === 1, ARRAY_FILTER_USE_KEY);
+    }
+
+
+    /**
+     * Returns the score of the language of $encoding that fits $letters best.
+     *
+     * @param array<string, int> $letters
+     */
+    private static function letterScore(array $letters, string $encoding): float
+    {
+        $best = $letters === [] ? 0.0 : -INF;
         foreach (self::CANDIDATES[$encoding] as $code) {
             $alphabet = self::letters()[$code];
             $score    = 0.0;
             foreach ($letters as $char => $count) {
-                $score += (isset($alphabet[$char]) ? 1 : -2) * $count;
+                $score += (isset($alphabet[$char]) ? self::KNOWN_CHARACTER_SCORE : self::UNKNOWN_CHARACTER_SCORE) * $count;
             }
-            $language = max($language, $score);
+            $best = max($best, $score);
         }
 
+        return $best;
+    }
+
+
+    /**
+     * @param array<string, int> $symbols the count of each non-ASCII character that is no letter
+     */
+    private static function symbolScore(array $symbols): float
+    {
+        $score = 0.0;
+        foreach ($symbols as $char => $count) {
+            $score += (isset(self::punctuation()[$char]) ? self::KNOWN_CHARACTER_SCORE : self::UNKNOWN_CHARACTER_SCORE) * $count;
+        }
+
+        return $score;
+    }
+
+
+    /**
+     * Returns the cost of odd letter case, mixed scripts and symbols inside words.
+     */
+    private static function penalty(string $text): float
+    {
         // Lines in capitals are common in subtitles. Other lines with more capitals than small letters are not.
         $extraCapitals = 0;
         foreach (explode("\n", $text) as $line) {
@@ -188,10 +237,7 @@ final class CodePageDetector
         $mixedScripts    = preg_match_all('/\p{Latin}(?=' . self::NON_LATIN . ')|' . self::NON_LATIN . '(?=\p{Latin})/u', $text);
         $symbolsInWords  = preg_match_all('/(?<=\p{L})[^\p{L}\p{M}\s\x00-\x7F\x{2019}\x{00B7}](?=\p{L})/u', $text);
 
-        $score = $language + $other - $extraCapitals
-                 - 2 * ($caseChanges + $lowercaseStarts + $mixedScripts) - 3 * $symbolsInWords;
-
-        return $score > $total / 2 ? $score : 0.0;
+        return $extraCapitals + self::CASE_PENALTY * ($caseChanges + $lowercaseStarts + $mixedScripts) + self::SYMBOL_IN_WORD_PENALTY * $symbolsInWords;
     }
 
 
