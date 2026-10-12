@@ -109,11 +109,7 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
      */
     private function showImages(PgsContext $context, array $shown, int $pts): string
     {
-        $pixels = [];
-        foreach ($shown as $entry) {
-            $pixels[] = $this->pixels($entry["cue"], $entry["image"]);
-        }
-        ["palette" => $palette, "indexes" => $indexes] = PaletteReducer::reduce(array_merge(...$pixels));
+        ["palette" => $palette, "indexes" => $indexes] = $this->reducePalette($shown);
 
         $images     = array_column($shown, "image");
         $windows    = $this->windows($images);
@@ -122,10 +118,11 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
         $offset     = 0;
         foreach ($shown as $id => ["cue" => $cue, "image" => $image]) {
             $windowId    = count($windows) === 1 ? 0 : $id;
+            $size        = $image->width * $image->height;
             $references .= pack("nCCnn", $id, $windowId, $cue->isForced() ? self::FLAG_FORCED : 0, $image->x, $image->y);
             $objects    .= $this->objects($pts, $id, $image->width, $image->height,
-                                          $this->encodeRle(substr($indexes, $offset, count($pixels[$id])), $image->width));
-            $offset     += count($pixels[$id]);
+                                          $this->encodeRle(substr($indexes, $offset, $size), $image->width));
+            $offset     += $size;
         }
 
         return $this->segment($pts, self::SEGMENT_PRESENTATION,
@@ -138,23 +135,48 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
 
 
     /**
-     * @return list<int> the 0xRRGGBBAA pixels of the image
+     * Maps the pixels of all shown images to one palette of at most 256 colors. Indexed PNG files skip the list of
+     * pixels, which takes 16 bytes of memory per pixel.
+     *
+     * @param non-empty-list<array{cue: SubtitleCue, image: CueImage, end: int}> $shown
+     * @return array{palette: list<int>, indexes: string} 0xRRGGBBAA colors and one entry byte per pixel of each image
      */
-    private function pixels(SubtitleCue $cue, CueImage $image): array
+    private function reducePalette(array $shown): array
+    {
+        $images = [];
+        foreach ($shown as ["cue" => $cue, "image" => $image]) {
+            $this->checkImage($cue, $image);
+            $images[] = $decoded = PngDecoder::decodeIndexed($image->png) ?? PngDecoder::decode($image->png);
+            $this->checkPngSize($cue, $image, $decoded["width"], $decoded["height"]);
+        }
+
+        $indexed = array_filter($images, fn (array $decoded): bool => isset($decoded["indexes"]));
+        $reduced = count($indexed) === count($images) ? PaletteReducer::reduceIndexed($images) : null;
+
+        return $reduced ?? PaletteReducer::reduce(array_merge(...array_map(
+            fn (array $decoded): array => $decoded["pixels"]
+                ?? array_map(fn (int $entry): int => $decoded["palette"][$entry] ?? 0, array_values(unpack("C*", $decoded["indexes"]))),
+            $images
+        )));
+    }
+
+
+    private function checkImage(SubtitleCue $cue, CueImage $image): void
     {
         foreach ([$image->x, $image->y, $image->width, $image->height, $image->screenWidth, $image->screenHeight] as $value) {
             if ($value < 0 || $value > self::MAX_FIELD) {
                 throw new UnwritableContentException($this->cueError($cue, "the image position and size must be from 0 to " . self::MAX_FIELD));
             }
         }
+    }
 
-        ["width" => $width, "height" => $height, "pixels" => $pixels] = PngDecoder::decode($image->png);
+
+    private function checkPngSize(SubtitleCue $cue, CueImage $image, int $width, int $height): void
+    {
         if ($width !== $image->width || $height !== $image->height) {
             throw new UnwritableContentException($this->cueError($cue, "the PNG has {$width}x{$height} pixels, " .
                                                                        "but the image data says {$image->width}x{$image->height}"));
         }
-
-        return $pixels;
     }
 
 

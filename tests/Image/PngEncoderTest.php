@@ -149,6 +149,31 @@ class PngEncoderTest extends TestCase
     }
 
 
+    public function testIndexedPngHoldsThePaletteAndTheEntryOfEachPixel(): void
+    {
+        $palette = [0x00000000, 0xFFFFFFFF, 0x10203080, 0xC0C0C0FF];
+        $indexes = "";
+        for ($pixel = 0; $pixel < 37 * 5; $pixel++) {
+            $indexes .= chr($pixel * 7 % 4);
+        }
+
+        $png = PngEncoder::encodeIndexed(37, 5, $indexes, $palette);
+
+        $this->assertSame(["width" => 37, "height" => 5, "palette" => $palette, "indexes" => $indexes], PngDecoder::decodeIndexed($png));
+        $this->assertSame(array_map(fn (string $entry): int => $palette[ord($entry)], str_split($indexes)), PngDecoder::decode($png)["pixels"]);
+        $this->assertSame("\x00\xFF\x80", array_column($this->readChunks($png), 1, 0)["tRNS"]);
+    }
+
+
+    public function testIndexedPngOfOpaqueColorsHasNoTransparencyChunk(): void
+    {
+        $png = PngEncoder::encodeIndexed(2, 1, "\0\1", [0x000000FF, 0xFFFFFFFF]);
+
+        $this->assertSame(["IHDR", "PLTE", "IDAT", "IEND"], array_column($this->readChunks($png), 0));
+        $this->assertSame([0x000000FF, 0xFFFFFFFF], PngDecoder::decode($png)["pixels"]);
+    }
+
+
     public function testRejectsAPixelCountThatDoesNotMatchTheSize(): void
     {
         $this->expectException(InvalidArgumentException::class);

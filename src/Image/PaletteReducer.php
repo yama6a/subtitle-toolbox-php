@@ -36,10 +36,8 @@ final class PaletteReducer
 
         $counts = array_count_values($pixels);
         if (count($counts) <= $maxColors) {
-            $colors = array_keys($counts);
-            usort($colors, fn (int $a, int $b): int => ($a & 0xFF) === 0 ? (($b & 0xFF) === 0 ? 0 : -1) : (($b & 0xFF) === 0 ? 1 : 0));
-            $entryOf = array_flip($colors);
-            $palette = $colors;
+            $palette = self::transparentFirst(array_keys($counts));
+            $entryOf = array_flip($palette);
         } else {
             [$palette, $entryOf] = self::medianCut($counts, $maxColors);
         }
@@ -51,6 +49,61 @@ final class PaletteReducer
         }
 
         return ["palette" => $palette, "indexes" => $indexes];
+    }
+
+
+    /**
+     * Returns what reduce() returns for the pixels of the indexed images, one image after the other, without a list of
+     * pixels. Returns null when the images have more than 256 colors together, so reduce() must cut the colors.
+     *
+     * @param list<array{palette: list<int>, indexes: string}> $images colors as 0xRRGGBBAA and one entry byte per pixel
+     * @return array{palette: list<int>, indexes: string}|null
+     *
+     * @internal
+     */
+    public static function reduceIndexed(array $images): ?array
+    {
+        $firstPixel = [];
+        $offset     = 0;
+        foreach ($images as ["palette" => $palette, "indexes" => $indexes]) {
+            foreach (str_split(count_chars($indexes, 3)) as $entry) {
+                $color              = $palette[ord($entry)] ?? 0;
+                $firstPixel[$color] = min($firstPixel[$color] ?? PHP_INT_MAX, $offset + strpos($indexes, $entry));
+            }
+            $offset += strlen($indexes);
+        }
+        if (count($firstPixel) > self::MAX_COLORS) {
+            return null;
+        }
+
+        asort($firstPixel);
+        $colors  = self::transparentFirst(array_keys($firstPixel));
+        $entryOf = array_flip($colors);
+        $joined  = "";
+        foreach ($images as ["palette" => $palette, "indexes" => $indexes]) {
+            $entries = count_chars($indexes, 3);
+            $mapped  = "";
+            foreach (str_split($entries) as $entry) {
+                $mapped .= chr($entryOf[$palette[ord($entry)] ?? 0]);
+            }
+            $joined .= strtr($indexes, $entries, $mapped);
+        }
+
+        return ["palette" => $colors, "indexes" => $joined];
+    }
+
+
+    /**
+     * Moves the fully transparent colors to the front and keeps the order otherwise.
+     *
+     * @param list<int> $colors
+     * @return list<int>
+     */
+    private static function transparentFirst(array $colors): array
+    {
+        usort($colors, fn (int $a, int $b): int => ($a & 0xFF) === 0 ? (($b & 0xFF) === 0 ? 0 : -1) : (($b & 0xFF) === 0 ? 1 : 0));
+
+        return $colors;
     }
 
 

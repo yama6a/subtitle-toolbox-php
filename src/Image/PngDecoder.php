@@ -29,7 +29,8 @@ final class PngDecoder
 
     private const COLOR_GRAY       = 0;
     private const COLOR_RGB        = 2;
-    private const COLOR_PALETTE    = 3;
+    /** @internal */
+    public const COLOR_PALETTE = 3;
     private const COLOR_GRAY_ALPHA = 4;
     /** @internal */
     public const COLOR_RGBA = 6;
@@ -51,12 +52,72 @@ final class PngDecoder
      */
     public static function decode(string $png): array
     {
-        if (!str_starts_with($png, self::SIGNATURE)) {
-            throw new InvalidArgumentException("Cannot decode the PNG: the data does not start with the PNG signature.");
+        $chunks = self::readChunks($png);
+        $header = self::readHeader($chunks);
+        $rows   = self::readRows($chunks, $header);
+        ["width" => $width, "height" => $height, "depth" => $depth, "color" => $color, "channels" => $channels] = $header;
+        if ($color === self::COLOR_RGBA && $depth === 8) {
+            return ["width" => $width, "height" => $height, "pixels" => array_values(unpack("N*", implode("", $rows)))];
         }
 
+        $palette = $color === self::COLOR_PALETTE ? self::readPalette($chunks["PLTE"][0] ?? "", $chunks["tRNS"][0] ?? "") : [];
+        if ($color === self::COLOR_PALETTE && $depth === 8) {
+            $rgbaOf = [];
+            for ($entry = 0; $entry < 256; $entry++) {
+                $rgbaOf[chr($entry)] = pack("N", $palette[$entry] ?? 0);
+            }
+
+            return ["width" => $width, "height" => $height, "pixels" => array_values(unpack("N*", strtr(implode("", $rows), $rgbaOf)))];
+        }
+
+        $key     = isset($chunks["tRNS"]) && $color !== self::COLOR_PALETTE
+            ? array_values(unpack("n*", $chunks["tRNS"][0]))
+            : null;
+
+        $pixels = [];
+        foreach ($rows as $row) {
+            $samples = array_chunk(array_slice(self::samples($row, $depth), 0, $width * $channels), $channels);
+            foreach ($samples as $sample) {
+                $pixels[] = self::toRgba($sample, $color, $depth, $palette, $key);
+            }
+        }
+
+        return ["width" => $width, "height" => $height, "pixels" => $pixels];
+    }
+
+
+    /**
+     * Decodes an 8-bit indexed PNG string to its size, its palette and one palette entry byte per pixel, row-major.
+     * Returns null for a PNG of another color type or bit depth. decode() reads an entry past the palette as 0x00000000.
+     *
+     * @return array{width: int, height: int, palette: list<int>, indexes: string}|null palette colors as 0xRRGGBBAA
+     *
+     * @internal
+     */
+    public static function decodeIndexed(string $png): ?array
+    {
         $chunks = self::readChunks($png);
-        ["width" => $width, "height" => $height, "depth" => $depth, "color" => $color, "channels" => $channels] = self::readHeader($chunks);
+        $header = self::readHeader($chunks);
+        if ($header["color"] !== self::COLOR_PALETTE || $header["depth"] !== 8) {
+            return null;
+        }
+
+        return ["width"   => $header["width"], "height" => $header["height"],
+                "palette" => self::readPalette($chunks["PLTE"][0] ?? "", $chunks["tRNS"][0] ?? ""),
+                "indexes" => implode("", self::readRows($chunks, $header))];
+    }
+
+
+    /**
+     * Inflates the IDAT chunks and removes the filters.
+     *
+     * @param array<string, list<string>> $chunks
+     * @param array{width: int, height: int, depth: int, color: int, channels: int} $header
+     * @return list<string> the rows without their filter type byte
+     */
+    private static function readRows(array $chunks, array $header): array
+    {
+        ["width" => $width, "height" => $height, "depth" => $depth, "channels" => $channels] = $header;
 
         $rowLength = intdiv($width * $channels * $depth + 7, 8);
         $dataSize  = ($rowLength + 1) * $height;
@@ -73,25 +134,7 @@ final class PngDecoder
                                                " bytes of image data: it needs $dataSize.");
         }
 
-        $rows = self::unfilter($scanlines, $rowLength, $height, max(1, intdiv($channels * $depth, 8)));
-        if ($color === self::COLOR_RGBA && $depth === 8) {
-            return ["width" => $width, "height" => $height, "pixels" => array_values(unpack("N*", implode("", $rows)))];
-        }
-
-        $palette = $color === self::COLOR_PALETTE ? self::readPalette($chunks["PLTE"][0] ?? "", $chunks["tRNS"][0] ?? "") : [];
-        $key     = isset($chunks["tRNS"]) && $color !== self::COLOR_PALETTE
-            ? array_values(unpack("n*", $chunks["tRNS"][0]))
-            : null;
-
-        $pixels = [];
-        foreach ($rows as $row) {
-            $samples = array_chunk(array_slice(self::samples($row, $depth), 0, $width * $channels), $channels);
-            foreach ($samples as $sample) {
-                $pixels[] = self::toRgba($sample, $color, $depth, $palette, $key);
-            }
-        }
-
-        return ["width" => $width, "height" => $height, "pixels" => $pixels];
+        return self::unfilter($scanlines, $rowLength, $height, max(1, intdiv($channels * $depth, 8)));
     }
 
 
@@ -127,6 +170,10 @@ final class PngDecoder
      */
     private static function readChunks(string $png): array
     {
+        if (!str_starts_with($png, self::SIGNATURE)) {
+            throw new InvalidArgumentException("Cannot decode the PNG: the data does not start with the PNG signature.");
+        }
+
         $chunks = [];
         $length = strlen($png);
         $offset = strlen(self::SIGNATURE);

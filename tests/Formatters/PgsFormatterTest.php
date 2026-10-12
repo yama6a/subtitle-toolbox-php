@@ -50,6 +50,14 @@ class PgsFormatterTest extends TestCase
     }
 
 
+    private static function assertSameImage(CueImage $expected, CueImage $actual, string $message = ""): void
+    {
+        self::assertSame([$expected->x, $expected->y, $expected->width, $expected->height, $expected->screenWidth, $expected->screenHeight, $expected->forced],
+                         [$actual->x, $actual->y, $actual->width, $actual->height, $actual->screenWidth, $actual->screenHeight, $actual->forced], $message);
+        self::assertSame(PngDecoder::decode($expected->png)["pixels"], PngDecoder::decode($actual->png)["pixels"], $message);
+    }
+
+
     private static function pgsRoundTrip(Subtitle $subtitle): Subtitle
     {
         return (new PgsParser())->parse($subtitle->toString(Format::Pgs), new ReadOptions());
@@ -82,7 +90,7 @@ class PgsFormatterTest extends TestCase
 
             $this->assertEqualsWithDelta($cue->getStart(), $copy->getStart(), 0.001);
             $this->assertEqualsWithDelta($cue->getEnd(), $copy->getEnd(), 0.001);
-            $this->assertEquals(CueImage::fromCue($cue), CueImage::fromCue($copy), "cue $index");
+            self::assertSameImage(CueImage::fromCue($cue), CueImage::fromCue($copy), "cue $index");
             $this->assertSame($cue->isForced(), $copy->isForced());
             $this->assertSame($cue->getAlignment(), $copy->getAlignment());
         }
@@ -301,7 +309,7 @@ class PgsFormatterTest extends TestCase
         $this->assertGreaterThan(2, count($objects));
         $this->assertSame([0x80, 0x00, 0x40], [ord($objects[0][3][3]), ord($objects[1][3][3]), ord(end($objects)[3][3])]);
         $this->assertSame(0xFFFF, strlen($objects[0][3]));
-        $this->assertEquals(CueImage::fromCue($subtitle->getCues()[0]), CueImage::fromCue(self::pgsRoundTrip($subtitle)->getCues()[0]));
+        self::assertSameImage(CueImage::fromCue($subtitle->getCues()[0]), CueImage::fromCue(self::pgsRoundTrip($subtitle)->getCues()[0]));
     }
 
 
@@ -321,6 +329,63 @@ class PgsFormatterTest extends TestCase
         foreach ($pixels as $index => $pixel) {
             $this->assertSame($index % 10 === 0 ? 0 : 0xFF, $written[$index] & 0xFF);
         }
+    }
+
+
+    /**
+     * @param list<int> $palette
+     * @return array{SubtitleCue, SubtitleCue} the image as an indexed PNG and as an RGBA PNG
+     */
+    private static function indexedAndRgbaCues(float $start, float $end, int $width, array $palette, string $indexes): array
+    {
+        $height = intdiv(strlen($indexes), $width);
+        $pixels = array_map(fn (string $entry): int => $palette[ord($entry)], str_split($indexes));
+
+        return [(new CueImage(PngEncoder::encodeIndexed($width, $height, $indexes, $palette), 100, 900, $width, $height, 1920, 1080))
+                    ->toCue(new SubtitleCue($start, $end)),
+                self::imageCue($start, $end, $width, $height, $pixels)];
+    }
+
+
+    public function testWritesIndexedPngFilesLikeTheSameRgbaPngFiles(): void
+    {
+        // Entry 3 repeats entry 1, entry 4 is unused, and the transparent color is not entry 0.
+        [$firstIndexed, $firstRgba]   = self::indexedAndRgbaCues(1.0, 3.0, 3, [0x11111180, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0xABCDEFFF],
+                                                                  "\1\2\0\3\0\1\2\2\2");
+        [$secondIndexed, $secondRgba] = self::indexedAndRgbaCues(2.0, 4.0, 2, [0xFF0000FF, 0xFFFFFFFF], "\1\0\0\1");
+
+        $expected = (new Subtitle())->addCues([$firstRgba, $secondRgba])->toString(Format::Pgs);
+
+        $this->assertSame($expected, (new Subtitle())->addCues([$firstIndexed, $secondIndexed])->toString(Format::Pgs));
+        $this->assertSame($expected, (new Subtitle())->addCues([$firstIndexed, $secondRgba])->toString(Format::Pgs));
+    }
+
+
+    public function testWritesIndexedPngFilesWithMoreThan256ColorsTogetherLikeRgbaPngFiles(): void
+    {
+        $indexes = implode("", array_map("chr", range(0, 199)));
+        [$firstIndexed, $firstRgba]   = self::indexedAndRgbaCues(1.0, 3.0, 20, range(0x000000FF, 0x0000C7FF, 0x100), $indexes);
+        [$secondIndexed, $secondRgba] = self::indexedAndRgbaCues(2.0, 4.0, 20, range(0x00FF00FF, 0x00FFC7FF, 0x100), $indexes);
+
+        $this->assertSame((new Subtitle())->addCues([$firstRgba, $secondRgba])->toString(Format::Pgs),
+                          (new Subtitle())->addCues([$firstIndexed, $secondIndexed])->toString(Format::Pgs));
+    }
+
+
+    public function testWritesAFull3840x2160IndexedImageInLessThan64MbOfMemory(): void
+    {
+        $indexes  = str_repeat("\1", 3840 * 1080) . str_repeat("\2", 3840 * 1080);
+        $image    = new CueImage(PngEncoder::encodeIndexed(3840, 2160, $indexes, [0, 0xFFFFFFFF, 0x000000FF]), 0, 0, 3840, 2160, 3840, 2160);
+        $subtitle = (new Subtitle())->addCue($image->toCue(new SubtitleCue(1.0, 2.0)));
+        unset($indexes);
+
+        memory_reset_peak_usage();
+        $before = memory_get_usage();
+        $subtitle->toString(Format::Pgs);
+
+        $this->assertLessThan(64 * 1024 * 1024, memory_get_peak_usage() - $before);
+        ["palette" => $palette, "indexes" => $copy] = PngDecoder::decodeIndexed(CueImage::fromCue(self::pgsRoundTrip($subtitle)->getCues()[0])->png);
+        $this->assertSame([0xFFFFFFFF, 0x000000FF], [$palette[ord($copy[0])], $palette[ord($copy[-1])]]);
     }
 
 
