@@ -21,10 +21,77 @@ class LineWrapperTest extends TestCase
     }
 
 
-    public function testKeepsCjkTextWithoutSpacesAsOneWord(): void
+    public function testBreaksCjkTextWithoutSpacesBetweenCharacters(): void
     {
-        $this->assertSame(["東京は今日とても暑いですね本当に"], LineWrapper::wrap(["東京は今日とても暑いですね本当に"], 10, 2));
-        $this->assertFalse(LineWrapper::fits(["東京は今日とても暑いですね本当に"], 10, 2));
+        $this->assertSame(["東京は今日とても", "暑いですね本当に"], LineWrapper::wrap(["東京は今日とても暑いですね本当に"], 10, 2));
+        $this->assertSame(["我们明天早上八点在火车站见面，", "然后一起坐车去北京看望奶奶。"],
+                          LineWrapper::wrap(["我们明天早上八点在火车站见面，然后一起坐车去北京看望奶奶。"], 16, 2));
+    }
+
+
+    public function testPrefersABreakAfterCjkPunctuationToEqualLines(): void
+    {
+        $this->assertSame(["今天的会议改到下午三点，", "请大家提前十分钟到三楼的会议室。"],
+                          LineWrapper::wrap(["今天的会议改到下午三点，请大家提前十分钟到三楼的会议室。"], 16, 2));
+        $this->assertSame(["朝ごはんが一日続く　", "公園はまだ温かい"], LineWrapper::wrap(["朝ごはんが一日続く　公園はまだ温かい"], 10, 2));
+    }
+
+
+    public function testNeverStartsALineWithClosingPunctuationSmallKanaOrTheLongVowelMark(): void
+    {
+        $this->assertSame(["スーパー", "マーケットへ"], LineWrapper::wrap(["スーパーマーケットへ"], 5, 2));
+        $this->assertSame(["ちょっ", "と"], LineWrapper::wrap(["ちょっと"], 3, 2));
+        $this->assertSame(["你好", "吗？"], LineWrapper::wrap(["你好吗？"], 3, 2));
+        $this->assertSame(["「あ」"], LineWrapper::wrap(["「あ」"], 1, 3));
+    }
+
+
+    public function testNeverEndsALineWithOpeningPunctuation(): void
+    {
+        $this->assertSame(["我们一起读", "《红楼梦》好吗"], LineWrapper::wrap(["我们一起读《红楼梦》好吗"], 6, 2));
+        $this->assertSame(["彼女は", "「はい」"], LineWrapper::wrap(["彼女は「はい」"], 3, 2));
+    }
+
+
+    public function testKeepsLinesOfOnlyPunctuationWhole(): void
+    {
+        $this->assertSame(["！？！？……"], LineWrapper::wrap(["！？！？……"], 2, 3));
+        $this->assertSame(["。。。。"], LineWrapper::wrap(["。。。。"], 2, 2));
+        $this->assertSame(["「」"], LineWrapper::wrap(["「」"], 1, 2));
+    }
+
+
+    public function testBreaksLatinWordsInCjkTextOnlyAtSpaces(): void
+    {
+        $this->assertSame(["明天的会议用Zoom开，", "链接我稍后发到群里。"], LineWrapper::wrap(["明天的会议用Zoom开，链接我稍后发到群里。"], 12, 2));
+        $this->assertSame(["我们用WhatsApp联系吧"], LineWrapper::wrap(["我们用WhatsApp联系吧"], 2, 1));
+        $this->assertSame(["我们", "用WhatsApp联", "系吧"], LineWrapper::wrap(["我们用WhatsApp联系吧"], 2, 3));
+        $this->assertSame(["新しい Windows", "の設定が分からない"], LineWrapper::wrap(["新しい Windows の設定が分からない"], 14, 2));
+    }
+
+
+    public function testBreaksKoreanTextOnlyAtSpaces(): void
+    {
+        $this->assertSame(["내일 아침 여덟 시에", "기차역에서 만나요"], LineWrapper::wrap(["내일 아침 여덟 시에 기차역에서 만나요"], 12, 2));
+        $this->assertSame(["기차역에서만나요기차역에서만나요"], LineWrapper::wrap(["기차역에서만나요기차역에서만나요"], 8, 2));
+    }
+
+
+    public function testKeepsTagsWithTheirCharactersAtABreakBetweenCjkCharacters(): void
+    {
+        $this->assertSame(["<i>东京</i>", "<b>大阪</b>"], LineWrapper::wrap(["<i>东京</i><b>大阪</b>"], 2, 2));
+        $this->assertSame(["<i>我们明天早上八点在火车站见面，</i>", "<i>然后一起坐车去北京。</i>"],
+                          LineWrapper::wrap(["<i>我们明天早上八点在火车站见面，然后一起坐车去北京。</i>"], 16, 2));
+    }
+
+
+    public function testJoinsCjkLinesWithoutASpace(): void
+    {
+        $this->assertSame(["这个周末我们一家人打算开车去海", "边度假，顺便看看那边的老朋友。"],
+                          LineWrapper::wrap(["这个周末我们一家人打算开车去海边度假，", "顺便看看那边的老朋友。"], 16, 2));
+        $this->assertSame(["我们明天早上八点在火车站见面，然后一起坐车去北京。", "- 好的。"],
+                          LineWrapper::unwrapTurns(["我们明天早上八点在火车站见面，", "然后一起坐车去北京。", "- 好的。"]));
+        $this->assertSame(["用Zoom 开会", "東京 Tokyo"], [...LineWrapper::unwrapTurns(["用Zoom", "开会"]), ...LineWrapper::unwrapTurns(["東京", "Tokyo"])]);
     }
 
 
