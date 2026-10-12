@@ -19,3 +19,4 @@
 | `expected/mantas-done-lrc.lrc.out.lrc` | Generated for this repository. Expected `LyricsFormatter` output for `mantas-done-lrc.lrc`: a space after each time tag, a final line end | MIT |
 | `expected/own-comment-before-earlier-line.lrc.out.lrc` | Generated for this repository. Expected `LyricsFormatter` output for `own-comment-before-earlier-line.lrc`: lines in time order with each comment before its line | MIT |
 | `expected/subsrt-sample.lrc.out.lrc` | Generated for this repository. Expected `LyricsFormatter` output for `subsrt-sample.lrc`: `[ti:]` first, a space after each time tag, no empty lines | MIT |
+| `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |

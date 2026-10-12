@@ -318,7 +318,8 @@ class FormatDetectorTest extends TestCase
         foreach (self::NOT_DETECTED_DIRECTORIES as $directory) {
             $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(self::DIR . $directory, \FilesystemIterator::SKIP_DOTS));
             foreach ($iterator as $file) {
-                if ($file->getExtension() !== "md") {
+                // A conversion golden "<file>.to.<format>" holds another format.
+                if ($file->getExtension() !== "md" && !str_contains($file->getFilename(), ".to.")) {
                     $name            = substr($file->getPathname(), strlen(self::DIR));
                     $fixtures[$name] = [$name];
                 }

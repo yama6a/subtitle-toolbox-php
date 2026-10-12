@@ -16,3 +16,4 @@ No permissively licensed project ships Whisper JSON output with neutral text. So
 | `whisper_cpp_ojf_split_utf8.json` | Written for this repository in the shape of whisper.cpp `-ojf` before the fix for [issue #1798](https://github.com/ggml-org/whisper.cpp/issues/1798). The first character is split across two tokens, so the token texts hold invalid UTF-8 | MIT |
 | `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
 | `expected/*.out.json` | Generated for this repository. Expected output of the file with the same name, read and written as Whisper JSON by `tests/files/generate-write-goldens.php` | MIT |
+| `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |

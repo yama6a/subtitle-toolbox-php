@@ -9,3 +9,4 @@
 | `subviewer1_delay.sub` | Written for this repository in the shape of the SubViewer 1 example in https://github.com/yama6a/subtitle-toolbox/issues/73, with a `[DELAY]` and cues without an end line | MIT |
 | `own_max_delay.sub` | Written for this repository. SubViewer 1 with a `[DELAY]` of 359999990 seconds, so the last cue ends at 99999:59:59 | MIT |
 | `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
+| `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |

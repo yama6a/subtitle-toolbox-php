@@ -18,7 +18,7 @@ use SubtitleToolbox\Tests\Support\WriteGoldens;
 class WriteGoldensTest extends TestCase
 {
     /**
-     * @return array<string, array{string, Format, Format, string}>
+     * @return array<string, array{string, Format, Format, string, ReadOptions}>
      */
     public static function goldens(): array
     {
@@ -27,19 +27,24 @@ class WriteGoldensTest extends TestCase
 
 
     #[DataProvider("goldens")]
-    public function testTheOutputMatchesTheGolden(string $path, Format $inputFormat, Format $outputFormat, string $golden): void
+    public function testTheOutputMatchesTheGolden(string $path, Format $inputFormat, Format $outputFormat, string $golden, ReadOptions $options): void
     {
-        $this->assertMatchesGolden($path, $golden, WriteGoldens::render($path, $inputFormat, $outputFormat));
+        $this->assertMatchesGolden($path, $golden, WriteGoldens::render($path, $inputFormat, $outputFormat, $options));
     }
 
 
-    #[DataProvider("goldens")]
-    public function testTheDefaultReadOptionsGiveTheSameRoundTrip(string $path, Format $inputFormat, Format $outputFormat, string $golden): void
+    /**
+     * @return array<string, array{string, Format, Format, string, ReadOptions}>
+     */
+    public static function roundTrips(): array
     {
-        if ($inputFormat !== $outputFormat) {
-            $this->markTestSkipped("A conversion is no round trip.");
-        }
+        return array_filter(WriteGoldens::cases(), fn (array $case): bool => $case[1] === $case[2]);
+    }
 
+
+    #[DataProvider("roundTrips")]
+    public function testTheDefaultReadOptionsGiveTheSameRoundTrip(string $path, Format $inputFormat, Format $outputFormat, string $golden, ReadOptions $options): void
+    {
         $this->assertMatchesGolden($path, $golden, WriteGoldens::render($path, $inputFormat, $outputFormat, new ReadOptions()));
     }
 

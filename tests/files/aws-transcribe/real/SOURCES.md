@@ -8,3 +8,4 @@ Amazon Transcribe output of real recordings holds the words of their speakers. S
 | `weather_items_only.json` | Written for this repository in the shape of the [example output](https://docs.aws.amazon.com/transcribe/latest/dg/how-input.html#how-it-works-output) without `audio_segments`, as older transcripts have it. A pause of 1.24 s inside a sentence, and a sentence of 103 characters | MIT |
 | `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
 | `expected/*.out.json` | Generated for this repository. Expected output of the file with the same name, read and written as Amazon Transcribe JSON by `tests/files/generate-write-goldens.php` | MIT |
+| `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |
