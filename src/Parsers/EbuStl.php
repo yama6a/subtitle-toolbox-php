@@ -55,6 +55,12 @@ final class EbuStl
 
     public const FRAME_RATES = ["STL25.01" => 25, "STL30.01" => 30];
 
+    // The DSC (Display Standard Code) values of teletext level 1 and level 2.
+    public const TELETEXT_DISPLAY_CODES = ["1", "2"];
+
+    // The CCT (Character Code Table) of the Latin alphabet, ISO 6937. It is the only table with diacritic bytes.
+    public const CCT_LATIN = "00";
+
     // EBU Tech 3264 section 4.2.2 and appendix 1.
     public const GSI_CODE_PAGES = [
         "437" => CodePage::CP_437,
@@ -66,11 +72,11 @@ final class EbuStl
 
     // EBU Tech 3264 section 4.2.2 and appendix 2. Table 00 is ISO 6937.
     public const CHARACTER_CODE_TABLES = [
-        "00" => null,
-        "01" => CodePage::ISO_8859_5,
-        "02" => CodePage::ISO_8859_6,
-        "03" => CodePage::ISO_8859_7,
-        "04" => CodePage::ISO_8859_8,
+        self::CCT_LATIN => null,
+        "01"            => CodePage::ISO_8859_5,
+        "02"            => CodePage::ISO_8859_6,
+        "03"            => CodePage::ISO_8859_7,
+        "04"            => CodePage::ISO_8859_8,
     ];
 
     // The language codes of EBU Tech 3264 appendix 3 as BCP 47 tags. Codes without a tag are left out.
@@ -139,7 +145,7 @@ final class EbuStl
      */
     public static function maxRow(array $gsi): int
     {
-        if (in_array($gsi["DSC"] ?? "", ["1", "2"], true)) {
+        if (in_array($gsi["DSC"] ?? "", self::TELETEXT_DISPLAY_CODES, true)) {
             return self::TELETEXT_MAX_ROW;
         }
 
