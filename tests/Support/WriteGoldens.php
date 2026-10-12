@@ -24,6 +24,7 @@ final class WriteGoldens
         "aws-transcribe" => Format::AwsTranscribe,
         "deepgram"       => Format::Deepgram,
         "assemblyai"     => Format::AssemblyAi,
+        "google-speech"  => Format::GoogleSpeech,
     ];
 
     /**

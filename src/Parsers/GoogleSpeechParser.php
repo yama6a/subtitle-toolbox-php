@@ -56,7 +56,24 @@ final class GoogleSpeechParser extends SubtitleParser
             }
         }
 
+        if ($diarized) {
+            $fileData["results"] = [self::withoutWords($results[$lastIndex])];
+        }
+
         return $this->transcript($cues, $language, $fileData + array_diff_key($data, ["results" => true]));
+    }
+
+
+    /**
+     * Returns the fields of a result and of its first alternative, without the transcript and the words.
+     */
+    private static function withoutWords(mixed $result): mixed
+    {
+        if (!is_array($result) || !is_array($result["alternatives"][0] ?? null)) {
+            return $result;
+        }
+
+        return ["alternatives" => [array_diff_key($result["alternatives"][0], ["transcript" => true, "words" => true])]] + $result;
     }
 
 
@@ -80,7 +97,7 @@ final class GoogleSpeechParser extends SubtitleParser
             }
             $previousEnd = $resultEnd;
 
-            $formatData = array_diff_key($result, ["alternatives" => true]) + array_diff_key($alternative ?? [], ["transcript" => true]);
+            $formatData = array_diff_key($result, ["alternatives" => true]) + ($alternative ?? []);
             $cue        = $this->cue($start, $end, $text, $words, null, $formatData, $index, $result);
             if ($cue !== null) {
                 $cues[] = $cue;

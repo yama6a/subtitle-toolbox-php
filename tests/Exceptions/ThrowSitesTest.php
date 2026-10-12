@@ -400,6 +400,12 @@ class ThrowSitesTest extends TestCase
             "Formatters/Options/EbuStlWriteOptions.php: frame rate 24" => [fn () => new EbuStlWriteOptions(frameRate: 24), ...$invalid],
             "Formatters/Options/IttWriteOptions.php: frame rate 50" => [fn () => new IttWriteOptions(frameRate: 50), ...$invalid],
             "Formatters/Options/MpSubWriteOptions.php: frame rate 23.976" => [fn () => new MpSubWriteOptions(frameRate: 23.976), ...$invalid],
+            "Formatters/GoogleSpeechFormatter.php: diarized cue without words" => [function (): string {
+                $subtitle = Subtitle::load(self::FILES . "google-speech/real/restaurant_v2_diarization.json", Format::GoogleSpeech);
+                $subtitle->getCues()[0]->setLines("Hello");
+
+                return $subtitle->toString(Format::GoogleSpeech);
+            }, ...$unwritable],
             "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: negative x"       => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), -1, 0, 1, 1, 9, 9))
                 ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],

@@ -8,6 +8,17 @@
         "comments": [],
         "formatData": {
             "google-speech": {
+                "results": [
+                    {
+                        "alternatives": [
+                            {
+                                "confidence": 0.92142606
+                            }
+                        ],
+                        "resultEndOffset": "12.260s",
+                        "languageCode": "en-us"
+                    }
+                ],
                 "metadata": {
                     "totalBilledDuration": "11s",
                     "requestId": "3f2e1d0c-9b8a-4766-8554-43322110ffee"

@@ -73,6 +73,7 @@ class RubyFallbackTest extends TestCase
             "Amazon Transcribe"   => [Format::AwsTranscribe, new WriteOptions()],
             "Deepgram"            => [Format::Deepgram, new WriteOptions()],
             "AssemblyAI"          => [Format::AssemblyAi, new WriteOptions()],
+            "Google"              => [Format::GoogleSpeech, new WriteOptions()],
         ];
     }
 
