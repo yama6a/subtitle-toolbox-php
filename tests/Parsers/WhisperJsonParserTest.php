@@ -14,17 +14,17 @@ use SubtitleToolbox\SubtitleCue;
 
 class WhisperJsonParserTest extends TestCase
 {
-    private const ISSUE_EXAMPLE = <<<'JSON'
+    private const TWO_SEGMENTS_WITH_WORDS = <<<'JSON'
         {
-          "task": "transcribe",
-          "language": "english",
-          "duration": 8.47,
-          "text": "The beach was quiet. Nobody came.",
-          "segments": [
+                    "task": "transcribe",
+                    "language": "english",
+                    "duration": 8.47,
+                    "text": "The beach was quiet. Nobody came.",
+                    "segments": [
             {"id": 0, "start": 0.0, "end": 3.32, "text": " The beach was quiet."},
             {"id": 1, "start": 3.9, "end": 5.1, "text": " Nobody came."}
           ],
-          "words": [
+                    "words": [
             {"word": "The", "start": 0.0, "end": 0.24},
             {"word": "beach", "start": 0.24, "end": 0.71}
           ]
@@ -38,9 +38,9 @@ class WhisperJsonParserTest extends TestCase
     }
 
 
-    public function testReadsTheIssueExampleOneCuePerSegment(): void
+    public function testReadsOneCuePerSegmentAndKeepsTheFieldsAsFormatData(): void
     {
-        $subtitle = Subtitle::fromStringAutoDetectFormat(self::ISSUE_EXAMPLE);
+        $subtitle = Subtitle::fromStringAutoDetectFormat(self::TWO_SEGMENTS_WITH_WORDS);
 
         $this->assertSame("en", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame(["format" => "openai-api", "task" => "transcribe", "language" => "english", "duration" => 8.47],
@@ -54,7 +54,7 @@ class WhisperJsonParserTest extends TestCase
 
     public function testWritesWordTimestampsWithTheOption(): void
     {
-        $this->assertSame("<00:00:00.000>The <00:00:00.240>beach was quiet.", self::withWords(self::ISSUE_EXAMPLE)->getCues()[0]->getText());
+        $this->assertSame("<00:00:00.000>The <00:00:00.240>beach was quiet.", self::withWords(self::TWO_SEGMENTS_WITH_WORDS)->getCues()[0]->getText());
     }
 
 

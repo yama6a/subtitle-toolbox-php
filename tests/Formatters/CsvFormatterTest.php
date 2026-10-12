@@ -32,7 +32,7 @@ class CsvFormatterTest extends TestCase
     }
 
 
-    public function testWritesTheIssueExampleWithABom(): void
+    public function testWritesSpeakersAndAQuotedLineBreakWithABom(): void
     {
         $this->assertSame(
             self::BOM . "start,end,speaker,text\n" .

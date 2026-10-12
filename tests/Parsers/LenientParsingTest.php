@@ -962,7 +962,7 @@ class LenientParsingTest extends TestCase
     }
 
 
-    public function testTheExampleOfTheIssueKeepsCuesOneAndThree(): void
+    public function testBrokenArrowSkipsOnlyThatCue(): void
     {
         $content = "1\n00:00:01,000 --> 00:00:04,000\nHello\n\n" .
                    "2\n00:00:05,000 => 00:00:07,000\nBroken arrow\n\n" .

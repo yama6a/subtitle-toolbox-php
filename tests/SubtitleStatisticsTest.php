@@ -26,7 +26,7 @@ class SubtitleStatisticsTest extends TestCase
     }
 
 
-    public function testOwnFile(): void
+    public function testStatisticsOfAFourCueFile(): void
     {
         $subtitle   = Subtitle::fromString(file_get_contents(self::FILES . "/statistics/own_bakery.srt"), Format::SubRip);
         $statistics = SubtitleStatistics::of($subtitle);

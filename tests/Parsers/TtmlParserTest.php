@@ -34,7 +34,7 @@ class TtmlParserTest extends TestCase
     }
 
 
-    public function testIssueExample(): void
+    public function testReadsBeginEndDurItalicSpanAndLanguage(): void
     {
         $subtitle = Subtitle::fromString(
             "<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:tts=\"http://www.w3.org/ns/ttml#styling\" xml:lang=\"en\">\n"

@@ -13,16 +13,16 @@ use SubtitleToolbox\WriteOptions;
 
 class TtmlFormatterTest extends TestCase
 {
-    private const ISSUE_EXAMPLE = "<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:tts=\"http://www.w3.org/ns/ttml#styling\" xml:lang=\"en\">\n"
-                                  . "  <body>\n    <div>\n"
-                                  . "      <p begin=\"00:00:01.500\" end=\"00:00:04.000\">Hello<br/><span tts:fontStyle=\"italic\">world</span></p>\n"
-                                  . "      <p begin=\"5s\" dur=\"2500ms\">Second cue</p>\n"
-                                  . "    </div>\n  </body>\n</tt>";
+    private const TWO_PARAGRAPHS = "<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:tts=\"http://www.w3.org/ns/ttml#styling\" xml:lang=\"en\">\n"
+                                   . "  <body>\n    <div>\n"
+                                   . "      <p begin=\"00:00:01.500\" end=\"00:00:04.000\">Hello<br/><span tts:fontStyle=\"italic\">world</span></p>\n"
+                                   . "      <p begin=\"5s\" dur=\"2500ms\">Second cue</p>\n"
+                                   . "    </div>\n  </body>\n</tt>";
 
 
-    public function testIssueExampleIsWrittenBack(): void
+    public function testTwoParagraphsAreWrittenBack(): void
     {
-        $subtitle = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::Ttml);
+        $subtitle = Subtitle::fromString(self::TWO_PARAGRAPHS, Format::Ttml);
 
         $this->assertSame(
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
@@ -119,7 +119,7 @@ class TtmlFormatterTest extends TestCase
 
     public function testAllXmlTagsAreStrippedAwayIfOptionIsSet(): void
     {
-        $subtitle = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::Ttml);
+        $subtitle = Subtitle::fromString(self::TWO_PARAGRAPHS, Format::Ttml);
 
         $this->assertStringContainsString(
             "<p begin=\"00:00:01.500\" end=\"00:00:04.000\">Hello<br/>world</p>",

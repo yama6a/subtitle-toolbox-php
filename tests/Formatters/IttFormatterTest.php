@@ -41,7 +41,7 @@ class IttFormatterTest extends TestCase
     }
 
 
-    public function testIssueExampleIsWrittenWithSmpteTimes(): void
+    public function testSmpteTtmlIsWrittenWithSmpteTimes(): void
     {
         $ttml = "<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:ttp=\"http://www.w3.org/ns/ttml#parameter\""
                 . " xmlns:tts=\"http://www.w3.org/ns/ttml#styling\" xml:lang=\"en\""

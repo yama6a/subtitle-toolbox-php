@@ -19,9 +19,9 @@ use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class SccParserTest extends TestCase
 {
-    private const ISSUE_EXAMPLE = "Scenarist_SCC V1.0\n\n"
-                                  . "00:00:01;12\t9420 9420 94ae 94ae 9452 9452 97a1 97a1 c8e5 ecec efa1 942f 942f\n\n"
-                                  . "00:00:04;00\t942c 942c\n";
+    private const POP_ON_HELLO = "Scenarist_SCC V1.0\n\n"
+                                 . "00:00:01;12\t9420 9420 94ae 94ae 9452 9452 97a1 97a1 c8e5 ecec efa1 942f 942f\n\n"
+                                 . "00:00:04;00\t942c 942c\n";
 
 
     /**
@@ -77,9 +77,9 @@ class SccParserTest extends TestCase
     }
 
 
-    public function testIssueExample(): void
+    public function testPopOnCaptionGetsItsTimesRowAndColumn(): void
     {
-        $subtitle = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::Scc);
+        $subtitle = Subtitle::fromString(self::POP_ON_HELLO, Format::Scc);
         $cue      = $subtitle->getCues()[0];
 
         $this->assertCount(1, $subtitle->getCues());

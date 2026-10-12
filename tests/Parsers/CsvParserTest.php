@@ -29,7 +29,7 @@ class CsvParserTest extends TestCase
     }
 
 
-    public function testReadsTheIssueExample(): void
+    public function testReadsSpeakersAndAQuotedLineBreak(): void
     {
         $csv = "start,end,speaker,text\n" .
                "00:00:01.000,00:00:04.000,Anna,\"Where are you going?\"\n" .

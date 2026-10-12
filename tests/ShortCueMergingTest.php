@@ -19,7 +19,7 @@ class ShortCueMergingTest extends TestCase
     }
 
 
-    public function testIssueExample(): void
+    public function testThreeShortCuesWithSmallGapsBecomeOneCue(): void
     {
         $subtitle = Subtitle::fromString("12\n00:01:02,100 --> 00:01:02,600\nWait.\n\n" .
                                     "13\n00:01:02,640 --> 00:01:03,300\nWhere are you\n\n" .

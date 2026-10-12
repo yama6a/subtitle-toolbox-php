@@ -42,7 +42,7 @@ class ProfanityFilterTest extends TestCase
     }
 
 
-    public function testIssueExample(): void
+    public function testFirstLetterMaskKeepsWordTimestampsAndPadsTheMuteRange(): void
     {
         $subtitle = Subtitle::fromString("WEBVTT\n\n00:01:02.000 --> 00:01:04.000\n" .
                                     "<00:01:02.000>What <00:01:02.300>the <00:01:02.480>hell <00:01:02.800>is this?\n",

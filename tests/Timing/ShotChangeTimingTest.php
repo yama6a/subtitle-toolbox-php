@@ -38,7 +38,7 @@ class ShotChangeTimingTest extends TestCase
     }
 
 
-    public function testRealFile(): void
+    public function testSnapsTheCuesOfARealFileToFfmpegShotChanges(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_garden_24fps.srt"), Format::SubRip);
         $cues     = $subtitle->getCues();

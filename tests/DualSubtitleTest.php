@@ -93,7 +93,7 @@ class DualSubtitleTest extends TestCase
     }
 
 
-    public function testStackJoinsTheIssueExample(): void
+    public function testStackPutsTheSecondaryCueInItalicsUnderThePrimaryCue(): void
     {
         $english = TestSubtitles::fromCues([[1, 4, "Where are you going?"]]);
         $german  = TestSubtitles::fromCues([[1.2, 3.9, "Wohin gehst du?"]]);

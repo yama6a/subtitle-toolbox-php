@@ -150,7 +150,7 @@ class WebVttParserTest extends TestCase
     }
 
 
-    public function testIssueExampleParses(): void
+    public function testReadsHeaderRegionNoteIdentifierAndCueSettings(): void
     {
         $raw = "WEBVTT Episode 1\nKind: captions\nLanguage: en\n\n"
                . "REGION\nid:fred\nwidth:40%\nlines:3\nregionanchor:0%,100%\nviewportanchor:10%,90%\nscroll:up\n\n"

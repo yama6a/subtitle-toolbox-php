@@ -74,7 +74,7 @@ class HlsWebVttSegmenterTest extends TestCase
     }
 
 
-    public function testSegmentWritesTheIssueExample(): void
+    public function testSegmentWritesTheSegmentsDurationsAndPlaylist(): void
     {
         $hls = HlsWebVttSegmenter::segment($this->ferry(), new HlsSegmentOptions(segmentDuration: 6, mpegts: 900000));
 
