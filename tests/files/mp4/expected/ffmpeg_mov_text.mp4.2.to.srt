@@ -4,7 +4,7 @@ The ferry to the island leaves at nine.
 
 2
 00:00:04,500 --> 00:00:07,250
-Tickets are sold
+<i>Tickets are sold</i>
 at the kiosk by the pier.
 
 3

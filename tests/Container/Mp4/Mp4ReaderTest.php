@@ -40,6 +40,7 @@ class Mp4ReaderTest extends TestCase
         $subtitle = Mp4Reader::open(self::DIR . "ffmpeg_mov_text.mp4")->extract(2);
 
         $this->assertStringEqualsFile(self::DIR . "expected/ffmpeg_mov_text.mp4.2.srt", $subtitle->toString(Format::SubRip, new WriteOptions(bom: false)));
+        $this->assertFileEquals(self::DIR . "../mkv/muxed/harbour.srt", self::DIR . "expected/ffmpeg_mov_text.mp4.2.srt");
     }
 
 
@@ -68,7 +69,7 @@ class Mp4ReaderTest extends TestCase
             [
                 [1.0, 3.5, ["The tram to the old town leaves from stop 3."]],
                 [4.0, 7.0, ["Tickets are sold", "at the machine."]],
-                [7.0, 9.0, ["Bold words here."]],
+                [7.0, 9.0, ["<b>Bold</b> words here."]],
                 [10.0, 12.25, ["Café at the corner, 2 € a cup."]],
                 [12.25, 14.0, ["Line one", "Line two"]],
             ],
@@ -271,6 +272,66 @@ class Mp4ReaderTest extends TestCase
             "id" => 1, "handler" => "sbtl", "entry" => Mp4FixtureWriter::tx3gEntry(), "perChunk" => 1,
             "samples" => [[1000, $sample ?? Mp4FixtureWriter::textSample("The shop is closed.")]],
         ]], true)));
+    }
+
+
+    /**
+     * @param list<array{int, int, int}> $records start character, end character and face style flags
+     */
+    private static function styl(array $records, ?int $count = null): string
+    {
+        $data = pack("n", $count ?? count($records));
+        foreach ($records as [$start, $end, $flags]) {
+            $data .= pack("nnnCCN", $start, $end, 1, $flags, 16, 0xFFFFFFFF);
+        }
+
+        return Mp4FixtureWriter::box("styl", $data);
+    }
+
+
+    /**
+     * The first 2 samples hold the styl records that ffmpeg 7.0.2 writes for the SubRip cues
+     * "Café <i>au lait</i>\n<b>naïve</b> <u>test</u>" and "<b><i>both</i></b> plain <i>over\nlines</i>".
+     */
+    public static function styledSamples(): array
+    {
+        return [
+            "italic, bold and underline after a 2-byte character" => [
+                Mp4FixtureWriter::textSample("Café au lait\nnaïve test", self::styl([[5, 12, 2], [13, 18, 1], [19, 23, 4]])),
+                ["Café <i>au lait</i>", "<b>naïve</b> <u>test</u>"],
+            ],
+            "bold italic, and italic over a line break"           => [
+                Mp4FixtureWriter::textSample("both plain over\nlines", self::styl([[0, 4, 3], [11, 21, 2]])),
+                ["<b><i>both</i></b> plain <i>over", "lines</i>"],
+            ],
+            "CR LF counts as 2 characters"                        => [
+                Mp4FixtureWriter::textSample("one\r\ntwo", self::styl([[5, 8, 2]])),
+                ["one", "<i>two</i>"],
+            ],
+            "a run past the text and an overlapping run"          => [
+                Mp4FixtureWriter::textSample("left right", self::styl([[0, 6, 1], [3, 99, 2]])),
+                ["<b>left r</b><i>ight</i>"],
+            ],
+            "a record count above the records in the box"         => [
+                Mp4FixtureWriter::textSample("left right", self::styl([[0, 4, 1]], 9)),
+                ["<b>left</b> right"],
+            ],
+            "a font style without bold, italic or underline"      => [
+                Mp4FixtureWriter::textSample("left right", self::styl([[0, 4, 0x08]])),
+                ["left right"],
+            ],
+            "a damaged box before the styl box"                   => [
+                Mp4FixtureWriter::textSample("left right", pack("N", 3) . "hlit" . self::styl([[0, 4, 1]])),
+                ["left right"],
+            ],
+        ];
+    }
+
+
+    #[DataProvider("styledSamples")]
+    public function testReadsTheStylBoxAsBoldItalicAndUnderlineTags(string $sample, array $lines): void
+    {
+        $this->assertSame($lines, self::oneTrack([], $sample)->extract(1)->getCues()[0]->getLines());
     }
 
 
