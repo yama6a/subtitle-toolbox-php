@@ -58,8 +58,13 @@ try {
 `UnwritableContentException` covers these cases:
 
 - More than 4 lines or 32 characters per line in SCC.
+- A character that CEA-608 cannot show in SCC, for example `日`.
 - A cue without an image in PGS.
+- An image position or size above 65535 in PGS.
+- A PNG in PGS output whose size differs from the size in the image data of its cue, for example a 2x2 PNG for a 720x80 image.
+- A cue time after 13:15:21.858 in PGS, the limit of its 32-bit time stamps of 90 kHz.
 - A subtitle number over 65535 in EBU STL.
+- Cue text that needs more than 241 TTI blocks of 112 bytes in EBU STL.
 - Text that is not UTF-8 in a JSON format.
 - Text that is not UTF-8 in TTML, iTT or SAMI output.
 - A stored TTML head that is not valid XML.
