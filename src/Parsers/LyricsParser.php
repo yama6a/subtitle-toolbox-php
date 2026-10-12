@@ -213,8 +213,15 @@ final class LyricsParser extends SubtitleParser
     }
 
 
+    /**
+     * Enhanced LRC can write a space on both sides of a word time, as in "<00:03.20> Slow <00:03.75> river".
+     * These spaces only separate the time from the words, so the parser drops them.
+     */
     private function convertWordTimestamps(string $text, float $offset): string
     {
+        $wordTime = "(<" . self::TIMESTAMP_PATTERN . ">)";
+        $text     = preg_replace(["/{$wordTime}[ \\t]+/", "/[ \\t]+{$wordTime}$/"], '$1', $text) ?? $text;
+
         return preg_replace_callback(
             "/<" . self::TIMESTAMP_PATTERN . ">|[^<]+|</",
             fn (array $matches): string => isset($matches[2])

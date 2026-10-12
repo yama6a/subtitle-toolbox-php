@@ -344,6 +344,23 @@ class LyricsParserTest extends TestCase
     }
 
 
+    public function testSpacesAroundWordTimestampsSeparateTheWords(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/lrc/real/handwritten-enhanced.lrc"), Format::Lyrics);
+
+        $this->assertSame("<00:00:03.000>Slow <00:00:03.550>river <00:00:04.400>runs", $subtitle->getCues()[0]->getText());
+        $this->assertStringContainsString("\nSlow river runs\n", $subtitle->toString(Format::SubRip));
+    }
+
+
+    public function testSpaceBeforeAWordTimestampAtTheLineEndIsDropped(): void
+    {
+        $subtitle = Subtitle::fromString("[00:01.00] <00:01.00> Fish <00:01.50> chips <00:02.00>\n", Format::Lyrics);
+
+        $this->assertSame("<00:00:01.000>Fish <00:00:01.500>chips<00:00:02.000>", $subtitle->getCues()[0]->getText());
+    }
+
+
     public function testPlainTextIsEscaped(): void
     {
         $subtitle = Subtitle::fromString("[00:01.00]I <3 bread & jam\n", Format::Lyrics);
@@ -417,8 +434,8 @@ class LyricsParserTest extends TestCase
             "handwritten-enhanced" => [
                 "handwritten-enhanced.lrc",
                 3,
-                [3.0, 5.9, "<00:00:03.000> Slow <00:00:03.550> river <00:00:04.400> runs"],
-                [9.6, 14.6, "<00:00:09.600> Into <00:00:10.100> the <00:00:10.650> sea"],
+                [3.0, 5.9, "<00:00:03.000>Slow <00:00:03.550>river <00:00:04.400>runs"],
+                [9.6, 14.6, "<00:00:09.600>Into <00:00:10.100>the <00:00:10.650>sea"],
             ],
         ];
     }

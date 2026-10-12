@@ -59,7 +59,7 @@ class WordTimestampRetimingTest extends TestCase
     {
         $subtitle = self::load("lrc/real/handwritten-enhanced.lrc", Format::Lyrics)->scale(2);
 
-        $this->assertStringContainsString("[00:06.00] <00:06.00> Slow <00:07.10> river <00:08.80> runs\n",
+        $this->assertStringContainsString("[00:06.00] <00:06.00>Slow <00:07.10>river <00:08.80>runs\n",
                                           $subtitle->toString(Format::Lyrics));
     }
 
