@@ -122,6 +122,34 @@ class CueEditingTest extends TestCase
     }
 
 
+    /** @return array<string, array{float, string}> */
+    public static function offsetsBeyondTheTimeLimit(): array
+    {
+        return [
+            "huge" => [1e300, "The retimed cue 1 would end at 1.0E+300 s. Cue times must be below 100000 hours."],
+            "NAN"  => [NAN, "The merge offset must be a finite number of seconds, got NAN."],
+            "INF"  => [INF, "The merge offset must be a finite number of seconds, got INF."],
+        ];
+    }
+
+
+    #[DataProvider("offsetsBeyondTheTimeLimit")]
+    public function testMergeBeyondTheTimeLimitThrowsAndKeepsTheSubtitle(float $offset, string $message): void
+    {
+        $part1  = Subtitle::fromString(file_get_contents(self::DIR . "film_part1.srt"), Format::SubRip);
+        $part2  = Subtitle::fromString(file_get_contents(self::DIR . "film_part2.srt"), Format::SubRip);
+        $before = $part1->toString(Format::SubRip);
+
+        try {
+            $part1->merge($part2, $offset);
+            $this->fail("No exception.");
+        } catch (InvalidArgumentException $exception) {
+            $this->assertSame($message, $exception->getMessage());
+        }
+        $this->assertSame($before, $part1->toString(Format::SubRip));
+    }
+
+
     public function testMergeClampsNegativeTimesToZero(): void
     {
         $subtitle = (new Subtitle())->merge(TestSubtitles::fromCues([[1, 3, "one"]]), -2);

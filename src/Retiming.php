@@ -153,21 +153,13 @@ trait Retiming
 
     /**
      * Checks every cue before it changes one, so that the subtitle keeps its times when it throws.
-     * The formatters cast times to int milliseconds, which fails far above MAX_HOURS.
      *
      * @param array<int, SubtitleCue> $cues
      * @param callable(float): float $map increases with the time
      */
     private function retimingMapTimes(array $cues, callable $map): self
     {
-        foreach ($cues as $index => $cue) {
-            $end = $map(max($cue->getStart(), $cue->getEnd()));
-            if (!($end < Timecode::MAX_HOURS * 3600)) {
-                throw new InvalidArgumentException(
-                    "The retimed cue " . ($index + 1) . " would end at $end s. Cue times must be below " . Timecode::MAX_HOURS . " hours."
-                );
-            }
-        }
+        CueList::checkTimeLimit($cues, $map);
         foreach ($cues as $cue) {
             $cue->mapTimes($map);
         }
