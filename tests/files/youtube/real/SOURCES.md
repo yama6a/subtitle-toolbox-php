@@ -15,3 +15,5 @@ The captions of real videos belong to their authors. So every file here is writt
 | `missing-d.en.srv3` | Written for this repository in the shape of srv3 `<timedtext format="3">` XML with `t` and `d` in milliseconds: a middle and a last `<p>` without `d`, and one with `d="0"` | MIT |
 | `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
 | `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |
+| `expected/auto.en.json3.out.json3`, `expected/manual.en.json3.out.json3` | Generated for this repository. Expected `YouTubeTimedTextFormatter` output for the file with the same name: the same JSON data and key order, without the indents of YouTube | MIT |
+| `expected/blank-lines.en.srv3.out.srv3` | Generated for this repository. Expected `YouTubeTimedTextFormatter` output for `blank-lines.en.srv3`: the same XML without the empty lines and the indent before the XML declaration | MIT |

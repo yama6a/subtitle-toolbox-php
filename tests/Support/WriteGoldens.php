@@ -37,6 +37,7 @@ final class WriteGoldens
         "deepgram"       => Format::Deepgram,
         "assemblyai"     => Format::AssemblyAi,
         "google-speech"  => Format::GoogleSpeech,
+        "youtube"        => Format::YouTubeTimedText,
     ];
 
     /**
@@ -67,7 +68,7 @@ final class WriteGoldens
     /**
      * The transcript formats that get a conversion golden of each file in TRANSCRIPT_CONVERSIONS.
      */
-    private const TRANSCRIPT_TARGETS = [Format::Whisper, Format::AwsTranscribe, Format::Deepgram, Format::AssemblyAi, Format::GoogleSpeech];
+    private const TRANSCRIPT_TARGETS = [Format::Whisper, Format::AwsTranscribe, Format::Deepgram, Format::AssemblyAi, Format::GoogleSpeech, Format::YouTubeTimedText];
 
     /**
      * The real files under tests/files that get a conversion golden in each format of TRANSCRIPT_TARGETS.
