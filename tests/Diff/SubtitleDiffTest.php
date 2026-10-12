@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class SubtitleDiffTest extends TestCase
@@ -212,5 +213,61 @@ class SubtitleDiffTest extends TestCase
         $this->assertSame([CueDifferenceKind::TextChanged, 149, 149], $summary[149]);
         $this->assertSame([CueDifferenceKind::Removed, 150, null], $summary[150]);
         $this->assertSame([CueDifferenceKind::TextChanged, 151, 150], $summary[151]);
+    }
+
+
+    /**
+     * Repeats the cues of $subtitle every 45 s and adds one cue over the whole file before them.
+     */
+    private function repeatWithOverallCue(Subtitle $subtitle, int $copies): Subtitle
+    {
+        $cues = [new SubtitleCue(0, 45 * $copies, "Coastal train tour")];
+        for ($copy = 0; $copy < $copies; $copy++) {
+            foreach ($subtitle->getCues() as $cue) {
+                $cues[] = new SubtitleCue($cue->getStart() + 45 * $copy, $cue->getEnd() + 45 * $copy, $cue->getLines());
+            }
+        }
+
+        return TestSubtitles::fromCues($cues);
+    }
+
+
+    // A scan of every new cue for each old cue, and a pair for each 2 cues of the same text, run out of memory here.
+    public function testOneCueOverTheWholeFileAndTextsRepeatedFourHundredTimesCompareUnderFiveSeconds(): void
+    {
+        $original = $this->repeatWithOverallCue($this->load("own_original.srt"), 400);
+        $edited   = $this->repeatWithOverallCue($this->load("own_edited.srt"), 400);
+        $copy     = $this->summarize(SubtitleDiff::compare($this->load("own_original.srt"), $this->load("own_edited.srt")));
+        $expected = [];
+        for ($index = 0; $index < 400; $index++) {
+            foreach ($copy as [$kind, $oldIndex, $newIndex]) {
+                $expected[] = [$kind, $oldIndex === null ? null : 1 + 13 * $index + $oldIndex,
+                               $newIndex === null ? null : 1 + 14 * $index + $newIndex];
+            }
+        }
+
+        $start       = microtime(true);
+        $differences = SubtitleDiff::compare($original, $edited);
+
+        $this->assertLessThan(5, microtime(true) - $start);
+        $this->assertCount(5201, $original);
+        $this->assertSame($expected, $this->summarize($differences));
+    }
+
+
+    public function testThreeThousandCuesWithTheSameTextCompareUnderFiveSeconds(): void
+    {
+        $old = [];
+        $new = [];
+        for ($index = 0; $index < 3000; $index++) {
+            $old[] = [3 * $index, 3 * $index + 2, "[MUSIC]"];
+            $new[] = [3 * $index + 0.3, 3 * $index + 2.3, "[MUSIC]"];
+        }
+
+        $start   = microtime(true);
+        $summary = $this->summarize(SubtitleDiff::compare(TestSubtitles::fromCues($old), TestSubtitles::fromCues($new)));
+
+        $this->assertLessThan(5, microtime(true) - $start);
+        $this->assertSame(array_map(fn (int $index): array => [CueDifferenceKind::TimingChanged, $index, $index], range(0, 2999)), $summary);
     }
 }
