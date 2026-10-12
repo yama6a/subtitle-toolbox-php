@@ -36,7 +36,7 @@ final class MicroDvdParser extends SubtitleParser
         );
         $blockIndexes = array_flip(array_keys($rawLines));
 
-        $frameRate = $this->readFrameRate($rawLines);
+        [$frameRate, $hasFrameRateLine] = $this->readFrameRate($rawLines);
         try {
             $frames = new FrameRate($frameRate);
         } catch (InvalidArgumentException $exception) {
@@ -45,7 +45,7 @@ final class MicroDvdParser extends SubtitleParser
 
         $subtitle   = new Subtitle();
         $parsedCues = [];
-        $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["frameRate" => $frameRate]);
+        $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["frameRate" => $frameRate] + ($hasFrameRateLine ? ["frameRateLine" => true] : []));
         foreach ($rawLines as $lineIndex => $rawLine) {
             $lineNumber = $lineIndex + 1;
             try {
@@ -71,8 +71,9 @@ final class MicroDvdParser extends SubtitleParser
      * Returns the frame rate of the options or of the {1}{1}<fps> line, and removes that line from $rawLines.
      *
      * @param array<int, string> $rawLines
+     * @return array{float, bool} the frame rate and whether the file has the line
      */
-    private function readFrameRate(array &$rawLines): float
+    private function readFrameRate(array &$rawLines): array
     {
         // In lenient mode, the {1}{1}<fps> line can follow lines without frames.
         $firstLine = null;
@@ -86,19 +87,21 @@ final class MicroDvdParser extends SubtitleParser
         if ($firstLine !== null && preg_match('/^\{1\}\{1\}(\d+(?:\.\d+)?)$/', $rawLines[$firstLine], $matches)) {
             $frameRate ??= (float) $matches[1];
             unset($rawLines[$firstLine]);
+
+            return [$frameRate, true];
         }
 
         if ($frameRate === null && $this->options->lenient) {
             $this->warn("The file has no {1}{1}<fps> line. The parser used " . self::LENIENT_FRAME_RATE . " fps.", null, null, [], ParseWarningAction::Repaired);
 
-            return self::LENIENT_FRAME_RATE;
+            return [self::LENIENT_FRAME_RATE, false];
         }
         if ($frameRate === null) {
             throw new ParsingException("The frame rate is unknown. Set MicroDvdReadOptions::\$frameRate, start the file with {1}{1}<fps>, " .
                                        "or read the file in lenient mode for " . self::LENIENT_FRAME_RATE . " fps.");
         }
 
-        return $frameRate;
+        return [$frameRate, false];
     }
 
 

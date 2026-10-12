@@ -10,7 +10,7 @@ final class MicroDvdWriteOptions implements FormatWriteOptions
 {
     /**
      * @param ?float $frameRate          Frames per second of the video. Null takes the frame rate that MicroDvdParser stored.
-     * @param bool   $writeFrameRateLine Write the frame rate as the first line, such as {1}{1}23.976.
+     * @param bool   $writeFrameRateLine Write the frame rate as the first line, such as {1}{1}23.976. A file that MicroDvdParser read with this line gets it anyway.
      */
     public function __construct(
         public readonly ?float $frameRate = null,

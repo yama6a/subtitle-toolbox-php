@@ -57,7 +57,26 @@ class MicroDvdFormatterTest extends TestCase
 
         $this->assertSame($raw, $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(writeFrameRateLine: true)])));
         $this->assertSame($raw, (new MicroDvdFormatter())->format($subtitle, new WriteOptions(formats: [new MicroDvdWriteOptions(writeFrameRateLine: true)])));
-        $this->assertSame(substr($raw, strpos($raw, "\n") + 1), (new MicroDvdFormatter())->format($subtitle));
+        $this->assertSame($raw, (new MicroDvdFormatter())->format($subtitle));
+    }
+
+
+    public function testFrameRateLineOfTheInputIsKept(): void
+    {
+        $raw      = file_get_contents(__DIR__ . "/../files/microdvd/real/own_max_frames.sub");
+        $subtitle = Subtitle::fromString($raw, Format::MicroDvd);
+
+        $this->assertSame(rtrim($raw, "\n") . "\n", $subtitle->toString(Format::MicroDvd));
+        $this->assertEquals($subtitle->getCues(), Subtitle::fromString($subtitle->toString(Format::MicroDvd), Format::MicroDvd)->getCues());
+    }
+
+
+    public function testRemovingTheFrameRateLineFieldDropsTheLine(): void
+    {
+        $subtitle = Subtitle::fromString("{1}{1}25\n{25}{50}Hello", Format::MicroDvd);
+        $subtitle->setFormatData("microdvd", ["frameRate" => 25.0]);
+
+        $this->assertSame("{25}{50}Hello\n", $subtitle->toString(Format::MicroDvd));
     }
 
 
@@ -154,7 +173,7 @@ class MicroDvdFormatterTest extends TestCase
         $subtitle->getCues()[0]->setLines(["<b>One</b>", "<i>Two</i>"]);
 
         $this->assertSame(
-            "{25}{50}{y:b}{f:Arial}One|{y:i}Two\n",
+            "{1}{1}25\n{25}{50}{y:b}{f:Arial}One|{y:i}Two\n",
             $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25)]))
         );
     }

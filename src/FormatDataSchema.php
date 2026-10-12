@@ -89,7 +89,8 @@ final class FormatDataSchema
             "idTags" => self::STRINGS,
         ],
         MicroDvdParser::FORMAT_DATA_KEY           => [
-            "frameRate" => "number",
+            "frameRate"     => "number",
+            "frameRateLine" => "bool",
         ],
         MpSubParser::FORMAT_DATA_KEY              => "strings",
         SamiParser::FORMAT_DATA_KEY               => [
