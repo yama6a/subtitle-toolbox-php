@@ -15,7 +15,7 @@ abstract class CliTestCase extends TestCase
 {
     use RunsApplication;
 
-    protected const BIN = __DIR__ . "/../../bin/subtitle-toolbox";
+    protected const BIN = __DIR__ . "/../../bin/stbox";
 
     protected const FIXTURES = __DIR__ . "/../files/cli/";
 
@@ -56,7 +56,7 @@ abstract class CliTestCase extends TestCase
 
     /**
      * Runs the CLI in the test process, in the temporary directory. A PHP warning, notice or deprecation goes to
-     * standard error as in bin/subtitle-toolbox, so a test that compares standard error fails on it. PHPUnit lowers
+     * standard error as in bin/stbox, so a test that compares standard error fails on it. PHPUnit lowers
      * the error reporting level while its own error handler runs, so this method raises it for the run.
      *
      * @param list<string> $arguments
@@ -90,7 +90,7 @@ abstract class CliTestCase extends TestCase
 
 
     /**
-     * Runs bin/subtitle-toolbox as a separate process, in the temporary directory.
+     * Runs bin/stbox as a separate process, in the temporary directory.
      *
      * @param list<string> $arguments
      * @param string ...$phpOptions options of the php binary, such as "-d", "memory_limit=32M"

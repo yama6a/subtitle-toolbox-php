@@ -19,7 +19,7 @@ trait RunsApplication
         fwrite($streams[0], $stdin);
         rewind($streams[0]);
 
-        $code = (new Application(...$streams))->run(["subtitle-toolbox", ...$arguments]);
+        $code = (new Application(...$streams))->run(["stbox", ...$arguments]);
 
         rewind($streams[1]);
         rewind($streams[2]);
@@ -36,6 +36,6 @@ trait RunsApplication
      */
     protected static function usageError(string $command, string $message): array
     {
-        return [2, "", "Error: $message\nRun \"subtitle-toolbox help $command\" for the usage.\n"];
+        return [2, "", "Error: $message\nRun \"stbox help $command\" for the usage.\n"];
     }
 }

@@ -184,7 +184,7 @@ class BinaryInputTest extends CliTestCase
     public function testFromAndToAlwaysNameFormats(): void
     {
         $this->assertSame(
-            self::usageError("convert", "Unknown format \"25\". Run \"subtitle-toolbox formats\" for the list."),
+            self::usageError("convert", "Unknown format \"25\". Run \"stbox formats\" for the list."),
             $this->runCli(["convert", "trip.srt", "--from", "25", "--to", "23.976"])
         );
         $this->assertSame([0, $this->tripAs(Format::WebVtt), ""], $this->runCli(["convert", "trip.srt", "--shift", "0", "--from", "srt", "--to", "vtt"]));

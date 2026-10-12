@@ -11,7 +11,7 @@ use SubtitleToolbox\Exceptions\SubtitleToolboxException;
  */
 final class Application
 {
-    public const NAME = "subtitle-toolbox";
+    public const NAME = "stbox";
 
     public const EXIT_OK     = 0;
     public const EXIT_RESULT = 1;

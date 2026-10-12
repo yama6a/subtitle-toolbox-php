@@ -153,7 +153,7 @@ class HelpTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication([]);
 
         $this->assertSame(0, $code);
-        $this->assertStringContainsString("Usage: subtitle-toolbox <command>", $stdout);
+        $this->assertStringContainsString("Usage: stbox <command>", $stdout);
         foreach ([...self::commandNames(), "help"] as $command) {
             $this->assertMatchesRegularExpression("/^  $command +\S/m", $stdout);
         }
@@ -179,7 +179,7 @@ class HelpTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication([$command, "--help"]);
 
         $this->assertSame(0, $code);
-        $this->assertStringStartsWith("Usage: subtitle-toolbox ", $stdout);
+        $this->assertStringStartsWith("Usage: stbox ", $stdout);
         $this->assertStringContainsString("  -h, --help ", $stdout);
         $this->assertSame("", $stderr);
         $this->assertSame([0, $stdout, ""], self::runApplication(["help", $command]));
@@ -234,9 +234,8 @@ class HelpTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication(["convert", "--help"]);
 
         $this->assertSame([0, ""], [$code, $stderr]);
-        $this->assertStringStartsWith("Usage: subtitle-toolbox convert <input> [--to FORMAT] [-o FILE] [options]\n" .
-                                      "       subtitle-toolbox convert <input>... [--to FORMAT] --output-dir DIR\n" .
-                                      "                                [options]\n", $stdout);
+        $this->assertStringStartsWith("Usage: stbox convert <input> [--to FORMAT] [-o FILE] [options]\n" .
+                                      "       stbox convert <input>... [--to FORMAT] --output-dir DIR [options]\n", $stdout);
         $this->assertMatchesRegularExpression('/^  --encoding NAME +/m', $stdout);
         $this->assertMatchesRegularExpression('/^  --language CODE +/m', $stdout);
         $this->assertDoesNotMatchRegularExpression('/^  --(ocr|sdh|structure-wrap|shift|karaoke)\b/m', $stdout);

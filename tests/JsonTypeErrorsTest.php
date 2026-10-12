@@ -243,7 +243,7 @@ class JsonTypeErrorsTest extends TestCase
         $streams     = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
         $application = new Application(...$streams);
         (new \ReflectionProperty(Application::class, "commands"))->setValue($application, $commands);
-        $code = $application->run(["subtitle-toolbox", ...$arguments]);
+        $code = $application->run(["stbox", ...$arguments]);
         rewind($streams[2]);
 
         return [$code, stream_get_contents($streams[2])];

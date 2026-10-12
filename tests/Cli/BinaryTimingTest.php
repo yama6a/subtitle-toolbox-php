@@ -72,7 +72,7 @@ class BinaryTimingTest extends CliTestCase
     public function testTimeOf100000HoursOrMoreIsAUsageError(): void
     {
         $this->assertSame(
-            [2, "", "Error: The option --shift needs a time below 100000 hours, got \"1e300\".\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            [2, "", "Error: The option --shift needs a time below 100000 hours, got \"1e300\".\nRun \"stbox help convert\" for the usage.\n"],
             $this->runCli(["convert", "trip.srt", "--shift", "1e300"])
         );
         $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--shift", "100000:00:00"])[0]);

@@ -8,7 +8,16 @@ composer require yama6a/subtitle-toolbox-php:^5.0
 
 ## Command name
 
-TODO #960
+| 4.x | 5.0 |
+|:--- |:--- |
+| `vendor/bin/subtitle-toolbox convert movie.srt --to vtt` | `vendor/bin/stbox convert movie.srt --to vtt` |
+| `subtitle-toolbox.phar` | `stbox.phar` |
+| `/usr/local/bin/subtitle-toolbox.phar` in the images | `/usr/local/bin/stbox.phar` |
+
+- Only the command name changes. The Composer package stays `yama6a/subtitle-toolbox-php`. The repository and the image names stay.
+- The old name has no alias. A script that calls `subtitle-toolbox` fails with "command not found".
+- Download the PHAR as `stbox.phar`: `curl -L -o /usr/local/bin/stbox https://github.com/yama6a/subtitle-toolbox-php/releases/latest/download/stbox.phar && chmod +x /usr/local/bin/stbox`.
+- Image users who run `php /usr/local/bin/subtitle-toolbox.phar` use `/usr/local/bin/stbox.phar`. The image entry point is unchanged.
 
 ## Cue order
 
@@ -22,7 +31,7 @@ TODO #960
 
 - A `Subtitle` always holds its cues in start order. Cues with the same start keep their order from the array or the file. Each comment moves with its cue.
 - Library JSON with cues out of start order reads sorted in 5.0. 4.x wrote such files after an unsorted `fromArray()`.
-- Example: a file holds a cue at 5 s, then a cue at 1 s. `subtitle-toolbox convert cues.json --to srt` now writes the 1 s cue first.
+- Example: a file holds a cue at 5 s, then a cue at 1 s. `stbox convert cues.json --to srt` now writes the 1 s cue first.
 - A cue index from the array can point to another cue after the sort. Read the indexes from `getCues()`.
 - `ValidationRules::structure()` checks `requireCues`, `noNegativeDuration` and `noOverlap`.
 
@@ -30,7 +39,7 @@ TODO #960
 
 | 4.x | 5.0 |
 |:--- |:--- |
-| `subtitle-toolbox retime movie.srt --shift 1.5 -o out.srt` | `subtitle-toolbox convert movie.srt --shift 1.5 -o out.srt` |
+| `subtitle-toolbox retime movie.srt --shift 1.5 -o out.srt` | `stbox convert movie.srt --shift 1.5 -o out.srt` |
 
 - `retime` is removed. Use `convert` with the same options and without `--to`.
 - The output files are byte-equal.
@@ -45,14 +54,14 @@ Chapter format names:
 | `--to podcast` | `--to podcast-chapters` |
 | `--to ogm` | `--to ogm-chapters` |
 
-- `--from` and `--to` no longer take `ytchapter`, `podcast`, `ogm` and `ffmeta`. The old names exit with code 2 and the message `Unknown format`. The message points to `subtitle-toolbox formats`, which lists the valid names.
+- `--from` and `--to` no longer take `ytchapter`, `podcast`, `ogm` and `ffmeta`. The old names exit with code 2 and the message `Unknown format`. The message points to `stbox formats`, which lists the valid names.
 - `ffmeta` still works, because it is the file extension of `ffmeta-chapters`. Use `--to ffmeta-chapters` in scripts.
 
 ## Output file extension
 
 | 4.x | 5.0 |
 |:--- |:--- |
-| `subtitle-toolbox sync a.srt --reference r.srt -o out.vtt` (writes SubRip into `out.vtt`) | `subtitle-toolbox sync a.srt --reference r.srt --to vtt -o out.vtt` |
+| `subtitle-toolbox sync a.srt --reference r.srt -o out.vtt` (writes SubRip into `out.vtt`) | `stbox sync a.srt --reference r.srt --to vtt -o out.vtt` |
 
 - `sync`, `dual` and `translate` need `--to` when the `-o` extension names another writable format than the input format.
 - Without `--to`, they exit with code 2 and the message names `--to`. `convert` already did this.

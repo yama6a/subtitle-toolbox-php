@@ -87,21 +87,21 @@ The command line tool also comes as a PHAR file and as two container images. The
 | [MP4 tracks](https://www.3gpp.org/dynareport/26245.htm) | | | `.mp4`, `.m4v`, `.mov` | ✅ | ❌ | `tx3g` (`mov_text`) tracks |
 
 ## Command line tool
-Composer installs `vendor/bin/subtitle-toolbox`. Optional parts are in brackets.
+Composer installs `vendor/bin/stbox`. Optional parts are in brackets.
 
 ```sh
-subtitle-toolbox convert movie.srt --to vtt [--timing-fix-overlaps] [-o movie.vtt]
-subtitle-toolbox convert movie.mkv --to srt --track 3 [-o movie.srt]
-subtitle-toolbox convert movie.sup --to srt --ocr [--ocr-language deu] [-o movie.srt]
-subtitle-toolbox convert movie.sub --input-fps 25 --from-fps 25 --to-fps 23.976 [-o movie.fixed.sub]
-subtitle-toolbox info movie.srt [--json]
-subtitle-toolbox validate movie.srt --preset netflix-en [--video-fps 23.976]
-subtitle-toolbox sync movie.de.srt --reference movie.en.srt [-o movie.de.synced.srt]
-subtitle-toolbox diff movie.v1.srt movie.v2.srt [--text-only]
-subtitle-toolbox translate movie.de.srt --engine deepl --target-language en-US [-o movie.en.srt]
-subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt --to ass [--mode stack] [-o movie.en-de.ass]
-subtitle-toolbox hls movie.vtt --output-dir hls/ [--segment 6]
-subtitle-toolbox formats
+stbox convert movie.srt --to vtt [--timing-fix-overlaps] [-o movie.vtt]
+stbox convert movie.mkv --to srt --track 3 [-o movie.srt]
+stbox convert movie.sup --to srt --ocr [--ocr-language deu] [-o movie.srt]
+stbox convert movie.sub --input-fps 25 --from-fps 25 --to-fps 23.976 [-o movie.fixed.sub]
+stbox info movie.srt [--json]
+stbox validate movie.srt --preset netflix-en [--video-fps 23.976]
+stbox sync movie.de.srt --reference movie.en.srt [-o movie.de.synced.srt]
+stbox diff movie.v1.srt movie.v2.srt [--text-only]
+stbox translate movie.de.srt --engine deepl --target-language en-US [-o movie.en.srt]
+stbox dual --primary movie.en.srt --secondary movie.de.srt --to ass [--mode stack] [-o movie.en-de.ass]
+stbox hls movie.vtt --output-dir hls/ [--segment 6]
+stbox formats
 ```
 
 - Without `-o`, the output goes to standard output.
@@ -109,7 +109,7 @@ subtitle-toolbox formats
 - No command overwrites a file.
 - When detection fails, pass `--from`.
 
-`subtitle-toolbox convert --help` lists the option groups of `convert`. See [cli.md](docs/cli.md) for all commands and options.
+`stbox convert --help` lists the option groups of `convert`. See [cli.md](docs/cli.md) for all commands and options.
 
 ## Library
 ### Load and write

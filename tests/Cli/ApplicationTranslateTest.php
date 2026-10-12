@@ -257,10 +257,9 @@ class ApplicationTranslateTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication(["translate", "--help"]);
 
         $this->assertSame([0, ""], [$code, $stderr]);
-        $this->assertStringStartsWith("Usage: subtitle-toolbox translate <input>... --engine deepl|google|openai\n" .
-                                      "                                  --target-language CODE\n" .
-                                      "                                  [--source-language CODE] [--api-key KEY]\n" .
-                                      "                                  [options]\n", $stdout);
+        $this->assertStringStartsWith("Usage: stbox translate <input>... --engine deepl|google|openai\n" .
+                                      "                       --target-language CODE [--source-language CODE]\n" .
+                                      "                       [--api-key KEY] [options]\n", $stdout);
         preg_match_all('/^  (?:-\w, )?--([\w-]+)/m', $stdout, $matches);
         $this->assertSame(["engine", "api-key", "source-language", "target-language", "to", "output", "output-dir"], array_slice($matches[1], 0, 7));
         $this->assertNotContains("in-place", $matches[1]);
@@ -272,7 +271,7 @@ class ApplicationTranslateTest extends TestCase
 
     public function testWithoutTheCurlExtensionTranslateExitsWith2AndOtherCommandsRun(): void
     {
-        $binary = __DIR__ . "/../../bin/subtitle-toolbox";
+        $binary = __DIR__ . "/../../bin/stbox";
         $input  = self::TRANSLATION . "own_station.srt";
 
         $this->assertSame(

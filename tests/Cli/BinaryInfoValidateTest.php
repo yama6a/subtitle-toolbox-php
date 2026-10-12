@@ -26,7 +26,7 @@ class BinaryInfoValidateTest extends CliTestCase
             "no rule"                 => [["validate", "shop.vtt"], "validate", "Pass --preset or at least one rule option."],
             "unknown preset"          => [["validate", "shop.vtt", "--preset", "nope"], "validate", "The option --preset must be netflix-en or bbc, got \"nope\"."],
             "frame rate as --from"    => [["validate", "checks.srt", "--preset", "netflix-en", "--from", "25"], "validate",
-                                          "Unknown format \"25\". Run \"subtitle-toolbox formats\" for the list."],
+                                          "Unknown format \"25\". Run \"stbox formats\" for the list."],
             "invalid character class" => [["validate", "-", "--allowed-characters", "[z-a]"], "validate",
                                           "The allowed characters \"[z-a]\" are no valid regular expression character class."],
         ];
