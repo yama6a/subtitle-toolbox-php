@@ -452,7 +452,7 @@ vendor/bin/subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt
 | `--secondary-alignment 1-9` | `secondaryAlignment` for `top-bottom`, as the value of the `Alignment` case, for example 8 for `Alignment::TopCenter` |
 | `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom`. The value is a [time](#times) |
 | `--primary-from FORMAT`, `--primary-track NUMBER` | the format and the MKV or WebM track of the primary file. `dual` has no `--from` and `--track` |
-| `--secondary-from FORMAT`, `--secondary-track NUMBER` | the format and the MKV or WebM track of the secondary file |
+| `--secondary-from FORMAT`, `--secondary-track NUMBER` | the format and the MKV or WebM track of the secondary file. Without `--secondary-from`, the tool detects the format of the secondary file. `--primary-from` does not apply to it |
 
 - **Output**: one result, so it goes to standard output unless `-o` or `--output-dir` sets a file.
 - **Secondary file**: a secondary file that is missing or does not parse fails with exit code 3. The message names only the secondary file, for example `movie.de.srt: The file does not exist.`
