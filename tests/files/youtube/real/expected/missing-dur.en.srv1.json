@@ -18,7 +18,12 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "start": "1.0",
+                        "dur": "2.0"
+                    }
+                }
             },
             {
                 "start": 4.0,
@@ -28,7 +33,11 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "start": "4.0"
+                    }
+                }
             },
             {
                 "start": 6.5,
@@ -38,7 +47,12 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "start": "6.5",
+                        "dur": "0"
+                    }
+                }
             },
             {
                 "start": 8.0,
@@ -48,7 +62,11 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "start": "8.0"
+                    }
+                }
             }
         ]
     }

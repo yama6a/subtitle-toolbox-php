@@ -14,6 +14,7 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 use SubtitleToolbox\XmlLoader;
 
 final class YouTubeTimedTextParser extends SubtitleParser
@@ -34,9 +35,10 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
         $subtitle   = new Subtitle();
         $parsedCues = [];
+        $captions   = $this->endAtNextCaption($captions, $fileData);
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData);
-        foreach ($this->endAtNextCaption($captions) as $caption) {
-            $cue = new SubtitleCue($caption["start"], $caption["end"], explode("\n", $this->markup($caption["segments"], $caption["start"])));
+        foreach ($captions as $caption) {
+            $cue = new SubtitleCue($caption["start"], $caption["end"], explode("\n", self::captionMarkup($caption["segments"], $caption["start"], $this->formatOptions()->wordTimestamps)));
             if ($cue->getLines() === []) {
                 continue;
             }
@@ -93,7 +95,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
                 continue;
             }
 
-            $formatData = array_diff_key($event, ["tStartMs" => true, "dDurationMs" => true, "segs" => true]);
+            $formatData = array_diff_key($event, ["segs" => true]);
             if (array_filter($extras) !== []) {
                 $formatData["segments"] = $extras;
             }
@@ -105,6 +107,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
                 "alignment"  => $this->alignment($this->entry($positions, $event["wpWinPosId"] ?? null)["apPoint"] ?? null),
                 "segments"   => $segments,
                 "formatData" => $formatData,
+                "source"     => $event,
             ];
         }
 
@@ -127,8 +130,8 @@ final class YouTubeTimedTextParser extends SubtitleParser
                 self::boundedField($start + $offset, "$path.segs[$segIndex].tOffsetMs");
             }
             $pen        = $this->entry($pens, $seg["pPenId"] ?? $event["pPenId"] ?? null);
-            $segments[] = [is_string($seg["utf8"] ?? null) ? $seg["utf8"] : "", $offset, $pen === null ? [] : $this->jsonPenStyle($pen)];
-            $extras[]   = is_array($seg) ? array_diff_key($seg, ["utf8" => true, "tOffsetMs" => true]) : [];
+            $segments[] = [is_string($seg["utf8"] ?? null) ? $seg["utf8"] : "", $offset, $pen === null ? [] : self::jsonPenStyle($pen)];
+            $extras[]   = is_array($seg) ? $seg : [];
         }
 
         return [$segments, $extras];
@@ -141,7 +144,12 @@ final class YouTubeTimedTextParser extends SubtitleParser
     }
 
 
-    private function jsonPenStyle(array $pen): array
+    /**
+     * Returns the style of a json3 pen: color, b, i and u.
+     *
+     * @internal
+     */
+    public static function jsonPenStyle(array $pen): array
     {
         $color = $pen["fcForeColor"] ?? null;
 
@@ -225,7 +233,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
                 "append"     => false,
                 "alignment"  => null,
                 "segments"   => [[Markup::decodeEntities($text->textContent), null, []]],
-                "formatData" => array_diff_key($this->attributes($text), [$startName => true, $durationName => true]),
+                "formatData" => $this->attributes($text) + self::rawText($text->textContent),
             ];
         }
 
@@ -260,7 +268,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
                 continue;
             }
 
-            $formatData = array_diff_key($attributes, ["t" => true, "d" => true]);
+            $formatData = $attributes;
             if (array_filter($extras) !== []) {
                 $formatData["segments"] = $extras;
             }
@@ -272,6 +280,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
                 "alignment"  => $this->alignment($anchors[$attributes["wp"] ?? ""] ?? null),
                 "segments"   => $segments,
                 "formatData" => $formatData,
+                "source"     => $attributes + ["text" => $paragraph->textContent],
             ];
         }
 
@@ -297,7 +306,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
                 $fileData[$definition->nodeName][] = $attributes;
                 $id                                = $attributes["id"] ?? "";
                 if ($definition->nodeName === "pen") {
-                    $pens[$id] = $this->xmlPenStyle($attributes);
+                    $pens[$id] = self::xmlPenStyle($attributes);
                 } elseif ($definition->nodeName === "wp" && preg_match('/^[0-9]+$/D', $attributes["ap"] ?? "") === 1) {
                     $anchors[$id] = (int) $attributes["ap"];
                 }
@@ -326,14 +335,31 @@ final class YouTubeTimedTextParser extends SubtitleParser
             }
             $pen        = $pens[$span?->getAttribute("p") ?: $paragraph->getAttribute("p")] ?? [];
             $segments[] = [Markup::decodeEntities($node->textContent), $offset, $pen];
-            $extras[]   = $span === null ? [] : array_diff_key($this->attributes($span), ["t" => true]);
+            $extras[]   = ($span === null ? [] : $this->attributes($span)) + ["text" => $node->textContent];
         }
 
         return [$segments, $extras];
     }
 
 
-    private function xmlPenStyle(array $attributes): array
+    /**
+     * Returns the text before the parser decodes its entities, when the decoding changes it. A file with
+     * double-escaped entities such as "&amp;#39;" holds "&#39;" there, and the formatter needs it to write the file again.
+     *
+     * @return array{text?: string}
+     */
+    private static function rawText(string $text): array
+    {
+        return Markup::decodeEntities($text) === $text ? [] : ["text" => $text];
+    }
+
+
+    /**
+     * Returns the style of a srv3 pen: color, b, i and u.
+     *
+     * @internal
+     */
+    public static function xmlPenStyle(array $attributes): array
     {
         $color = $attributes["fc"] ?? "";
 
@@ -378,47 +404,93 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
 
     /**
-     * Skips the append captions, which only add a line break.
-     * Ends a caption without a duration at the next later start.
-     * Ends a caption where the next caption in its window starts.
+     * Skips the append captions, which only add a line break. Each cue keeps the append captions before it in
+     * "appends" of its format data, and the file keeps the ones after the last cue.
+     * Sets the end of each caption with captionEnds().
      */
-    private function endAtNextCaption(array $captions): array
+    private function endAtNextCaption(array $captions, array &$fileData): array
     {
-        $captions = array_values(array_filter($captions, fn (array $caption): bool => !$caption["append"]));
-        $starts   = array_column($captions, "start");
-        foreach ($captions as $index => $caption) {
-            $captions[$index]["end"] ??= $this->endAtNextStart($starts, $index);
-        }
-        foreach ($captions as $index => $caption) {
-            if ($caption["window"] === null) {
+        $kept    = [];
+        $appends = [];
+        foreach ($captions as $caption) {
+            if ($caption["append"]) {
+                $appends[] = $caption["source"];
                 continue;
             }
-            for ($next = $index + 1; $next < count($captions); $next++) {
-                if ($captions[$next]["window"] === $caption["window"] && $captions[$next]["start"] > $caption["start"]) {
-                    $captions[$index]["end"] = min($caption["end"], $captions[$next]["start"]);
-                    break;
-                }
+            if ($appends !== []) {
+                $caption["formatData"]["appends"] = $appends;
+                $appends                          = [];
             }
+            $kept[] = $caption;
+        }
+        if ($appends !== []) {
+            $fileData["appends"] = $appends;
         }
 
-        return $captions;
+        $ends = self::captionEnds(array_map(fn (array $caption): array => [$caption["start"], $caption["end"], $caption["window"]], $kept),
+                                  $this->options->lastCueDuration);
+        foreach ($ends as $index => $end) {
+            $kept[$index]["end"] = $end;
+        }
+
+        return $kept;
     }
 
 
-    private function markup(array $segments, float $start): string
+    /**
+     * Returns the end of each caption. A caption without a duration ends at the next later start, or lasts
+     * $lastCueDuration at the end. A caption ends where the next caption in its window starts.
+     * The formatter uses it to tell whether a cue still has the end of its source duration.
+     *
+     * @internal
+     *
+     * @param list<array{float, ?float, mixed}> $captions the start, the end of the source duration or null, and the window
+     *
+     * @return list<float>
+     */
+    public static function captionEnds(array $captions, float $lastCueDuration): array
     {
-        $timed  = $this->formatOptions()->wordTimestamps && array_filter(array_column($segments, 1), fn (?float $offset): bool => $offset !== null) !== [];
+        $ends = [];
+        foreach ($captions as $index => [$start, $end, $window]) {
+            for ($next = $index + 1; $end === null && $next < count($captions); $next++) {
+                $end = $captions[$next][0] > $start ? $captions[$next][0] : null;
+            }
+            $end ??= Timecode::roundToMilliseconds($start + $lastCueDuration);
+            for ($next = $index + 1; $window !== null && $next < count($captions); $next++) {
+                if ($captions[$next][2] === $window && $captions[$next][0] > $start) {
+                    $end = min($end, $captions[$next][0]);
+                    break;
+                }
+            }
+            $ends[] = $end;
+        }
+
+        return $ends;
+    }
+
+
+    /**
+     * Returns the cue markup of the text segments of a caption, each with its text, its offset from $start in seconds
+     * or null, and its pen style. The formatter compares a cue with it to tell whether the cue is unchanged.
+     *
+     * @internal
+     *
+     * @param list<array{string, ?float, array}> $segments
+     */
+    public static function captionMarkup(array $segments, float $start, bool $wordTimestamps): string
+    {
+        $timed  = $wordTimestamps && array_filter(array_column($segments, 1), fn (?float $offset): bool => $offset !== null) !== [];
         $markup = "";
         foreach ($segments as [$text, $offset, $style]) {
             if (!$timed) {
-                $markup .= $this->styled($text, $style);
+                $markup .= self::styled($text, $style);
                 continue;
             }
 
             preg_match('/\A(\s*)(.*)\z/s', $text, $parts);
             $markup .= $parts[1];
             if ($parts[2] !== "") {
-                $markup .= "<" . Markup::coreTimestamp($start + ($offset ?? 0)) . ">" . $this->styled($parts[2], $style);
+                $markup .= "<" . Markup::coreTimestamp($start + ($offset ?? 0)) . ">" . self::styled($parts[2], $style);
             }
         }
 
@@ -426,7 +498,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
     }
 
 
-    private function styled(string $text, array $style): string
+    private static function styled(string $text, array $style): string
     {
         return implode("\n", array_map(
             fn (string $line): string => StyleRuns::toMarkup([[$line, $style]], true),

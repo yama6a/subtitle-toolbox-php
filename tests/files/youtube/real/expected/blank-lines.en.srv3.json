@@ -18,7 +18,17 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "t": "1000",
+                        "d": "2000",
+                        "segments": [
+                            {
+                                "text": "The market opens at eight."
+                            }
+                        ]
+                    }
+                }
             },
             {
                 "start": 3.5,
@@ -28,7 +38,17 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "t": "3500",
+                        "d": "2500",
+                        "segments": [
+                            {
+                                "text": "Fresh bread is sold first."
+                            }
+                        ]
+                    }
+                }
             }
         ]
     }

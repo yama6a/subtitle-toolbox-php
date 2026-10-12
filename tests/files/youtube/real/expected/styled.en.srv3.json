@@ -80,11 +80,14 @@
                 "alignment": 8,
                 "formatData": {
                     "youtube": {
+                        "t": "0",
+                        "d": "2500",
                         "wp": "1",
                         "ws": "1",
                         "segments": [
                             {
-                                "p": "2"
+                                "p": "2",
+                                "text": "Chapter one"
                             }
                         ]
                     }
@@ -100,9 +103,16 @@
                 "alignment": null,
                 "formatData": {
                     "youtube": {
+                        "t": "2500",
+                        "d": "3000",
                         "p": "1",
                         "wp": "2",
-                        "ws": "1"
+                        "ws": "1",
+                        "segments": [
+                            {
+                                "text": "The ferry leaves at noon."
+                            }
+                        ]
                     }
                 }
             },
@@ -116,17 +126,22 @@
                 "alignment": null,
                 "formatData": {
                     "youtube": {
+                        "t": "5500",
+                        "d": "3200",
                         "wp": "2",
                         "ws": "1",
                         "segments": [
                             {
-                                "p": "1"
+                                "p": "1",
+                                "text": "Tickets cost "
                             },
                             {
-                                "p": "2"
+                                "p": "2",
+                                "text": "four euros"
                             },
                             {
-                                "p": "1"
+                                "p": "1",
+                                "text": "."
                             }
                         ]
                     }
@@ -142,11 +157,14 @@
                 "alignment": 7,
                 "formatData": {
                     "youtube": {
+                        "t": "8700",
+                        "d": "2800",
                         "wp": "3",
                         "ws": "1",
                         "segments": [
                             {
-                                "p": "3"
+                                "p": "3",
+                                "text": "Pier 3 &#39;North&#39;"
                             }
                         ]
                     }
@@ -161,7 +179,17 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "t": "11500",
+                        "d": "3000",
+                        "segments": [
+                            {
+                                "text": "Please keep\nyour ticket."
+                            }
+                        ]
+                    }
+                }
             }
         ]
     }
