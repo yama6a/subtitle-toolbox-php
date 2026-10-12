@@ -87,7 +87,7 @@ final class TtmlHead
     public static function addTitle(TtmlContext $context, string $title): void
     {
         $element = $context->headDocument->createElementNS($context->namespaces[$context->ttm], "$context->ttm:title");
-        $element->appendChild($context->headDocument->createTextNode($title));
+        $element->appendChild($context->headDocument->createTextNode(XmlOutput::text($title)));
         self::insertChild($context->head, $element, $context->head->firstChild, 2);
     }
 
@@ -105,7 +105,7 @@ final class TtmlHead
         $element->setAttribute("type", "person");
         $nameElement = $context->headDocument->createElementNS($uri, "$context->ttm:name");
         $nameElement->setAttribute("type", "full");
-        $nameElement->appendChild($context->headDocument->createTextNode($name));
+        $nameElement->appendChild($context->headDocument->createTextNode(XmlOutput::text($name)));
         $element->appendChild($nameElement);
 
         $before = null;
@@ -206,6 +206,6 @@ final class TtmlHead
 
     public static function attribute(string $name, string $value): string
     {
-        return " $name=\"" . htmlspecialchars(XmlOutput::requireUtf8($value), ENT_XML1 | ENT_COMPAT, "UTF-8") . "\"";
+        return " $name=\"" . htmlspecialchars(XmlOutput::text($value), ENT_XML1 | ENT_COMPAT, "UTF-8") . "\"";
     }
 }

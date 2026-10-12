@@ -417,7 +417,7 @@ final class TtmlFormatter extends SubtitleFormatter
 
     private function formatText(string $text): string
     {
-        $text = htmlspecialchars(XmlOutput::requireUtf8(Markup::decodeEntities($text)), ENT_XML1 | ENT_NOQUOTES, "UTF-8");
+        $text = htmlspecialchars(XmlOutput::text(Markup::decodeEntities($text)), ENT_XML1 | ENT_NOQUOTES, "UTF-8");
 
         return str_replace(LineEnding::Lf->value, "<br/>", $text);
     }
