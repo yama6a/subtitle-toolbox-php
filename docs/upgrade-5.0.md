@@ -163,5 +163,6 @@ These methods were public and marked `@internal`. 5.0 removes the ones in this t
 - `HearingImpairedOptions` keeps `speakerLabels` and `speakerLabelsUpperCaseOnly`. `SpeakerLabelOptions` now uses the same 2 names.
 - `ReferenceSyncReport::$segments` is a list of `SyncSegment` objects with the fields `from`, `to`, `scale` and `offset`.
 - `CueImage::applyTo()` returns nothing. It still changes the cue that you pass.
+- **Properties**: the renamed options are also renamed properties. Code that reads `SpeakerLabelOptions::$to`, `$readPrefixes` or `$readUpperCaseOnly`, `CommonErrorOptions::$unicodeEllipsis` or `DualSubtitleOptions::$snapTolerance` fails with an `Error`. Read `$style`, `$speakerLabels`, `$speakerLabelsUpperCaseOnly`, `$ellipsis` and `$timeTolerance` instead.
 - `OcrEngineChooser::create()` makes Tesseract read English. Pass another language to `recognizeText()`, or build a `TesseractOcrEngine` with `TesseractOcrOptions::$language`.
 - The CLI options are the same. The output of all these calls is the same.
