@@ -77,13 +77,14 @@ final class JsonParser extends SubtitleParser
 
 
     /**
-     * Returns $skipped with the indexes of the cues that have a time of MAX_HOURS or more.
+     * Returns $skipped with the indexes of the cues that have a time of MAX_HOURS or more, or that end before they start.
+     * Lenient mode swaps the times of a short cue that ends before it starts.
      *
      * @param array<int, true> $skipped
      *
      * @return array<int, true>
      */
-    private function checkCueTimes(array $data, array $skipped): array
+    private function checkCueTimes(array &$data, array $skipped): array
     {
         foreach (is_array($data["cues"] ?? null) ? $data["cues"] : [] as $index => $cue) {
             if (isset($skipped[$index]) || !is_array($cue)) {
@@ -97,6 +98,9 @@ final class JsonParser extends SubtitleParser
                     }
                 }
                 self::checkWordTimestamps(is_array($cue["lines"] ?? null) ? array_values(array_filter($cue["lines"], "is_string")) : [], null);
+                if (self::isTime($cue["start"] ?? null) && self::isTime($cue["end"] ?? null) && $cue["end"] < $cue["start"]) {
+                    [$data["cues"][$index]["start"], $data["cues"][$index]["end"]] = $this->orderedTimes($cue["start"], $cue["end"], null, $index, [RawJson::encode($cue)]);
+                }
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($cue)]);
                 $skipped[$index] = true;

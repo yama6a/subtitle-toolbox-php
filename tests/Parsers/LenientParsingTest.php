@@ -805,6 +805,20 @@ class LenientParsingTest extends TestCase
                     [null, 3, self::SKIPPED, "The field cues[3].lines[1] must be a string."],
                 ],
             ],
+            "Library JSON with cues that end before they start" => [
+                "start_after_end.json",
+                JsonParser::class,
+                "The cue ends at 3 s, before it starts at 5 s.",
+                [
+                    [1, 2, "Welcome on board."],
+                    [3, 5, "The tour takes one hour."],
+                    [10, 12, "Enjoy the view."],
+                ],
+                [
+                    [null, 1, self::REPAIRED, "The cue ends at 3 s, before it starts at 5 s. The parser swapped the times."],
+                    [null, 2, self::SKIPPED, "The cue ends at 2 s, before it starts at 70 s."],
+                ],
+            ],
             "CSV with 20 hour digits" => [
                 "absurd_hours.csv",
                 CsvParser::class,
