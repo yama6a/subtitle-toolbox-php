@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -22,6 +24,34 @@ class MpSubFormatterTest extends TestCase
             file_get_contents(__DIR__ . "/../files/mpsub/valid.mpsub"),
             $subtitle->toString(Format::MpSub)
         );
+    }
+
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function filesWithEmptyLines(): array
+    {
+        return [
+            "empty cues"        => ["srt/real/own_empty_cues.srt"],
+            "empty middle line" => ["srt/real/own_alignment_and_coordinates.srt"],
+            "only empty tags"   => ["validation/own_netflix_checks.srt"],
+        ];
+    }
+
+
+    #[DataProvider("filesWithEmptyLines")]
+    public function testEmptyCuesAndLinesAreSkippedSoTheOutputReadsBack(string $file): void
+    {
+        $subtitle = Subtitle::load(__DIR__ . "/../files/$file", Format::SubRip);
+        $expected = array_values(array_filter(array_map(
+            fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), Markup::plainLines($cue->getLines())],
+            $subtitle->getCues()
+        ), fn (array $cue): bool => $cue[2] !== []));
+
+        $read = Subtitle::fromString($subtitle->toString(Format::MpSub), Format::MpSub);
+
+        $this->assertEqualsWithDelta($expected, array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), Markup::plainLines($cue->getLines())], $read->getCues()), 0.0011);
     }
 
 
