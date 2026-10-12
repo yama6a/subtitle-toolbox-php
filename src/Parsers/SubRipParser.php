@@ -146,7 +146,7 @@ final class SubRipParser extends SubtitleParser
             $index,
             $rawLines
         );
-        $cue       = new SubtitleCue($start, $end, array_map($this->escapeText(...), array_slice($rawLines, 2)));
+        $cue       = new SubtitleCue($start, $end, Markup::unknownTagsAsText(array_map($this->escapeText(...), array_slice($rawLines, 2))));
         $alignment = $this->convertOverrideTags($cue);
         $this->applyTextAfterEndTime($cue, $timing["textAfterEndTime"], $alignment, $index, $lineNumber, $rawLines);
 

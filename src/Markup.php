@@ -231,6 +231,30 @@ final class Markup
 
 
     /**
+     * Escapes a start tag such as <today> as text when its name is no core, WebVTT or <br> tag,
+     * it has no attributes, and no line of the cue holds its end tag.
+     * FFmpeg writes such text from ASS unchanged into SubRip and WebVTT.
+     *
+     * @param list<string> $lines
+     *
+     * @return list<string>
+     *
+     * @internal
+     */
+    public static function unknownTagsAsText(array $lines): array
+    {
+        $text = implode("\n", $lines);
+
+        return array_map(fn (string $line): string => preg_replace_callback(
+            '/<([a-zA-Z][a-zA-Z0-9]*)>/',
+            fn (array $tag): string => in_array(strtolower($tag[1]), [...self::CORE_TAGS, "c", "lang", "ruby", "rt", "br"], true)
+                || preg_match("/<\/$tag[1]\s*>/i", $text) === 1 ? $tag[0] : "&lt;$tag[1]&gt;",
+            $line
+        ) ?? $line, $lines);
+    }
+
+
+    /**
      * Splits a line at its tags. The text runs are at the even indexes and the tags at the odd indexes.
      *
      * @return list<string>

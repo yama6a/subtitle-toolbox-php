@@ -366,6 +366,17 @@ class WebVttParserTest extends TestCase
     }
 
 
+    public function testUnknownTagWithoutAttributesAndEndTagIsText(): void
+    {
+        $raw = "WEBVTT\n\n00:01.000 --> 00:02.000\n<b>Rye</b> &amp; <b>spelt</b> <today>\n<c>open<foo>a</foo> <lang en>x</lang>\n";
+
+        $subtitle = Subtitle::fromString($raw, Format::WebVtt);
+
+        $this->assertSame(["<b>Rye</b> &amp; <b>spelt</b> &lt;today&gt;", "<c>open<foo>a</foo> <lang en>x</lang>"], $subtitle->getCues()[0]->getLines());
+        $this->assertStringContainsString("\n<b>Rye</b> &amp; <b>spelt</b> &lt;today&gt;\n", $subtitle->toString(Format::WebVtt));
+    }
+
+
     public function testInlineTimestampsAreKept(): void
     {
         $raw = "WEBVTT\n\n00:01.000 --> 00:04.000\nOne <00:00:02.500>two <00:03.000>three\n";

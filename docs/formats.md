@@ -461,6 +461,7 @@ $report->changes[0]->message;                                                   
 - Text after an empty line stays in the cue before it, when no timing line follows and its first line is no number. See [lenient-parsing.md](lenient-parsing.md).
 - Other override tags such as `{\pos(10,20)}` stay in the cue text.
 - A tag is `<b>`, `<i>`, `<u>`, `<s>`, `<font>` or `<v>`, or a name with only `name=value` attributes, such as `<foo>` or `<span class="x">`. Other text in angle brackets, such as `<a sentence in brackets>`, is cue text.
+- A tag of another name without attributes is cue text when the cue has no end tag for it, so `<today>` stays text and `<foo>a</foo>` is a tag. FFmpeg writes such text from ASS unchanged. `<br>` and the WebVTT tags `<c>`, `<lang>`, `<ruby>` and `<rt>` are always tags.
 - The formatter keeps `<b>`, `<i>`, `<u>`, `<s>` and `<font>`, and strips all other tags.
 
 ## SubViewer
@@ -528,6 +529,7 @@ $subtitle->toString(Format::Ttml);
 | Cue settings `vertical`, `line`, `position`, `size`, `align`, `region` | `$cue->findFormatData('vtt')`, exact values. The key `alignment` holds the alignment that the parser read from them. |
 | `&nbsp;`, `&lrm;`, `&rlm;` | the characters U+00A0, U+200E, U+200F |
 | `&` that starts no character reference, as in `Rye & spelt` or `&foo;` | text, so the cue line holds `&amp;`, and WebVTT output writes `&amp;` |
+| A start tag without attributes, such as `<today>`, whose name is no core or WebVTT tag and whose end tag is not in the cue | text, so WebVTT output writes `&lt;today&gt;`. FFmpeg writes such text from ASS unchanged. |
 
 - **Alignment from cue settings**: `line:0` is the top row, and `line:50%,center` is the middle row. No `line`, `line:-1` and `line:100%,end` are the bottom row. `align:left`, `center` and `right` set the column. Other values, `align:start`, `align:end` and `vertical` give `Alignment::BottomCenter`.
 - **Cue settings from alignment**: a cue without `vtt` format data gets settings from its alignment. `Alignment::TopCenter` becomes `line:0`, `Alignment::TopLeft` becomes `line:0 align:left`. A cue keeps its stored settings while it has the alignment that the parser read. After `setAlignment()` with another value, the formatter drops the stored `line`, `position` and `align` and writes the settings of the new alignment. It keeps `size`, `vertical` and `region`.
