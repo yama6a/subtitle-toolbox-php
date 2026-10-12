@@ -89,11 +89,10 @@ jobs:
         with:
           name: phar
       - name: Tag and release with the PHAR
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.version.outputs.tag }}
-          IMAGE: ghcr.io/${{ github.repository }}:${{ needs.version.outputs.version }}
-        run: |
-          gh release create "$TAG" subtitle-toolbox.phar -R "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --title "$TAG" --generate-notes \
-            --notes "Images: \`${IMAGE}\`, with Tesseract \`${IMAGE}-tesseract\`"
+        uses: yama6a/gha/.github/actions/gh-release@v2
+        with:
+          tag: ${{ needs.version.outputs.tag }}
+          target: ${{ github.sha }}
+          generate-notes: "true"
+          notes: "Images: `ghcr.io/${{ github.repository }}:${{ needs.version.outputs.version }}`, with Tesseract `ghcr.io/${{ github.repository }}:${{ needs.version.outputs.version }}-tesseract`"
+          files: subtitle-toolbox.phar
