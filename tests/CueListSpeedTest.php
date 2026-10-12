@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class CueListSpeedTest extends TestCase
@@ -52,6 +53,55 @@ class CueListSpeedTest extends TestCase
         $this->assertSame($expected, $subtitle->getCues());
         $this->assertSame([0, 0], array_map(fn (Comment $comment): int => $comment->beforeCueIndex, array_slice($subtitle->getComments(), 0, 2)));
         $this->assertSame(range(1, 4499), array_map(fn (Comment $comment): int => $comment->beforeCueIndex, array_slice($subtitle->getComments(), 501)));
+    }
+
+
+    // A filter of all cues and comments after each join takes about 20 s here.
+    public function testMergeShortCuesJoinsTwentyThousandCuesUnderTenSeconds(): void
+    {
+        $subtitle = $this->withACommentBeforeEachCue(array_map(fn (int $index): SubtitleCue => new SubtitleCue($index * 0.6, $index * 0.6 + 0.5, "word$index"), range(0, self::CUE_COUNT - 1)));
+
+        $start = microtime(true);
+        $subtitle->mergeShortCues();
+
+        $this->assertLessThan(10, microtime(true) - $start);
+        $this->assertCount(self::CUE_COUNT / 2, $subtitle);
+        $this->assertSame(["word0 word1"], $subtitle->getCues()[0]->getLines());
+        $this->assertSame([0, 0, 1, 1], array_map(fn (Comment $comment): int => $comment->beforeCueIndex, array_slice($subtitle->getComments(), 0, 4)));
+    }
+
+
+    public function testRemoveDuplicateCuesAndMergeSameTimeCuesJoinTwentyThousandCuesUnderFiveSeconds(): void
+    {
+        $twice      = fn (int $index): SubtitleCue => new SubtitleCue(intdiv($index, 2) * 2, intdiv($index, 2) * 2 + 1, "text" . intdiv($index, 2));
+        $duplicates = $this->withACommentBeforeEachCue(array_map($twice, range(0, self::CUE_COUNT - 1)));
+        $sameTimes  = $this->withACommentBeforeEachCue(array_map(fn (int $index): SubtitleCue => $twice($index)->setLines("line$index"), range(0, self::CUE_COUNT - 1)));
+
+        $start = microtime(true);
+        $duplicates->removeDuplicateCues();
+        $sameTimes->mergeSameTimeCues();
+
+        $this->assertLessThan(5, microtime(true) - $start);
+        $this->assertSame(["text0", "text1"], TestSubtitles::texts(array_slice($duplicates->getCues(), 0, 2)));
+        $this->assertSame(["line0", "line1"], $sameTimes->getCues()[0]->getLines());
+        foreach ([$duplicates, $sameTimes] as $subtitle) {
+            $this->assertCount(self::CUE_COUNT / 2, $subtitle);
+            $this->assertSame([0, 0, 1, 1], array_map(fn (Comment $comment): int => $comment->beforeCueIndex, array_slice($subtitle->getComments(), 0, 4)));
+        }
+    }
+
+
+    /**
+     * @param list<SubtitleCue> $cues
+     */
+    private function withACommentBeforeEachCue(array $cues): Subtitle
+    {
+        $subtitle = (new Subtitle())->addCues($cues);
+        foreach (array_keys($cues) as $index) {
+            $subtitle->addComment("note $index", $index);
+        }
+
+        return $subtitle;
     }
 
 

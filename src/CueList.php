@@ -39,18 +39,15 @@ final class CueList
 
 
     /**
-     * Joins the cues of $group into the first cue of $group and removes the others from $cues.
+     * Joins the cues of $group into the first cue of $group and adds each other cue to $joinedInto.
      * The first cue ends at the latest end of the group. With $joinLines, it also gets the lines of the others.
+     * removeJoined() then removes the other cues from the cue list.
      *
-     * @param SubtitleCue[]            $cues
-     * @param SubtitleCue[]            $group
-     * @param array<int, ?SubtitleCue> $anchors
-     *
-     * @return array{list<SubtitleCue>, array<int, ?SubtitleCue>} the cues and the anchors after the join
+     * @param list<SubtitleCue>                           $group
+     * @param \SplObjectStorage<SubtitleCue, SubtitleCue> $joinedInto each joined cue and the cue it joined into
      */
-    public static function join(array $cues, array $group, array $anchors, bool $joinLines): array
+    public static function join(array $group, bool $joinLines, \SplObjectStorage $joinedInto): void
     {
-        $group  = array_values($group);
         $joined = $group[0];
         $lines  = $joined->getLines();
         $end    = $joined->getEnd();
@@ -58,17 +55,38 @@ final class CueList
             if ($joinLines) {
                 $lines = array_merge($lines, $cue->getLines());
             }
-            $end     = max($end, $cue->getEnd());
-            $anchors = CommentAnchors::move($anchors, $cue, $joined);
+            $end              = max($end, $cue->getEnd());
+            $joinedInto[$cue] = $joined;
         }
         $joined->setEnd($end)->setLines($lines);
+    }
 
-        $cues = array_values(array_filter(
-            $cues,
-            fn (SubtitleCue $cue): bool => $cue === $joined || !in_array($cue, $group, true)
-        ));
 
-        return [$cues, $anchors];
+    /**
+     * Removes the cues of $joinedInto from $cues and moves each anchor on such a cue to the cue that holds it now.
+     *
+     * @param SubtitleCue[]                               $cues
+     * @param array<int, ?SubtitleCue>                    $anchors
+     * @param \SplObjectStorage<SubtitleCue, SubtitleCue> $joinedInto
+     *
+     * @return array{list<SubtitleCue>, array<int, ?SubtitleCue>} the cues and the anchors after the joins
+     */
+    public static function removeJoined(array $cues, array $anchors, \SplObjectStorage $joinedInto): array
+    {
+        $joins = [];
+        foreach ($joinedInto as $cue) {
+            $joins[] = [$cue, $joinedInto->getInfo()];
+        }
+        // A cue can join into a cue that joins into a third cue later, so the later joins resolve first.
+        $holders = new \SplObjectStorage();
+        foreach (array_reverse($joins) as [$cue, $into]) {
+            $holders[$cue] = isset($holders[$into]) ? $holders[$into] : $into;
+        }
+
+        return [
+            array_values(array_filter($cues, fn (SubtitleCue $cue): bool => !isset($holders[$cue]))),
+            array_map(fn (?SubtitleCue $anchor): ?SubtitleCue => $anchor !== null && isset($holders[$anchor]) ? $holders[$anchor] : $anchor, $anchors),
+        ];
     }
 
 

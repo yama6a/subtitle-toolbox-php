@@ -18,8 +18,9 @@ trait ShortCueMerging
     {
         $options ??= new MergeShortCuesOptions();
         $anchors = CommentAnchors::of($this->cues, $this->comments);
-        $cues    = CueList::inStartOrder($this->cues);
-        $index   = 0;
+        $cues       = CueList::inStartOrder($this->cues);
+        $joinedInto = new \SplObjectStorage();
+        $index      = 0;
         while ($index < count($cues)) {
             if (!$options->mergeSameSpeakerAnyDuration && !self::shortCueMergingIsShort($cues[$index], $options)) {
                 $index++;
@@ -40,12 +41,13 @@ trait ShortCueMerging
                 continue;
             }
 
-            [$this->cues, $anchors] = CueList::join($this->cues, [$cues[$first], $cues[$first + 1]], $anchors, false);
+            CueList::join([$cues[$first], $cues[$first + 1]], false, $joinedInto);
             $cues[$first]->setLines($lines);
             array_splice($cues, $first + 1, 1);
             $index = $first;
         }
-        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
+        [$this->cues, $anchors] = CueList::removeJoined($this->cues, $anchors, $joinedInto);
+        $this->comments         = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
     }
