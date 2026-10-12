@@ -50,6 +50,8 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
   - Laced subtitle blocks.
   - A block that starts or ends at 100,000 hours or more, the [time limit](formats.md) of the parsers.
   - An unsigned integer element, such as a cluster `Timestamp`, of more than 8 bytes or of 2^63 or more.
+  - An element whose size reaches past the end of the file. The reader checks the size before it reads, so a damaged size cannot exhaust the memory.
+  - Zlib data that is not valid or that inflates to more than 64 MB. A full-screen 4K PGS display set holds about 8 MB.
   - A file that is not Matroska or WebM.
 - **Spec**: [Matroska elements](https://www.matroska.org/technical/elements.html), [Matroska subtitles](https://www.matroska.org/technical/subtitles.html).
 
