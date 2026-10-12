@@ -116,6 +116,8 @@ class EbuStlFormatterTest extends TestCase
             "text like a tag at end" => ["<i>a</i>< b > c", "\x80a\x81< b > c"],
             "dollar and currency"    => ["$5 or 5\u{00A4}", "\xA45 or 5\x24"],
             "outside the table"      => ["\u{4E2D} ok", "? ok"],
+            "underline over 2 lines" => ["<u>under\nline</u>", "\x82under\x83\x8A\x82line\x83"],
+            "<c> color over 2 lines" => ["<c.yellow>Mind\nthe gap</c>", "\x03Mind\x8A\x03the gap"],
         ];
     }
 
@@ -126,6 +128,29 @@ class EbuStlFormatterTest extends TestCase
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, $line));
 
         $this->assertSame(bin2hex($textField), bin2hex(rtrim(substr(self::ttiBlocks($subtitle->toString(Format::EbuStl))[0], 16), "\x8F")));
+    }
+
+
+    /**
+     * @return array<string, array{string, int, list<string>}>
+     */
+    public static function stylesOverTwoLines(): array
+    {
+        return [
+            "italics"                => ["srt/real/own_styled.srt", 6, ["<i>Italics over two lines</i>", "<i>that close on the second line</i>"]],
+            "italics that stay open" => ["fixing/web-errors.srt", 2, ["<i>The station was closed,</i>", "<i>so we walked.</i>"]],
+            "color that stays open"  => ["fixing/web-errors.srt", 10, ["<font color=\"#ffff00\">Next stop:</font>", "<font color=\"#ffff00\">the harbour</font>"]],
+            "italics in WebVTT"      => ["hearing-impaired/own_sdh.vtt", 7, ["<i>[door opens]</i>", "<i>(footsteps)</i>"]],
+        ];
+    }
+
+
+    #[DataProvider("stylesOverTwoLines")]
+    public function testStyleThatSpansTwoLinesStylesBoth(string $file, int $index, array $lines): void
+    {
+        $stl = Subtitle::load(__DIR__ . "/../files/$file", Format::fromPath($file))->toString(Format::EbuStl);
+
+        $this->assertSame($lines, Subtitle::fromString($stl, Format::EbuStl)->getCues()[$index]->getLines());
     }
 
 

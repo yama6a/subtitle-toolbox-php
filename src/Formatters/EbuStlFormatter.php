@@ -287,7 +287,7 @@ final class EbuStlFormatter extends SubtitleFormatter
     private function encodeText(EbuStlContext $context, SubtitleCue $cue): string
     {
         $rows = [];
-        foreach (array_map(Markup::rubyAsText(...), $cue->getLines()) as $line) {
+        foreach (Markup::carryOpenTags(array_map(Markup::rubyAsText(...), $cue->getLines())) as $line) {
             $bytes  = "";
             $italic = 0;
             $under  = 0;

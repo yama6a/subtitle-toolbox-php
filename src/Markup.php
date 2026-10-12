@@ -529,6 +529,28 @@ final class Markup
 
 
     /**
+     * Starts each line with the tags that the lines before it leave open, for writers that style each line on its own.
+     * It first turns WebVTT color classes into <font> tags, so that a color can span lines too.
+     *
+     * @param list<string> $lines
+     * @return list<string>
+     *
+     * @internal
+     */
+    public static function carryOpenTags(array $lines): array
+    {
+        $lines = explode("\n", MarkupColors::webVttColorsToFont(implode("\n", $lines)));
+        $open  = [];
+        foreach ($lines as $index => $line) {
+            $lines[$index] = implode("", array_column($open, "tag")) . $line;
+            $open          = self::openCoreTags($line, $open);
+        }
+
+        return $lines;
+    }
+
+
+    /**
      * Returns the seconds of a core word timestamp such as "<00:01:02.500>", or null for other text.
      */
     public static function wordTimestampSeconds(string $timestamp): ?float
