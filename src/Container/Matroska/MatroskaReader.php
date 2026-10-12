@@ -51,6 +51,9 @@ final class MatroskaReader implements ContainerReader
 
     private const NANOSECONDS_PER_MILLISECOND = 1000000;
 
+    private const MKVMERGE_WRITING_APP = "mkvmerge ";
+    private const NUMBER_OF_FRAMES     = "NUMBER_OF_FRAMES";
+
     // The WebM codecs of WebVTT tracks. D_WEBVTT/METADATA holds no text to display.
     private const CODEC_WEBM_SUBTITLES    = "D_WEBVTT/SUBTITLES";
     private const CODEC_WEBM_CAPTIONS     = "D_WEBVTT/CAPTIONS";
@@ -77,9 +80,11 @@ final class MatroskaReader implements ContainerReader
     private const ID_SEEK_POSITION    = 0x53AC;
     private const ID_INFO             = 0x1549A966;
     private const ID_TIMESTAMP_SCALE  = 0x2AD7B1;
+    private const ID_WRITING_APP      = 0x5741;
     private const ID_TRACKS           = 0x1654AE6B;
     private const ID_TRACK_ENTRY      = 0xAE;
     private const ID_TRACK_NUMBER     = 0xD7;
+    private const ID_TRACK_UID        = 0x73C5;
     private const ID_TRACK_TYPE       = 0x83;
     private const ID_CODEC_ID         = 0x86;
     private const ID_CODEC_PRIVATE    = 0x63A2;
@@ -98,6 +103,19 @@ final class MatroskaReader implements ContainerReader
     private const ID_COMP_ALGO        = 0x4254;
     private const ID_COMP_SETTINGS    = 0x4255;
     private const ID_CLUSTER          = 0x1F43B675;
+    private const ID_CUES             = 0x1C53BB6B;
+    private const ID_CUE_POINT        = 0xBB;
+    private const ID_CUE_POSITIONS    = 0xB7;
+    private const ID_CUE_TRACK        = 0xF7;
+    private const ID_CUE_CLUSTER      = 0xF1;
+    private const ID_CUE_RELATIVE     = 0xF0;
+    private const ID_TAGS             = 0x1254C367;
+    private const ID_TAG              = 0x7373;
+    private const ID_TARGETS          = 0x63C0;
+    private const ID_TAG_TRACK_UID    = 0x63C5;
+    private const ID_SIMPLE_TAG       = 0x67C8;
+    private const ID_TAG_NAME         = 0x45A3;
+    private const ID_TAG_STRING       = 0x4487;
     private const ID_TIMESTAMP        = 0xE7;
     private const ID_SIMPLE_BLOCK     = 0xA3;
     private const ID_BLOCK_GROUP      = 0xA0;
@@ -142,12 +160,20 @@ final class MatroskaReader implements ContainerReader
 
     private int $firstCluster;
 
+    private int $segmentOffset;
+
+    private ?int $cuesOffset = null;
+
+    private ?int $tagsOffset = null;
+
+    private bool $writtenByMkvmerge = false;
+
     private int $timestampScale = self::DEFAULT_TIMESTAMP_SCALE;
 
     /** @var array<int, SubtitleTrack> */
     private array $tracks = [];
 
-    /** @var array<int, array{codecPrivate: string, defaultDuration: ?int, encodings: list<array{scope: int, type: int, algo: int, settings: string}>}> */
+    /** @var array<int, array{uid: ?string, codecPrivate: string, defaultDuration: ?int, encodings: list<array{scope: int, type: int, algo: int, settings: string}>}> */
     private array $trackData = [];
 
 
@@ -266,8 +292,9 @@ final class MatroskaReader implements ContainerReader
             throw new ParsingException("The file is not a Matroska or WebM file.");
         }
 
-        $this->segmentEnd   = $segment["size"] === EbmlReader::UNKNOWN_SIZE ? PHP_INT_MAX : $segment["offset"] + $segment["size"];
-        $this->firstCluster = $this->segmentEnd;
+        $this->segmentOffset = $segment["offset"];
+        $this->segmentEnd    = $segment["size"] === EbmlReader::UNKNOWN_SIZE ? PHP_INT_MAX : $segment["offset"] + $segment["size"];
+        $this->firstCluster  = $this->segmentEnd;
 
         $positions = [];
         $tracks    = null;
@@ -283,9 +310,18 @@ final class MatroskaReader implements ContainerReader
                 self::ID_SEEK_HEAD => $positions += $this->readSeekHead($element),
                 self::ID_INFO      => $info = $element,
                 self::ID_TRACKS    => $tracks = $element,
+                self::ID_CUES      => $this->cuesOffset = $position,
+                self::ID_TAGS      => $this->tagsOffset = $position,
                 default            => null,
             };
             $this->skip($element);
+        }
+
+        if (isset($positions[self::ID_CUES])) {
+            $this->cuesOffset ??= $segment["offset"] + $positions[self::ID_CUES];
+        }
+        if (isset($positions[self::ID_TAGS])) {
+            $this->tagsOffset ??= $segment["offset"] + $positions[self::ID_TAGS];
         }
 
         $info   ??= $this->elementAt($segment["offset"], $positions[self::ID_INFO] ?? null);
@@ -370,9 +406,11 @@ final class MatroskaReader implements ContainerReader
     private function readInfo(array $info): void
     {
         foreach ($this->children($info) as $child) {
-            if ($child["id"] === self::ID_TIMESTAMP_SCALE) {
-                $this->timestampScale = $this->ebml->readUnsigned($child);
-            }
+            match ($child["id"]) {
+                self::ID_TIMESTAMP_SCALE => $this->timestampScale = $this->ebml->readUnsigned($child),
+                self::ID_WRITING_APP     => $this->writtenByMkvmerge = str_starts_with($this->ebml->readString($child["size"]), self::MKVMERGE_WRITING_APP),
+                default                  => null,
+            };
         }
     }
 
@@ -389,6 +427,7 @@ final class MatroskaReader implements ContainerReader
                 $size = $child["size"];
                 match ($child["id"]) {
                     self::ID_TRACK_NUMBER     => $fields["number"] = $this->ebml->readUnsigned($child),
+                    self::ID_TRACK_UID        => $fields["uid"] = $this->readUid($child),
                     self::ID_TRACK_TYPE       => $fields["type"] = $this->ebml->readUnsigned($child),
                     self::ID_CODEC_ID         => $fields["codecId"] = $this->ebml->readString($size),
                     self::ID_CODEC_PRIVATE    => $fields["codecPrivate"] = $this->ebml->readBytes($size),
@@ -420,6 +459,7 @@ final class MatroskaReader implements ContainerReader
                 $fields["forced"],
             );
             $this->trackData[$number] = [
+                "uid"             => $fields["uid"] ?? null,
                 "codecPrivate"    => $fields["codecPrivate"],
                 "defaultDuration" => $fields["defaultDuration"],
                 "encodings"       => $fields["encodings"],
@@ -476,11 +516,184 @@ final class MatroskaReader implements ContainerReader
 
 
     /**
+     * @return list<array{start: int, duration: ?int, data: string, additional: ?string}> times in TimestampScale ticks
+     */
+    private function readBlocks(int $trackNumber): array
+    {
+        return $this->readListedBlocks($trackNumber) ?? $this->walkBlocks($trackNumber);
+    }
+
+
+    /**
+     * Reads only the blocks that the Cues element lists for the track, in a file from mkvmerge.
+     * mkvmerge lists every subtitle block by default, and its NUMBER_OF_FRAMES tag counts the blocks of the track.
+     * Returns null, so that the caller walks all clusters, when the counts differ, the tag is missing or a listed block cannot be read.
+     *
+     * @return list<array{start: int, duration: ?int, data: string, additional: ?string}>|null
+     */
+    private function readListedBlocks(int $trackNumber): ?array
+    {
+        if (!$this->writtenByMkvmerge || $this->cuesOffset === null || $this->tagsOffset === null) {
+            return null;
+        }
+
+        try {
+            $positions = $this->cuePositions($trackNumber);
+            if ($positions === [] || count($positions) !== $this->frameCount($this->trackData[$trackNumber]["uid"])) {
+                return null;
+            }
+
+            $blocks   = [];
+            $clusters = [];
+            foreach ($positions as [$cluster, $relative]) {
+                $clusters[$cluster] ??= $this->clusterStart($cluster);
+                if ($clusters[$cluster] === null) {
+                    return null;
+                }
+                $this->ebml->seek($clusters[$cluster]["dataOffset"] + $relative);
+                $element = $this->ebml->readElementHeader();
+                $block   = match ($element["id"] ?? null) {
+                    self::ID_SIMPLE_BLOCK => $this->readBlock($element, $trackNumber),
+                    self::ID_BLOCK_GROUP  => $this->readBlockGroup($element, $trackNumber),
+                    default               => null,
+                };
+                if ($block === null) {
+                    return null;
+                }
+                $blocks[] = $this->finishBlock($trackNumber, $element["offset"], $block, $clusters[$cluster]["time"]);
+            }
+        } catch (ParsingException) {
+            return null;
+        }
+
+        return $blocks;
+    }
+
+
+    /**
+     * Returns the position of each block that the Cues element lists for the track, in file order: the offset of the cluster
+     * and the offset of the block in the cluster data.
+     *
+     * @return list<array{int, int}>
+     */
+    private function cuePositions(int $trackNumber): array
+    {
+        $this->ebml->seek($this->cuesOffset);
+        $cues = $this->ebml->readElementHeader();
+        if ($cues === null || $cues["id"] !== self::ID_CUES) {
+            return [];
+        }
+
+        $positions = [];
+        foreach ($this->children($cues) as $point) {
+            foreach ($point["id"] === self::ID_CUE_POINT ? $this->children($point) : [] as $trackPositions) {
+                $fields = [];
+                foreach ($trackPositions["id"] === self::ID_CUE_POSITIONS ? $this->children($trackPositions) : [] as $child) {
+                    if (in_array($child["id"], [self::ID_CUE_TRACK, self::ID_CUE_CLUSTER, self::ID_CUE_RELATIVE], true)) {
+                        $fields[$child["id"]] = $this->ebml->readUnsigned($child);
+                    }
+                }
+                if (($fields[self::ID_CUE_TRACK] ?? null) !== $trackNumber) {
+                    continue;
+                }
+                if (!isset($fields[self::ID_CUE_CLUSTER], $fields[self::ID_CUE_RELATIVE])) {
+                    return [];
+                }
+                $positions[$fields[self::ID_CUE_CLUSTER] . ":" . $fields[self::ID_CUE_RELATIVE]] = [
+                    $this->segmentOffset + $fields[self::ID_CUE_CLUSTER],
+                    $fields[self::ID_CUE_RELATIVE],
+                ];
+            }
+        }
+        usort($positions, fn (array $a, array $b): int => $a <=> $b);
+
+        return $positions;
+    }
+
+
+    /**
+     * Returns the NUMBER_OF_FRAMES statistics tag of the track with the TrackUID $uid, or null without one.
+     */
+    private function frameCount(?string $uid): ?int
+    {
+        $this->ebml->seek($this->tagsOffset);
+        $tags = $this->ebml->readElementHeader();
+        if ($uid === null || $tags === null || $tags["id"] !== self::ID_TAGS) {
+            return null;
+        }
+
+        foreach ($this->children($tags) as $tag) {
+            $uids  = [];
+            $count = null;
+            foreach ($tag["id"] === self::ID_TAG ? $this->children($tag) : [] as $child) {
+                if ($child["id"] === self::ID_TARGETS) {
+                    foreach ($this->children($child) as $target) {
+                        if ($target["id"] === self::ID_TAG_TRACK_UID) {
+                            $uids[] = $this->readUid($target);
+                        }
+                    }
+                } elseif ($child["id"] === self::ID_SIMPLE_TAG) {
+                    $count ??= $this->numberOfFrames($child);
+                }
+            }
+            if ($count !== null && in_array($uid, $uids, true)) {
+                return $count;
+            }
+        }
+
+        return null;
+    }
+
+
+    /**
+     * Reads a UID as bytes without leading zeros, because a UID may be 2^63 or more.
+     */
+    private function readUid(array $element): string
+    {
+        return ltrim($this->ebml->readBytes($element["size"]), "\0");
+    }
+
+
+    private function numberOfFrames(array $simpleTag): ?int
+    {
+        $name  = null;
+        $value = null;
+        foreach ($this->children($simpleTag) as $child) {
+            match ($child["id"]) {
+                self::ID_TAG_NAME   => $name = $this->ebml->readString($child["size"]),
+                self::ID_TAG_STRING => $value = $this->ebml->readString($child["size"]),
+                default             => null,
+            };
+        }
+
+        return $name === self::NUMBER_OF_FRAMES && $value !== null && preg_match('/^\d+\z/', $value) === 1 ? (int) $value : null;
+    }
+
+
+    /**
+     * Reads the start of the cluster data and the cluster Timestamp, which mkvmerge writes as the first child.
+     *
+     * @return array{dataOffset: int, time: int}|null null when no cluster with a Timestamp first starts at $offset
+     */
+    private function clusterStart(int $offset): ?array
+    {
+        $this->ebml->seek($offset);
+        $cluster   = $this->ebml->readElementHeader();
+        $timestamp = $cluster !== null && $cluster["id"] === self::ID_CLUSTER ? $this->ebml->readElementHeader() : null;
+        if ($timestamp === null || $timestamp["id"] !== self::ID_TIMESTAMP) {
+            return null;
+        }
+
+        return ["dataOffset" => $cluster["offset"], "time" => $this->ebml->readUnsigned($timestamp)];
+    }
+
+
+    /**
      * Walks all clusters. Clusters of unknown size, as live recordings write them, end at the next cluster.
      *
      * @return list<array{start: int, duration: ?int, data: string, additional: ?string}> times in TimestampScale ticks
      */
-    private function readBlocks(int $trackNumber): array
+    private function walkBlocks(int $trackNumber): array
     {
         $blocks      = [];
         $clusterTime = 0;
@@ -499,14 +712,24 @@ final class MatroskaReader implements ContainerReader
             }
 
             if ($block !== null) {
-                $block["start"] += $clusterTime;
-                $this->checkTime($trackNumber, $element["offset"], $block);
-                $block["data"]   = $this->decode($trackNumber, $block["data"], self::SCOPE_FRAMES);
-                $blocks[]        = $block;
+                $blocks[] = $this->finishBlock($trackNumber, $element["offset"], $block, $clusterTime);
             }
         }
 
         return $blocks;
+    }
+
+
+    /**
+     * Adds the cluster time to the block time, checks the time limit and decodes the block data.
+     */
+    private function finishBlock(int $trackNumber, int $offset, array $block, int $clusterTime): array
+    {
+        $block["start"] += $clusterTime;
+        $this->checkTime($trackNumber, $offset, $block);
+        $block["data"] = $this->decode($trackNumber, $block["data"], self::SCOPE_FRAMES);
+
+        return $block;
     }
 
 
