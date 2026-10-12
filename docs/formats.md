@@ -320,7 +320,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWri
 - `$subtitle->findFormatData('microdvd')['frameRate']` returns the frame rate that the parser used.
 - **Frame rate line**: the format data holds `frameRateLine: true` when the file starts with `{1}{1}<fps>`. The formatter then writes that line with the frame rate of the output, so the file reads back at the same frame rate. `MicroDvdWriteOptions(writeFrameRateLine: true)` writes the line for any input. To drop the line of a MicroDVD input, remove `frameRateLine` from the format data.
 - **Control codes**: `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` become core markup. The parser reads the codes at the start of each `|`-separated line. A code later in the line stays text. A lower-case code styles one line. An upper-case code styles the whole cue. The `microdvd` format data keeps other control codes.
-- **Output**: the formatter writes control codes only for tags that wrap a whole line. It strips other tags. An unchanged cue keeps its original control codes. With `stripTags`, the formatter writes no control codes, also not the stored font and size codes such as `{f:Arial}` and `{s:30}`.
+- **Output**: the formatter writes control codes only for tags that wrap a whole line. It strips other tags. A tag that spans lines wraps each of its lines, so `<i>` around 2 lines gives `{y:i}` on both lines. A `<v>` tag does not hide the styles inside it. An unchanged cue keeps its original control codes. With `stripTags`, the formatter writes no control codes, also not the stored font and size codes such as `{f:Arial}` and `{s:30}`.
 
 ## MPL2 and TMPlayer
 Both formats are common in Polish subtitle downloads and use the `.txt` extension.

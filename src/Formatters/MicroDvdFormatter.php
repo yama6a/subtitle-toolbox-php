@@ -51,7 +51,12 @@ final class MicroDvdFormatter extends SubtitleFormatter
     private function formatText(SubtitleCue $cue, bool $stripTags): string
     {
         $storedLines = $cue->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["lines"] ?? [];
-        $lines       = array_map(fn (string $line): array => $this->readLine(MarkupColors::webVttColorsToFont($line)), array_map(Markup::rubyAsText(...), $cue->getLines()));
+        // A style that spans lines wraps each of its lines here, so that readLine() finds it on every line.
+        // MicroDVD has no speaker codes, so a <v> tag must not hide the style inside it.
+        $lines       = array_map(
+            fn (string $line): array => $this->readLine(Markup::keepTags($line . Markup::closeCoreTags(Markup::openCoreTags($line)), Markup::STYLE_TAGS)),
+            Markup::carryOpenTags(array_map(Markup::rubyAsText(...), $cue->getLines()))
+        );
 
         $keepStoredCodes = !$stripTags && count($storedLines) === count($lines);
         foreach ($lines as $index => $line) {
