@@ -18,7 +18,7 @@ Every release also ships the tool as a PHAR file and as a container image.
 
 | Form | Needs | Example |
 |:--- |:--- |:--- |
-| PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox-php/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv` and `ext-zlib`, plus `ext-curl` for `translate` | `php subtitle-toolbox.phar convert in.srt --to vtt -o out.vtt` |
+| PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox-php/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv`, `ext-mbstring` and `ext-zlib`, plus `ext-curl` for `translate` | `php subtitle-toolbox.phar convert in.srt --to vtt -o out.vtt` |
 | Image `ghcr.io/yama6a/subtitle-toolbox-php` | Docker or another container runtime | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox-php:3.0.0 convert in.srt --to vtt -o out.vtt` |
 | Image `ghcr.io/yama6a/subtitle-toolbox-php:tesseract` | the same, for OCR with Tesseract in every language | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox-php:3.0.0-tesseract convert in.sup --to srt -o out.srt --ocr --ocr-language deu` |
 

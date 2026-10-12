@@ -484,7 +484,7 @@ final class Markup
      */
     public static function countCharacters(string $text): int
     {
-        // mbstring is not part of a default PHP build, but PCRE is. preg_match_all() fails on invalid UTF-8.
+        // preg_match_all() fails on invalid UTF-8, so such text counts its bytes.
         return preg_match_all('/./su', $text) ?: strlen($text);
     }
 

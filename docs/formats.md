@@ -238,7 +238,7 @@ $subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOp
 
 - **Times**: the disk format code `STL25.01` or `STL30.01` sets the frame rate. By default, the parser keeps the time codes of the file.
 - **Start of programme**: `EbuStlReadOptions(subtractStartOfProgramme: true)` subtracts the TCP time code, for example `10:00:00:00`. A time before it becomes 0. The formatter adds TCP again.
-- **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). It needs no `mbstring` or `iconv`. The formatter writes `?` for a character outside the table.
+- **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). The formatter writes `?` for a character outside the table.
 - **Styles**: italics, underline and the 8 teletext colors become `<i>`, `<u>` and `<font color>`, and back. White gives no tag. The formatter drops other colors. A teletext row resets the styles, so the formatter repeats a style that spans rows at the start of each row. For example, `<i>` around 2 lines makes both rows italic.
 - **Blocks**: the parser joins the TTI blocks of one subtitle and skips user data blocks. A subtitle with the comment flag becomes a comment. The formatter splits text over the 112 bytes of one TTI text field into extension blocks.
 - **Alignment**: the justification code gives the column. The vertical position gives the row: the top, middle or bottom third of the rows.

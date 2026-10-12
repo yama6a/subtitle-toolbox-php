@@ -144,7 +144,7 @@ final class SubtitleStatistics
         $word = preg_replace('/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/u', "", $word)
             ?? preg_replace('/^[[:punct:]]+|[[:punct:]]+$/', "", $word);
 
-        return StringHelpers::canUseMultibyte($word)
+        return StringHelpers::isValidUtf8($word)
             ? mb_strtolower($word, "UTF-8")
             : strtolower($word);
     }

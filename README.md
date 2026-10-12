@@ -19,9 +19,8 @@ apt install tesseract-ocr                    # or Tesseract on Debian and Ubuntu
 
 The core package needs neither OCR engine. See [ocr.md](docs/ocr.md) for the install commands of other systems and languages.
 
-The library needs PHP 8.2 or later with `ext-dom` and `ext-iconv`. These extensions are optional:
+The library needs PHP 8.2 or later with `ext-dom`, `ext-iconv` and `ext-mbstring`. These extensions are optional:
 
-- `ext-mbstring` for Unicode upper and lower case
 - `ext-zlib` for PGS output and compressed MKV tracks
 - `ext-curl` for the translation engines
 

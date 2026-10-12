@@ -22,7 +22,7 @@ final class TextCase
 
     public static function upper(string $text, bool $turkic): string
     {
-        if (!StringHelpers::canUseMultibyte($text)) {
+        if (!StringHelpers::isValidUtf8($text)) {
             return strtoupper($text);
         }
 
@@ -32,7 +32,7 @@ final class TextCase
 
     public static function lower(string $text, bool $turkic): string
     {
-        if (!StringHelpers::canUseMultibyte($text)) {
+        if (!StringHelpers::isValidUtf8($text)) {
             return strtolower($text);
         }
 
@@ -45,7 +45,7 @@ final class TextCase
 
     public static function title(string $char, bool $turkic): string
     {
-        if (!StringHelpers::canUseMultibyte($char)) {
+        if (!StringHelpers::isValidUtf8($char)) {
             return strtoupper($char);
         }
 
