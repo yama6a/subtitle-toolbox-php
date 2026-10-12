@@ -76,8 +76,8 @@ Subtitle::loadTrack('/media/phone-video.mp4', 2)->save('phone-video.srt');
 | `forced` | the `tx3g` display flag "all samples are forced" |
 
 - **Tracks**: `tracks()` lists tracks with the handler `text`, `sbtl`, `subt` or `clcp` (closed captions).
-- **Cues**: each `tx3g` sample with text becomes a cue with the sample times. An empty sample is a gap. The text is UTF-8, or UTF-16 after a byte order mark. The reader ignores style boxes such as `styl`, so the cues have no tags.
-- **Format**: `getFormat()` is `Format::SubRip`. The cues hold plain text, as from an `S_TEXT/UTF8` track of an MKV file.
+- **Cues**: each `tx3g` sample with text becomes a cue with the sample times. An empty sample is a gap. The text is UTF-8, or UTF-16 after a byte order mark. The reader turns the bold, italic and underline runs of a `styl` box into `<b>`, `<i>` and `<u>` tags, so `ffmpeg -c:s mov_text` output keeps the tags of the SubRip input. It ignores the font, the size and the color of a run, and other modifier boxes such as `hlit`.
+- **Format**: `getFormat()` is `Format::SubRip`. The cues hold text with SubRip tags, as from an `S_TEXT/UTF8` track of an MKV file.
 - **Detection**: `loadAutoDetectFormat()` and `fromStringAutoDetectFormat()` know an MP4 file by the `ftyp` box at byte 4.
 - **Memory**: the reader reads the sample tables of the wanted track and its samples only. It skips the media data with `fseek()`.
 - **Errors**: `extract()` throws `ParsingException` for a `c608` track, another codec and an encrypted track (`enct` or a `sinf` box). It also throws `ParsingException` for a sample outside the file. The same applies when the `stsz` box lists more sample bytes than the file has.

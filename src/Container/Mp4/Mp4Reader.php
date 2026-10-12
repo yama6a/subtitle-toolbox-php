@@ -48,6 +48,15 @@ final class Mp4Reader implements ContainerReader
     // A tx3g sample starts with a 16-bit text length.
     private const TEXT_LENGTH_SIZE = 2;
 
+    // A styl box holds a 16-bit record count and records of 12 bytes: start and end character, font ID, face style
+    // flags, font size and color. The reader reads at most this many bytes of modifier boxes after the text.
+    private const STYLE_COUNT_SIZE   = 2;
+    private const STYLE_RECORD_SIZE  = 12;
+    private const MAX_MODIFIERS_SIZE = self::BOX_HEADER_SIZE + self::STYLE_COUNT_SIZE + 0xFFFF * self::STYLE_RECORD_SIZE;
+
+    // The face style flags of 3GPP TS 26.245 and the tags that hold them.
+    private const FACE_STYLE_TAGS = ["b" => 0x01, "i" => 0x02, "u" => 0x04];
+
     // A box header holds a 32-bit size and the type. A size of 1 adds a 64-bit size field.
     private const BOX_HEADER_SIZE   = 8;
     private const LARGE_SIZE_LENGTH = 8;
@@ -430,7 +439,8 @@ final class Mp4Reader implements ContainerReader
 
 
     /**
-     * Reads the text of a tx3g sample, without its modifier boxes. A UTF-16 BOM sets UTF-16.
+     * Reads the text of a tx3g sample with the bold, italic and underline runs of its styl box as tags.
+     * A UTF-16 BOM sets UTF-16.
      */
     private function sampleText(int $trackNumber, int $offset, int $size): string
     {
@@ -453,7 +463,72 @@ final class Mp4Reader implements ContainerReader
             throw new ParsingException("The text of the sample of track $trackNumber at byte $offset is not valid UTF-8.");
         }
 
-        return StringHelpers::normalizeEOLs($text);
+        $rest      = $size - self::TEXT_LENGTH_SIZE - $length;
+        $modifiers = $rest < self::BOX_HEADER_SIZE ? "" : (string) fread($this->stream, min($rest, self::MAX_MODIFIERS_SIZE));
+
+        // The character offsets of the styl box count the line endings as they are in the sample.
+        return StringHelpers::normalizeEOLs(self::addStyleTags($text, self::readStyles($modifiers)));
+    }
+
+
+    /**
+     * Returns the start character, the end character and the face style flags of each record of the styl box.
+     * A damaged modifier box gives no styles, as the text alone is still correct.
+     *
+     * @return list<array{int, int, int}>
+     */
+    private static function readStyles(string $modifiers): array
+    {
+        $offset = 0;
+        while ($offset + self::BOX_HEADER_SIZE <= strlen($modifiers)) {
+            ["size" => $size, "type" => $type] = unpack("Nsize/a4type", $modifiers, $offset);
+            if ($size < self::BOX_HEADER_SIZE) {
+                return [];
+            }
+            if ($type !== "styl") {
+                $offset += $size;
+                continue;
+            }
+
+            $data    = substr($modifiers, $offset + self::BOX_HEADER_SIZE, $size - self::BOX_HEADER_SIZE);
+            $count   = strlen($data) >= self::STYLE_COUNT_SIZE ? unpack("n", $data)[1] : 0;
+            $count   = min($count, intdiv(strlen($data) - self::STYLE_COUNT_SIZE, self::STYLE_RECORD_SIZE));
+            $records = [];
+            for ($index = 0; $index < $count; $index++) {
+                $records[] = array_values(unpack("nstart/nend/x2/Cflags", $data, self::STYLE_COUNT_SIZE + $index * self::STYLE_RECORD_SIZE));
+            }
+
+            return $records;
+        }
+
+        return [];
+    }
+
+
+    /**
+     * Wraps each style run of $text in <b>, <i> and <u> tags. The start and end count characters, and the end is exclusive.
+     *
+     * @param list<array{int, int, int}> $styles
+     */
+    private static function addStyleTags(string $text, array $styles): string
+    {
+        $characters = preg_split("//u", $text, -1, PREG_SPLIT_NO_EMPTY);
+        $covered    = 0;
+        usort($styles, fn (array $a, array $b): int => $a[0] <=> $b[0]);
+        foreach ($styles as [$start, $end, $flags]) {
+            $start = max($start, $covered);
+            $end   = min($end, count($characters));
+            $tags  = array_keys(array_filter(self::FACE_STYLE_TAGS, fn (int $flag): bool => ($flags & $flag) !== 0));
+            if ($start >= $end || $tags === []) {
+                continue;
+            }
+
+            $characters[$start]   = "<" . implode("><", $tags) . ">" . $characters[$start];
+            $characters[$end - 1] .= "</" . implode("></", array_reverse($tags)) . ">";
+            $covered               = $end;
+        }
+
+        return implode("", $characters);
     }
 
 
