@@ -10,6 +10,7 @@ use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\CsvColumnRole;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -40,65 +41,97 @@ final class CsvFormatter extends SubtitleFormatter
         if ($timeFormat === CsvTimeFormat::Frames && $frameRate === null) {
             throw new InvalidArgumentException("The time format " . CsvTimeFormat::Frames->value . " needs a frame rate. Set CsvWriteOptions::\$frameRate.");
         }
-        $second = $formatOptions->secondText;
+        $secondSubtitle = $formatOptions->secondText;
 
         $cues               = array_values($subtitle->getCues());
-        $rows               = array_map($this->splitSpeaker(...), $cues);
-        [$columns, $header] = $this->columns($fileData, $cues, $rows);
-        if ($second !== null) {
-            $position = array_search(["text", null], $columns, true) + 1;
-            array_splice($columns, $position, 0, [["second", null]]);
-            array_splice($header, $position, 0, [$formatOptions->secondTextHeader]);
-            $secondTexts = $this->secondTexts($cues, array_values($second->getCues()));
+        $speakerAndText     = array_map($this->splitSpeaker(...), $cues);
+        [$columns, $header] = $this->columns($fileData, $cues, $speakerAndText);
+        $secondTexts        = [];
+        if ($secondSubtitle !== null) {
+            $this->insertSecondTextColumn($columns, $header, $formatOptions->secondTextHeader);
+            $secondTexts = $this->secondTexts($cues, array_values($secondSubtitle->getCues()));
         }
 
         $records = $fileData === [] || $fileData["header"] !== null ? [$header] : [];
         foreach ($cues as $index => $cue) {
-            $records[] = array_map(fn (array $column): string => match ($column[0]) {
-                "identifier" => $cue->getIdentifier() ?? "",
-                "start"      => $this->timeCell($cue->getStart(), $timeFormat, $frameRate),
-                "end"        => $this->timeCell($cue->getEnd(), $timeFormat, $frameRate),
-                "duration"   => $this->timeCell($cue->getEnd() - $cue->getStart(), $timeFormat, $frameRate),
-                "speaker"    => $rows[$index][0],
-                "text"       => $rows[$index][1],
-                "second"     => $secondTexts[$index],
-                "other"      => (string) ($cue->findFormatData(CsvParser::FORMAT_DATA_KEY)["columns"][$column[1]] ?? ""),
-            }, $columns);
+            $records[] = $this->record($cue, $columns, $speakerAndText[$index], $secondTexts[$index] ?? "", $timeFormat, $frameRate);
         }
 
         // In-cell line breaks stay LF, as in Excel, so the records get the line ending here.
         $lineEnding = $options->lineEnding->value;
-        $lines      = array_map(fn (array $record): string => implode($delimiter, array_map(
-            fn (string $cell): string => $this->quote($formatOptions->escapeFormulas ? $this->escapeFormula($cell) : $cell, $delimiter),
-            $record
-        )), $records);
+        $lines      = array_map(fn (array $record): string => $this->line($record, $delimiter, $formatOptions->escapeFormulas), $records);
 
         return $this->applyBom(implode($lineEnding, $lines) . $lineEnding, $options);
     }
 
 
     /**
-     * @param list<SubtitleCue>           $cues
-     * @param list<array{string, string}> $rows
-     *
-     * @return array{list<array{string, string|int|null}>, list<string>}
+     * @param list<array{CsvColumnRole, string|int|null}> $columns
+     * @param list<string>                                $header
      */
-    private function columns(array $fileData, array $cues, array $rows): array
+    private function insertSecondTextColumn(array &$columns, array &$header, string $headerName): void
+    {
+        $position = array_search([CsvColumnRole::Text, null], $columns, true) + 1;
+        array_splice($columns, $position, 0, [[CsvColumnRole::Second, null]]);
+        array_splice($header, $position, 0, [$headerName]);
+    }
+
+
+    /**
+     * @param list<array{CsvColumnRole, string|int|null}> $columns
+     * @param array{string, string}                       $speakerAndText
+     *
+     * @return list<string>
+     */
+    private function record(SubtitleCue $cue, array $columns, array $speakerAndText, string $secondText, CsvTimeFormat $timeFormat, ?FrameRate $frameRate): array
+    {
+        return array_map(fn (array $column): string => match ($column[0]) {
+            CsvColumnRole::Identifier => $cue->getIdentifier() ?? "",
+            CsvColumnRole::Start      => $this->timeCell($cue->getStart(), $timeFormat, $frameRate),
+            CsvColumnRole::End        => $this->timeCell($cue->getEnd(), $timeFormat, $frameRate),
+            CsvColumnRole::Duration   => $this->timeCell($cue->getEnd() - $cue->getStart(), $timeFormat, $frameRate),
+            CsvColumnRole::Speaker    => $speakerAndText[0],
+            CsvColumnRole::Text       => $speakerAndText[1],
+            CsvColumnRole::Second     => $secondText,
+            CsvColumnRole::Other      => (string) ($cue->findFormatData(CsvParser::FORMAT_DATA_KEY)["columns"][$column[1]] ?? ""),
+        }, $columns);
+    }
+
+
+    /**
+     * @param list<string> $record
+     */
+    private function line(array $record, string $delimiter, bool $escapeFormulas): string
+    {
+        return implode($delimiter, array_map(
+            fn (string $cell): string => $this->quote($escapeFormulas ? $this->escapeFormula($cell) : $cell, $delimiter),
+            $record
+        ));
+    }
+
+
+    /**
+     * @param list<SubtitleCue>           $cues
+     * @param list<array{string, string}> $speakerAndText
+     *
+     * @return array{list<array{CsvColumnRole, string|int|null}>, list<string>}
+     */
+    private function columns(array $fileData, array $cues, array $speakerAndText): array
     {
         $columns = [];
         $header  = [];
         if ($fileData !== []) {
             for ($index = 0; $index < $fileData["width"]; $index++) {
                 $role      = array_search($index, $fileData["roles"], true);
-                $columns[] = $role === false ? ["other", $fileData["header"][$index] ?? $index] : [$role, null];
+                $columns[] = $role === false ? [CsvColumnRole::Other, $fileData["header"][$index] ?? $index] : [CsvColumnRole::from($role), null];
                 $header[]  = $fileData["header"][$index] ?? "";
             }
         } else {
             $hasIdentifier = array_filter($cues, fn (SubtitleCue $cue): bool => $cue->getIdentifier() !== null) !== [];
-            foreach (["identifier", "start", "end", "text"] as $role) {
-                if ($role !== "identifier" || $hasIdentifier) {
+            foreach ([CsvColumnRole::Identifier, CsvColumnRole::Start, CsvColumnRole::End, CsvColumnRole::Text] as $role) {
+                if ($role !== CsvColumnRole::Identifier || $hasIdentifier) {
                     $columns[] = [$role, null];
-                    $header[]  = $role;
+                    $header[]  = $role->value;
                 }
             }
             $others = [];
@@ -106,16 +139,16 @@ final class CsvFormatter extends SubtitleFormatter
                 $others += $cue->findFormatData(CsvParser::FORMAT_DATA_KEY)["columns"] ?? [];
             }
             foreach (array_keys($others) as $name) {
-                $columns[] = ["other", $name];
+                $columns[] = [CsvColumnRole::Other, $name];
                 $header[]  = (string) $name;
             }
         }
 
-        $hasSpeaker = array_filter($rows, fn (array $row): bool => $row[0] !== "") !== [];
-        if ($hasSpeaker && !in_array(["speaker", null], $columns, true)) {
-            $position = array_search(["text", null], $columns, true);
-            array_splice($columns, $position, 0, [["speaker", null]]);
-            array_splice($header, $position, 0, ["speaker"]);
+        $hasSpeaker = array_filter($speakerAndText, fn (array $pair): bool => $pair[0] !== "") !== [];
+        if ($hasSpeaker && !in_array([CsvColumnRole::Speaker, null], $columns, true)) {
+            $position = array_search([CsvColumnRole::Text, null], $columns, true);
+            array_splice($columns, $position, 0, [[CsvColumnRole::Speaker, null]]);
+            array_splice($header, $position, 0, [CsvColumnRole::Speaker->value]);
         }
 
         return [$columns, $header];
