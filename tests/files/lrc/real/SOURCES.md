@@ -10,3 +10,4 @@
 | handwritten-core.lrc | Written for this repository from the core format and ID tag description at https://en.wikipedia.org/wiki/LRC_(file_format) | MIT |
 | handwritten-enhanced.lrc | Written for this repository from the enhanced LRC (A2 extension) description at https://en.wikipedia.org/wiki/LRC_(file_format) | MIT |
 | own-comment-before-earlier-line.lrc | Written for this repository. Lines out of time order, and a `[#:...]` comment before a line that starts earlier than the line before it | MIT |
+| `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
