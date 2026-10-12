@@ -9,4 +9,5 @@ The PGS and VobSub generators use `generator/TextBitmap.php` to draw the text cu
 | `generator/TrueTypeFont.php`, `generator/Rasterizer.php` | [php-glyph-ocr](https://github.com/yama6a/php-glyph-ocr/tree/5348524/tests/fixtures/generator), namespace and quotes changed | MIT |
 | `generator/TextBitmap.php` | Written for this repository, after `TextRenderer.php` of php-glyph-ocr | MIT |
 | `fonts/LiberationSans-Regular.ttf`, `fonts/LiberationSans-Italic.ttf` | [Liberation Fonts 2.1.5](https://github.com/liberationfonts/liberation-fonts/releases/tag/2.1.5), unchanged | SIL Open Font License 1.1, see `fonts/Liberation-LICENSE.txt` |
+| `fonts/Liberation-LICENSE.txt` | The licence text of [Liberation Fonts 2.1.5](https://github.com/liberationfonts/liberation-fonts/releases/tag/2.1.5), unchanged | SIL Open Font License 1.1 |
 | `fake-tesseract/tesseract` | Written for this repository. A shell script that stands in for the `tesseract` program in tests | MIT |
