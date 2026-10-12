@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Timing;
 
 use SubtitleToolbox\CueList;
+use SubtitleToolbox\SortedSearch;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -104,31 +105,17 @@ final class ShotChangeTiming
     }
 
 
-    /** @param list<int> $shots */
+    /** @param list<int> $shots in ascending order */
     private static function firstShotFrom(array $shots, int $frame): ?int
     {
-        foreach ($shots as $shot) {
-            if ($shot >= $frame) {
-                return $shot;
-            }
-        }
-
-        return null;
+        return $shots[SortedSearch::firstAtOrAfter($shots, $frame)] ?? null;
     }
 
 
-    /** @param list<int> $shots */
+    /** @param list<int> $shots in ascending order */
     private static function lastShotUntil(array $shots, int $frame): ?int
     {
-        $found = null;
-        foreach ($shots as $shot) {
-            if ($shot > $frame) {
-                break;
-            }
-            $found = $shot;
-        }
-
-        return $found;
+        return $shots[SortedSearch::firstAfter($shots, $frame) - 1] ?? null;
     }
 
 

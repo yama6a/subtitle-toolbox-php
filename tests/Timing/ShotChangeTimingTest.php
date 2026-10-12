@@ -55,6 +55,44 @@ class ShotChangeTimingTest extends TestCase
     }
 
 
+    // A scan of the whole shot list per cue takes about 4.5 s here.
+    public function testRealFileRepeatedTwentyThousandTimesSnapsUnderTwoSeconds(): void
+    {
+        $copies   = 1820;
+        $garden   = Subtitle::fromString(file_get_contents(self::FILES . "own_garden_24fps.srt"), Format::SubRip);
+        $gardenShots = ShotChanges::fromFfmpegLog(file_get_contents(self::FILES . "own_ffmpeg_showinfo.log"));
+        // Shots in the 18 s between 2 copies, 2 s or more away from any cue.
+        $gardenShots = [...$gardenShots, 93.0, 95.0, 97.0, 99.0, 101.0, 103.0];
+        $cues     = [];
+        $shots    = [];
+        for ($copy = 0; $copy < $copies; $copy++) {
+            foreach ($garden->getCues() as $cue) {
+                $cues[] = new SubtitleCue($cue->getStart() + 100 * $copy, $cue->getEnd() + 100 * $copy, $cue->getText());
+            }
+            foreach ($gardenShots as $shot) {
+                $shots[] = $shot + 100 * $copy;
+            }
+        }
+        $subtitle = (new Subtitle())->addCues($cues);
+        $this->assertCount(20020, $subtitle);
+        $this->assertCount(20020, $shots);
+
+        $start  = microtime(true);
+        $report = ShotChangeTiming::apply($subtitle, new ShotChangeOptions(frameRate: 24, shotChanges: $shots));
+        $this->assertLessThan(2, microtime(true) - $start);
+
+        $this->assertEquals(new ShotChangeReport(3 * $copies, 5 * $copies), $report);
+        $timed    = $this->getFrames(Subtitle::fromString(file_get_contents(self::FILES . "own_garden_24fps_timed.srt"), Format::SubRip), 24);
+        $expected = [];
+        for ($copy = 0; $copy < $copies; $copy++) {
+            foreach ($timed as [$startFrame, $endFrame]) {
+                $expected[] = [$startFrame + 2400 * $copy, $endFrame + 2400 * $copy];
+            }
+        }
+        $this->assertSame($expected, $this->getFrames($subtitle, 24));
+    }
+
+
     public function testNetflixExamplesAt24Fps(): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(62.708, 65));
