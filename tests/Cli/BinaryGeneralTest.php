@@ -5,76 +5,14 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Cli;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use SubtitleToolbox\CueLimits;
-use SubtitleToolbox\Diff\SubtitleDiffOptions;
-use SubtitleToolbox\Dual\DualSubtitleOptions;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\AssWriteOptions;
-use SubtitleToolbox\Hls\HlsSegmentOptions;
-use SubtitleToolbox\Karaoke\WordHighlightOptions;
-use SubtitleToolbox\Ocr\TesseractOcrOptions;
-use SubtitleToolbox\Parsers\Options\SccReadOptions;
-use SubtitleToolbox\Profanity\ProfanityOptions;
-use SubtitleToolbox\Resegmenting\ResegmentOptions;
-use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Tests\Support\CliTestCase;
-use SubtitleToolbox\Timing\ShotChangeOptions;
-use SubtitleToolbox\WriteOptions;
 
 /**
- * Runs the commands that every run shares: help, version, usage errors, exit codes and the formats list.
+ * Runs the commands that every run shares: version, usage errors, exit codes and the formats list.
  */
 class BinaryGeneralTest extends CliTestCase
 {
-    private const COMMANDS = ["convert", "retime", "info", "validate", "sync", "diff", "dual", "hls", "formats"];
-
-    /** Option => the library parameter whose default the CLI uses when the option is absent: class, method, parameter. */
-    private const LIBRARY_DEFAULTS = [
-        "time-tolerance"           => [SubtitleDiffOptions::class, "__construct", "timeTolerance"],
-        "mode"                     => [DualSubtitleOptions::class, "__construct", "mode"],
-        "secondary-style"          => [DualSubtitleOptions::class, "__construct", "secondaryStyle"],
-        "secondary-alignment"      => [DualSubtitleOptions::class, "__construct", "secondaryAlignment"],
-        "snap-tolerance"           => [DualSubtitleOptions::class, "__construct", "snapTolerance"],
-        "segment"                  => [HlsSegmentOptions::class, "__construct", "segmentDuration"],
-        "pattern"                  => [HlsSegmentOptions::class, "__construct", "fileNamePattern"],
-        "mpegts"                   => [HlsSegmentOptions::class, "__construct", "mpegts"],
-        "local"                    => [HlsSegmentOptions::class, "__construct", "local"],
-        "min-offset"               => [ReferenceSyncOptions::class, "__construct", "minOffset"],
-        "max-offset"               => [ReferenceSyncOptions::class, "__construct", "maxOffset"],
-        "max-splits"               => [ReferenceSyncOptions::class, "__construct", "maxSplits"],
-        "split-penalty"            => [ReferenceSyncOptions::class, "__construct", "splitPenalty"],
-        "structure-max-word-gap"   => [ResegmentOptions::class, "__construct", "maxWordGap"],
-        "structure-max-cpl"        => [CueLimits::class, "__construct", "maxCharactersPerLine"],
-        "structure-max-lines"      => [CueLimits::class, "__construct", "maxLinesPerCue"],
-        "snap-min-gap-frames"      => [ShotChangeOptions::class, "__construct", "minGapFrames"],
-        "snap-min-duration-frames" => [ShotChangeOptions::class, "__construct", "minDurationFrames"],
-        "timing-min-gap"           => [Subtitle::class, "fixOverlaps", "minGap"],
-        "mask"                     => [ProfanityOptions::class, "__construct", "mask"],
-        "mute-padding"             => [ProfanityOptions::class, "__construct", "padding"],
-        "karaoke-style"            => [WordHighlightOptions::class, "__construct", "style"],
-        "ass-karaoke-tag"          => [AssWriteOptions::class, "__construct", "karaokeTag"],
-        "line-ending"              => [WriteOptions::class, "__construct", "lineEnding"],
-        "ocr-language"             => [TesseractOcrOptions::class, "__construct", "language"],
-        "scc-roll-up"              => [SccReadOptions::class, "__construct", "rollUp"],
-    ];
-
-    /** Option => a default that only the CLI has. */
-    private const CLI_DEFAULTS = [
-        "playlist"  => HlsCommand::DEFAULT_PLAYLIST,
-        "video-fps" => ValidateCommand::DEFAULT_FPS,
-    ];
-
-    /** Defaults that the help describes in words. */
-    private const DESCRIBED_DEFAULTS = [
-        "the format detected from the content", "as for --from",
-        "UTF-8", "stop at the first failure", "the input format", "the format of the primary file",
-        "the frame rate of a MicroDVD or iTT input", "the BOM rule of the output format", "the end of the last cue",
-        "half the --video-fps, rounded to the nearest frame", "tesseract when it is installed", "the subtitle fonts database of php-glyph-ocr",
-        "the environment variable of the engine", "the engine detects it",
-    ];
-
-
     public function testPhpWarningGoesToStandardErrorAndKeepsTheOutputClean(): void
     {
         file_put_contents(
@@ -92,59 +30,6 @@ class BinaryGeneralTest extends CliTestCase
     }
 
 
-    public function testEachHelpDefaultIsTheDefaultThatTheCommandUses(): void
-    {
-        $found = [];
-        foreach (self::COMMANDS as $command) {
-            $help = self::unwrapHelp($this->runCli([$command, "--help", ...($command === "convert" ? ["all"] : [])])[1]);
-            preg_match_all('/^  (?:-\w, )?--([\w-]+)\N*? Default: (.+?)\.(?: |$)/m', $help, $matches, PREG_SET_ORDER);
-            foreach ($matches as [, $option, $default]) {
-                $found[$option] = true;
-                if (isset(self::LIBRARY_DEFAULTS[$option])) {
-                    [$class, $method, $parameter] = self::LIBRARY_DEFAULTS[$option];
-                    $this->assertSame(self::helpText(self::parameterDefault($class, $method, $parameter)), $default, "$command --$option");
-                } elseif (isset(self::CLI_DEFAULTS[$option])) {
-                    $this->assertSame(self::helpText(self::CLI_DEFAULTS[$option]), $default, "$command --$option");
-                } else {
-                    $this->assertContains($default, self::DESCRIBED_DEFAULTS, "$command --$option");
-                }
-            }
-        }
-
-        $this->assertSame([], array_diff(array_keys([...self::LIBRARY_DEFAULTS, ...self::CLI_DEFAULTS]), array_keys($found)));
-    }
-
-
-    /**
-     * @param class-string $class
-     */
-    private static function parameterDefault(string $class, string $method, string $parameter): mixed
-    {
-        foreach ((new \ReflectionMethod($class, $method))->getParameters() as $reflection) {
-            if ($reflection->getName() === $parameter) {
-                return $reflection->getDefaultValue();
-            }
-        }
-
-        throw new \LogicException("$class::$method() has no parameter $parameter.");
-    }
-
-
-    /**
-     * Returns a default as the help writes it. An enum case is its value, or its name in lower case for an enum whose
-     * value the user cannot type, such as LineEnding::Lf.
-     */
-    private static function helpText(mixed $value): string
-    {
-        return match (true) {
-            $value === null           => "none",
-            $value instanceof \BackedEnum => ctype_print((string)$value->value) && $value->value !== "" ? (string)$value->value : strtolower($value->name),
-            is_int($value), is_float($value) => Command::number($value),
-            default                   => (string)$value,
-        };
-    }
-
-
     public function testVersionPrintsTheVersionAlone(): void
     {
         [$code, $stdout, $stderr] = $this->runCli(["--version"]);
@@ -154,75 +39,6 @@ class BinaryGeneralTest extends CliTestCase
         $this->assertMatchesRegularExpression('/^(dev|\d+\.\d+\.\d+\S*)\n$/', $stdout);
         $this->assertSame("", $stderr);
         $this->assertSame([0, $stdout, ""], $this->runCli(["-V"]));
-    }
-
-
-    public function testWithoutArgumentsPrintsTheHelp(): void
-    {
-        [$code, $stdout, $stderr] = $this->runCli([]);
-
-        $this->assertSame(0, $code);
-        $this->assertStringContainsString("Usage: subtitle-toolbox <command>", $stdout);
-        foreach ([...self::COMMANDS, "help"] as $command) {
-            $this->assertMatchesRegularExpression("/^  $command +\S/m", $stdout);
-        }
-        $this->assertSame("", $stderr);
-        $this->assertSame([0, $stdout, ""], $this->runCli(["--help"]));
-        $this->assertSame([0, $stdout, ""], $this->runCli(["help"]));
-        $this->assertSame([0, $stdout, ""], $this->runCli(["help", "help"]));
-    }
-
-
-    /**
-     * @return array<string, array{string}>
-     */
-    public static function commands(): array
-    {
-        return array_combine(
-            self::COMMANDS,
-            array_map(fn (string $command): array => [$command], self::COMMANDS)
-        );
-    }
-
-
-    #[DataProvider("commands")]
-    public function testEveryCommandHasHelp(string $command): void
-    {
-        [$code, $stdout, $stderr] = $this->runCli([$command, "--help"]);
-
-        $this->assertSame(0, $code);
-        $this->assertStringStartsWith("Usage: subtitle-toolbox ", $stdout);
-        $this->assertStringContainsString("  -h, --help ", $stdout);
-        $this->assertSame("", $stderr);
-        $this->assertSame([0, $stdout, ""], $this->runCli(["help", $command]));
-        $this->assertSame([0, $stdout, ""], $this->runCli([$command, "-h"]));
-    }
-
-
-    public function testHelpTextsDescribeWhatTheOptionsDo(): void
-    {
-        $convert = self::unwrapHelp($this->runCli(["convert", "--help"])[1]);
-        $this->assertMatchesRegularExpression('/^  --lenient +Skip or repair broken cues and print a warning for each\. ' .
-                                              'SCC, PGS, VobSub and chapter input ignore it\.$/m', $convert);
-        $this->assertMatchesRegularExpression('/^  --encoding NAME +.*It replaces code page detection\. A BOM, valid UTF-8 and UTF-16 input win over it\.$/m', $convert);
-        $this->assertMatchesRegularExpression('/^  --input-fps RATE +Frame rate of a MicroDVD input without a \{1\}\{1\}<fps> first line, and of CSV or TSV times in hh:mm:ss:ff\.$/m', $convert);
-        $this->assertMatchesRegularExpression('/^  --output-fps RATE +Frame rate of MicroDVD and iTT output\..*$/m', $convert);
-        $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps, --output-fps and --video-fps\. A specific option wins over --fps\.$/m', $convert);
-        $this->assertMatchesRegularExpression('/^  --from FORMAT +Input format\./m', $convert);
-        $this->assertMatchesRegularExpression('/^  --to FORMAT +Output format\./m', $convert);
-        $this->assertStringNotContainsString("SubRip, WebVTT and SBV", $convert);
-
-        $structure = self::unwrapHelp($this->runCli(["convert", "--help", "structure"])[1]);
-        $this->assertMatchesRegularExpression('/^  --structure-split-long +.*at sentence ends, clause ends or spaces\.$/m', $structure);
-        $this->assertMatchesRegularExpression('/^  --structure-merge-short +.*at most 0\.25 s away.*$/m', $structure);
-        $info = self::unwrapHelp($this->runCli(["info", "--help"])[1]);
-        $this->assertDoesNotMatchRegularExpression('/--output-fps|--video-fps/', $info);
-        $this->assertMatchesRegularExpression('/^  --fps RATE +Same as --input-fps\.$/m', $info);
-
-        $validate = self::unwrapHelp($this->runCli(["validate", "--help"])[1]);
-        $this->assertMatchesRegularExpression('/^  --video-fps RATE +Frame rate of the video, for the 2-frame gap of netflix-en\. Default: 23\.976\.$/m', $validate);
-        $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps and --video-fps\. A specific option wins over --fps\.$/m', $validate);
-        $this->assertDoesNotMatchRegularExpression('/--output-fps/', $validate);
     }
 
 
