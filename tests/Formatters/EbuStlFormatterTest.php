@@ -246,6 +246,14 @@ class EbuStlFormatterTest extends TestCase
     }
 
 
+    public function testWritesACommentWithACueIndexPastTheLastCueAtTheEnd(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "Hello"))->addComment("Check the ending", 5);
+
+        $this->assertSame(["Check the ending"], array_column(Subtitle::fromString($subtitle->toString(Format::EbuStl), Format::EbuStl)->getComments(), "text"));
+    }
+
+
     public function testWritesTheTextOfOtherCharacterCodeTables(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "weather_greek.stl"), Format::EbuStl);

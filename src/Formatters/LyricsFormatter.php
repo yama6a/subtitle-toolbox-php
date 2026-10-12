@@ -23,10 +23,10 @@ final class LyricsFormatter extends SubtitleFormatter
         $options ??= new WriteOptions();
         $output   = $this->formatIdTags($subtitle);
         $cues     = array_values($subtitle->getCues());
-        $comments = $subtitle->getComments();
+        $comments = $this->commentsByCue($subtitle);
 
         foreach ($cues as $cueIndex => $cue) {
-            $output .= $this->formatComments($comments, $cueIndex, $cueIndex);
+            $output .= $this->formatComments($comments[$cueIndex] ?? []);
             $output .= $this->formatCue($cue);
             $output .= LineEnding::Lf->value;
 
@@ -34,7 +34,7 @@ final class LyricsFormatter extends SubtitleFormatter
                 $output .= "[" . $this->stamp($cue->getEnd()) . "]" . LineEnding::Lf->value;
             }
         }
-        $output .= $this->formatComments($comments, count($cues), PHP_INT_MAX);
+        $output .= $this->formatComments($comments[count($cues)] ?? []);
 
         return $this->applyOutputOptions($output, $options);
     }
@@ -62,13 +62,11 @@ final class LyricsFormatter extends SubtitleFormatter
     /**
      * @param list<Comment> $comments
      */
-    private function formatComments(array $comments, int $fromCueIndex, int $toCueIndex): string
+    private function formatComments(array $comments): string
     {
         $output = "";
         foreach ($comments as $comment) {
-            if ($comment->beforeCueIndex >= $fromCueIndex && $comment->beforeCueIndex <= $toCueIndex) {
-                $output .= "[#:" . Markup::toSingleLine($comment->text) . "]" . LineEnding::Lf->value;
-            }
+            $output .= "[#:" . Markup::toSingleLine($comment->text) . "]" . LineEnding::Lf->value;
         }
 
         return $output;
