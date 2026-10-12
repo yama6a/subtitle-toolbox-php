@@ -25,6 +25,7 @@ trait CueEditing
         $move = fn (float $time): float => $time + $offset;
         CueList::checkTimeLimit($other->getCues(), $move);
 
+        $this->sortStartChanges();
         $ownAnchors = CommentAnchors::of($this->cues, $this->comments);
         $otherCues  = [];
         foreach ($other->getCues() as $index => $cue) {
@@ -38,11 +39,12 @@ trait CueEditing
         }
 
         $comments = array_merge($this->comments, $other->comments);
-        $cues     = CueList::inStartOrder(array_merge(array_values($this->cues), array_values($otherCues)));
+        CueHolders::hold($this, $otherCues);
 
-        $this->cues       = $cues;
+        $this->cues       = array_merge(array_values($this->cues), array_values($otherCues));
         $this->metadata   = $this->metadata + $other->getAllMetadata();
         $this->formatData = $this->formatData + $other->formatData;
+        $this->sortCues();
         $this->comments   = CommentAnchors::comments($this->cues, $comments, array_merge($ownAnchors, $otherAnchors));
 
         return $this;
@@ -101,6 +103,7 @@ trait CueEditing
      */
     private function cueEditingCopyWithCues(\SplObjectStorage $copies): self
     {
+        $this->sortStartChanges();
         $anchors = CommentAnchors::of($this->cues, $this->comments);
         $copy    = clone $this;
         $cues    = [];
@@ -161,7 +164,9 @@ trait CueEditing
 
         $this->cues = $cues;
         $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
-        unset(self::$cuesSortedAt[$this]);
+        // The second cue can start after the next cue, so it counts as a start change from the place after the first cue.
+        CueHolders::hold($this, [$second]);
+        CueHolders::startChanged($second, $cue->getStart());
 
         return $this;
     }
@@ -209,6 +214,7 @@ trait CueEditing
     {
         OptionChecks::nonNegativeFinite($maxGap, "The maximum gap must be a finite number of 0 or more seconds, got %s.");
         $maxGap     = Timecode::roundToMilliseconds($maxGap);
+        $this->sortStartChanges();
         $anchors    = CommentAnchors::of($this->cues, $this->comments);
         $joinedInto = new \SplObjectStorage();
         $runCues    = [];
@@ -247,6 +253,7 @@ trait CueEditing
     {
         OptionChecks::nonNegativeFinite($tolerance, "The tolerance must be a finite number of 0 or more seconds, got %s.");
         $tolerance = Timecode::roundToMilliseconds($tolerance);
+        $this->sortStartChanges();
         $anchors   = CommentAnchors::of($this->cues, $this->comments);
         $groups    = [];
         foreach ($this->cues as $cue) {
@@ -294,9 +301,9 @@ trait CueEditing
     {
         $this->cues     = array_values($cues);
         $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
-        unset(self::$cuesSortedAt[$this]);
+        CueHolders::hold($this, $this->cues);
 
-        return $this;
+        return CueList::startsInOrder($this->cues) ? $this : $this->reIndexCues();
     }
 
 
@@ -335,6 +342,7 @@ trait CueEditing
 
     private function cueEditingCueAt(int $index, string $action): SubtitleCue
     {
+        $this->sortStartChanges();
         if (!array_key_exists($index, $this->cues)) {
             throw new CueNotFoundException("Cannot $action cue $index: the cue does not exist.");
         }

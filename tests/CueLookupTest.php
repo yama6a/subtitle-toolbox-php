@@ -27,15 +27,7 @@ class CueLookupTest extends TestCase
      */
     private function makeUnsortedSubtitle(array $times): Subtitle
     {
-        $subtitle = (new Subtitle())->addCues(array_map(
-            fn (int $index): SubtitleCue => new SubtitleCue($index, $index, "text$index"),
-            array_keys($times)
-        ));
-        foreach ($subtitle->getCues() as $index => $cue) {
-            $cue->setStart($times[$index][0])->setEnd($times[$index][1]);
-        }
-
-        return $subtitle;
+        return TestSubtitles::inGivenOrder(array_map(fn (array $time, int $index): array => [$time[0], $time[1], "text$index"], $times, array_keys($times)));
     }
 
 
@@ -161,9 +153,9 @@ class CueLookupTest extends TestCase
         $this->assertSame(0, $subtitle->findCueIndexAt(12));
 
         $subtitle->getCues()[5]->setStart(1)->setEnd(3);
-        $this->assertSame(5, $subtitle->findCueIndexAt(2));
+        $this->assertSame(0, $subtitle->findCueIndexAt(2));
 
-        $subtitle->removeCue(5);
+        $subtitle->removeCue(0);
         $this->assertNull($subtitle->findCueIndexAt(2));
     }
 

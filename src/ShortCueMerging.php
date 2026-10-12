@@ -17,6 +17,7 @@ trait ShortCueMerging
     public function mergeShortCues(?MergeShortCuesOptions $options = null): self
     {
         $options ??= new MergeShortCuesOptions();
+        $this->sortStartChanges();
         $anchors = CommentAnchors::of($this->cues, $this->comments);
         $cues       = CueList::inStartOrder($this->cues);
         $joinedInto = new \SplObjectStorage();

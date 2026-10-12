@@ -10,6 +10,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class HlsWebVttSegmenterTest extends TestCase
 {
@@ -241,8 +242,7 @@ class HlsWebVttSegmenterTest extends TestCase
 
     public function testCuesOutOfStartOrderGoToTheSegmentTheyStartIn(): void
     {
-        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "A"), new SubtitleCue(30, 31, "B")]);
-        $subtitle->getCues()[0]->setStart(55)->setEnd(56);
+        $subtitle = TestSubtitles::inGivenOrder([[55, 56, "A"], [30, 31, "B"]]);
         $segments = iterator_to_array(HlsWebVttSegmenter::segment($subtitle, new HlsSegmentOptions(segmentDuration: 10))->getSegments());
 
         $this->assertSame([

@@ -13,6 +13,7 @@ use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class ArrayConversionTest extends TestCase
 {
@@ -79,12 +80,8 @@ class ArrayConversionTest extends TestCase
 
     public function testFromArrayKeepsBinaryFormatDataAndTheCueOrder(): void
     {
-        $subtitle = (new Subtitle())->addCues([
-            (new SubtitleCue(1, 2, "Late"))->setFormatData("image", ["png" => "\x89PNG\r\n\x1a\n"]),
-            new SubtitleCue(3, 4, "Early"),
-        ]);
-        $subtitle->getCues()[0]->setStart(5)->setEnd(6);
-        $subtitle->getCues()[1]->setStart(1)->setEnd(2);
+        $subtitle = TestSubtitles::inGivenOrder([[5, 6, "Late"], [1, 2, "Early"]]);
+        $subtitle->getCues()[0]->setFormatData("image", ["png" => "\x89PNG\r\n\x1a\n"]);
 
         $copy = Subtitle::fromArray($subtitle->toArray());
 

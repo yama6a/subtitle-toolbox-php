@@ -64,6 +64,125 @@ final class CueList
 
 
     /**
+     * Returns $cues in start order, or null when they are in start order already.
+     * Only the cues in $moved can be out of order. $cues are in the order of the starts that $moved holds for its cues.
+     * The result equals a stable sort: equal starts keep their order in $cues.
+     *
+     * @param list<SubtitleCue>                     $cues
+     * @param \SplObjectStorage<SubtitleCue, float> $moved each moved cue and the start that its place in $cues follows
+     *
+     * @return ?list<SubtitleCue>
+     */
+    public static function withCuesMoved(array $cues, \SplObjectStorage $moved): ?array
+    {
+        $movedAt = [];
+        foreach ($moved as $cue) {
+            foreach (self::positionsOf($cues, $cue, $moved) as $position) {
+                $movedAt[$position] = $cue;
+            }
+        }
+        $inPlace = true;
+        foreach ($movedAt as $position => $cue) {
+            $inPlace = $inPlace && ($position === 0 || $cues[$position - 1]->getStart() <= $cue->getStart())
+                && (!isset($cues[$position + 1]) || $cue->getStart() <= $cues[$position + 1]->getStart());
+        }
+        if ($inPlace) {
+            return null;
+        }
+        if (count($movedAt) === 1) {
+            return self::withOneCueMoved($cues, array_key_first($movedAt));
+        }
+
+        ksort($movedAt);
+        $rest      = array_diff_key($cues, $movedAt);
+        $positions = array_keys($rest);
+        $rest      = array_values($rest);
+        foreach ($movedAt as $position => $cue) {
+            $low  = 0;
+            $high = count($rest);
+            while ($low < $high) {
+                $middle = ($low + $high) >> 1;
+                $start  = $rest[$middle]->getStart();
+                if ($start < $cue->getStart() || ($start === $cue->getStart() && $positions[$middle] < $position)) {
+                    $low = $middle + 1;
+                } else {
+                    $high = $middle;
+                }
+            }
+            array_splice($rest, $low, 0, [$cue]);
+            array_splice($positions, $low, 0, [$position]);
+        }
+
+        return $rest;
+    }
+
+
+    /**
+     * Moves the cue at $from to its place in the other cues, which are in start order, with one slice rotation.
+     *
+     * @param list<SubtitleCue> $cues
+     *
+     * @return list<SubtitleCue>
+     */
+    private static function withOneCueMoved(array $cues, int $from): array
+    {
+        $cue   = $cues[$from];
+        $start = $cue->getStart();
+        // Earlier cues with the same start stay before the cue, and later cues with the same start stay after it.
+        [$low, $high] = $from > 0 && $cues[$from - 1]->getStart() > $start ? [0, $from] : [$from + 1, count($cues)];
+        while ($low < $high) {
+            $middle       = ($low + $high) >> 1;
+            $otherStart   = $cues[$middle]->getStart();
+            $cueGoesLater = $middle < $from ? $otherStart <= $start : $otherStart < $start;
+            if ($cueGoesLater) {
+                $low = $middle + 1;
+            } else {
+                $high = $middle;
+            }
+        }
+
+        return $low < $from
+            ? array_merge(array_slice($cues, 0, $low), [$cue], array_slice($cues, $low, $from - $low), array_slice($cues, $from + 1))
+            : array_merge(array_slice($cues, 0, $from), array_slice($cues, $from + 1, $low - $from - 1), [$cue], array_slice($cues, $low));
+    }
+
+
+    /**
+     * Finds $cue by a binary search on the start that its place follows, then in the run of cues with that start.
+     *
+     * @param list<SubtitleCue>                     $cues
+     * @param \SplObjectStorage<SubtitleCue, float> $moved
+     *
+     * @return list<int>
+     */
+    private static function positionsOf(array $cues, SubtitleCue $cue, \SplObjectStorage $moved): array
+    {
+        $placeStart = fn (SubtitleCue $other): float => isset($moved[$other]) ? $moved[$other] : $other->getStart();
+        $start      = $moved[$cue];
+        $low        = 0;
+        $high       = count($cues);
+        while ($low < $high) {
+            $middle = ($low + $high) >> 1;
+            if ($placeStart($cues[$middle]) < $start) {
+                $low = $middle + 1;
+            } else {
+                $high = $middle;
+            }
+        }
+
+        $positions = [];
+        for ($position = $low; isset($cues[$position]) && $placeStart($cues[$position]) === $start; $position++) {
+            if ($cues[$position] === $cue) {
+                $positions[] = $position;
+            }
+        }
+
+        // A cue that the subtitle no longer holds is not in its place, so only a full search can rule it out.
+        return $positions === [] ? array_keys($cues, $cue, true) : $positions;
+    }
+
+
+    /**
      * Joins the cues of $group into the first cue of $group and adds each other cue to $joinedInto.
      * The first cue ends at the latest end of the group. With $joinLines, it also gets the lines of the others.
      * removeJoined() then removes the other cues from the cue list.

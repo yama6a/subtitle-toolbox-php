@@ -37,7 +37,7 @@ $copy  = Subtitle::fromString($json, Format::Json);
 | `metadata` | object of strings | no | the keys of `getAllMetadata()` |
 | `comments` | list of objects | no | `text` and `beforeCueIndex`, the fields of the `Comment` objects that `getComments()` returns |
 | `formatData` | object of objects | no | the format data of the subtitle by format key |
-| `cues` | list of objects | yes | the cues in this order. `fromArray()` does not sort them |
+| `cues` | list of objects | yes | the cues in this order. `fromArray()` does not sort them. The subtitle keeps this order until the first start time edit of one of its cues, or a call that sorts, such as `reIndexCues()`, `addCue()` or `removeCue()` |
 | `cues[].start`, `cues[].end` | number | yes | seconds, rounded to milliseconds |
 | `cues[].lines` | list of strings | yes | the lines with core markup and escaped `&lt;`, `&gt;` and `&amp;` |
 | `cues[].identifier` | string or null | no | the cue identifier |

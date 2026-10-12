@@ -21,6 +21,7 @@ trait ArrayConversion
      */
     public function toArray(bool $withFormatData = true): array
     {
+        $this->sortStartChanges();
         $cues = [];
         foreach ($this->cues as $cue) {
             $cueArray = [
@@ -88,6 +89,8 @@ trait ArrayConversion
         self::arrayConversionReadFormatData($subtitle, $data, $reject);
         $skippedCues = self::arrayConversionReadCues($subtitle, $data, $skippedCues, $reject);
         self::arrayConversionReadComments($subtitle, $data, $skippedCues, $reject);
+        CueHolders::hold($subtitle, $subtitle->cues);
+        $subtitle->keepsArrayCueOrder = !CueList::startsInOrder($subtitle->cues);
 
         return $subtitle;
     }

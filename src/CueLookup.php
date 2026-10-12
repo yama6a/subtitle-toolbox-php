@@ -24,6 +24,8 @@ trait CueLookup
      */
     public function getIterator(): Iterator
     {
+        $this->sortStartChanges();
+
         return new ArrayIterator($this->cues);
     }
 
@@ -77,6 +79,8 @@ trait CueLookup
      */
     public function findCues(callable $predicate): array
     {
+        $this->sortStartChanges();
+
         return array_filter($this->cues, $predicate);
     }
 
@@ -135,6 +139,7 @@ trait CueLookup
      */
     private function cueLookupCurrentIndex(): array
     {
+        $this->sortStartChanges();
         $timeEdits = SubtitleCue::timeEditCount();
         $index     = $this->cueLookupIndex;
         // The cached list shares its storage with $this->cues until either changes, so this check costs O(1).
@@ -142,7 +147,7 @@ trait CueLookup
             return $index;
         }
 
-        SubtitleCue::countTimeEditsOf($this->cues);
+        CueHolders::hold($this, $this->cues);
         $starts = [];
         $ends   = [];
         foreach ($this->cues as $cue) {
