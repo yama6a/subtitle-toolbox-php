@@ -228,7 +228,7 @@ class ValidationTest extends TestCase
     }
 
 
-    public function testIssueExampleCue(): void
+    public function testOneCueBreaksSixTextRules(): void
     {
         $subtitle = TestSubtitles::fromCues([[10, 11, ["-Where are you?\u{00A0} <i>Home", "- Wait.", "- Now!"]]]);
         $rules    = new ValidationRules(

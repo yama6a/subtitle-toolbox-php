@@ -42,7 +42,7 @@ class WordHighlightTest extends TestCase
     }
 
 
-    public function testIssueExample(): void
+    public function testUnderlineStyleGivesOneCuePerWord(): void
     {
         $subtitle = TestSubtitles::fromCues([new SubtitleCue(0, 1.6, self::BEACH)]);
         $karaoke  = self::expand($subtitle, new WordHighlightOptions(style: "u"));
@@ -316,7 +316,7 @@ class WordHighlightTest extends TestCase
 
 
     #[DataProvider("realFiles")]
-    public function testRealFile(\Closure $parse, WordHighlightOptions $options, Format $format, string $expected): void
+    public function testRealFileGivesTheGoldenOutput(\Closure $parse, WordHighlightOptions $options, Format $format, string $expected): void
     {
         $this->assertSame(
             file_get_contents(self::FILES . "karaoke/" . $expected),

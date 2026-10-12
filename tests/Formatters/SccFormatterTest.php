@@ -38,7 +38,7 @@ class SccFormatterTest extends TestCase
     }
 
 
-    public function testIssueExampleRoundTrips(): void
+    public function testPopOnCaptionRoundTripsWithTheControlCodesInWriterOrder(): void
     {
         $scc = self::HEADER . "00:00:01;12\t9420 9420 94ae 94ae 9452 9452 97a1 97a1 c8e5 ecec efa1 942f 942f\n\n00:00:04;00\t942c 942c\n";
 

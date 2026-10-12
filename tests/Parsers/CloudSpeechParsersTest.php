@@ -17,10 +17,10 @@ use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class CloudSpeechParsersTest extends TestCase
 {
-    private const ISSUE_EXAMPLE = <<<'JSON'
+    private const AWS_HELLO_WORLD = <<<'JSON'
         {"jobName": "lecture-12", "results": {
-          "transcripts": [{"transcript": "Hello world."}],
-          "items": [
+            "transcripts": [{"transcript": "Hello world."}],
+            "items": [
             {"type": "pronunciation", "start_time": "0.04", "end_time": "0.51", "alternatives": [{"confidence": "0.99", "content": "Hello"}]},
             {"type": "pronunciation", "start_time": "0.51", "end_time": "0.98", "alternatives": [{"confidence": "0.98", "content": "world"}]},
             {"type": "punctuation", "alternatives": [{"confidence": "0.0", "content": "."}]}
@@ -41,9 +41,9 @@ class CloudSpeechParsersTest extends TestCase
     }
 
 
-    public function testReadsTheIssueExample(): void
+    public function testReadsAnAwsTranscribeJobAsOneCueWithItsConfidences(): void
     {
-        $subtitle = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::AwsTranscribe);
+        $subtitle = Subtitle::fromString(self::AWS_HELLO_WORLD, Format::AwsTranscribe);
 
         $this->assertSame([[0.04, 0.98, "Hello world."]], TestSubtitles::describe($subtitle));
         $this->assertSame(["jobName" => "lecture-12"], $subtitle->findFormatData("aws-transcribe"));
@@ -56,7 +56,7 @@ class CloudSpeechParsersTest extends TestCase
     {
         $parser = new AwsTranscribeParser();
 
-        $this->assertSame("<00:00:00.040>Hello <00:00:00.510>world.", $parser->parse(self::ISSUE_EXAMPLE, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]))->getCues()[0]->getText());
+        $this->assertSame("<00:00:00.040>Hello <00:00:00.510>world.", $parser->parse(self::AWS_HELLO_WORLD, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]))->getCues()[0]->getText());
     }
 
 

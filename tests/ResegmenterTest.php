@@ -19,8 +19,8 @@ class ResegmenterTest extends TestCase
 {
     private const FILES = __DIR__ . "/files/resegmenting/";
 
-    private const ISSUE_EXAMPLE = "The tensor operators are optimized heavily for Apple silicon CPUs. Depending on the computation " .
-                                  "size, Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.";
+    private const LONG_TENSOR_SENTENCE = "The tensor operators are optimized heavily for Apple silicon CPUs. Depending on the computation " .
+                                         "size, Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.";
 
 
     private static function apply(Subtitle $subtitle, ResegmentOptions $options): Subtitle
@@ -50,9 +50,9 @@ class ResegmenterTest extends TestCase
     }
 
 
-    public function testIssueExample(): void
+    public function testSplitLongBreaksAtSentenceAndClauseEnds(): void
     {
-        $cues = $this->split([[0, 11.05, self::ISSUE_EXAMPLE]], new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 42, maxLinesPerCue: 2)));
+        $cues = $this->split([[0, 11.05, self::LONG_TENSOR_SENTENCE]], new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 42, maxLinesPerCue: 2)));
 
         $this->assertSame([
             [0.0, 4.231, "The tensor operators are optimized\nheavily for Apple silicon CPUs."],
@@ -280,10 +280,10 @@ class ResegmenterTest extends TestCase
     {
         $subtitle = (new Subtitle())
             ->addCue(new SubtitleCue(0, 20, "Supercalifragilisticexpialidocious"))
-            ->addCue((new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(20, 40, self::ISSUE_EXAMPLE)));
+            ->addCue((new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(20, 40, self::LONG_TENSOR_SENTENCE)));
 
         foreach ([ResegmentMode::SplitLong, ResegmentMode::ByWords] as $mode) {
-            $this->assertSame([[0.0, 20.0, "Supercalifragilisticexpialidocious"], [20.0, 40.0, self::ISSUE_EXAMPLE]],
+            $this->assertSame([[0.0, 20.0, "Supercalifragilisticexpialidocious"], [20.0, 40.0, self::LONG_TENSOR_SENTENCE]],
                               TestSubtitles::describe(self::apply($subtitle, new ResegmentOptions($mode, limits: new CueLimits(maxCharactersPerLine: 10, maxLinesPerCue: 1)))),
                               $mode->name);
         }
@@ -292,7 +292,7 @@ class ResegmenterTest extends TestCase
 
     public function testSplitKeepsIdentifierOnFirstPartAndCommentsBeforeIt(): void
     {
-        $subtitle = TestSubtitles::fromCues([[0, 1, "Before."], [1, 11.05, self::ISSUE_EXAMPLE], [12, 13, "After."]]);
+        $subtitle = TestSubtitles::fromCues([[0, 1, "Before."], [1, 11.05, self::LONG_TENSOR_SENTENCE], [12, 13, "After."]]);
         $subtitle->getCues()[1]->setIdentifier("long")->setAlignment(Alignment::TopCenter)->setForced(true);
         $subtitle->addComment("before long", 1)->addComment("before after", 2);
 

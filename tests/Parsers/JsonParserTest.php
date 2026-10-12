@@ -16,7 +16,7 @@ use SubtitleToolbox\SubtitleCue;
 
 class JsonParserTest extends TestCase
 {
-    public function testReadsTheIssueExample(): void
+    public function testReadsMetadataCommentsAndCueFields(): void
     {
         $subtitle = Subtitle::fromString(<<<'JSON'
             {

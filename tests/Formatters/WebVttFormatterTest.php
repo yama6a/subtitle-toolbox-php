@@ -47,22 +47,22 @@ class WebVttFormatterTest extends TestCase
     }
 
 
-    private const ISSUE_EXAMPLE = "WEBVTT Episode 1\nKind: captions\nLanguage: en\n\n"
-                                  . "REGION\nid:fred\nwidth:40%\nlines:3\nregionanchor:0%,100%\nviewportanchor:10%,90%\nscroll:up\n\n"
-                                  . "STYLE\n::cue {\n  color: lime;\n}\n\n"
-                                  . "NOTE Translated by Jane Doe\n\n"
-                                  . "intro\n00:00:01.000 --> 00:00:04.000 region:fred align:left line:85%\n"
-                                  . "<v Fred>Hi, I am Fred &amp; this is <c>Bob</c></v>\n\n"
-                                  . "2\n00:00:05.000 --> 00:00:06.000\nSecond\n\n"
-                                  . "NOTE\nend of\nfile\n";
+    private const HEADER_REGION_AND_NOTE = "WEBVTT Episode 1\nKind: captions\nLanguage: en\n\n"
+                                           . "REGION\nid:fred\nwidth:40%\nlines:3\nregionanchor:0%,100%\nviewportanchor:10%,90%\nscroll:up\n\n"
+                                           . "STYLE\n::cue {\n  color: lime;\n}\n\n"
+                                           . "NOTE Translated by Jane Doe\n\n"
+                                           . "intro\n00:00:01.000 --> 00:00:04.000 region:fred align:left line:85%\n"
+                                           . "<v Fred>Hi, I am Fred &amp; this is <c>Bob</c></v>\n\n"
+                                           . "2\n00:00:05.000 --> 00:00:06.000\nSecond\n\n"
+                                           . "NOTE\nend of\nfile\n";
 
 
-    public function testIssueExampleRoundTripsByteForByte(): void
+    public function testHeaderRegionAndNoteRoundTripByteForByte(): void
     {
-        $subtitle = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::WebVtt);
+        $subtitle = Subtitle::fromString(self::HEADER_REGION_AND_NOTE, Format::WebVtt);
 
         $this->assertSame(
-            "\xEF\xBB\xBF" . self::ISSUE_EXAMPLE,
+            "\xEF\xBB\xBF" . self::HEADER_REGION_AND_NOTE,
             $subtitle->toString(Format::WebVtt)
         );
     }
@@ -166,7 +166,7 @@ class WebVttFormatterTest extends TestCase
     }
 
 
-    public function testIssueExampleMovesTheCueToTheBottom(): void
+    public function testBottomCenterAlignmentDropsTheLineSetting(): void
     {
         $subtitle = Subtitle::fromString("WEBVTT\n\n00:00:01.000 --> 00:00:02.000 line:0\nHello\n", Format::WebVtt);
         $subtitle->getCues()[0]->setAlignment(Alignment::BottomCenter);
