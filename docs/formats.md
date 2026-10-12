@@ -318,7 +318,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWri
 - **Frame rate**: `MicroDvdReadOptions::$frameRate` wins over a `{1}{1}<fps>` first line. The parser never reads that line as a cue. Without either, the parser throws `ParsingException` in strict mode. Lenient mode uses 23.976 fps, as pysubs2 and mantas-done/subtitles do, and adds a `ParseWarning`. The format data holds this `frameRate`.
 - `$subtitle->findFormatData('microdvd')['frameRate']` returns the frame rate that the parser used.
 - **Control codes**: `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` become core markup. The parser reads the codes at the start of each `|`-separated line. A code later in the line stays text. A lower-case code styles one line. An upper-case code styles the whole cue. The `microdvd` format data keeps other control codes.
-- **Output**: the formatter writes control codes only for tags that wrap a whole line. It strips other tags. An unchanged cue keeps its original control codes.
+- **Output**: the formatter writes control codes only for tags that wrap a whole line. It strips other tags. An unchanged cue keeps its original control codes. With `stripTags`, the formatter writes no control codes, also not the stored font and size codes such as `{f:Arial}` and `{s:30}`.
 
 ## MPL2 and TMPlayer
 Both formats are common in Polish subtitle downloads and use the `.txt` extension.
