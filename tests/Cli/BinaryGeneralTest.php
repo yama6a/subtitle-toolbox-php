@@ -30,6 +30,17 @@ class BinaryGeneralTest extends CliTestCase
     }
 
 
+    public function testRaisesOnlyThePhpDefaultMemoryLimit(): void
+    {
+        file_put_contents("$this->dir/limit.php", "<?php register_shutdown_function(static fn () => fwrite(STDERR, ini_get(\"memory_limit\")));\n");
+
+        foreach (["128M" => "512M", "256M" => "256M", "64M" => "64M", "-1" => "-1"] as $limit => $expected) {
+            [$code, , $stderr] = $this->runBinary(["formats"], "", "-d", "memory_limit=$limit", "-d", "auto_prepend_file=$this->dir/limit.php");
+            $this->assertSame([0, $expected], [$code, $stderr], (string)$limit);
+        }
+    }
+
+
     public function testVersionPrintsTheVersionAlone(): void
     {
         [$code, $stdout, $stderr] = $this->runCli(["--version"]);
