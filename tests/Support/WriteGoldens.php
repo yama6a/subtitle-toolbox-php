@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Tests\Support;
 
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\WriteOptions;
@@ -14,7 +15,7 @@ use SubtitleToolbox\WriteOptions;
  * A round trip golden "<file>.out.<extension>" holds a real file read and written in its own format. A round trip
  * whose output equals the input after BOM and line-end normalisation has no golden file, and its test compares with
  * the input.
- * A conversion golden "<file>.to.<format>.<extension>" holds a real file of another format written in the format.
+ * A conversion golden "<file>.to.<format>" holds a real file of another format written in the format.
  */
 final class WriteGoldens
 {
@@ -35,24 +36,62 @@ final class WriteGoldens
     ];
 
     /**
-     * The transcript formats that get a conversion golden of each file in CONVERSIONS.
+     * The transcript formats that get a conversion golden of each file in TRANSCRIPT_CONVERSIONS.
      */
-    private const CONVERSION_FORMATS = [Format::Whisper, Format::AwsTranscribe, Format::Deepgram, Format::AssemblyAi, Format::GoogleSpeech];
+    private const TRANSCRIPT_TARGETS = [Format::Whisper, Format::AwsTranscribe, Format::Deepgram, Format::AssemblyAi, Format::GoogleSpeech];
 
     /**
-     * The real files under tests/files that get a conversion golden in each format of CONVERSION_FORMATS.
+     * The real files under tests/files that get a conversion golden in each format of TRANSCRIPT_TARGETS.
      */
-    private const CONVERSIONS = [
+    private const TRANSCRIPT_CONVERSIONS = [
         "srt/real/own_styled.srt"     => Format::SubRip,
         "vtt/real/w3c_timestamps.vtt" => Format::WebVtt,
     ];
 
+    /**
+     * The real files under tests/files that get a conversion golden in SubRip, WebVTT and ASS, one or two per
+     * subtitle format, with markup where the format has it.
+     */
+    private const SUBTITLE_CONVERSIONS = [
+        "srt/real/own_styled.srt"                    => Format::SubRip,
+        "vtt/real/w3c_voices.vtt"                    => Format::WebVtt,
+        "vtt/real/own_ytdlp_rolling.vtt"             => Format::WebVtt,
+        "ass/real/own_aegisub.ass"                   => Format::Ass,
+        "ass/real/own_signs_crlf.ass"                => Format::Ass,
+        "sbv/real/youtube_studio_lf.sbv"             => Format::Sbv,
+        "subviewer/real/subviewer2_crlf.sub"         => Format::SubViewer,
+        "microdvd/real/sub_microdvd_with_styles.sub" => Format::MicroDvd,
+        "mpl2/real/subtitle_edit_shape.txt"          => Format::Mpl2,
+        "mpsub/real/mplayer_doc_time.sub"            => Format::MpSub,
+        "tmplayer/real/tmplayer_multiline_bom.txt"   => Format::TmPlayer,
+        "lrc/real/handwritten-enhanced.lrc"          => Format::Lyrics,
+        "csv/real/mantas_done_shape.csv"             => Format::Csv,
+    ];
 
     /**
-     * Returns one case per golden file: the input file, its format, the output format and the golden file.
-     * The paths are relative to tests/files.
+     * The real files under tests/files that get a conversion golden in SubRip and WebVTT, one or more per transcript
+     * format, with speakers where the format has them. They are read with the default read options.
+     */
+    private const TRANSCRIPT_INPUT_CONVERSIONS = [
+        "whisper/real/openai_whisper_word_timestamps.json"      => Format::Whisper,
+        "whisper/real/whisperx_diarize.json"                    => Format::Whisper,
+        "aws-transcribe/real/library_speakers_language_id.json" => Format::AwsTranscribe,
+        "deepgram/real/pool_utterances_diarize.json"            => Format::Deepgram,
+        "assemblyai/real/hike_utterances_speakers.json"         => Format::AssemblyAi,
+        "google-speech/real/restaurant_v2_diarization.json"     => Format::GoogleSpeech,
+        "youtube/real/auto.en.json3"                            => Format::YouTubeTimedText,
+        "youtube/real/styled.en.srv3"                           => Format::YouTubeTimedText,
+        "youtube/real/transcript.en.srv1"                       => Format::YouTubeTimedText,
+        "podcast/real/spec_word_segments.json"                  => Format::PodcastTranscript,
+        "html/real/spec_example_shape.html"                     => Format::HtmlTranscript,
+    ];
+
+
+    /**
+     * Returns one case per golden file: the input file, its format, the output format, the golden file and the read
+     * options. The paths are relative to tests/files.
      *
-     * @return array<string, array{string, Format, Format, string}>
+     * @return array<string, array{string, Format, Format, string, ReadOptions}>
      */
     public static function cases(): array
     {
@@ -60,13 +99,24 @@ final class WriteGoldens
         foreach (self::ROUND_TRIPS as $folder => $format) {
             foreach (self::realFiles($folder) as $file) {
                 $golden         = "$folder/real/expected/$file.out." . pathinfo($file, PATHINFO_EXTENSION);
-                $cases[$golden] = ["$folder/real/$file", $format, $format, $golden];
+                $cases[$golden] = ["$folder/real/$file", $format, $format, $golden, self::transcriptReadOptions()];
             }
         }
-        foreach (self::CONVERSION_FORMATS as $format) {
-            foreach (self::CONVERSIONS as $path => $inputFormat) {
-                $golden         = dirname($path) . "/expected/" . basename($path) . ".to.$format->value." . $format->extensions()[0];
-                $cases[$golden] = [$path, $inputFormat, $format, $golden];
+        foreach (self::TRANSCRIPT_TARGETS as $target) {
+            foreach (self::TRANSCRIPT_CONVERSIONS as $path => $format) {
+                $cases += self::conversion($path, $format, $target, self::transcriptReadOptions());
+            }
+        }
+        foreach (self::SUBTITLE_CONVERSIONS as $path => $format) {
+            foreach ([Format::SubRip, Format::WebVtt, Format::Ass] as $target) {
+                if ($target !== $format) {
+                    $cases += self::conversion($path, $format, $target, self::readOptions($path));
+                }
+            }
+        }
+        foreach (self::TRANSCRIPT_INPUT_CONVERSIONS as $path => $format) {
+            foreach ([Format::SubRip, Format::WebVtt] as $target) {
+                $cases += self::conversion($path, $format, $target, new ReadOptions());
             }
         }
 
@@ -74,13 +124,8 @@ final class WriteGoldens
     }
 
 
-    /**
-     * Returns the output of the input file. A transcript file is read with word timestamps and speaker voices.
-     */
-    public static function render(string $path, Format $inputFormat, Format $outputFormat, ?ReadOptions $options = null): string
+    public static function render(string $path, Format $inputFormat, Format $outputFormat, ReadOptions $options): string
     {
-        $options ??= new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true, speakerVoices: true)]);
-
         return TestFiles::parse($path, $inputFormat, $options)->toString($outputFormat, new WriteOptions());
     }
 
@@ -101,6 +146,39 @@ final class WriteGoldens
     public static function canonicalJson(string $json): mixed
     {
         return self::sortKeys(json_decode($json, true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE));
+    }
+
+
+    /**
+     * Returns the case of a conversion golden "<file>.to.<format>", or "<file>.to.<format>.<extension>" when the
+     * format name is not its extension.
+     *
+     * @return array<string, array{string, Format, Format, string, ReadOptions}>
+     */
+    private static function conversion(string $path, Format $format, Format $target, ReadOptions $options): array
+    {
+        $extension = $target->extensions()[0];
+        $golden    = dirname($path) . "/expected/" . basename($path) . ".to.$target->value" . ($extension === $target->value ? "" : ".$extension");
+
+        return [$golden => [$path, $format, $target, $golden, $options]];
+    }
+
+
+    /**
+     * A round trip and a conversion to a transcript format read a transcript with word timestamps and speaker voices.
+     */
+    private static function transcriptReadOptions(): ReadOptions
+    {
+        return new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true, speakerVoices: true)]);
+    }
+
+
+    /**
+     * MicroDVD files need a frame rate. 23.976 fps is the most common rate of MicroDVD files.
+     */
+    private static function readOptions(string $path): ReadOptions
+    {
+        return str_starts_with($path, "microdvd/") ? new ReadOptions(formats: [new MicroDvdReadOptions(23.976)]) : new ReadOptions();
     }
 
 

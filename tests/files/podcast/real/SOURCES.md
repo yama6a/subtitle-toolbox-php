@@ -11,3 +11,4 @@ The example files of the spec and of podcast-transcript-convert hold film dialog
 | `expected/podcast_transcript_convert_from_html.json.out.json` | Generated for this repository. Expected `PodcastTranscriptFormatter` output for `podcast_transcript_convert_from_html.json`: an `endTime` in each segment, 4-space indents | MIT |
 | `expected/podcast_transcript_convert_from_srt.json.out.json` | Generated for this repository. Expected `PodcastTranscriptFormatter` output for `podcast_transcript_convert_from_srt.json`: 4-space indents | MIT |
 | `expected/spec_word_segments.json.out.json` | Generated for this repository. Expected `PodcastTranscriptFormatter` output for `spec_word_segments.json`: one segment per cue, not per word | MIT |
+| `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |

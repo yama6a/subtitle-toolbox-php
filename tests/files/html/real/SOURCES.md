@@ -9,3 +9,4 @@ The example files of the spec and of podcast-transcript-convert hold real podcas
 | `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
 | `expected/hhmmss_empty_paragraphs.html.out.html` | Generated for this repository. Expected `HtmlTranscriptFormatter` output for `hhmmss_empty_paragraphs.html`: short times such as `0:08`, one paragraph for cues of the same speaker without a gap, no empty paragraphs | MIT |
 | `expected/spec_example_shape.html.out.html` | Generated for this repository. Expected `HtmlTranscriptFormatter` output for `spec_example_shape.html`: apostrophes as characters, each paragraph on one line, no space before the colon in `<cite>` | MIT |
+| `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |

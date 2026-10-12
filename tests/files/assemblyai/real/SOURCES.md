@@ -8,3 +8,4 @@ AssemblyAI transcripts of real recordings hold the words of their speakers. So e
 | `market_words_french.json` | Written for this repository in the shape of the same response without speaker labels, so `"utterances": null`, with language detection. French text, a pause of 1.3 s and a sentence of 100 characters | MIT |
 | `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
 | `expected/*.out.json` | Generated for this repository. Expected output of the file with the same name, read and written as AssemblyAI JSON by `tests/files/generate-write-goldens.php` | MIT |
+| `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |

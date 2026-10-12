@@ -8,3 +8,4 @@
 | `own_empty_cue.sbv` | Written for this repository. Cue 2 has a timing line and no text. | MIT |
 | `own_angle_bracket_text_from_srt.sbv` | Generated for this repository. Expected `SbvFormatter` output for `srt/real/own_angle_bracket_text.srt`. | MIT |
 | `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
+| `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |

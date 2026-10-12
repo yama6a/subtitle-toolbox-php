@@ -8,3 +8,4 @@ Google Cloud Speech-to-Text responses for real recordings hold the words of thei
 | `restaurant_v2_diarization.json` | Written for this repository in the shape of the V2 `recognize` response with `diarizationConfig`: [speaker diarization](https://cloud.google.com/speech-to-text/docs/multiple-voices). One result, words with `startOffset`, `endOffset` and `speakerLabel`, no punctuation | MIT |
 | `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
 | `expected/*.out.json` | Generated for this repository. Expected output of the file with the same name, read and written as Google Speech-to-Text JSON by `tests/files/generate-write-goldens.php` | MIT |
+| `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |
