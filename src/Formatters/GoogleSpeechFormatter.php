@@ -134,7 +134,7 @@ final class GoogleSpeechFormatter extends SubtitleFormatter
             : self::wordTime($words[count($words) - 1], "end"), $end);
         $sameText  = TranscriptWords::sameText($cue, $text);
         $voice     = $diarized ? TranscriptWords::speaker($cue) : null;
-        $speaker   = $voice === null ? null : ($v2 ? ["speakerLabel" => $voice] : ["speakerTag" => ctype_digit($voice) ? (int) $voice : $voice]);
+        $speaker   = $voice === null ? null : ($v2 ? ["speakerLabel" => $voice] : ["speakerTag" => preg_match('/^[0-9]+$/D', $voice) === 1 ? (int) $voice : $voice]);
         $confident = array_filter($words, fn (mixed $word): bool => isset($word["confidence"])) !== [];
         $words     = TranscriptWords::words(
             $cue,
