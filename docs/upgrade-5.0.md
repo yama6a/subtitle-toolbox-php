@@ -38,7 +38,14 @@ Chapter format names:
 
 ## Output file extension
 
-TODO #965
+| 4.x | 5.0 |
+|:--- |:--- |
+| `subtitle-toolbox sync a.srt --reference r.srt -o out.vtt` (writes SubRip into `out.vtt`) | `subtitle-toolbox sync a.srt --reference r.srt --to vtt -o out.vtt` |
+
+- `sync`, `dual` and `translate` need `--to` when the `-o` extension names another writable format than the input format.
+- Without `--to`, they exit with code 2 and the message names `--to`. `convert` already did this.
+- The extension never picks the output format. `.bak` and the extension of the input format still work.
+- For standard input, the file fails with exit code 3.
 
 ## Exceptions
 

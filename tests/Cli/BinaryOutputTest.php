@@ -79,24 +79,59 @@ class BinaryOutputTest extends CliTestCase
     }
 
 
-    public function testConvertWithoutToRejectsTheExtensionOfAnotherWritableFormat(): void
+    /**
+     * @param list<string> $input   the input arguments of the command, with a trip.srt input
+     * @param list<string> $options the options that the command needs
+     * @param list<string> $stdin   the same input arguments, with standard input in place of trip.srt
+     */
+    #[DataProvider("writeCommandsWithInput")]
+    public function testWithoutToTheExtensionOfAnotherWritableFormatFailsBeforeAnyFileIsRead(string $command, array $input, array $options, array $stdin): void
     {
         copy(__DIR__ . "/../files/whisper/real/openai_whisper_german.json", "$this->dir/lecture.json");
         $before = $this->snapshot();
-        $hint   = "Pass --to vtt to convert, or use the extension of the input format.";
+        $hint   = "Pass --to vtt to write that format, or use the extension of the input format.";
 
-        $this->assertSame(self::usageError("convert", "The output trip.vtt has the extension of the format vtt, not of the input format srt. $hint"),
-                          $this->runCli(["convert", "trip.srt", "-o", "trip.vtt"]));
-        $this->assertSame(self::usageError("convert", "The output lecture.vtt has the extension of the format vtt, not of the input format whisper. $hint"),
-                          $this->runCli(["convert", "lecture.json", "-o", "lecture.vtt"]));
-        $this->assertSame([3, "", "stdin: The output trip.vtt has the extension of the format vtt, not of the input format srt. $hint\n"],
-                          $this->runCli(["convert", "-", "-o", "trip.vtt"], $this->file("trip.srt")));
+        $this->assertSame(self::usageError($command, "The output out.vtt has the extension of the format vtt, not of the input format srt. $hint"),
+                          $this->runCli([$command, ...$input, ...$options, "-o", "out.vtt"]));
         $this->assertSame($before, $this->snapshot());
 
-        $this->assertSame(0, $this->runCli(["convert", "trip.srt", "-o", "kept.srt"])[0]);
-        $this->assertSame($this->tripAs(Format::SubRip), $this->file("kept.srt"));
-        $this->assertSame(0, $this->runCli(["convert", "trip.srt", "-o", "kept.bak"])[0]);
-        $this->assertSame($this->tripAs(Format::SubRip), $this->file("kept.bak"));
+        [$code, $stdout, $stderr] = $this->runCli([$command, ...$stdin, ...$options, "-o", "out.vtt"], $this->file("trip.srt"));
+        $this->assertSame([3, ""], [$code, $stdout]);
+        $this->assertStringEndsWith("stdin: The output out.vtt has the extension of the format vtt, not of the input format srt. $hint\n", $stderr);
+        $this->assertSame($before, $this->snapshot());
+    }
+
+
+    /**
+     * @return array<string, array{string, list<string>, list<string>, list<string>}>
+     */
+    public static function writeCommandsWithInput(): array
+    {
+        return [
+            "convert"   => ["convert", ["trip.srt"], [], ["-"]],
+            "sync"      => ["sync", ["trip.srt"], ["--reference", "shop.vtt"], ["-"]],
+            "dual"      => ["dual", ["--primary", "trip.srt"], ["--secondary", "shop.vtt"], ["--primary", "-"]],
+            "translate" => ["translate", ["trip.srt"], ["--engine", "deepl", "--api-key", "key", "--target-language", "de"], ["-"]],
+        ];
+    }
+
+
+    public function testWithoutToTheExtensionOfTheInputFormatOrOfNoFormatWorks(): void
+    {
+        copy(__DIR__ . "/../files/whisper/real/openai_whisper_german.json", "$this->dir/lecture.json");
+        $this->assertSame(self::usageError("convert", "The output lecture.vtt has the extension of the format vtt, not of the input format whisper. " .
+                                                      "Pass --to vtt to write that format, or use the extension of the input format."),
+                          $this->runCli(["convert", "lecture.json", "-o", "lecture.vtt"]));
+
+        foreach ([["convert", "trip.srt"], ["sync", "trip.srt", "--reference", "shop.vtt"], ["dual", "--primary", "trip.srt", "--secondary", "shop.vtt"]] as $call) {
+            foreach (["kept.srt", "kept.bak"] as $name) {
+                $this->assertSame(0, $this->runCli([...$call, "-o", $name])[0], "$call[0] $name");
+                $this->assertFileExists("$this->dir/$name");
+                unlink("$this->dir/$name");
+            }
+        }
+        $this->assertSame(0, $this->runCli(["sync", "trip.srt", "--reference", "shop.vtt", "--to", "vtt", "-o", "out.vtt"])[0]);
+        $this->assertStringContainsString("WEBVTT\n", $this->file("out.vtt"));
     }
 
 
