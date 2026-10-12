@@ -24,6 +24,9 @@ final class CsvParser extends SubtitleParser
     public const FORMAT_DATA_KEY = Format::Csv->value;
 
     /** Header names, without case, spaces, underscores and hyphens, that stand for a role when no header has the role name. They apply only to a table without a "start" or a "text" header. */
+    /** The smallest median cue duration, read as seconds, of a table with whole number times that the parser reads as milliseconds. */
+    private const MILLISECONDS_MEDIAN_DURATION = 100;
+
     private const SYNONYMS = [
         "start"    => ["begin", "in", "starttime", "starttc", "timecode", "tcin"],
         "end"      => ["out", "stop", "endtime", "endtc", "tcout"],
@@ -56,19 +59,20 @@ final class CsvParser extends SubtitleParser
         $parsedCues = [];
         $rate       = $this->formatOptions()->frameRate;
         $frameRate  = $rate === null ? null : new FrameRate($rate);
-        $timeFormat = null;
-        $openEnds   = [];
+        $timeFormat   = null;
+        $openEnds     = [];
+        $milliseconds = $this->hasMillisecondTimes($records, $roles, $delimiter);
         foreach (array_values($records) as $rowIndex => [$lineNumber, $cells]) {
             $cell = fn (string $role): string => isset($roles[$role]) ? trim($cells[$roles[$role]] ?? "") : "";
             try {
-                [$start, $end] = self::readTimes($cell, $frameRate, $lineNumber);
+                [$start, $end] = self::readTimes($cell, $frameRate, $milliseconds, $lineNumber);
                 // A cut-off row or a time with a comma that split the cells gives the wrong end, so lenient mode drops the row.
                 $end = $end === null ? null : $this->orderedTimes($start, $end, $lineNumber, $rowIndex, [implode($delimiter, $cells)], false)[1];
             } catch (ParsingException $exception) {
                 $this->fail($exception, $lineNumber, $rowIndex, [implode($delimiter, $cells)]);
                 continue;
             }
-            $timeFormat ??= self::timeFormatOf($cell("start"));
+            $timeFormat ??= $milliseconds ? CsvTimeFormat::Milliseconds->value : self::timeFormatOf($cell("start"));
 
             $cue = new SubtitleCue($start, $end ?? $start, $this->textLines($cells[$roles["text"]] ?? "", $cell("speaker")));
             self::addCellData($cue, $cell, $cells, $roles, $header);
@@ -99,16 +103,62 @@ final class CsvParser extends SubtitleParser
      * @param \Closure(string): string $cell the trimmed cell of a role
      * @return array{float, ?float}
      */
-    private static function readTimes(\Closure $cell, ?FrameRate $frameRate, int $lineNumber): array
+    private static function readTimes(\Closure $cell, ?FrameRate $frameRate, bool $milliseconds, int $lineNumber): array
     {
-        $start = self::parseTime($cell("start"), $frameRate, $lineNumber);
+        $start = self::parseTime($cell("start"), $frameRate, $milliseconds, $lineNumber);
         $end   = match (true) {
-            $cell("end") !== ""      => self::parseTime($cell("end"), $frameRate, $lineNumber),
-            $cell("duration") !== "" => $start + self::parseTime($cell("duration"), $frameRate, $lineNumber),
+            $cell("end") !== ""      => self::parseTime($cell("end"), $frameRate, $milliseconds, $lineNumber),
+            $cell("duration") !== "" => $start + self::parseTime($cell("duration"), $frameRate, $milliseconds, $lineNumber),
             default                  => null,
         };
 
         return [$start, $end];
+    }
+
+
+    /**
+     * Returns true when every time of the table is a whole number and the median cue duration is
+     * MILLISECONDS_MEDIAN_DURATION or more, read as seconds. Then it warns once, also in strict mode.
+     * openai-whisper and whisper.cpp write such tables with times in milliseconds.
+     *
+     * @param list<array{int, list<string>}> $records
+     * @param array<string, int>             $roles
+     */
+    private function hasMillisecondTimes(array $records, array $roles, string $delimiter): bool
+    {
+        $durations = [];
+        foreach ($records as [, $cells]) {
+            $times = array_map(fn (string $role): string => isset($roles[$role]) ? trim($cells[$roles[$role]] ?? "") : "", ["start" => "start", "end" => "end", "duration" => "duration"]);
+            foreach ($times as $time) {
+                if ($time !== "" && preg_match('/^[0-9]+$/D', $time) !== 1) {
+                    return false;
+                }
+            }
+            if ($times["start"] !== "" && $times["end"] !== "") {
+                $durations[] = (int) $times["end"] - (int) $times["start"];
+            } elseif ($times["duration"] !== "") {
+                $durations[] = (int) $times["duration"];
+            }
+        }
+        if ($durations === []) {
+            return false;
+        }
+        sort($durations);
+        $middle = intdiv(count($durations), 2);
+        $median = count($durations) % 2 === 1 ? $durations[$middle] : ($durations[$middle - 1] + $durations[$middle]) / 2;
+        if ($median < self::MILLISECONDS_MEDIAN_DURATION) {
+            return false;
+        }
+
+        $this->warn(
+            "The times are whole numbers, and the median cue lasts $median seconds. The parser reads the times as milliseconds.",
+            $records[0][0],
+            null,
+            [implode($delimiter, $records[0][1])],
+            ParseWarningAction::Repaired
+        );
+
+        return true;
     }
 
 
@@ -283,11 +333,12 @@ final class CsvParser extends SubtitleParser
 
     /**
      * Reads seconds, h:mm:ss.mmm, m:ss.mmm or hh:mm:ss:ff. The last seconds field can have 1 digit. Frames need a frame rate.
+     * With $milliseconds, a number is milliseconds.
      */
-    private static function parseTime(string $time, ?FrameRate $frameRate, int $lineNumber): float
+    private static function parseTime(string $time, ?FrameRate $frameRate, bool $milliseconds, int $lineNumber): float
     {
         if (preg_match('/^\d+(?:\.\d+)?$/', $time)) {
-            return self::boundedTime((float) $time, $time, $lineNumber);
+            return self::boundedTime((float) $time / ($milliseconds ? 1000 : 1), $time, $lineNumber);
         }
         $problem = "is not seconds, h:mm:ss.mmm, m:ss.mmm, hh:mm:ss,mmm or hh:mm:ss:ff.";
         if (preg_match('/^(\d+):([0-5]\d):([0-5]\d):(\d+)$/', $time, $matches)) {

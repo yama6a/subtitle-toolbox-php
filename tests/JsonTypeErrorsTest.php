@@ -153,7 +153,7 @@ class JsonTypeErrorsTest extends TestCase
             "CSV pipe delimiter"       => [Format::Csv, ["csv" => ["delimiter" => "|", "header" => null, "roles" => ["start" => 0], "width" => 1]],
                                            'The field formatData.csv.delimiter must be one of ",", ";", "\\t".'],
             "CSV unknown time format"  => [Format::Csv, ["csv" => ["header" => null, "roles" => ["start" => 0], "width" => 1, "timeFormat" => "hh:mm:ss;fff"]],
-                                           'The field formatData.csv.timeFormat must be one of "seconds", "hh:mm:ss.mmm", "hh:mm:ss,mmm", "hh:mm:ss:ff".'],
+                                           'The field formatData.csv.timeFormat must be one of "seconds", "hh:mm:ss.mmm", "hh:mm:ss,mmm", "hh:mm:ss:ff", "milliseconds".'],
             "LRC tag number"           => [Format::Lyrics, ["lrc" => ["idTags" => ["ar" => 5]]], "The field formatData.lrc.idTags.ar must be a string."],
             "WebVTT header lines"      => [Format::WebVtt, ["vtt" => ["headerLines" => [5]]], "The field formatData.vtt.headerLines[0] must be a string."],
             "MPSub value list"         => [Format::MpSub, ["mpsub" => ["NOTE" => ["x"]]], "The field formatData.mpsub.NOTE must be a string."],

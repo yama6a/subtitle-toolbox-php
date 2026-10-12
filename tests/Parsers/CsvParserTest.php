@@ -244,6 +244,42 @@ class CsvParserTest extends TestCase
     }
 
 
+    public function testReadsWholeNumberTimesWithLongCuesAsMilliseconds(): void
+    {
+        $subtitle = (new CsvParser())->parse("start\tend\ttext\n0\t2340\tFirst line\n2340\t5100\tSecond line\n", new ReadOptions());
+        $warnings = $subtitle->getParseWarnings();
+
+        $this->assertSame([[0.0, 2.34, ["First line"]], [2.34, 5.1, ["Second line"]]], $this->describe("start\tend\ttext\n0\t2340\tFirst line\n2340\t5100\tSecond line\n"));
+        $this->assertSame("milliseconds", $subtitle->findFormatData("csv")["timeFormat"]);
+        $this->assertCount(1, $warnings);
+        $this->assertSame("The times are whole numbers, and the median cue lasts 2550 seconds. The parser reads the times as milliseconds.", $warnings[0]->message);
+        $this->assertSame(2, $warnings[0]->lineNumber);
+        $this->assertSame(ParseWarningAction::Repaired, $warnings[0]->action);
+    }
+
+
+    public function testReadsAWholeNumberDurationColumnWithLongCuesAsMilliseconds(): void
+    {
+        $this->assertSame([[1.5, 3.5, ["a"]], [3.5, 4.0, ["b"]], [4.0, 6.25, ["c"]]], $this->describe("start,duration,text\n1500,2000,a\n3500,500,b\n4000,2250,c\n"));
+    }
+
+
+    public function testReadsWholeSecondTimesWithShortCuesAsSeconds(): void
+    {
+        $subtitle = (new CsvParser())->parse("start,end,text\n1,4,a\n5,99,b\n100,104,c\n", new ReadOptions());
+
+        $this->assertSame([[1.0, 4.0, ["a"]], [5.0, 99.0, ["b"]], [100.0, 104.0, ["c"]]], $this->describe("start,end,text\n1,4,a\n5,99,b\n100,104,c\n"));
+        $this->assertSame("seconds", $subtitle->findFormatData("csv")["timeFormat"]);
+        $this->assertSame([], $subtitle->getParseWarnings());
+    }
+
+
+    public function testReadsLongCuesAsSecondsWhenOneTimeHasAFraction(): void
+    {
+        $this->assertSame([[0.0, 2340.0, ["a"]], [2340.0, 5100.5, ["b"]]], $this->describe("start,end,text\n0,2340,a\n2340,5100.5,b\n"));
+    }
+
+
     public function testFindsColumnsByHeaderSynonyms(): void
     {
         $subtitle = (new CsvParser())->parse("Start Time,End Time,Subtitle\n1,2.5,a\n", new ReadOptions());

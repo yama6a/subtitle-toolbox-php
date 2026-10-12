@@ -67,10 +67,11 @@ class CsvFormatterTest extends TestCase
     public static function timeFormats(): array
     {
         return [
-            "seconds" => [CsvTimeFormat::Seconds, "62.48", "3599.99"],
-            "dot"     => [CsvTimeFormat::Dot, "00:01:02.480", "00:59:59.990"],
-            "comma"   => [CsvTimeFormat::Comma, "\"00:01:02,480\"", "\"00:59:59,990\""],
-            "frames"  => [CsvTimeFormat::Frames, "00:01:02:12", "01:00:00:00"],
+            "seconds"      => [CsvTimeFormat::Seconds, "62.48", "3599.99"],
+            "dot"          => [CsvTimeFormat::Dot, "00:01:02.480", "00:59:59.990"],
+            "comma"        => [CsvTimeFormat::Comma, "\"00:01:02,480\"", "\"00:59:59,990\""],
+            "frames"       => [CsvTimeFormat::Frames, "00:01:02:12", "01:00:00:00"],
+            "milliseconds" => [CsvTimeFormat::Milliseconds, "62480", "3599990"],
         ];
     }
 
@@ -90,7 +91,7 @@ class CsvFormatterTest extends TestCase
     public static function unknownStoredValues(): array
     {
         return [
-            "time format" => ["timeFormat", "hh:mm:ss;fff", 'The field formatData.csv.timeFormat must be one of "seconds", "hh:mm:ss.mmm", "hh:mm:ss,mmm", "hh:mm:ss:ff".'],
+            "time format" => ["timeFormat", "hh:mm:ss;fff", 'The field formatData.csv.timeFormat must be one of "seconds", "hh:mm:ss.mmm", "hh:mm:ss,mmm", "hh:mm:ss:ff", "milliseconds".'],
             "delimiter"   => ["delimiter", "|", 'The field formatData.csv.delimiter must be one of ",", ";", "\t".'],
         ];
     }
