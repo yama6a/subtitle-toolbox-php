@@ -103,8 +103,10 @@ class FormatDetectorTest extends TestCase
             $this->expectExceptionMessage("The frame rate is unknown.");
         }
 
-        $detected = Subtitle::fromStringAutoDetectFormat($content);
-        $explicit = Subtitle::fromString($content, $format);
+        // The parsers do not detect CP949, so this file needs the encoding.
+        $options  = $file === "sami/real/own_korean_cp949.smi" ? new ReadOptions(TextEncoding::Cp949) : new ReadOptions();
+        $detected = Subtitle::fromStringAutoDetectFormat($content, $options);
+        $explicit = Subtitle::fromString($content, $format, $options);
 
         $this->assertEquals($explicit->getCues(), $detected->getCues());
     }

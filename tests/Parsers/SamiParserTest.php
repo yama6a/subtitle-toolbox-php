@@ -47,6 +47,16 @@ class SamiParserTest extends TestCase
                 [185.113, 187.035, ["500번 열차가 도착합니다,"]],
                 [335.453, 342.46, ["<font color=\"#ffff00\"><b>출발! 출발!</b></font>"]],
             ],
+            "Windows Media shape" => [
+                "own_windows_media.smi", 3, "en-US",
+                [0.0, 3.5, ["Announcer", "Good evening. Here is the station news."]],
+                [8.0, 11.0, ["<b>Bus 7</b> runs every ten minutes."]],
+            ],
+            "Subtitle Edit shape" => [
+                "own_subtitle_edit_modern.smi", 4, "en-US",
+                [1.2, 3.8, ["The winter timetable starts on Monday."]],
+                [10.4, 13.9, ["<font color=\"#ffff00\">The last train</font> still leaves at 11:15."]],
+            ],
         ];
     }
 
