@@ -179,6 +179,40 @@ class MicroDvdFormatterTest extends TestCase
     }
 
 
+    public function testStylesThatSpanLinesStyleEachLine(): void
+    {
+        $subtitle = Subtitle::load(__DIR__ . "/../files/srt/real/own_styled.srt", Format::SubRip);
+        $output   = $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25)]));
+        $reparsed = (new MicroDvdParser())->parse($output, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
+
+        $this->assertStringContainsString("{12000}{13500}{y:i}Italics over two lines|{y:i}that close on the second line\n", $output);
+        $this->assertStringContainsString("{13500}{15000}{y:i}Italics that never close\n", $output);
+        $this->assertSame(["<i>Italics over two lines</i>", "<i>that close on the second line</i>"], $reparsed->getCues()[6]->getLines());
+    }
+
+
+    public function testAColorAndAStyleThatSpanLinesStyleEachLine(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["<font color=\"#ff0000\"><u>Red", "still red</u></font>", "plain"]));
+
+        $this->assertSame(
+            "{25}{50}{c:\$0000FF}{y:u}Red|{c:\$0000FF}{y:u}still red|plain\n",
+            $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25)]))
+        );
+    }
+
+
+    public function testASpeakerTagDoesNotHideTheStyleOfItsLines(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["<v Ben><i>The harbour is closed</i>", "<i>until Monday.</i>"]));
+
+        $this->assertSame(
+            "{25}{50}{y:i}The harbour is closed|{y:i}until Monday.\n",
+            $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25)]))
+        );
+    }
+
+
     public function testSubRipConvertsToMicroDvd(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/valid.srt"), Format::SubRip);
