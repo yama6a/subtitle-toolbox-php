@@ -38,6 +38,7 @@ final class ReadGoldens
         "json"                => Format::Json,
         "ttml"                => Format::Ttml,
         "itt"                 => Format::Itt,
+        "scc"                 => Format::Scc,
         "chapters/ffmetadata" => Format::FfMetadataChapters,
         "chapters/ogm"        => Format::OgmChapters,
         "chapters/podcast"    => Format::PodcastChapters,

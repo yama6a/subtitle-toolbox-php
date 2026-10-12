@@ -232,3 +232,36 @@ write("raw_data_row.scc", [
     line("00:00:31:00", cmd("ENM"), cmd("RCL"), pac(15, 4), text("THE NEXT CAPTION IS FINE."), cmd("EOC")),
     line("00:00:34:00", cmd("EDM")),
 ]);
+
+// The shape of a CaptionMaker or MacCaption pop-on export: ENM and RCL before each caption, every control code doubled,
+// EOC at the end of the line, and EDM on a line of its own to clear.
+write("captionmaker_popon_df.scc", [
+    line("00:00:01;12", cmd("ENM"), cmd("RCL"), pac(14, 8), text("THE WINTER TIMETABLE"), pac(15, 8), text("STARTS ON MONDAY."), cmd("EOC")),
+    line("00:00:04;20", cmd("EDM")),
+    line("00:00:05;02", cmd("ENM"), cmd("RCL"), pac(15, 0, "italic"), text("[ANNOUNCER]"), cmd("EOC")),
+    line("00:00:07;00", cmd("EDM")),
+    line("00:00:07;10", cmd("ENM"), cmd("RCL"), pac(14, 4), text("THE COAST TRAIN LEAVES AT"), pac(15, 4), text("6:50, TEN MINUTES EARLIER."), cmd("EOC")),
+    line("00:00:11;00", cmd("EDM")),
+]);
+
+// The shape of an Adobe Premiere Pro SCC export: one caption per line with RCL first, EOC at the end of the line, and
+// drop-frame time codes.
+write("premiere_popon_df.scc", [
+    line("00:00:00;00", cmd("RCL"), cmd("ENM"), pac(15, 0), text("Welcome to the station office."), cmd("EOC")),
+    line("00:00:02;29", cmd("RCL"), cmd("ENM"), pac(14, 0), text("Tickets for the coast line"), pac(15, 0), text("are sold at window two."), cmd("EOC")),
+    line("00:00:06;03", cmd("RCL"), cmd("ENM"), pac(15, 0, "yellow"), text("The last train leaves at 11:15."), cmd("EOC")),
+    line("00:00:09;15", cmd("EDM")),
+]);
+
+// The shape of a live roll-up encoder: RU2, a carriage return before each line, all caps, and a time code every 1 to 2
+// seconds.
+write("live_rollup_ru2.scc", [
+    line("00:10:00:00", cmd("RU2"), cmd("CR"), pac(15), text(">> THE COUNCIL MET")),
+    line("00:10:01:10", text(" TONIGHT ABOUT")),
+    line("00:10:02:20", cmd("RU2"), cmd("CR"), pac(15), text("THE NEW BUS LINE.")),
+    line("00:10:04:00", cmd("RU2"), cmd("CR"), pac(15), text("IT RUNS FROM THE HARBOUR")),
+    line("00:10:05:15", cmd("RU2"), cmd("CR"), pac(15), text("TO THE STATION.")),
+    line("00:10:06:25", cmd("RU2"), cmd("CR"), pac(15), text(">> SERVICE STARTS")),
+    line("00:10:08:00", text(" IN MARCH.")),
+    line("00:10:09:10", cmd("EDM")),
+]);

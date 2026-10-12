@@ -56,6 +56,21 @@ class SccRealFileTest extends TestCase
                 0.234, 4.004, ["OK"], Alignment::BottomCenter,
                 31.665, 34.034, ["THE NEXT CAPTION IS FINE."], Alignment::BottomCenter,
             ],
+            "captionmaker_popon_df" => [
+                "captionmaker_popon_df.scc", 3,
+                2.302, 4.671, ["THE WINTER TIMETABLE", "STARTS ON MONDAY."], Alignment::BottomCenter,
+                8.475, 11.011, ["THE COAST TRAIN LEAVES AT", "6:50, TEN MINUTES EARLIER."], Alignment::BottomCenter,
+            ],
+            "premiere_popon_df"     => [
+                "premiere_popon_df.scc", 3,
+                0.701, 4.071, ["Welcome to the station office."], Alignment::BottomCenter,
+                6.84, 9.51, ["<font color=\"#ffff00\">The last train leaves at 11:15.</font>"], Alignment::BottomCenter,
+            ],
+            "live_rollup_ru2"       => [
+                "live_rollup_ru2.scc", 7,
+                600.8, 601.935, ["&gt;&gt; THE COUNCIL MET"], Alignment::BottomCenter,
+                608.608, 609.943, ["TO THE STATION.", "&gt;&gt; SERVICE STARTS IN MARCH."], Alignment::BottomCenter,
+            ],
         ];
     }
 
@@ -96,6 +111,8 @@ class SccRealFileTest extends TestCase
             "painton_corrections" => ["painton_corrections.scc"],
             "interleaved_pac_tab" => ["interleaved_pac_tab.scc"],
             "raw_data_row"        => ["raw_data_row.scc"],
+            "captionmaker_popon"  => ["captionmaker_popon_df.scc"],
+            "premiere_popon"      => ["premiere_popon_df.scc"],
         ];
     }
 

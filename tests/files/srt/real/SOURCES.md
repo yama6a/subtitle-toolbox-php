@@ -38,3 +38,4 @@
 | `expected/own_whisper_cpp_diarize.srt.out.srt` | Generated for this repository. Expected `SubRipFormatter` output for `own_whisper_cpp_diarize.srt`: no final empty line | MIT |
 | `expected/own_ffmpeg.srt.out.srt` | Generated for this repository. Expected `SubRipFormatter` output for `own_ffmpeg.srt`: LF line ends, no `<today>`, which the parser reads as an unknown tag (#905), no final empty line | MIT |
 | `expected/own_styled.srt.to.itt` | Generated for this repository. Expected `IttFormatter` output for `own_styled.srt` with `IttWriteOptions(frameRate: 23.976)`, written by `tests/files/generate-write-goldens.php` | MIT |
+| `expected/own_styled.srt.to.ndf.scc` | Generated for this repository. Expected `SccFormatter` output for `own_styled.srt` with `SccWriteOptions(dropFrame: false)`, written by `tests/files/generate-write-goldens.php` | MIT |

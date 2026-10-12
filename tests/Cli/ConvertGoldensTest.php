@@ -30,6 +30,7 @@ class ConvertGoldensTest extends CliTestCase
             "MicroDVD to SubRip"      => ["microdvd/real/sub_microdvd_with_styles.sub", ["--input-fps", "23.976", "--to", "srt"], "microdvd/real/expected/sub_microdvd_with_styles.sub.to.srt"],
             "TTML to SubRip"          => ["ttml/real/bbc_ebu_tt_d.ttml", ["--to", "srt"], "ttml/real/expected/bbc_ebu_tt_d.ttml.to.srt"],
             "iTT to WebVTT"           => ["itt/real/fcp_23976_styles.itt", ["--to", "vtt"], "itt/real/expected/fcp_23976_styles.itt.to.vtt"],
+            "SCC to SubRip"           => ["scc/real/popon_broadcast_df.scc", ["--to", "srt"], "scc/real/expected/popon_broadcast_df.scc.to.srt"],
             "LRC to SubRip"           => ["lrc/real/handwritten-enhanced.lrc", ["--to", "srt"], "lrc/real/expected/handwritten-enhanced.lrc.to.srt"],
         ];
     }
