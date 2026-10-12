@@ -9,6 +9,7 @@ use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\TextCase;
 
 final class SpeakerLabels
 {
@@ -98,7 +99,7 @@ final class SpeakerLabels
         self::convert($subtitle, function (array $lines) use ($upperCase, $separator): array {
             $result = [];
             foreach ($lines as $line) {
-                $name     = $line->speaker === null ? "" : Markup::escapeText($upperCase ? Subtitle::toUpperOrLower($line->speaker, true) : $line->speaker);
+                $name     = $line->speaker === null ? "" : Markup::escapeText($upperCase ? TextCase::upper($line->speaker, false) : $line->speaker);
                 $result[] = $line->startsSpeaker && $line->speaker !== null ? $name . Markup::escapeText($separator) . $line->text : $line->text;
             }
 
@@ -319,8 +320,8 @@ final class SpeakerLabels
     {
         return preg_replace_callback(
             "/(?:^|(?<=[\\s.'-]))\\p{Ll}/u",
-            fn (array $match): string => Subtitle::toUpperOrLower($match[0], true),
-            Subtitle::toUpperOrLower($name, false)
+            fn (array $match): string => TextCase::upper($match[0], false),
+            TextCase::lower($name, false)
         ) ?? $name;
     }
 }

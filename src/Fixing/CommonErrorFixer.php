@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Fixing;
 
+use SubtitleToolbox\CueList;
 use SubtitleToolbox\DialogueDash;
 use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Markup;
@@ -87,7 +88,7 @@ final class CommonErrorFixer
 
             return $change && $lines !== $original ? $lines : null;
         };
-        $subtitle->setLinesAndRemoveEmptied($fixCue, fn (array $lines): bool => Markup::plainLines($lines) !== []);
+        CueList::setLinesAndRemoveEmptied($subtitle, $fixCue, fn (array $lines): bool => Markup::plainLines($lines) !== []);
 
         return new CommonErrorReport($fixes);
     }
@@ -232,7 +233,7 @@ final class CommonErrorFixer
                 return $text;
             }
 
-            $upper = $turkic && $match[2] === "i" ? "\u{0130}" : Subtitle::toUpperOrLower($match[2], true);
+            $upper = $turkic && $match[2] === "i" ? "\u{0130}" : TextCase::upper($match[2], false);
 
             return $match[1] . $upper . substr($text, strlen($match[1]) + strlen($match[2]));
         })[0];

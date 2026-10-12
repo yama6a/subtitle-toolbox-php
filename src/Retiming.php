@@ -159,7 +159,7 @@ trait Retiming
     {
         CueList::checkTimeLimit($cues, $map);
         foreach ($cues as $cue) {
-            $cue->mapTimes($map);
+            CueList::mapTimes($cue, $map);
         }
 
         return $this;

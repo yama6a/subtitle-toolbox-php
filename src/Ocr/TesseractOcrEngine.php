@@ -50,6 +50,8 @@ final class TesseractOcrEngine implements OcrEngine
 
     /**
      * Returns true when $program runs and prints a Tesseract version.
+     *
+     * @internal
      */
     public static function isInstalled(string $program = "tesseract"): bool
     {
