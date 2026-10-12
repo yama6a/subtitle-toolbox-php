@@ -16,7 +16,16 @@ TODO #962
 
 ## Removed commands and aliases
 
-TODO #963 #964
+| 4.x | 5.0 |
+|:--- |:--- |
+| `subtitle-toolbox retime movie.srt --shift 1.5 -o out.srt` | `subtitle-toolbox convert movie.srt --shift 1.5 -o out.srt` |
+
+- `retime` is removed. Use `convert` with the same options and without `--to`.
+- The output files are byte-equal.
+- `retime` exits with code 2 as an unknown command.
+- `retime` with no edit option exited with code 2. `convert` without an edit option copies the file.
+
+TODO #964
 
 ## Output file extension
 

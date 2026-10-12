@@ -41,7 +41,6 @@ final class Application
         );
         $this->commands = [
             new ConvertCommand($beforeCreate),
-            new RetimeCommand($beforeCreate),
             new InfoCommand($beforeCreate),
             new ValidateCommand($beforeCreate),
             new SyncCommand($beforeCreate),

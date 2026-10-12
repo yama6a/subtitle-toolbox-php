@@ -27,16 +27,16 @@ class BinaryTimingTest extends CliTestCase
         copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");
         $expected = (string)file_get_contents(self::FILES . "editing/own_ferry_drift_shifted_all.vtt");
 
-        $this->assertSame([0, $expected, ""], $this->runCli(["retime", "ferry.vtt", "--shift", "-1.5"]));
-        $this->assertSame([0, $expected, ""], $this->runCli(["retime", "ferry.vtt", "--shift=-1.5"]));
-        $this->assertSame([0, "ferry.vtt -> shifted.vtt\n", ""], $this->runCli(["retime", "ferry.vtt", "--shift", "-1.5", "-o", "shifted.vtt"]));
+        $this->assertSame([0, $expected, ""], $this->runCli(["convert", "ferry.vtt", "--shift", "-1.5"]));
+        $this->assertSame([0, $expected, ""], $this->runCli(["convert", "ferry.vtt", "--shift=-1.5"]));
+        $this->assertSame([0, "ferry.vtt -> shifted.vtt\n", ""], $this->runCli(["convert", "ferry.vtt", "--shift", "-1.5", "-o", "shifted.vtt"]));
         $this->assertSame($expected, $this->file("shifted.vtt"));
     }
 
 
     public function testRetimeShiftAfter(): void
     {
-        [$code, $stdout] = $this->runCli(["retime", "shop.vtt", "--shift", "5", "--shift-after", "12"]);
+        [$code, $stdout] = $this->runCli(["convert", "shop.vtt", "--shift", "5", "--shift-after", "12"]);
 
         $this->assertSame(0, $code);
         $this->assertStringContainsString("00:00:10.000 --> 00:00:12.000", $stdout);
@@ -48,13 +48,13 @@ class BinaryTimingTest extends CliTestCase
     {
         $trip = Subtitle::fromString($this->file("trip.srt"), Format::SubRip);
 
-        $this->assertSame([0, (clone $trip)->shift(-2.5)->toString(Format::SubRip), ""], $this->runCli(["retime", "trip.srt", "--shift=-00:00:02,500"]));
-        $this->assertSame([0, (clone $trip)->shift(-2.5)->toString(Format::SubRip), ""], $this->runCli(["retime", "trip.srt", "--shift", "-00:00:02,500"]));
-        $this->assertSame([0, (clone $trip)->shift(2.5)->toString(Format::SubRip), ""], $this->runCli(["retime", "trip.srt", "--shift", "2.5"]));
+        $this->assertSame([0, (clone $trip)->shift(-2.5)->toString(Format::SubRip), ""], $this->runCli(["convert", "trip.srt", "--shift=-00:00:02,500"]));
+        $this->assertSame([0, (clone $trip)->shift(-2.5)->toString(Format::SubRip), ""], $this->runCli(["convert", "trip.srt", "--shift", "-00:00:02,500"]));
+        $this->assertSame([0, (clone $trip)->shift(2.5)->toString(Format::SubRip), ""], $this->runCli(["convert", "trip.srt", "--shift", "2.5"]));
         $this->assertSame([0, (clone $trip)->shift(1, 3723.456)->toString(Format::SubRip), ""],
-                          $this->runCli(["retime", "trip.srt", "--shift", "1", "--shift-after", "01:02:03.456"]));
+                          $this->runCli(["convert", "trip.srt", "--shift", "1", "--shift-after", "01:02:03.456"]));
         $this->assertSame([0, (clone $trip)->shift(1, 3)->toString(Format::SubRip), ""],
-                          $this->runCli(["retime", "trip.srt", "--shift", "1", "--shift-after", "00:03"]));
+                          $this->runCli(["convert", "trip.srt", "--shift", "1", "--shift-after", "00:03"]));
         $this->assertSame([0, (clone $trip)->extendShortCues(1.2)->toString(Format::SubRip), ""],
                           $this->runCli(["convert", "trip.srt", "--to", "srt", "--timing-min-duration", "00:00:01.2"]));
     }
@@ -63,8 +63,8 @@ class BinaryTimingTest extends CliTestCase
     public function testInvalidTimeIsAUsageErrorThatQuotesTheValue(): void
     {
         $this->assertSame(
-            self::usageError("retime", "The option --shift needs seconds or a timecode such as 00:01:02.500, got \"1:2:3:4:5\"."),
-            $this->runCli(["retime", "trip.srt", "--shift", "1:2:3:4:5"])
+            self::usageError("convert", "The option --shift needs seconds or a timecode such as 00:01:02.500, got \"1:2:3:4:5\"."),
+            $this->runCli(["convert", "trip.srt", "--shift", "1:2:3:4:5"])
         );
     }
 
@@ -72,11 +72,11 @@ class BinaryTimingTest extends CliTestCase
     public function testTimeOf100000HoursOrMoreIsAUsageError(): void
     {
         $this->assertSame(
-            [2, "", "Error: The option --shift needs a time below 100000 hours, got \"1e300\".\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
-            $this->runCli(["retime", "trip.srt", "--shift", "1e300"])
+            [2, "", "Error: The option --shift needs a time below 100000 hours, got \"1e300\".\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runCli(["convert", "trip.srt", "--shift", "1e300"])
         );
-        $this->assertSame(2, $this->runCli(["retime", "trip.srt", "--shift", "100000:00:00"])[0]);
-        $this->assertSame(2, $this->runCli(["retime", "trip.srt", "--shift", "-360000000"])[0]);
+        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--shift", "100000:00:00"])[0]);
+        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--shift", "-360000000"])[0]);
         $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "srt", "--timing-min-duration", "1e300"])[0]);
         $this->assertSame(2, $this->runCli(["hls", "trip.srt", "--output-dir", "out", "--local", "1e300"])[0]);
         $this->assertFileDoesNotExist("$this->dir/out");
@@ -127,8 +127,8 @@ class BinaryTimingTest extends CliTestCase
         copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");
         $expected = Subtitle::load(self::FILES . "editing/own_ferry_drift.vtt", Format::WebVtt)->syncByPoints([new SyncPoint(5, 12.5), new SyncPoint(1500, 6065)])->toString(Format::WebVtt);
 
-        $this->assertSame([0, $expected, ""], $this->runCli(["retime", "ferry.vtt", "--sync", "first=00:00:12.5", "--sync", "last=01:41:05"]));
-        $this->assertSame([0, $expected, ""], $this->runCli(["retime", "ferry.vtt", "--sync=#1=12.5", "--sync", "#5=6065"]));
+        $this->assertSame([0, $expected, ""], $this->runCli(["convert", "ferry.vtt", "--sync", "first=00:00:12.5", "--sync", "last=01:41:05"]));
+        $this->assertSame([0, $expected, ""], $this->runCli(["convert", "ferry.vtt", "--sync=#1=12.5", "--sync", "#5=6065"]));
     }
 
 
@@ -137,11 +137,11 @@ class BinaryTimingTest extends CliTestCase
         copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");
         $ferry = Subtitle::load(self::FILES . "editing/own_ferry_drift.vtt", Format::WebVtt);
 
-        $this->assertSame([0, (clone $ferry)->shift(2)->toString(Format::WebVtt), ""], $this->runCli(["retime", "ferry.vtt", "--sync", "10=12"]));
+        $this->assertSame([0, (clone $ferry)->shift(2)->toString(Format::WebVtt), ""], $this->runCli(["convert", "ferry.vtt", "--sync", "10=12"]));
         $this->assertSame([0, (clone $ferry)->shift(2)->toString(Format::WebVtt), ""], $this->runCli(["convert", "ferry.vtt", "--to", "vtt", "--sync", "10=12"]));
         $this->assertSame(
             [0, (string)file_get_contents(self::FILES . "editing/own_ferry_drift_synced.vtt"), ""],
-            $this->runCli(["retime", "ferry.vtt", "--sync", "#2=00:12", "--sync", "00:10:00=610", "--sync", "1200=00:20:05,000"])
+            $this->runCli(["convert", "ferry.vtt", "--sync", "#2=00:12", "--sync", "00:10:00=610", "--sync", "1200=00:20:05,000"])
         );
     }
 
@@ -152,32 +152,31 @@ class BinaryTimingTest extends CliTestCase
     public static function timingUsageErrors(): array
     {
         $time   = "needs seconds or a timecode such as 00:01:02.500, got";
-        $retime = ["retime", "trip.srt"];
+        $convert = ["convert", "trip.srt"];
         $garden = ["convert", "garden.srt", "--to", "srt", "-o", "-"];
         $sync   = "Pass one of --reference FILE and --silence-log FILE.";
 
         return [
-            "retime without change"     => [$retime, "retime", "Pass --shift SECONDS, --scale FACTOR, --sync OLD=NEW, or --from-fps RATE and --to-fps RATE."],
-            "--shift soon"              => [[...$retime, "--shift", "soon"], "retime", "The option --shift $time \"soon\"."],
+            "--shift soon"              => [[...$convert, "--shift", "soon"], "convert", "The option --shift $time \"soon\"."],
             "--timing-min-duration negative" => [["convert", "trip.srt", "--to", "srt", "--timing-min-duration", "-00:00:01"], "convert",
                                                  "The option --timing-min-duration must be greater than 0."],
             "--timing-min-gap frames"   => [["convert", "trip.srt", "--to", "srt", "--timing-fix-overlaps", "--timing-min-gap", "00:00:01:12"], "convert",
                                             "The option --timing-min-gap $time \"00:00:01:12\"."],
             "--timing-lead-out soon"    => [["convert", "asr.srt", "--to", "srt", "--timing-lead-out", "soon"], "convert", "The option --timing-lead-out $time \"soon\"."],
-            "--sync with --shift"       => [[...$retime, "--sync", "10=12", "--shift", "2"], "retime", "Pass --sync without --shift and --scale."],
-            "--sync with --scale"       => [[...$retime, "--sync", "10=12", "--scale", "2"], "retime", "Pass --sync without --shift and --scale."],
-            "--sync without ="          => [[...$retime, "--sync", "10"], "retime", "The option --sync needs OLD=NEW, got \"10\"."],
-            "--sync bad old"            => [[...$retime, "--sync", "soon=12"], "retime", "The option --sync $time \"soon\"."],
-            "--sync bad new"            => [[...$retime, "--sync", "first=1:2:3:4:5"], "retime", "The option --sync $time \"1:2:3:4:5\"."],
-            "--sync cue 0"              => [[...$retime, "--sync", "#0=12"], "retime", "The option --sync needs a cue number from 1 after #, got \"#0=12\"."],
-            "--sync same old"           => [[...$retime, "--sync", "10=12", "--sync", "10=15"], "retime",
+            "--sync with --shift"       => [[...$convert, "--sync", "10=12", "--shift", "2"], "convert", "Pass --sync without --shift and --scale."],
+            "--sync with --scale"       => [[...$convert, "--sync", "10=12", "--scale", "2"], "convert", "Pass --sync without --shift and --scale."],
+            "--sync without ="          => [[...$convert, "--sync", "10"], "convert", "The option --sync needs OLD=NEW, got \"10\"."],
+            "--sync bad old"            => [[...$convert, "--sync", "soon=12"], "convert", "The option --sync $time \"soon\"."],
+            "--sync bad new"            => [[...$convert, "--sync", "first=1:2:3:4:5"], "convert", "The option --sync $time \"1:2:3:4:5\"."],
+            "--sync cue 0"              => [[...$convert, "--sync", "#0=12"], "convert", "The option --sync needs a cue number from 1 after #, got \"#0=12\"."],
+            "--sync same old"           => [[...$convert, "--sync", "10=12", "--sync", "10=15"], "convert",
                                             "The --sync points must increase in both times, got \"10=12\" before \"10=15\"."],
-            "--sync old reverse"        => [[...$retime, "--sync", "600=610", "--sync", "10=12"], "retime",
+            "--sync old reverse"        => [[...$convert, "--sync", "600=610", "--sync", "10=12"], "convert",
                                             "The --sync points must increase in both times, got \"600=610\" before \"10=12\"."],
-            "--sync new reverse"        => [[...$retime, "--sync", "10=20", "--sync", "first=5", "--sync", "30=15"], "retime",
+            "--sync new reverse"        => [[...$convert, "--sync", "10=20", "--sync", "first=5", "--sync", "30=15"], "convert",
                                             "The --sync points must increase in both times, got \"10=20\" before \"30=15\"."],
-            "--scale 0"                 => [["retime", "shop.vtt", "--scale", "0"], "retime", "The option --scale must be greater than 0."],
-            "--from-fps without --to-fps" => [["retime", "frames.sub", "--input-fps", "25", "--from-fps", "25"], "retime", "Pass --from-fps and --to-fps together."],
+            "--scale 0"                 => [["convert", "shop.vtt", "--scale", "0"], "convert", "The option --scale must be greater than 0."],
+            "--from-fps without --to-fps" => [["convert", "frames.sub", "--input-fps", "25", "--from-fps", "25"], "convert", "Pass --from-fps and --to-fps together."],
             "sync without reference"    => [["sync", "de.srt"], "sync", $sync],
             "sync offsets reversed"     => [["sync", "de.srt", "--reference", "en.srt", "--min-offset", "10", "--max-offset", "-10"], "sync",
                                             "The minimum offset must not be greater than the maximum offset, got 10 and -10."],
@@ -213,11 +212,11 @@ class BinaryTimingTest extends CliTestCase
     {
         $this->assertSame(
             [3, "", "trip.srt: The --sync point \"#4=12\" names cue 4, but the subtitle has 3 cues.\n"],
-            $this->runCli(["retime", "trip.srt", "--sync", "#4=12"])
+            $this->runCli(["convert", "trip.srt", "--sync", "#4=12"])
         );
         $this->assertSame(
             [3, "", "trip.srt: The --sync points must increase in both times, got \"10=12\" before \"last=20\".\n"],
-            $this->runCli(["retime", "trip.srt", "--sync", "10=12", "--sync", "last=20"])
+            $this->runCli(["convert", "trip.srt", "--sync", "10=12", "--sync", "last=20"])
         );
     }
 
@@ -226,8 +225,8 @@ class BinaryTimingTest extends CliTestCase
     {
         $message = "trip.srt: The retimed cue 1 would end at 3.0E+300 s. Cue times must be below 100000 hours.\n";
 
-        $this->assertSame([3, "", $message], $this->runCli(["retime", "trip.srt", "--scale", "1e300"]));
-        $this->assertSame([3, "", $message], $this->runCli(["retime", "trip.srt", "--from-fps", "1", "--to-fps", "1e-300"]));
+        $this->assertSame([3, "", $message], $this->runCli(["convert", "trip.srt", "--scale", "1e300"]));
+        $this->assertSame([3, "", $message], $this->runCli(["convert", "trip.srt", "--from-fps", "1", "--to-fps", "1e-300"]));
     }
 
 
@@ -236,7 +235,7 @@ class BinaryTimingTest extends CliTestCase
         copy(self::FILES . "editing/harbour_tour.vtt", "$this->dir/harbour.vtt");
         $expected = (string)file_get_contents(self::FILES . "editing/harbour_tour_shifted_back.vtt");
 
-        $this->assertSame([0, $expected, ""], $this->runBinary(["retime", "harbour.vtt", "--shift", "-12.5", "--shift-after", "17.5"]));
+        $this->assertSame([0, $expected, ""], $this->runBinary(["convert", "harbour.vtt", "--shift", "-12.5", "--shift-after", "17.5"]));
     }
 
 
@@ -245,15 +244,15 @@ class BinaryTimingTest extends CliTestCase
         copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");
         $expected = (string)file_get_contents(self::FILES . "editing/own_ferry_drift_shifted.vtt");
 
-        $this->assertSame([0, $expected, ""], $this->runCli(["retime", "ferry.vtt", "--shift", "2", "--shift-after", "6", "--shift-before", "00:10:00"]));
+        $this->assertSame([0, $expected, ""], $this->runCli(["convert", "ferry.vtt", "--shift", "2", "--shift-after", "6", "--shift-before", "00:10:00"]));
         $this->assertSame([0, $expected, ""], $this->runCli(["convert", "ferry.vtt", "--to", "vtt", "--shift", "2", "--shift-after", "6", "--shift-before", "600"]));
         $this->assertSame(
-            self::usageError("retime", "The option --shift-before must be after --shift-after."),
-            $this->runCli(["retime", "ferry.vtt", "--shift", "2", "--shift-after", "600", "--shift-before", "600"])
+            self::usageError("convert", "The option --shift-before must be after --shift-after."),
+            $this->runCli(["convert", "ferry.vtt", "--shift", "2", "--shift-after", "600", "--shift-before", "600"])
         );
         $this->assertSame(
-            self::usageError("retime", "Pass --shift with --shift-before."),
-            $this->runCli(["retime", "ferry.vtt", "--scale", "2", "--shift-before", "600"])
+            self::usageError("convert", "Pass --shift with --shift-before."),
+            $this->runCli(["convert", "ferry.vtt", "--scale", "2", "--shift-before", "600"])
         );
     }
 
@@ -263,7 +262,7 @@ class BinaryTimingTest extends CliTestCase
         copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");
 
         $this->assertSame([0, (string)file_get_contents(self::FILES . "editing/own_ferry_drift_scaled.vtt"), ""],
-                          $this->runCli(["retime", "ferry.vtt", "--scale", "1.001"]));
+                          $this->runCli(["convert", "ferry.vtt", "--scale", "1.001"]));
     }
 
 
@@ -272,7 +271,7 @@ class BinaryTimingTest extends CliTestCase
         copy(self::FILES . "sync/own_target_de_25fps.srt", "$this->dir/de.srt");
 
         $this->assertSame([0, (string)file_get_contents(self::FILES . "sync/own_target_de_23976fps.srt"), ""],
-                          $this->runCli(["retime", "de.srt", "--from-fps", "25", "--to-fps", "23.976"]));
+                          $this->runCli(["convert", "de.srt", "--from-fps", "25", "--to-fps", "23.976"]));
     }
 
 
@@ -284,7 +283,7 @@ class BinaryTimingTest extends CliTestCase
 
         $this->assertNotSame($reversed, $expected);
         $this->assertSame([0, $expected, ""], $this->runCli([
-            "retime", "trip.srt", "--from-fps", "25", "--to-fps", "23.976", "--scale", "1.001", "--shift", "-1.5",
+            "convert", "trip.srt", "--from-fps", "25", "--to-fps", "23.976", "--scale", "1.001", "--shift", "-1.5",
         ]));
     }
 
@@ -292,7 +291,7 @@ class BinaryTimingTest extends CliTestCase
     public function testRetimeChangesTheFrameRateAndTheFormat(): void
     {
         $this->assertSame([0, (string)file_get_contents(self::FILES . "cli/frames_23976.vtt"), ""],
-                          $this->runCli(["retime", "frames.sub", "--input-fps", "25", "--from-fps", "25", "--to-fps", "23.976", "--to", "vtt"]));
+                          $this->runCli(["convert", "frames.sub", "--input-fps", "25", "--from-fps", "25", "--to-fps", "23.976", "--to", "vtt"]));
     }
 
 

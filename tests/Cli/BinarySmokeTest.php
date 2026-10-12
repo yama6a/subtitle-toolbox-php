@@ -26,7 +26,7 @@ class BinarySmokeTest extends CliTestCase
             "convert stdin"       => [["convert", "-", "--from", "srt", "--to", "ass", "-o", "-"], 0, file_get_contents(self::FIXTURES . "trip.srt")],
             "convert usage error" => [["convert", "trip.srt", "--to", "nope"], 2],
             "convert file error"  => [["convert", "missing.srt", "--to", "vtt", "-o", "-"], 3],
-            "retime"              => [["retime", "trip.srt", "--shift", "1", "-o", "late.srt"], 0],
+            "convert shift"        => [["convert", "trip.srt", "--shift", "1", "-o", "late.srt"], 0],
             "info"                => [["info", "trip.srt", "shop.vtt", "--json"], 0],
             "validate"            => [["validate", "trip.srt", "--preset", "bbc"], 1],
             "sync"                => [["sync", "trip.srt", "--reference", "shop.vtt", "-o", "-"], 0],

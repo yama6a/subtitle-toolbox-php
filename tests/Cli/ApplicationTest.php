@@ -115,23 +115,19 @@ class ApplicationTest extends TestCase
     public function testUsageErrorsExitWith2(): void
     {
         $this->assertSame(
-            self::usageError("retime", "Pass --shift SECONDS, --scale FACTOR, --sync OLD=NEW, or --from-fps RATE and --to-fps RATE."),
-            self::runApplication(["retime", "-"])
+            self::usageError("convert", "Pass --from-fps and --to-fps together."),
+            self::runApplication(["convert", "-", "--from-fps", "25"])
         );
         $this->assertSame(
-            self::usageError("retime", "Pass --from-fps and --to-fps together."),
-            self::runApplication(["retime", "-", "--from-fps", "25"])
-        );
-        $this->assertSame(
-            self::usageError("retime", "Pass --shift with --shift-after."),
-            self::runApplication(["retime", "-", "--scale", "2", "--shift-after", "1"])
+            self::usageError("convert", "Pass --shift with --shift-after."),
+            self::runApplication(["convert", "-", "--scale", "2", "--shift-after", "1"])
         );
     }
 
 
     public function testRemovedCommandsAreUnknownAndNotInTheHelp(): void
     {
-        foreach (["shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "snap"] as $command) {
+        foreach (["retime", "shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "snap"] as $command) {
             $this->assertSame(
                 [2, "", "Error: Unknown command \"$command\".\nRun \"subtitle-toolbox help\" for the usage.\n"],
                 self::runApplication([$command, "-", "--by", "1"])

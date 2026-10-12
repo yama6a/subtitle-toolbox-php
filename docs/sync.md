@@ -1,6 +1,6 @@
 # Sync
 
-[editing.md](editing.md#retiming) covers fixed shifts, scales, frame rate changes and the sync by known points. On the command line, `retime --sync` does the sync by known points, see [cli.md](cli.md#retime). This page covers the sync that finds the offset and scale for you.
+[editing.md](editing.md#retiming) covers fixed shifts, scales, frame rate changes and the sync by known points. On the command line, `convert --sync` does the sync by known points, see [cli.md](cli.md#timing). This page covers the sync that finds the offset and scale for you.
 
 ## Sync to a reference subtitle
 A German SRT for the 25 fps release is late and drifts against a 23.976 fps video. An English SRT for that video is in sync. `ReferenceSync` finds the scale and the offset from the cue times alone, so the languages can differ.

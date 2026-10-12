@@ -94,11 +94,11 @@ class BinaryOptionCoverageTest extends CliTestCase
      * @param list<string> $options
      */
     #[DataProvider("retimeOptions")]
-    public function testConvertRetimesLikeRetime(array $options): void
+    public function testConvertRetimes(array $options): void
     {
-        [$code, $expected] = $this->runCli(["retime", "shop.vtt", "--to", "srt", ...$options]);
+        [$code, $expected] = $this->runCli(["convert", "shop.vtt", "--to", "srt", ...$options]);
         $this->assertSame(0, $code);
-        $this->assertNotSame($this->runCli(["retime", "shop.vtt", "--to", "srt", "--shift", "0"])[1], $expected);
+        $this->assertNotSame($this->runCli(["convert", "shop.vtt", "--to", "srt", "--shift", "0"])[1], $expected);
         $this->assertSame([0, $expected, ""], $this->runCli(["convert", "shop.vtt", "--to", "srt", "-o", "-", ...$options]));
     }
 
@@ -169,8 +169,8 @@ class BinaryOptionCoverageTest extends CliTestCase
                             ->shift(1);
 
         $this->assertSame([0, $expected->toString(Format::WebVtt), ""],
-                          $this->runCli(["retime", "lecture.json", "--shift", "1", "--to", "vtt", "--word-timestamps"]));
-        $this->assertStringNotContainsString("<00:", $this->runCli(["retime", "lecture.json", "--shift", "1", "--to", "vtt"])[1]);
+                          $this->runCli(["convert", "lecture.json", "--shift", "1", "--to", "vtt", "--word-timestamps"]));
+        $this->assertStringNotContainsString("<00:", $this->runCli(["convert", "lecture.json", "--shift", "1", "--to", "vtt"])[1]);
     }
 
 
@@ -180,7 +180,7 @@ class BinaryOptionCoverageTest extends CliTestCase
     public static function keepGoingCommands(): array
     {
         return [
-            "retime" => ["retime", ["--shift", "1"]],
+            "convert" => ["convert", ["--shift", "1"]],
             "sync"   => ["sync", ["--reference", "late.srt"]],
         ];
     }
@@ -214,7 +214,7 @@ class BinaryOptionCoverageTest extends CliTestCase
     public static function encodingCommands(): array
     {
         return [
-            "retime --encoding"   => ["retime"],
+            "convert --encoding"   => ["convert"],
             "info --encoding"     => ["info"],
             "validate --encoding" => ["validate"],
             "sync --encoding"     => ["sync"],
@@ -281,7 +281,7 @@ class BinaryOptionCoverageTest extends CliTestCase
     public static function lenientCommands(): array
     {
         return [
-            "retime --lenient"    => ["retime"],
+            "convert --lenient"    => ["convert"],
             "sync --lenient"      => ["sync"],
             "translate --lenient" => ["translate"],
             "dual --lenient"      => ["dual"],
@@ -310,7 +310,7 @@ class BinaryOptionCoverageTest extends CliTestCase
     public static function trackCommands(): array
     {
         return [
-            "retime --track"    => ["retime"],
+            "convert --track"    => ["convert"],
             "validate --track"  => ["validate"],
             "sync --track"      => ["sync"],
             "translate --track" => ["translate"],
@@ -361,7 +361,7 @@ class BinaryOptionCoverageTest extends CliTestCase
     public static function wordTimestampsCommands(): array
     {
         return [
-            "retime --word-timestamps"    => ["retime"],
+            "convert --word-timestamps"    => ["convert"],
             "info --word-timestamps"      => ["info"],
             "validate --word-timestamps"  => ["validate"],
             "sync --word-timestamps"      => ["sync"],
@@ -391,7 +391,7 @@ class BinaryOptionCoverageTest extends CliTestCase
     public static function sccRollUpCommands(): array
     {
         return [
-            "retime --scc-roll-up"    => ["retime"],
+            "convert --scc-roll-up"    => ["convert"],
             "info --scc-roll-up"      => ["info"],
             "validate --scc-roll-up"  => ["validate"],
             "sync --scc-roll-up"      => ["sync"],
@@ -452,7 +452,7 @@ class BinaryOptionCoverageTest extends CliTestCase
     public static function writingCommands(): array
     {
         return [
-            "retime"    => ["retime"],
+            "convert"   => ["convert"],
             "sync"      => ["sync"],
             "translate" => ["translate"],
             "dual"      => ["dual"],
@@ -509,7 +509,7 @@ class BinaryOptionCoverageTest extends CliTestCase
     public static function sccFitCommands(): array
     {
         return [
-            "retime"    => ["retime", 3, true],
+            "convert"   => ["convert", 3, true],
             "sync"      => ["sync", 3, true],
             "translate" => ["translate", 0, false],
             "dual"      => ["dual", 3, true],
@@ -596,7 +596,7 @@ class BinaryOptionCoverageTest extends CliTestCase
     private static function commandLine(string $command, string $input, string $secondExtension = "srt", string $to = "srt"): array
     {
         return match ($command) {
-            "retime"    => ["retime", $input, "--shift", "1", "--to", $to],
+            "convert"   => ["convert", $input, "--shift", "1", "--to", $to],
             "info"      => ["info", $input],
             "validate"  => ["validate", $input, "--preset", "bbc"],
             "sync"      => ["sync", $input, "--reference", "late.$secondExtension", "--to", $to],
