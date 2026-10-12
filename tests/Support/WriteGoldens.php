@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Tests\Support;
 
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
@@ -48,6 +49,19 @@ final class WriteGoldens
         "itt/real/fcp_23976_styles.itt"       => Format::Itt,
         "scc/real/popon_broadcast_df.scc"     => Format::Scc,
         "sami/real/multi_language.smi"        => Format::Sami,
+    ];
+
+    /**
+     * The EBU STL files under tests/files that get a conversion golden in SubRip and TTML, the targets of most
+     * broadcast workflows.
+     */
+    private const STL_CONVERSIONS = [
+        "stl/real/bakery_teletext_25fps.stl",
+        "stl/real/irt_requirement-0056-001_modified.stl",
+        "stl/real/irt_requirement-0061-001.stl",
+        "stl/real/irt_requirement-0074-001.stl",
+        "stl/real/irt_requirement-0076-001.stl",
+        "stl/real/irt_requirement-0076-009.stl",
     ];
 
     /**
@@ -142,6 +156,11 @@ final class WriteGoldens
                 }
             }
         }
+        foreach (self::STL_CONVERSIONS as $path) {
+            foreach ([Format::SubRip, Format::Ttml] as $target) {
+                $cases += self::conversion($path, Format::EbuStl, $target, new ReadOptions());
+            }
+        }
         foreach (self::TRANSCRIPT_INPUT_CONVERSIONS as $path => $format) {
             foreach ([Format::SubRip, Format::WebVtt] as $target) {
                 $cases += self::conversion($path, $format, $target, new ReadOptions());
@@ -154,7 +173,13 @@ final class WriteGoldens
 
     public static function render(string $path, Format $inputFormat, Format $outputFormat, ReadOptions $options, WriteOptions $writeOptions = new WriteOptions()): string
     {
-        return TestFiles::parse($path, $inputFormat, $options)->toString($outputFormat, $writeOptions);
+        $subtitle = TestFiles::parse($path, $inputFormat, $options);
+        if ($outputFormat === Format::EbuStl && $subtitle->findFormatData("stl") === null) {
+            // A new EBU STL file holds the date of today in the GSI fields CD and RD.
+            $subtitle->setFormatData("stl", ["gsi" => ["CD" => "261012", "RD" => "261012"]]);
+        }
+
+        return $subtitle->toString($outputFormat, $writeOptions);
     }
 
 
@@ -208,6 +233,8 @@ final class WriteGoldens
             "scc"     => [Format::Scc, new WriteOptions()],
             "ndf.scc" => [Format::Scc, new WriteOptions(formats: [new SccWriteOptions(dropFrame: false)])],
             "smi"     => [Format::Sami, new WriteOptions()],
+            "25.stl"  => [Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 25)])],
+            "30.stl"  => [Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 30)])],
         ];
     }
 

@@ -41,7 +41,7 @@ Run the tests with `composer test`. Each pull request carries one label that set
 | shaka-project/shaka-player | Apache-2.0 | adapt with credit, keep the licence text, state changes |
 | pysubs2, srt (cdown) | MIT | adapt with credit |
 | pycaption (PBS) | Apache-2.0 | adapt with credit + keep NOTICE |
-| sandflow/ttconv | BSD-2-Clause (checked @ 1fed6ab) | adapt with credit |
+| sandflow/ttconv | BSD-2-Clause, the STL files in `src/test/resources/stl/irt/` Apache-2.0 with a NOTICE (checked @ 1fed6ab) | adapt with credit; the IRT files need their NOTICE |
 | go-astisub, martinlindhe/subtitles, libgosubs | MIT | adapt with credit |
 | androidx/media (Media3) | Apache-2.0 | adapt with credit + keep NOTICE, state changes |
 | JDaren/subtitleConverter | MIT (per README) | adapt with credit |

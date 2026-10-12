@@ -41,6 +41,7 @@ final class ReadGoldens
         "itt"                 => Format::Itt,
         "scc"                 => Format::Scc,
         "sami"                => Format::Sami,
+        "stl"                 => Format::EbuStl,
         "chapters/ffmetadata" => Format::FfMetadataChapters,
         "chapters/ogm"        => Format::OgmChapters,
         "chapters/podcast"    => Format::PodcastChapters,

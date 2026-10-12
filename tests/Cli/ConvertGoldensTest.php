@@ -32,6 +32,7 @@ class ConvertGoldensTest extends CliTestCase
             "iTT to WebVTT"           => ["itt/real/fcp_23976_styles.itt", ["--to", "vtt"], "itt/real/expected/fcp_23976_styles.itt.to.vtt"],
             "SCC to SubRip"           => ["scc/real/popon_broadcast_df.scc", ["--to", "srt"], "scc/real/expected/popon_broadcast_df.scc.to.srt"],
             "SAMI to SAMI"            => ["sami/real/multi_language.smi", ["--to", "sami"], "sami/real/expected/multi_language.smi.out.smi"],
+            "EBU STL to SubRip"       => ["stl/real/bakery_teletext_25fps.stl", ["--to", "srt"], "stl/real/expected/bakery_teletext_25fps.stl.to.srt"],
             "LRC to SubRip"           => ["lrc/real/handwritten-enhanced.lrc", ["--to", "srt"], "lrc/real/expected/handwritten-enhanced.lrc.to.srt"],
         ];
     }

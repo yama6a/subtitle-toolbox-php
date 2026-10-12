@@ -48,6 +48,19 @@ class EbuStlRealFilesTest extends TestCase
             "train_cyrillic"        => ["train_cyrillic.stl", 2, 2.0, 4.0, "Поезд отправляется в семь часов.", Alignment::BottomCenter,
                                         5.0, 8.0, "Следующая станция:\n<font color=\"#00ff00\">Северный вокзал.</font>", Alignment::BottomCenter],
             "weather_greek"         => ["weather_greek.stl", 3, 1.0, 3.0, "Αύριο θα βρέξει.", Alignment::BottomCenter, 6.4, 9.0, "Ο άνεμος είναι ασθενής.", Alignment::BottomCenter],
+            "IRT subtitle groups"   => ["irt_requirement-0056-001_modified.stl", 4, 0.0, 2.0, "Subtitle 1 Group 1", Alignment::BottomCenter, 9.0, 10.0, "Subtitle 4 Group 3", Alignment::BottomCenter],
+            "IRT top position"      => ["irt_requirement-0061-001.stl", 1, 0.0, 2.0, "Test Subtitle", Alignment::TopCenter, 0.0, 2.0, "Test Subtitle", Alignment::TopCenter],
+            "IRT character set"     => ["irt_requirement-0074-001.stl", 1, 0.0, 2.0, "^ ! \" § % &amp; / ( ) = ? * '\n&lt; &gt; ° ; : -", Alignment::BottomCenter,
+                                        0.0, 2.0, "^ ! \" § % &amp; / ( ) = ? * '\n&lt; &gt; ° ; : -", Alignment::BottomCenter],
+            "IRT black text"        => ["irt_requirement-0076-001.stl", 1, 36000.0, 36001.0, "WhiteOnBlack <font color=\"#000000\">BlackOnBlack</font>", Alignment::BottomCenter,
+                                        36000.0, 36001.0, "WhiteOnBlack <font color=\"#000000\">BlackOnBlack</font>", Alignment::BottomCenter],
+            "IRT backgrounds"       => ["irt_requirement-0076-009.stl", 1, 36000.0, 36001.0, "WhiteOnWhite WhiteOnBlack", Alignment::BottomCenter, 36000.0, 36001.0, "WhiteOnWhite WhiteOnBlack", Alignment::BottomCenter],
+            "Sandflow cumulative"   => ["sandflow_cumulative_set.stl", 5, 0.04, 1.0, "Not part of cumulative set.", Alignment::BottomCenter, 5.0, 7.0, "4", Alignment::TopCenter],
+            "Sandflow multi TTI"    => ["sandflow_multi_tti_subtitle.stl", 1, 0.92, 2.92, "<font color=\"#0000ff\">Foo Bar Baz</font>", Alignment::BottomCenter,
+                                        0.92, 2.92, "<font color=\"#0000ff\">Foo Bar Baz</font>", Alignment::BottomCenter],
+            "Sandflow overlapping"  => ["sandflow_overlapping_tti.stl", 2, 1.0, 5.0, "Subtitle One", Alignment::BottomCenter, 3.0, 7.0, "Subtitle Two", Alignment::BottomCenter],
+            "Sandflow row 18"       => ["sandflow_vp18_3_lines.stl", 1, 0.04, 3.0, "<font color=\"#ffff00\">This</font>\nis\nrow 18", Alignment::BottomCenter,
+                                        0.04, 3.0, "<font color=\"#ffff00\">This</font>\nis\nrow 18", Alignment::BottomCenter],
         ];
     }
 

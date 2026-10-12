@@ -653,6 +653,37 @@ SOFTWARE.
   - `tests/files/ttml/real/ttconv_lwsp_default.ttml`
   - `tests/files/ttml/real/ttconv_lwsp_preserve.ttml`
 - Files written by ttconv 1.1.1 from our own input: `tests/files/ttml/real/own_ttconv_imsc11.ttml`
+- Files copied unchanged from `src/test/resources/stl/sandflow/`:
+  - `tests/files/stl/real/sandflow_cumulative_set.stl`
+  - `tests/files/stl/real/sandflow_multi_tti_subtitle.stl`
+  - `tests/files/stl/real/sandflow_overlapping_tti.stl`
+  - `tests/files/stl/real/sandflow_vp18_3_lines.stl`
+- Files copied unchanged from `src/test/resources/stl/irt/`, under Apache-2.0 with the NOTICE below. Sandflow made them from the XML test files of the IRT Subtitle Conversion Framework, <https://github.com/irt-open-source/scf>, Apache-2.0:
+  - `tests/files/stl/real/irt_requirement-0056-001_modified.stl`
+  - `tests/files/stl/real/irt_requirement-0061-001.stl`
+  - `tests/files/stl/real/irt_requirement-0074-001.stl`
+  - `tests/files/stl/real/irt_requirement-0076-001.stl`
+  - `tests/files/stl/real/irt_requirement-0076-009.stl`
+- The licence of the `irt` folder is the Apache License 2.0, <https://www.apache.org/licenses/LICENSE-2.0>. Its NOTICE file, copied unchanged:
+
+```text
+Copyright/Attribution Notice
+
+The STL test files in this directory are a modified versions of the STL 
+test files developed by Institut fuer Rundfunktechnik as part of 
+the Subtitle Conversion Framework ("SCF") 
+(https://github.com/irt-open-source/scf).
+
+The Subtitle Conversion Framework ("SCF") offered by Institut fuer 
+Rundfunktechnik on GitHub is subject to the Apache 2.0 license.
+
+The STL test files have been translated from an XML representation
+to a binary representation that conforms to the EBU-STL specification.
+
+Copyright (c) 2020, Sandflow Consulting LLC
+```
+
+- The licence of the rest of the project:
 
 ```text
 Copyright (c) 2020, Sandflow Consulting LLC
