@@ -184,11 +184,11 @@ final class WebVttFormatter extends SubtitleFormatter
 
     private function formatSettings(SubtitleCue $cue): string
     {
-        $stored    = $cue->findFormatData(WebVttParser::FORMAT_DATA_KEY);
-        $unchanged = ($stored["alignment"] ?? Alignment::BottomCenter->value) === $cue->getAlignment()->value;
+        $cueData   = $cue->findFormatData(WebVttParser::FORMAT_DATA_KEY);
+        $unchanged = ($cueData["alignment"] ?? Alignment::BottomCenter->value) === $cue->getAlignment()->value;
         $names     = $unchanged ? WebVttParser::CUE_SETTINGS : array_diff(WebVttParser::CUE_SETTINGS, self::POSITION_SETTINGS);
         $settings  = [];
-        foreach ($stored as $name => $value) {
+        foreach ($cueData as $name => $value) {
             if (in_array($name, $names, true)) {
                 $settings[] = "$name:$value";
             }
