@@ -29,3 +29,19 @@ TODO #966
 ## Line wrapping of Chinese and Japanese
 
 TODO #944
+
+## Public API cleanup
+
+TODO #968
+
+## Renamed methods
+
+TODO #969 #971
+
+## Load and parse
+
+TODO #970
+
+## Options and results
+
+TODO #972
