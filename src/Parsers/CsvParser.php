@@ -130,7 +130,7 @@ final class CsvParser extends SubtitleParser
         foreach ($records as [, $cells]) {
             $times = array_map(fn (string $role): string => isset($roles[$role]) ? trim($cells[$roles[$role]] ?? "") : "", ["start" => "start", "end" => "end", "duration" => "duration"]);
             foreach ($times as $time) {
-                if ($time !== "" && !ctype_digit($time)) {
+                if ($time !== "" && preg_match('/^[0-9]+$/D', $time) !== 1) {
                     return false;
                 }
             }
