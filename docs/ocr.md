@@ -22,7 +22,7 @@ $subtitle->toString(Format::SubRip);
 $subtitle->toString(Format::SubRip, new WriteOptions(skipImageCues: true));   // drops image cues without text
 ```
 
-- **Text formats**: `toString()` throws `ImageCueWithoutTextException` for an image cue without text. So a file without OCR fails at once, and does not become a valid file with missing cues.
+- **Text formats**: `toString()` throws `UnwritableContentException` for an image cue without text. So a file without OCR fails at once, and does not become a valid file with missing cues.
 - **After OCR**: the cue keeps its image, so `PgsFormatter` can still write it.
 - **Language**: pass an `OcrLanguage` case, for example `OcrLanguage::German`. The engine receives its value, the Tesseract model name `deu`. A string such as `'deu+eng'` or the name of a custom trained model reaches the engine as it is.
 - **Confidence**: `(new OcrRunner($engine))->run($subtitle, 'eng')` does the same as `recognizeText()`. It returns an `OcrReport` whose `texts` hold the `RecognizedText` of each cue by cue index.

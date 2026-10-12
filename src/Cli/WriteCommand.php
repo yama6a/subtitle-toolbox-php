@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\Formatters\ImageFormatter;
 use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
@@ -181,8 +183,12 @@ abstract class WriteCommand extends FileCommand
                 $outputFormat === Format::Scc && $this->sccFit => $this->fittedScc($subtitle, $options, $console, $label),
                 default                                        => $subtitle->toString($outputFormat, $options),
             };
-        } catch (ImageCueWithoutTextException) {
-            self::fail(self::IMAGE_CUES_MESSAGE);
+        } catch (UnwritableContentException $exception) {
+            if (!is_subclass_of(FormatRegistry::formatterClass($outputFormat), ImageFormatter::class)) {
+                self::textCues($subtitle, $options);
+            }
+
+            throw $exception;
         }
 
         if ($target === self::DASH) {

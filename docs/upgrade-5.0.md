@@ -24,7 +24,16 @@ TODO #965
 
 ## Exceptions
 
-TODO #966
+Image cues without text now throw `UnwritableContentException`, like all other content that a format cannot hold. `ImageCueWithoutTextException` no longer exists.
+
+| Old | New |
+|:--- |:--- |
+| `catch (ImageCueWithoutTextException $e)` | `catch (UnwritableContentException $e)` |
+| error code 103 | error code 108 |
+
+- Code 103 is retired and never used again.
+- A catch of `UnwritableContentException` now also catches this error. Check the message if you handle the two cases differently.
+- The message still names the cue, and says that the cue needs OCR or a bitmap format.
 
 ## Line wrapping of Chinese and Japanese
 

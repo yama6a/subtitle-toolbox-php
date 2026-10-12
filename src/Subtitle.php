@@ -6,10 +6,10 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\CueNotFoundException;
-use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
 use SubtitleToolbox\Exceptions\UnsupportedFormatException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Formatters\ImageFormatter;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\OcrEngine;
@@ -254,8 +254,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
                 CueImage::isImageCue($cue) && $cue->getLines() === []));
 
             if ($imageCueIndexes !== [] && !$options->skipImageCues) {
-                throw new ImageCueWithoutTextException("Cue #{$imageCueIndexes[0]} holds an image but no text. " .
-                                                       "Run recognizeText() first, or pass WriteOptions(skipImageCues: true).");
+                throw new UnwritableContentException("Cue #{$imageCueIndexes[0]} holds an image but no text, and {$format->value} needs text. " .
+                                                     "Run OCR with recognizeText() first, write a bitmap format such as PGS, or pass WriteOptions(skipImageCues: true).");
             }
             if ($imageCueIndexes !== []) {
                 $subtitle = $this->withoutCues($imageCueIndexes);
