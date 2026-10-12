@@ -56,17 +56,6 @@ final class CommentAnchors
 
 
     /**
-     * @param array<int, ?SubtitleCue> $anchors
-     *
-     * @return array<int, ?SubtitleCue>
-     */
-    public static function move(array $anchors, SubtitleCue $from, SubtitleCue $to): array
-    {
-        return array_map(fn (?SubtitleCue $anchor): ?SubtitleCue => $anchor === $from ? $to : $anchor, $anchors);
-    }
-
-
-    /**
      * Replaces each anchor with the cue that $map holds for it. A null anchor stays null.
      *
      * @param array<int, ?SubtitleCue>                    $anchors

@@ -182,8 +182,10 @@ trait CueEditing
             ARRAY_FILTER_USE_KEY
         );
 
-        [$this->cues, $anchors] = CueList::join($this->cues, $group, $anchors, true);
-        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
+        $joinedInto = new \SplObjectStorage();
+        CueList::join(array_values($group), true, $joinedInto);
+        [$this->cues, $anchors] = CueList::removeJoined($this->cues, $anchors, $joinedInto);
+        $this->comments         = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
     }
@@ -219,16 +221,18 @@ trait CueEditing
             $groups[] = ["cues" => [$cue], "start" => $cue->getStart(), "end" => $cue->getEnd()];
         }
 
+        $joinedInto = new \SplObjectStorage();
         foreach ($groups as ["cues" => $group, "start" => $start]) {
             if (count($group) > 1) {
-                [$this->cues, $anchors] = CueList::join($this->cues, $group, $anchors, false);
+                CueList::join($group, false, $joinedInto);
                 // A setStart() after addCue() can leave a later cue of the run with an earlier start.
                 if ($start < $group[0]->getStart()) {
                     $group[0]->setStart($start);
                 }
             }
         }
-        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
+        [$this->cues, $anchors] = CueList::removeJoined($this->cues, $anchors, $joinedInto);
+        $this->comments         = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
     }
@@ -261,17 +265,19 @@ trait CueEditing
             $groups[] = [$cue];
         }
 
+        $joinedInto = new \SplObjectStorage();
         foreach ($groups as $group) {
             if (count($group) > 1) {
                 $lines = [];
                 foreach ($group as $cue) {
                     $lines[$cue->getText()] ??= $cue->getLines();
                 }
-                [$this->cues, $anchors] = CueList::join($this->cues, $group, $anchors, false);
+                CueList::join($group, false, $joinedInto);
                 $group[0]->setLines(array_merge(...array_values($lines)));
             }
         }
-        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
+        [$this->cues, $anchors] = CueList::removeJoined($this->cues, $anchors, $joinedInto);
+        $this->comments         = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
     }
