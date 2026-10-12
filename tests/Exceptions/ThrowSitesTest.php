@@ -620,14 +620,14 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/VobSubParser.php: packet too long"     => [fn () => (new VobSubParser())->parse(
                 substr(self::vobSubPacket("\0\4\0\4"), 0, -1), new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
-            "Parsers/VobSubParser.php: no control sequence" => [fn () => (new VobSubParser())->parse(
+            "Parsers/DvdSubpicture.php: no control sequence" => [fn () => (new VobSubParser())->parse(
                 self::vobSubPacket("\0\2"), new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
-            "Parsers/VobSubParser.php: cut off command"     => [fn () => (new VobSubParser())->parse(
+            "Parsers/DvdSubpicture.php: cut off command"    => [fn () => (new VobSubParser())->parse(
                 self::vobSubPacket("\0\x09\0\4\0\0\0\4\x05"), new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
-            "Parsers/VobSubParser.php: image too large"     => [fn () => (new VobSubParser())->parse(
+            "Parsers/DvdSubpicture.php: image too large"    => [fn () => (new VobSubParser())->parse(
                 self::vobSubPacket("\0\x15\0\4\0\0\0\4\x05\x00\x0F\xFF\x00\x0F\xFF\x06\0\0\0\0\xFF"),
                 new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
-            "Parsers/VobSubParser.php: cut off bitmap"      => [fn () => (new VobSubParser())->parse(
+            "Parsers/DvdSubpicture.php: cut off bitmap"     => [fn () => (new VobSubParser())->parse(
                 self::vobSubPacket("\0\x15\0\4\0\0\0\4\x05\0\0\1\0\0\1\x06\0\x15\0\x15\xFF"), new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
             "Parsers/Options/VobSubReadOptions.php: negative track" => [fn () => new VobSubReadOptions(track: -1), ...$invalid],
             "Parsers/WebVttParser.php: no WEBVTT"           => [fn () => (new WebVttParser())->parse("text", new ReadOptions()), ...$parsing],
