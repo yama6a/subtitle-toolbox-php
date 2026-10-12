@@ -27,8 +27,8 @@ if (!class_exists(Application::class)) {
     exit(2);
 }
 
-// OCR of a long file needs more than the 128 MB default. A Composer install leaves the limit to the user.
-if (in_array("--ocr", $argv, true) && class_exists(Phar::class) && Phar::running() !== "" && ini_get("memory_limit") === "128M") {
+// Word-level JSON transcripts and OCR need more than the PHP default of 128 MB. Any other limit is the user's choice.
+if (ini_get("memory_limit") === "128M") {
     ini_set("memory_limit", "512M");
 }
 

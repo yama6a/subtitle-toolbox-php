@@ -31,7 +31,7 @@ php subtitle-toolbox.phar --version
 - **Image**: the tool runs in `/work`, so mount your files there. `--user` makes the tool write files that you own. Without it, the tool runs as `www-data` and cannot write to most mounted folders.
 - **Platforms**: the image is for `linux/amd64` and `linux/arm64`.
 - **OCR**: `convert --ocr` works in every form with no extra steps, because all include php-glyph-ocr. The Tesseract image adds Tesseract with the `tessdata_fast` models of all its languages, see [ocr.md](ocr.md#tesseract). It is about 340 MB larger.
-- **Memory**: the image sets `memory_limit` to 512 MB. The PHAR raises a `memory_limit` of 128 MB to 512 MB when you pass `--ocr`. It keeps any other value, for example from `php -d memory_limit=1G`.
+- **Memory**: the tool raises a `memory_limit` of 128 MB, the PHP default, to 512 MB. The image sets 512 MB too. The tool keeps any other value, so raise it for larger files, for example `php -d memory_limit=1G vendor/bin/subtitle-toolbox convert big.json --to srt -o big.srt`. A word-level JSON transcript of 50,000 cues needs about 520 MB.
 
 ## Commands
 | Command | Does |
@@ -494,5 +494,5 @@ vendor/bin/subtitle-toolbox convert movie.idx --to srt -o movie.srt --ocr --ocr-
 - **Database**: `--ocr-database` loads a `.nocr` file in place of the subtitle fonts database. See [Training a database](ocr.md#training-a-database).
 - **No engine**: when neither Tesseract nor php-glyph-ocr is installed, `--ocr` stops with exit code 2 and prints the install commands of both.
 - **Progress**: the tool prints `movie.sup: OCR 100/1500` to standard error after every 100 image cues and after the last one.
-- **Memory**: php-glyph-ocr can need more than the default `memory_limit` of 128 MB, see [ocr.md](ocr.md#php-glyph-ocr). Raise it, for example with `php -d memory_limit=512M vendor/bin/subtitle-toolbox convert movie.sup --to srt -o movie.srt --ocr`.
+- **Memory**: php-glyph-ocr can need more than the default `memory_limit` of 128 MB, see [ocr.md](ocr.md#php-glyph-ocr). The tool raises 128 MB to 512 MB, see [Install without Composer](#install-without-composer).
 - **Info**: `info` prints `Image cues: 12, 0 with text` for a file with image cues. The JSON holds `"imageCues": {"count": 12, "withText": 0}` for every file.
