@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Tests\Support;
 
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
+use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
@@ -44,6 +45,7 @@ final class WriteGoldens
         "ttml/real/mantas_netflix_ticks.dfxp" => Format::Ttml,
         "ttml/real/w3c_imsc11_regions.ttml"   => Format::Ttml,
         "itt/real/fcp_23976_styles.itt"       => Format::Itt,
+        "scc/real/popon_broadcast_df.scc"     => Format::Scc,
     ];
 
     /**
@@ -79,6 +81,8 @@ final class WriteGoldens
         "lrc/real/handwritten-enhanced.lrc"               => Format::Lyrics,
         "ttml/real/bbc_ebu_tt_d.ttml"                     => Format::Ttml,
         "itt/real/fcp_23976_styles.itt"                   => Format::Itt,
+        "scc/real/popon_broadcast_df.scc"                 => Format::Scc,
+        "scc/real/rollup_news_ndf.scc"                    => Format::Scc,
         "csv/real/mantas_done_shape.csv"                  => Format::Csv,
     ];
 
@@ -196,8 +200,10 @@ final class WriteGoldens
     private static function styledConversions(): array
     {
         return [
-            "ttml" => [Format::Ttml, new WriteOptions()],
-            "itt"  => [Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 23.976)])],
+            "ttml"    => [Format::Ttml, new WriteOptions()],
+            "itt"     => [Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 23.976)])],
+            "scc"     => [Format::Scc, new WriteOptions()],
+            "ndf.scc" => [Format::Scc, new WriteOptions(formats: [new SccWriteOptions(dropFrame: false)])],
         ];
     }
 
