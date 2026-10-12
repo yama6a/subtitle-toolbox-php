@@ -101,7 +101,7 @@ final class WebVttStreamReader implements CueStreamReader
         $held    = null;
         $heldKey = 0;
         $pending = [];
-        foreach ($this->parser->withoutControlCharacters(Streams::lines($stream)) as $key => $line) {
+        foreach ($this->parser->withoutControlCharacters(Streams::lines($stream, $this->parser->warnInvalidUtf8(...))) as $key => $line) {
             if (trim($line) === "") {
                 if ($held !== null && ($line !== "" || end($pending) !== "")) {
                     $pending[$key] = $line;

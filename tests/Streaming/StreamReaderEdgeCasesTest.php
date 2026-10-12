@@ -129,6 +129,35 @@ class StreamReaderEdgeCasesTest extends TestCase
     }
 
 
+    public static function filesWithInvalidUtf8(): array
+    {
+        return [
+            "SubRip with one bad byte"      => [SubRipStreamReader::class, SubRipParser::class, "invalid-utf-8/one-bad-byte.srt"],
+            "WebVTT with one bad byte"      => [WebVttStreamReader::class, WebVttParser::class, "invalid-utf-8/one-bad-byte.vtt"],
+            "SubRip in Windows-1252"        => [SubRipStreamReader::class, SubRipParser::class, "french-windows-1252.srt"],
+            "SubRip in Shift JIS with CRLF" => [SubRipStreamReader::class, SubRipParser::class, "japanese-shift_jis.srt"],
+        ];
+    }
+
+
+    /**
+     * @param class-string<CueStreamReader>           $readerClass
+     * @param class-string<SubRipParser|WebVttParser> $parserClass
+     */
+    #[DataProvider("filesWithInvalidUtf8")]
+    public function testLenientReaderWarnsAboutInvalidUtf8LikeTheParser(string $readerClass, string $parserClass, string $file): void
+    {
+        $path     = __DIR__ . "/../files/encoding/$file";
+        $subtitle = (new $parserClass())->parse(file_get_contents($path), new ReadOptions(lenient: true));
+        $reader   = new $readerClass(new ReadOptions(lenient: true));
+        $cues     = iterator_to_array($reader->read($path), false);
+
+        $this->assertStringStartsWith("The content is not valid UTF-8.", $subtitle->getParseWarnings()[0]->message);
+        $this->assertEquals($subtitle->getCues(), $cues);
+        $this->assertEquals($subtitle->getParseWarnings(), $reader->getWarnings());
+    }
+
+
     public function testReaderRejectsAMissingFile(): void
     {
         $this->expectException(InvalidArgumentException::class);

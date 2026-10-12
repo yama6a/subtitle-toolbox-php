@@ -106,7 +106,7 @@ abstract class SubtitleParser
             return $content;
         }
 
-        $message = "The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding.";
+        $message = self::invalidUtf8Message($offset);
         if (!$this->replacesInvalidUtf8($content)) {
             if ($this->options->lenient) {
                 $this->warn($message, null, null, [], ParseWarningAction::Repaired);
@@ -121,6 +121,26 @@ abstract class SubtitleParser
         $this->warn("$message The parser read the bad bytes as U+FFFD.", null, null, [], ParseWarningAction::Repaired);
 
         return StringHelpers::replaceInvalidUtf8($content);
+    }
+
+
+    /**
+     * Warns in lenient mode about a stream whose byte at $offset is not valid UTF-8. The stream readers of text formats
+     * that keep invalid UTF-8 call it, and the warning comes first, as in parse().
+     *
+     * @internal
+     */
+    public function warnInvalidUtf8(int $offset): void
+    {
+        if ($this->options->lenient) {
+            array_unshift($this->warnings, new ParseWarning(self::invalidUtf8Message($offset), null, null, [], ParseWarningAction::Repaired));
+        }
+    }
+
+
+    private static function invalidUtf8Message(int $offset): string
+    {
+        return "The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding.";
     }
 
 

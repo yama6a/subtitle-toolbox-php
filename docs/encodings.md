@@ -39,7 +39,7 @@ StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Win
 - **Binary formats**: EBU STL, PGS and VobSub skip steps 2 and 5.
 - **XML declaration**: the TTML, iTT and YouTube parsers ignore `encoding="utf-16"` or `"utf-32"` in the XML declaration of UTF-8 content. This covers converted UTF-16 files and UTF-8 files that declare UTF-16.
 - **Legacy text that looks like UTF-8**: a few legacy files are valid UTF-8 by chance. For example, the Windows-1252 text `Ã©` is the bytes `C3 A9`, which are `é` in UTF-8. The library reads such a file as UTF-8.
-- **Invalid UTF-8**: after step 6, a parser that gets content with a byte that is not valid UTF-8 acts as below. In lenient mode, a `ParseWarning` with the action `Repaired` names the first bad byte, for example "The content is not valid UTF-8. The first bad byte is at offset 42. Pass --encoding."
+- **Invalid UTF-8**: after step 6, a parser that gets content with a byte that is not valid UTF-8 acts as below. In lenient mode, a `ParseWarning` with the action `Repaired` names the first bad byte, for example "The content is not valid UTF-8. The first bad byte is at offset 42. Pass --encoding." `SubRipStreamReader` and `WebVttStreamReader` give the same warning with the same offset.
 
 | Format | Strict mode | Lenient mode |
 |:--- |:--- |:--- |
