@@ -15,6 +15,8 @@ final class SubtitleDiff
     private const MIN_TEXT_SIMILARITY  = 0.7;
     private const MIN_OVERLAP_SHARE    = 0.5;
     private const FULL_ALIGN_MAX_CELLS = 40000;
+    private const SAME_TEXT_WINDOW     = 50;
+    private const LONG_CUE_SECONDS     = 60;
 
     // The step of each cell in the fullAlign() table: from the cell above, from the left, or diagonal for a pair.
     private const UP       = "u";
@@ -218,6 +220,7 @@ final class SubtitleDiff
 
     /**
      * Returns the pairs with the same text and the pairs that overlap in time, with their weights.
+     * A text that repeats more than SAME_TEXT_WINDOW times in $new pairs only with the repeats nearest in index.
      *
      * @return list<array{int, int, float}>
      */
@@ -228,20 +231,21 @@ final class SubtitleDiff
             $newByText[$text][] = $j;
         }
 
-        $newOrder = array_keys($this->newStarts);
-        usort($newOrder, fn (int $a, int $b): int => $this->newStarts[$a] <=> $this->newStarts[$b]);
-        $sortedStarts = array_map(fn (int $j): float => $this->newStarts[$j], $newOrder);
-        $longest      = 0.0;
+        // Each list scans back by its longest cue, so one cue of 2 hours does not make each old cue scan all new cues.
+        $shortAndLong = [[], []];
         foreach ($this->newStarts as $j => $start) {
-            $longest = max($longest, $this->newEnds[$j] - $start);
+            $shortAndLong[(int)($this->newEnds[$j] - $start > self::LONG_CUE_SECONDS)][] = $j;
         }
+        $timeLists = array_map(fn (array $list): array => $this->byStart($list), $shortAndLong);
 
         $candidates = [];
         foreach ($this->oldTexts as $i => $text) {
-            $partners = array_fill_keys($newByText[$text] ?? [], true);
-            for ($k = SortedSearch::firstAtOrAfter($sortedStarts, $this->oldStarts[$i] - $longest);
-                 $k < count($sortedStarts) && $sortedStarts[$k] < $this->oldEnds[$i]; $k++) {
-                $partners[$newOrder[$k]] = true;
+            $partners = array_fill_keys(self::nearest($newByText[$text] ?? [], $i), true);
+            foreach ($timeLists as [$order, $sortedStarts, $longest]) {
+                for ($k = SortedSearch::firstAtOrAfter($sortedStarts, $this->oldStarts[$i] - $longest);
+                     $k < count($sortedStarts) && $sortedStarts[$k] < $this->oldEnds[$i]; $k++) {
+                    $partners[$order[$k]] = true;
+                }
             }
 
             foreach (array_keys($partners) as $j) {
@@ -253,6 +257,50 @@ final class SubtitleDiff
         }
 
         return $candidates;
+    }
+
+
+    /**
+     * @param list<int> $newIndexes
+     * @return array{list<int>, list<float>, float} the indexes by start, their starts and the longest duration
+     */
+    private function byStart(array $newIndexes): array
+    {
+        usort($newIndexes, fn (int $a, int $b): int => $this->newStarts[$a] <=> $this->newStarts[$b]);
+        $starts  = array_map(fn (int $j): float => $this->newStarts[$j], $newIndexes);
+        $longest = 0.0;
+        foreach ($newIndexes as $j) {
+            $longest = max($longest, $this->newEnds[$j] - $this->newStarts[$j]);
+        }
+
+        return [$newIndexes, $starts, $longest];
+    }
+
+
+    /**
+     * Returns the SAME_TEXT_WINDOW values of $sorted nearest to $index, the lower one first on a tie.
+     *
+     * @param list<int> $sorted
+     * @return list<int>
+     */
+    private static function nearest(array $sorted, int $index): array
+    {
+        if (count($sorted) <= self::SAME_TEXT_WINDOW) {
+            return $sorted;
+        }
+
+        $after   = SortedSearch::firstAtOrAfter($sorted, $index);
+        $before  = $after - 1;
+        $nearest = [];
+        while (count($nearest) < self::SAME_TEXT_WINDOW) {
+            if ($before >= 0 && (!isset($sorted[$after]) || $index - $sorted[$before] <= $sorted[$after] - $index)) {
+                $nearest[] = $sorted[$before--];
+            } else {
+                $nearest[] = $sorted[$after++];
+            }
+        }
+
+        return $nearest;
     }
 
 
