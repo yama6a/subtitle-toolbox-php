@@ -164,6 +164,7 @@ final class AssParser extends SubtitleParser
         [$type, $value] = $this->splitDescriptor($line);
         if (strcasecmp($type, "Format") === 0) {
             $data["eventFormat"] = array_map("trim", explode(",", $value));
+            $this->checkFieldNames($data["eventFormat"], $line, $lineNumber);
 
             return;
         }
@@ -174,6 +175,24 @@ final class AssParser extends SubtitleParser
         }
 
         $this->events[] = ["format" => $data["eventFormat"], "line" => $line, "lineNumber" => $lineNumber, "value" => $value, "isComment" => $isComment];
+    }
+
+
+    /**
+     * PHP turns a field name such as "1" into an int array key, which the format data cannot hold. Lenient mode drops the values of such a field.
+     */
+    private function checkFieldNames(array $format, string $line, int $lineNumber): void
+    {
+        foreach ($format as $fieldName) {
+            if (!is_int(array_key_first([$fieldName => true]))) {
+                continue;
+            }
+            $message = "The field name \"$fieldName\" in the Format line of the [Events] section is a number.";
+            if (!$this->options->lenient) {
+                throw new ParsingException($message, $lineNumber);
+            }
+            $this->warn("$message The parser dropped the values of this field.", $lineNumber, null, [$line], ParseWarningAction::Repaired);
+        }
     }
 
 
@@ -189,6 +208,7 @@ final class AssParser extends SubtitleParser
         if ($fields === null) {
             throw new ParsingException("The line \"$line\" has fewer fields than the Format line of the [Events] section.", $lineNumber);
         }
+        $fields = array_filter($fields, "is_string", ARRAY_FILTER_USE_KEY);
 
         $start = $this->findField($fields, "Start");
         $end   = $this->findField($fields, "End");

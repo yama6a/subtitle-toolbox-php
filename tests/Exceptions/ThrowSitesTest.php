@@ -488,6 +488,7 @@ class ThrowSitesTest extends TestCase
                                                                                                   "Dialogue: 0,text\n", new ReadOptions()), ...$parsing],
             "Parsers/AssParser.php: invalid time"           => [fn () => (new AssParser())->parse("[Events]\nFormat: Start, End, Text\n" .
                                                                                                   "Dialogue: soon,0:00:02.00,text\n", new ReadOptions()), ...$parsing],
+            "Parsers/AssParser.php: number as field name"   => [fn () => (new AssParser())->parse("[Events]\nFormat: 1, Start, End, Text\n", new ReadOptions()), ...$parsing],
             "Parsers/AssemblyAiParser.php: no words"        => [fn () => (new AssemblyAiParser())->parse('{"text": "Hi"}', new ReadOptions()), ...$parsing],
             "Parsers/AwsTranscribeParser.php: no items"     => [fn () => (new AwsTranscribeParser())->parse('{"results": {}}', new ReadOptions()), ...$parsing],
             "Parsers/Options/CsvColumns.php: negative index"        => [fn () => new CsvColumns(start: -1), ...$invalid],

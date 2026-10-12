@@ -477,6 +477,19 @@ class LenientParsingTest extends TestCase
                     [15, 4, self::REPAIRED, "The time \"0:00:10:00\" is not in the form h:mm:ss.cc. The parser read it as 10 s."],
                 ],
             ],
+            "ASS with a number as a field name in the Format line of [Events]" => [
+                "numeric_field_name.ass",
+                AssParser::class,
+                "The field name \"1\" in the Format line of the [Events] section is a number.",
+                [
+                    [1, 3.5, "<v Captain>The ferry leaves at nine."],
+                    [3.6, 6.2, "Tickets are sold\non the upper deck."],
+                ],
+                [
+                    [13, null, self::REPAIRED, "The field name \"1\" in the Format line of the [Events] section is a number. " .
+                                               "The parser dropped the values of this field."],
+                ],
+            ],
             "ASS with 20 hour digits" => [
                 "absurd_hours.ass",
                 AssParser::class,
