@@ -103,8 +103,9 @@ function runLengthLine(array $line): string
  * @param list<int> $alphas contrast 0 to 15 in the same order
  * @param list<array{int, list<string>}> $sequences each a date in units of 1024/90000 s and its commands, where
  *        "params" stands for SET_COLOR, SET_CONTR, SET_DAREA and SET_DSPXA
+ * @param bool $bottomFieldFirst stores the bottom field before the top field, so SET_DSPXA points to the second field first
  */
-function unit(array $rows, int $x, int $y, array $colors, array $alphas, array $sequences): string
+function unit(array $rows, int $x, int $y, array $colors, array $alphas, array $sequences, bool $bottomFieldFirst = false): string
 {
     $top    = "";
     $bottom = "";
@@ -120,7 +121,7 @@ function unit(array $rows, int $x, int $y, array $colors, array $alphas, array $
             . "\x04" . chr($alphas[3] << 4 | $alphas[2]) . chr($alphas[1] << 4 | $alphas[0])
             . "\x05" . chr($x >> 4) . chr(($x & 0x0F) << 4 | $x2 >> 8) . chr($x2 & 0xFF)
             . chr($y >> 4) . chr(($y & 0x0F) << 4 | $y2 >> 8) . chr($y2 & 0xFF)
-            . "\x06" . pack("nn", 4, 4 + strlen($top));
+            . "\x06" . ($bottomFieldFirst ? pack("nn", 4 + strlen($bottom), 4) : pack("nn", 4, 4 + strlen($top)));
 
     $bodies = array_map(fn (array $sequence): string =>
         implode("", array_map(fn (string $command): string => $command === "params" ? $params : $command, $sequence[1])) . "\xFF",
@@ -134,7 +135,7 @@ function unit(array $rows, int $x, int $y, array $colors, array $alphas, array $
         $offset   = $next;
     }
 
-    $unit = $top . $bottom . $control;
+    $unit = ($bottomFieldFirst ? $bottom . $top : $top . $bottom) . $control;
 
     return pack("nn", 4 + strlen($unit), 4 + strlen($top) + strlen($bottom)) . $unit;
 }
@@ -184,6 +185,19 @@ function packs(string $unit, int $track, float $time): string
 }
 
 
+/**
+ * Packs the unit into one PES packet after one pack header, without padding packets.
+ */
+function onePacket(string $unit, int $track, float $time): string
+{
+    $ticks  = (int) round($time * 90000);
+    $header = timestamp($ticks);
+    $body   = "\x81\x80" . chr(strlen($header)) . $header . chr(0x20 + $track) . $unit;
+
+    return packHeader($ticks) . "\x00\x00\x01\xBD" . pack("n", strlen($body)) . $body;
+}
+
+
 function idxTime(float $time): string
 {
     $ms = (int) round($time * 1000);
@@ -226,9 +240,10 @@ function writeFixture(string $name, array $header, array $tracks, string $eol): 
 
 /**
  * @param list<array{lines: list<string>, index: int, delay?: float, units: list<array{float, string}>}> $tracks
+ * @param string $pack the function that packs a unit into the .sub content
  * @return array{string, string} the .idx and the .sub content
  */
-function buildFixture(array $header, array $tracks, string $eol): array
+function buildFixture(array $header, array $tracks, string $eol, string $pack = "packs"): array
 {
     $all = [];
     foreach ($tracks as $trackNumber => $track) {
@@ -242,7 +257,7 @@ function buildFixture(array $header, array $tracks, string $eol): array
     $filepos = [];
     foreach ($all as [$time, $trackNumber, $unitNumber, $unit]) {
         $filepos[$trackNumber][$unitNumber] = strlen($sub);
-        $sub .= packs($unit, $tracks[$trackNumber]["index"], $time);
+        $sub .= $pack($unit, $tracks[$trackNumber]["index"], $time);
     }
 
     $lines = $header;
@@ -340,6 +355,36 @@ function textFixture(): array
 }
 
 
+/** Start and end in seconds, the text lines, the font size in pixels and whether the bottom field comes first. */
+const ONE_PACKET_CUES = [
+    [1.0, 3.0, ["The museum opens at ten."], 26, false],
+    [3.5, 6.0, ["Tickets are sold", "at the north door."], 28, true],
+    [6.5, 9.0, ["Photos are allowed without flash."], 24, false],
+];
+
+
+/**
+ * One English track in the layout of Subtitle Edit and ffmpeg: one PES packet per unit without padding packets, and an
+ * .idx with only the size and palette lines and no custom colors line.
+ *
+ * @return array{string, string} the .idx and the .sub content
+ */
+function onePacketFixture(): array
+{
+    $units = [];
+    foreach (ONE_PACKET_CUES as [$start, $end, $lines, $size, $bottomFieldFirst]) {
+        $rows    = text($lines, $size);
+        $stop    = (int)round(($end - $start) * 90000 / 1024);
+        $units[] = [$start, unit($rows, intdiv(720 - count($rows[0]), 2), 536 - count($rows), [0, 1, 3, 0], [0, 15, 15, 15],
+                                 [[0, ["params", "\x01"]], [$stop, ["\x02"]]], $bottomFieldFirst)];
+    }
+
+    return buildFixture(["# VobSub index file, v7 (do not modify this line!)", "size: 720x576", "palette: " . PALETTE, ""], [
+        ["lines" => ["id: en, index: 0"], "index" => 0, "units" => $units],
+    ], "\n", "onePacket");
+}
+
+
 if (realpath($_SERVER["SCRIPT_FILENAME"] ?? "") !== __FILE__) {
     return;
 }
@@ -347,6 +392,10 @@ if (realpath($_SERVER["SCRIPT_FILENAME"] ?? "") !== __FILE__) {
 [$idx, $sub] = textFixture();
 file_put_contents(__DIR__ . "/text-pal.idx", $idx);
 file_put_contents(__DIR__ . "/text-pal.sub", $sub);
+
+[$idx, $sub] = onePacketFixture();
+file_put_contents(__DIR__ . "/one-packet-pal.idx", $idx);
+file_put_contents(__DIR__ . "/one-packet-pal.sub", $sub);
 
 $show = fn (int $stop): array => [[0, ["params", "\x01"]], [$stop, ["\x02"]]];
 

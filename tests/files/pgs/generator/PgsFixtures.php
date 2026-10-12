@@ -34,6 +34,8 @@ final class PgsFixtures
         "shapes_576p.sup"  => "shapes576p",
         "text_1080p.sup"          => "text1080p",
         "text_cyrillic_1080p.sup" => "textCyrillic1080p",
+        "authoring_layout_1080p.sup" => "authoringLayout1080p",
+        "fade_layout_1080p.sup"      => "fadeLayout1080p",
     ];
 
     private const WHITE_RGB  = [255, 255, 255];
@@ -178,6 +180,86 @@ final class PgsFixtures
                   ->windows($end, [0 => [160, 480, 400, 60]])
                   ->end($end);
             }
+        }
+
+        return $w->bytes();
+    }
+
+
+    /**
+     * Three cues in the segment layout of a Blu-ray authoring tool: every display set is an epoch start, also the one
+     * that clears the screen, and every palette defines all 256 entries.
+     * The cues are a line of blocks, a bar that uses each of the 256 entries, and one line of text.
+     */
+    public static function authoringLayout1080p(): string
+    {
+        $palette = [self::TRANSPARENT => self::PALETTE[self::TRANSPARENT]];
+        for ($entry = 1; $entry < 256; $entry++) {
+            $rgb             = [$entry * 53 % 256 / 255, $entry * 97 % 256 / 255, $entry * 29 % 256 / 255];
+            $palette[$entry] = [...self::ycrcb709($rgb), $entry % 4 === 0 ? 128 : 255];
+        }
+        $gradient = "";
+        for ($row = 0; $row < 40; $row++) {
+            $gradient .= implode("", array_map("chr", range(0, 255)));
+        }
+        [$text, $textPalette, $textWidth, $textHeight] = self::textObject(TextBitmap::render(["Gate 12 closes at 9:40."], 52, 52 / 16, 2), self::WHITE_RGB);
+
+        $cues = [
+            [1.0, 3.0, 640, 90, self::blocks(5), $palette],
+            [3.5, 6.0, 256, 40, $gradient, $palette],
+            [6.5, 9.0, $textWidth, $textHeight, $text, $textPalette + array_fill(0, 256, [16, 128, 128, 0])],
+        ];
+
+        $w = new PgsFixtureWriter();
+        foreach ($cues as $index => [$start, $end, $width, $height, $pixels, $entries]) {
+            $x        = intdiv(1920 - $width, 2);
+            $y        = 1000 - $height;
+            $startPts = (int)round($start * 90000);
+            $endPts   = (int)round($end * 90000);
+            ksort($entries);
+            $w->presentation($startPts, 1920, 1080, 2 * $index, PgsFixtureWriter::STATE_EPOCH_START, 0,
+                             [["id" => 0, "window" => 0, "x" => $x, "y" => $y]])
+              ->windows($startPts, [0 => [$x, $y, $width, $height]])
+              ->palette($startPts, 0, 0, $entries)
+              ->object($startPts, 0, 0, $width, $height, $pixels)
+              ->end($startPts)
+              ->presentation($endPts, 1920, 1080, 2 * $index + 1, PgsFixtureWriter::STATE_EPOCH_START, 0, [])
+              ->windows($endPts, [0 => [$x, $y, $width, $height]])
+              ->end($endPts);
+        }
+
+        return $w->bytes();
+    }
+
+
+    /**
+     * Two cues in the segment layout of BDSup2Sub and SUPer: two objects in one composition, windows larger than the
+     * objects, and a fade out of display sets in the normal state that only update the palette.
+     */
+    public static function fadeLayout1080p(): string
+    {
+        $objects = [["id" => 0, "window" => 0, "x" => 640, "y" => 820], ["id" => 1, "window" => 1, "x" => 640, "y" => 940]];
+        $windows = [0 => [620, 810, 680, 110], 1 => [620, 930, 680, 110]];
+
+        $w = new PgsFixtureWriter();
+        foreach ([[90000, 0], [630000, 10]] as [$start, $number]) {
+            $w->presentation($start, 1920, 1080, $number, PgsFixtureWriter::STATE_EPOCH_START, 0, $objects)
+              ->windows($start, $windows)
+              ->palette($start, 0, 0, self::PALETTE)
+              ->object($start, 0, 0, 640, 90, self::blocks($number + 3))
+              ->object($start, 1, 0, 640, 90, self::blocks($number + 9))
+              ->end($start);
+            // Fade out over 3 steps of 0.1 s. Each step sets lower alpha values and keeps the objects.
+            foreach ([3, 2, 1] as $step => $quarters) {
+                $pts     = $start + 180000 + 9000 * $step;
+                $entries = array_map(fn (array $entry): array => [$entry[0], $entry[1], $entry[2], intdiv($entry[3] * $quarters, 4)], self::PALETTE);
+                $w->presentation($pts, 1920, 1080, $number + 1 + $step, PgsFixtureWriter::STATE_NORMAL, 0, $objects, true)
+                  ->palette($pts, 0, $step + 1, $entries)
+                  ->end($pts);
+            }
+            $w->presentation($start + 207000, 1920, 1080, $number + 4, PgsFixtureWriter::STATE_NORMAL, 0, [])
+              ->windows($start + 207000, $windows)
+              ->end($start + 207000);
         }
 
         return $w->bytes();
