@@ -13,6 +13,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class SamiFormatterTest extends TestCase
 {
@@ -40,7 +41,7 @@ class SamiFormatterTest extends TestCase
         $output   = $subtitle->toString(Format::Sami);
         $reparsed = Subtitle::fromString($output, Format::Sami);
 
-        $this->assertSame($this->describe($subtitle), $this->describe($reparsed));
+        $this->assertSame(TestSubtitles::describeLines($subtitle), TestSubtitles::describeLines($reparsed));
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
         $this->assertSame($output, $reparsed->toString(Format::Sami));
     }
@@ -139,9 +140,4 @@ class SamiFormatterTest extends TestCase
         );
     }
 
-
-    private function describe(Subtitle $subtitle): array
-    {
-        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $subtitle->getCues());
-    }
 }

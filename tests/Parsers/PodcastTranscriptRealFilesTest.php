@@ -11,8 +11,8 @@ use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class PodcastTranscriptRealFilesTest extends TestCase
 {
@@ -50,16 +50,11 @@ class PodcastTranscriptRealFilesTest extends TestCase
     }
 
 
-    private static function cues(Subtitle $subtitle): array
-    {
-        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues());
-    }
-
 
     #[DataProvider("realFiles")]
     public function testRealFileParses(string $fileName, int $cueCount, array $firstCue, array $lastCue): void
     {
-        $cues = self::cues(self::parse($fileName));
+        $cues = TestSubtitles::describe(self::parse($fileName));
 
         $this->assertCount($cueCount, $cues);
         $this->assertSame($firstCue, $cues[0]);
@@ -74,7 +69,7 @@ class PodcastTranscriptRealFilesTest extends TestCase
         $json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(formats: [new PodcastTranscriptWriteOptions(prettyPrint: true)]));
         $again    = (new PodcastTranscriptParser())->parse($json, new ReadOptions());
 
-        $this->assertSame(self::cues($subtitle), self::cues($again));
+        $this->assertSame(TestSubtitles::describe($subtitle), TestSubtitles::describe($again));
         $this->assertSame($subtitle->findFormatData("podcast-transcript"), $again->findFormatData("podcast-transcript"));
     }
 

@@ -9,13 +9,13 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
-use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Tests\Support\RealFiles;
 use SubtitleToolbox\WriteOptions;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class Mpl2ParserTest extends TestCase
 {
@@ -144,7 +144,7 @@ class Mpl2ParserTest extends TestCase
                 [1, 0, ParseWarningAction::Skipped, "The line \"Downloaded from a subtitle site\" is not an MPL2 cue."],
                 [3, 2, ParseWarningAction::Skipped, "The line \"[4x][60]The stalls sell fish.\" is not an MPL2 cue."],
             ],
-            array_map(fn (ParseWarning $warning): array => [$warning->lineNumber, $warning->blockIndex, $warning->action, $warning->message], $subtitle->getParseWarnings())
+            TestSubtitles::warnings($subtitle)
         );
     }
 

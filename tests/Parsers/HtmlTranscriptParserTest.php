@@ -9,17 +9,10 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
-use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class HtmlTranscriptParserTest extends TestCase
 {
-    private static function cues(Subtitle $subtitle): array
-    {
-        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $subtitle->getCues());
-    }
-
-
     public function testReadsAFullDocumentWithParagraphsUpToTheNextTime(): void
     {
         $html = "<!DOCTYPE html>\r\n<html>\r\n<head><title>Episode 4</title></head>\r\n<body>\r\n" .
@@ -29,7 +22,7 @@ class HtmlTranscriptParserTest extends TestCase
         $this->assertSame([
             [5.0, 3723.5, ["<v Anna>Hello", "there.", "Come in."]],
             [3723.5, 3728.5, ["&lt;3 &amp; bye"]],
-        ], self::cues((new HtmlTranscriptParser())->parse($html, new ReadOptions())));
+        ], TestSubtitles::describeLines((new HtmlTranscriptParser())->parse($html, new ReadOptions())));
     }
 
 
@@ -38,7 +31,7 @@ class HtmlTranscriptParserTest extends TestCase
         $html = "<cite>Dr. O'Neil :</cite><time>0:00</time><p>Hi.</p><time>0:02</time><p>Bye.</p>";
 
         $this->assertSame([[0.0, 2.0, ["<v Dr. O'Neil>Hi."]], [2.0, 5.0, ["Bye."]]],
-                          self::cues((new HtmlTranscriptParser())->parse($html, new ReadOptions(lastCueDuration: 3))));
+                          TestSubtitles::describeLines((new HtmlTranscriptParser())->parse($html, new ReadOptions(lastCueDuration: 3))));
     }
 
 
@@ -64,7 +57,7 @@ class HtmlTranscriptParserTest extends TestCase
     {
         $subtitle = (new HtmlTranscriptParser())->parse("<time>0:00</time><p>Hi.</p>\n<time>0:61</time><p>Oops.</p>\n<time>0:04</time><p>Bye.</p>", new ReadOptions(lenient: true));
 
-        $this->assertSame([[0.0, 4.0, ["Hi."]], [4.0, 9.0, ["Bye."]]], self::cues($subtitle));
+        $this->assertSame([[0.0, 4.0, ["Hi."]], [4.0, 9.0, ["Bye."]]], TestSubtitles::describeLines($subtitle));
         $this->assertSame([["The time \"0:61\" is not valid.", 2, 1, ParseWarningAction::Skipped]], array_map(
             fn (ParseWarning $warning): array => [$warning->message, $warning->lineNumber, $warning->blockIndex, $warning->action],
             $subtitle->getParseWarnings()

@@ -9,17 +9,10 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
-use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class PodcastTranscriptParserTest extends TestCase
 {
-    private static function cues(Subtitle $subtitle): array
-    {
-        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues());
-    }
-
-
     private static function words(array $words): string
     {
         $segments = array_map(fn (array $word): array => ["speaker" => $word[0], "startTime" => $word[1], "endTime" => $word[2], "body" => $word[3]],
@@ -42,7 +35,7 @@ class PodcastTranscriptParserTest extends TestCase
             [2.0, 2.4, "<v Ben>Thanks"],
             [2.5, 3.4, "<v Anna>Sit \"down.\""],
             [3.5, 3.9, "<v Anna>Tea"],
-        ], self::cues((new PodcastTranscriptParser())->parse($json, new ReadOptions())));
+        ], TestSubtitles::describe((new PodcastTranscriptParser())->parse($json, new ReadOptions())));
     }
 
 
@@ -52,7 +45,7 @@ class PodcastTranscriptParserTest extends TestCase
                 '{"startTime":61.4,"endTime":61.8,"body":"and"},{"startTime":62.8,"endTime":63,"body":"bye"}]}';
 
         $this->assertSame([[1.0, 1.5, "Hello"], [60.0, 61.8, "again and"], [62.8, 63.0, "bye"]],
-                          self::cues((new PodcastTranscriptParser())->parse($json, new ReadOptions())));
+                          TestSubtitles::describe((new PodcastTranscriptParser())->parse($json, new ReadOptions())));
     }
 
 
@@ -61,7 +54,7 @@ class PodcastTranscriptParserTest extends TestCase
         $json   = self::words([["Anna", 0, 0.4, "Hello"], ["Anna", 0.5, 0.9, "there."]]);
         $parser = new PodcastTranscriptParser();
 
-        $this->assertSame([[0.0, 0.4, "<v Anna>Hello"], [0.5, 0.9, "<v Anna>there."]], self::cues($parser->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(keepSegments: true)]))));
+        $this->assertSame([[0.0, 0.4, "<v Anna>Hello"], [0.5, 0.9, "<v Anna>there."]], TestSubtitles::describe($parser->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(keepSegments: true)]))));
     }
 
 
@@ -71,7 +64,7 @@ class PodcastTranscriptParserTest extends TestCase
         $parser = new PodcastTranscriptParser();
 
         $this->assertSame([[0.0, 0.9, "<v Anna><00:00:00.000>Hello <00:00:00.500>there."], [1.0, 2.0, "<v Anna>Bye."]],
-                          self::cues($parser->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]))));
+                          TestSubtitles::describe($parser->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]))));
     }
 
 
@@ -80,7 +73,7 @@ class PodcastTranscriptParserTest extends TestCase
         $json = '{"segments": [{"startTime": 0, "endTime": 2, "body": "Where are"}, {"startTime": 2, "endTime": 3, "body": "you"},' .
                 ' {"startTime": 3, "endTime": 4, "body": "going?"}]}';
 
-        $this->assertSame([[0.0, 2.0, "Where are"], [2.0, 4.0, "you going?"]], self::cues((new PodcastTranscriptParser())->parse($json, new ReadOptions())));
+        $this->assertSame([[0.0, 2.0, "Where are"], [2.0, 4.0, "you going?"]], TestSubtitles::describe((new PodcastTranscriptParser())->parse($json, new ReadOptions())));
     }
 
 
@@ -89,7 +82,7 @@ class PodcastTranscriptParserTest extends TestCase
         $json   = '{"segments": [{"startTime": 1, "body": "One two"}, {"startTime": 1, "body": "Three four"}, {"startTime": 5, "body": "Five six"}]}';
         $parser = new PodcastTranscriptParser();
 
-        $this->assertSame([[1.0, 5.0, "One two"], [1.0, 5.0, "Three four"], [5.0, 8.0, "Five six"]], self::cues($parser->parse($json, new ReadOptions(lastCueDuration: 3))));
+        $this->assertSame([[1.0, 5.0, "One two"], [1.0, 5.0, "Three four"], [5.0, 8.0, "Five six"]], TestSubtitles::describe($parser->parse($json, new ReadOptions(lastCueDuration: 3))));
     }
 
 
@@ -97,7 +90,7 @@ class PodcastTranscriptParserTest extends TestCase
     {
         $json = '{"segments": [{"speaker": "Dr. O\'Neil", "startTime": 0, "endTime": 1, "body": " Fish & <chips>\n "}]}';
 
-        $this->assertSame([[0.0, 1.0, "<v Dr. O'Neil>Fish &amp; &lt;chips&gt;"]], self::cues((new PodcastTranscriptParser())->parse($json, new ReadOptions())));
+        $this->assertSame([[0.0, 1.0, "<v Dr. O'Neil>Fish &amp; &lt;chips&gt;"]], TestSubtitles::describe((new PodcastTranscriptParser())->parse($json, new ReadOptions())));
     }
 
 
@@ -105,7 +98,7 @@ class PodcastTranscriptParserTest extends TestCase
     {
         $json = '{"segments": [{"speaker": "Anna", "startTime": 0}, {"startTime": 1, "endTime": 2, "body": " "}, {"startTime": 2, "endTime": 3, "body": "Hi"}]}';
 
-        $this->assertSame([[2.0, 3.0, "Hi"]], self::cues((new PodcastTranscriptParser())->parse($json, new ReadOptions())));
+        $this->assertSame([[2.0, 3.0, "Hi"]], TestSubtitles::describe((new PodcastTranscriptParser())->parse($json, new ReadOptions())));
     }
 
 
@@ -132,7 +125,7 @@ class PodcastTranscriptParserTest extends TestCase
     {
         $subtitle = (new PodcastTranscriptParser())->parse('{"segments": [{"startTime": 0, "endTime": 1, "body": "Hi"}, {"startTime": 1, "body": 7}, "x"]}', new ReadOptions(lenient: true));
 
-        $this->assertSame([[0.0, 1.0, "Hi"]], self::cues($subtitle));
+        $this->assertSame([[0.0, 1.0, "Hi"]], TestSubtitles::describe($subtitle));
         $this->assertSame(
             [["The field segments[1].body must be a string.", 1, '{"startTime":1,"body":7}'], ["The field segments[2] must be an object.", 2, '"x"']],
             array_map(fn (ParseWarning $warning): array => [$warning->message, $warning->blockIndex, $warning->block[0]], $subtitle->getParseWarnings())

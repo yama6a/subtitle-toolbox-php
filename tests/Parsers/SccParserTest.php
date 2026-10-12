@@ -15,6 +15,7 @@ use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class SccParserTest extends TestCase
 {
@@ -62,15 +63,6 @@ class SccParserTest extends TestCase
         return array_values(Subtitle::fromString("Scenarist_SCC V1.0\n\n" . implode("\n\n", $lines) . "\n", Format::Scc, $options)->getCues());
     }
 
-
-    /**
-     * @param list<SubtitleCue> $cues
-     * @return list<array{float, float, list<string>}>
-     */
-    private static function describe(array $cues): array
-    {
-        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $cues);
-    }
 
 
     private static function seconds(int $frame): float
@@ -324,7 +316,7 @@ class SccParserTest extends TestCase
             [self::seconds(36), self::seconds(92), ["ONE TWO"]],
             [self::seconds(96), self::seconds(122), ["THREE"]],
             [self::seconds(126), self::seconds(150), ["FOUR"]],
-        ], self::describe($cues));
+        ], TestSubtitles::describeLines($cues));
         $this->assertSame(["mode" => "roll-up", "rows" => [15], "columns" => [0]], $cues[0]->findFormatData(SccParser::FORMAT_DATA_KEY));
     }
 
@@ -357,7 +349,7 @@ class SccParserTest extends TestCase
         $lines  = $this->lineCues(...$content);
 
         $this->assertEquals([$screen[0], $screen[2]], [$lines[0], $lines[2]]);
-        $this->assertSame([self::seconds(96), self::seconds(156), ["ROLL"]], self::describe($lines)[1]);
+        $this->assertSame([self::seconds(96), self::seconds(156), ["ROLL"]], TestSubtitles::describeLines($lines)[1]);
         $this->assertCount(3, $lines);
     }
 
@@ -369,7 +361,7 @@ class SccParserTest extends TestCase
             "00:00:02:00\t9425 9425 94ad 94ad 9470 9470 " . self::text("TWO")
         );
 
-        $this->assertSame([[self::seconds(36), self::seconds(62), ["ONE"]], [self::seconds(66), round(self::seconds(66) + 5, 3), ["TWO"]]], self::describe($cues));
+        $this->assertSame([[self::seconds(36), self::seconds(62), ["ONE"]], [self::seconds(66), round(self::seconds(66) + 5, 3), ["TWO"]]], TestSubtitles::describeLines($cues));
     }
 
 

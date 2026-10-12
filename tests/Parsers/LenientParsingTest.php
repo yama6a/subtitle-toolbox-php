@@ -16,6 +16,7 @@ use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Streaming\WebVttStreamReader;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class LenientParsingTest extends TestCase
 {
@@ -783,8 +784,8 @@ class LenientParsingTest extends TestCase
         $parser   = new $parserClass();
         $subtitle = $parser->parse(file_get_contents(self::DIR . $file), new ReadOptions(lenient: true));
 
-        $this->assertEquals($expectedCues, $this->cueRows($subtitle->getCues()));
-        $this->assertSame($expectedWarnings, $this->warningRows($subtitle->getParseWarnings()));
+        $this->assertEquals($expectedCues, TestSubtitles::describe($subtitle));
+        $this->assertSame($expectedWarnings, TestSubtitles::warnings($subtitle));
     }
 
 
@@ -819,7 +820,7 @@ class LenientParsingTest extends TestCase
         $cues   = iterator_to_array($reader->read(self::DIR . $file));
 
         $this->assertSame(array_keys($cues), range(0, count($cues) - 1));
-        $this->assertSame($this->cueRows($subtitle->getCues()), $this->cueRows($cues));
+        $this->assertSame(TestSubtitles::describe($subtitle), TestSubtitles::describe($cues));
         $this->assertEquals($subtitle->getParseWarnings(), $reader->getWarnings());
     }
 
@@ -831,7 +832,7 @@ class LenientParsingTest extends TestCase
                    "3\n00:00:08,000 --> 00:00:10,000\nStill fine\n";
         $subtitle = (new SubRipParser())->parse($content, new ReadOptions(lenient: true));
 
-        $this->assertEquals([[1, 4, "Hello"], [8, 10, "Still fine"]], $this->cueRows($subtitle->getCues()));
+        $this->assertEquals([[1, 4, "Hello"], [8, 10, "Still fine"]], TestSubtitles::describe($subtitle));
         $this->assertEquals(
             [new ParseWarning(
                 "Block #1 has no timing line on its second line. The line is \"00:00:05,000 => 00:00:07,000\".",
@@ -938,7 +939,7 @@ class LenientParsingTest extends TestCase
         $content  = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n\nThe ferry leaves.\n\nNOTE checked\n\nSTYLE\n::cue { color: red }\n";
         $subtitle = (new WebVttParser())->parse($content, new ReadOptions(lenient: true));
 
-        $this->assertEquals([[1, 2, "The ferry leaves."]], $this->cueRows($subtitle->getCues()));
+        $this->assertEquals([[1, 2, "The ferry leaves."]], TestSubtitles::describe($subtitle));
         $this->assertSame("checked", $subtitle->getComments()[0]->text);
         $this->assertCount(1, $subtitle->getParseWarnings());
     }
@@ -986,7 +987,7 @@ class LenientParsingTest extends TestCase
                    "Dialogue: 0,$time,0:00:03.00,Default,,0,0,0,,Hello\n";
 
         $subtitle = (new AssParser())->parse($content, new ReadOptions(lenient: true));
-        $this->assertSame([[$seconds, 3.0, "Hello"]], $this->cueRows($subtitle->getCues()));
+        $this->assertSame([[$seconds, 3.0, "Hello"]], TestSubtitles::describe($subtitle));
         $this->assertSame([self::REPAIRED], array_map(fn (ParseWarning $warning) => $warning->action, $subtitle->getParseWarnings()));
         $this->assertStringContainsString(sprintf("Dialogue: 0,0:00:%05.2f,0:00:03.00,", $seconds), $subtitle->toString(Format::Ass));
 
@@ -1011,7 +1012,7 @@ class LenientParsingTest extends TestCase
         $content = "00:00:00.00,00:00:01.00\nFirst\n\n$line\nHello\n";
 
         $subtitle = (new SubViewerParser())->parse($content, new ReadOptions(lenient: true));
-        $this->assertSame([[0.0, 1.0, "First"], [1.5, 3.0, "Hello"]], $this->cueRows($subtitle->getCues()));
+        $this->assertSame([[0.0, 1.0, "First"], [1.5, 3.0, "Hello"]], TestSubtitles::describe($subtitle));
         $this->assertSame([self::REPAIRED], array_map(fn (ParseWarning $warning) => $warning->action, $subtitle->getParseWarnings()));
         $this->assertStringContainsString("00:00:01.50,00:00:03.00\nHello", $subtitle->toString(Format::SubViewer));
 
@@ -1025,7 +1026,7 @@ class LenientParsingTest extends TestCase
         $subtitle = (new SubViewerParser())->parse("[TITLE]\nMarket\nbroken\n" . SubViewerParser::START_SCRIPT . "\n[00:00:01]\nHello\n[00:00:02]\n", new ReadOptions(lenient: true));
 
         $this->assertSame("Hello", $subtitle->getCues()[0]->getText());
-        $this->assertSame([[3, 0, self::SKIPPED, "The line \"broken\" is not a SubViewer 1 header tag."]], $this->warningRows($subtitle->getParseWarnings()));
+        $this->assertSame([[3, 0, self::SKIPPED, "The line \"broken\" is not a SubViewer 1 header tag."]], TestSubtitles::warnings($subtitle));
     }
 
 
@@ -1033,8 +1034,8 @@ class LenientParsingTest extends TestCase
     {
         $subtitle = (new MpSubParser())->parse("FORMAT=PAL\n\n1 2\nHello\n", new ReadOptions(lenient: true));
 
-        $this->assertEquals([[1, 3, "Hello"]], $this->cueRows($subtitle->getCues()));
-        $this->assertSame([[1, 0, self::SKIPPED, "The FORMAT value \"PAL\" is not known."]], $this->warningRows($subtitle->getParseWarnings()));
+        $this->assertEquals([[1, 3, "Hello"]], TestSubtitles::describe($subtitle));
+        $this->assertSame([[1, 0, self::SKIPPED, "The FORMAT value \"PAL\" is not known."]], TestSubtitles::warnings($subtitle));
     }
 
 
@@ -1055,7 +1056,7 @@ class LenientParsingTest extends TestCase
             [4, 6, "Turn left\nat the bakery."],
             [7, 9, "Tickets cost 5 &amp;cur; at the door."],
             [10, 12, "The last bus leaves at ten."],
-        ], $this->cueRows($subtitle->getCues()));
+        ], TestSubtitles::describe($subtitle));
 
         // The text of the libxml error differs between libxml versions.
         $warnings = $subtitle->getParseWarnings();
@@ -1083,7 +1084,7 @@ class LenientParsingTest extends TestCase
             new ReadOptions(lenient: true)
         );
 
-        $this->assertEquals([[1, 2, "Caf\u{e9}\u{a0}ok"], [3, 4, "A &amp; B"]], $this->cueRows($subtitle->getCues()));
+        $this->assertEquals([[1, 2, "Caf\u{e9}\u{a0}ok"], [3, 4, "A &amp; B"]], TestSubtitles::describe($subtitle));
         $this->assertSame([2, 3], array_map(fn (ParseWarning $warning): ?int => $warning->lineNumber, $subtitle->getParseWarnings()));
     }
 
@@ -1113,8 +1114,8 @@ class LenientParsingTest extends TestCase
             new ReadOptions(lenient: true)
         );
 
-        $this->assertEquals([[5, 6, "On time"]], $this->cueRows($subtitle->getCues()));
-        $this->assertSame([[2, 0, self::SKIPPED, "The paragraph begins at 7s, but its parent ends at 6s."]], $this->warningRows($subtitle->getParseWarnings()));
+        $this->assertEquals([[5, 6, "On time"]], TestSubtitles::describe($subtitle));
+        $this->assertSame([[2, 0, self::SKIPPED, "The paragraph begins at 7s, but its parent ends at 6s."]], TestSubtitles::warnings($subtitle));
     }
 
 
@@ -1127,7 +1128,7 @@ class LenientParsingTest extends TestCase
         $this->assertSame([[$seconds, 30.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
         $this->assertSame(
             [[2, 0, self::REPAIRED, "The time expression \"$begin\" is not valid. The parser read it as {$seconds}s."]],
-            $this->warningRows($subtitle->getParseWarnings())
+            TestSubtitles::warnings($subtitle)
         );
     }
 
@@ -1161,7 +1162,7 @@ class LenientParsingTest extends TestCase
         );
 
         $this->assertSame([[2.0, 3.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
-        $this->assertSame([[2, null, self::REPAIRED, "The time expression \"1000\" is not valid. The parser read it as 1s."]], $this->warningRows($subtitle->getParseWarnings()));
+        $this->assertSame([[2, null, self::REPAIRED, "The time expression \"1000\" is not valid. The parser read it as 1s."]], TestSubtitles::warnings($subtitle));
     }
 
 
@@ -1176,7 +1177,7 @@ class LenientParsingTest extends TestCase
         $this->assertSame([[$start, $stop]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
         $this->assertSame([[2, null, self::REPAIRED,
             "The frame label $label in \"" . ($label === (int) substr($begin, -2) ? $begin : $end) . "\" is not below the default frame rate of 30, and the file has no ttp:frameRate. The parser read the frames at $fps fps."]],
-            $this->warningRows($subtitle->getParseWarnings()));
+            TestSubtitles::warnings($subtitle));
     }
 
 
@@ -1207,7 +1208,7 @@ class LenientParsingTest extends TestCase
         $this->assertSame([[1.75, 3.2], [4.05, 5.5]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
         $this->assertSame([[2, null, self::REPAIRED,
             "The frame label 75 in \"00:00:01:75\" is not below the default frame rate of 30, and the file has no ttp:frameRate. The parser read the last field as hundredths of a second."]],
-            $this->warningRows($subtitle->getParseWarnings()));
+            TestSubtitles::warnings($subtitle));
     }
 
 
@@ -1270,8 +1271,8 @@ class LenientParsingTest extends TestCase
                    ' {"offsets": {"from": 3000, "to": 4000}, "text": " Bye"}]}';
         $subtitle = (new WhisperJsonParser())->parse($content, new ReadOptions(lenient: true));
 
-        $this->assertEquals([[0, 2, "Hello"], [3, 4, "Bye"]], $this->cueRows($subtitle->getCues()));
-        $this->assertSame([[null, 1, self::SKIPPED, "The field transcription[1].offsets.from must be a number."]], $this->warningRows($subtitle->getParseWarnings()));
+        $this->assertEquals([[0, 2, "Hello"], [3, 4, "Bye"]], TestSubtitles::describe($subtitle));
+        $this->assertSame([[null, 1, self::SKIPPED, "The field transcription[1].offsets.from must be a number."]], TestSubtitles::warnings($subtitle));
     }
 
 
@@ -1433,8 +1434,8 @@ class LenientParsingTest extends TestCase
     ): void {
         $subtitle = (new $parserClass())->parse($content, new ReadOptions(lenient: true));
 
-        $this->assertEquals($expectedCues, $this->cueRows($subtitle->getCues()));
-        $this->assertSame([[...$warningPlace, self::SKIPPED, $message]], $this->warningRows($subtitle->getParseWarnings()));
+        $this->assertEquals($expectedCues, TestSubtitles::describe($subtitle));
+        $this->assertSame([[...$warningPlace, self::SKIPPED, $message]], TestSubtitles::warnings($subtitle));
 
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage($message);
@@ -1449,28 +1450,4 @@ class LenientParsingTest extends TestCase
     }
 
 
-    /**
-     * @param iterable<SubtitleCue> $cues
-     */
-    private function cueRows(iterable $cues): array
-    {
-        $rows = [];
-        foreach ($cues as $cue) {
-            $rows[] = [$cue->getStart(), $cue->getEnd(), $cue->getText()];
-        }
-
-        return $rows;
-    }
-
-
-    /**
-     * @param list<ParseWarning> $warnings
-     */
-    private function warningRows(array $warnings): array
-    {
-        return array_map(
-            fn (ParseWarning $warning): array => [$warning->lineNumber, $warning->blockIndex, $warning->action, $warning->message],
-            $warnings
-        );
-    }
 }

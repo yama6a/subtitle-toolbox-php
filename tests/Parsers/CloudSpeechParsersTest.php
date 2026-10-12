@@ -13,6 +13,7 @@ use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class CloudSpeechParsersTest extends TestCase
 {
@@ -26,11 +27,6 @@ class CloudSpeechParsersTest extends TestCase
           ]}}
         JSON;
 
-
-    private static function cues(Subtitle $subtitle): array
-    {
-        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues());
-    }
 
 
     /**
@@ -49,7 +45,7 @@ class CloudSpeechParsersTest extends TestCase
     {
         $subtitle = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::AwsTranscribe);
 
-        $this->assertSame([[0.04, 0.98, "Hello world."]], self::cues($subtitle));
+        $this->assertSame([[0.04, 0.98, "Hello world."]], TestSubtitles::describe($subtitle));
         $this->assertSame(["jobName" => "lecture-12"], $subtitle->findFormatData("aws-transcribe"));
         $this->assertSame(["0.99", "0.98", "0.0"],
                           array_column(array_column(array_column($subtitle->getCues()[0]->findFormatData("aws-transcribe")["items"], "alternatives"), 0), "confidence"));
@@ -86,7 +82,7 @@ class CloudSpeechParsersTest extends TestCase
     #[DataProvider("groupings")]
     public function testGroupsWordsIntoCues(array $words, array $expected): void
     {
-        $this->assertSame($expected, self::cues((new AssemblyAiParser())->parse(self::assemblyAiWords($words), new ReadOptions())));
+        $this->assertSame($expected, TestSubtitles::describe((new AssemblyAiParser())->parse(self::assemblyAiWords($words), new ReadOptions())));
     }
 
 
@@ -94,9 +90,9 @@ class CloudSpeechParsersTest extends TestCase
     {
         $json = self::assemblyAiWords([["Hi.", 0, 300, "O'Neil"], ["Bye.", 400, 700, "B"]]);
 
-        $this->assertSame([[0.0, 0.3, "Hi."], [0.4, 0.7, "Bye."]], self::cues((new AssemblyAiParser())->parse($json, new ReadOptions())));
+        $this->assertSame([[0.0, 0.3, "Hi."], [0.4, 0.7, "Bye."]], TestSubtitles::describe((new AssemblyAiParser())->parse($json, new ReadOptions())));
         $this->assertSame([[0.0, 0.3, "<v O'Neil>Hi."], [0.4, 0.7, "<v B>Bye."]],
-                          self::cues((new AssemblyAiParser())->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]))));
+                          TestSubtitles::describe((new AssemblyAiParser())->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]))));
     }
 
 
@@ -104,7 +100,7 @@ class CloudSpeechParsersTest extends TestCase
     {
         $json = self::assemblyAiWords([["<b>", 0, 300], ["&", 300, 600]]);
 
-        $this->assertSame([[0.0, 0.6, "&lt;b&gt; &amp;"]], self::cues((new AssemblyAiParser())->parse($json, new ReadOptions())));
+        $this->assertSame([[0.0, 0.6, "&lt;b&gt; &amp;"]], TestSubtitles::describe((new AssemblyAiParser())->parse($json, new ReadOptions())));
     }
 
 
@@ -124,7 +120,7 @@ class CloudSpeechParsersTest extends TestCase
                 '{"type": "pronunciation", "start_time": "1.0", "end_time": "1.5", "alternatives": [{"content": "Vienes"}]},' .
                 '{"type": "punctuation", "alternatives": [{"content": "?"}]}]}}';
 
-        $this->assertSame([[1.0, 1.5, "\u{bf}Vienes?"]], self::cues((new AwsTranscribeParser())->parse($json, new ReadOptions())));
+        $this->assertSame([[1.0, 1.5, "\u{bf}Vienes?"]], TestSubtitles::describe((new AwsTranscribeParser())->parse($json, new ReadOptions())));
     }
 
 
@@ -135,7 +131,7 @@ class CloudSpeechParsersTest extends TestCase
                 '{"type": "pronunciation", "start_time": "0.5", "end_time": "0.9", "speaker_label": "spk_1", "alternatives": [{"content": "No"}]}]}}';
         $parser = new AwsTranscribeParser();
 
-        $this->assertSame([[0.1, 0.4, "<v spk_0>Yes"], [0.5, 0.9, "<v spk_1>No"]], self::cues($parser->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]))));
+        $this->assertSame([[0.1, 0.4, "<v spk_0>Yes"], [0.5, 0.9, "<v spk_1>No"]], TestSubtitles::describe($parser->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]))));
     }
 
 
@@ -146,7 +142,7 @@ class CloudSpeechParsersTest extends TestCase
                 '{"alternatives": [{"words": [{"word": "first", "start": 0.5, "end": 1.0, "punctuated_word": "First."}]}]}]}}';
         $subtitle = (new DeepgramParser())->parse($json, new ReadOptions());
 
-        $this->assertSame([[0.5, 1.0, "First."], [2.0, 2.5, "later"]], self::cues($subtitle));
+        $this->assertSame([[0.5, 1.0, "First."], [2.0, 2.5, "later"]], TestSubtitles::describe($subtitle));
         $this->assertSame([1, 0], array_map(fn (SubtitleCue $cue): int => $cue->findFormatData("deepgram")["channel"], $subtitle->getCues()));
     }
 
@@ -157,7 +153,7 @@ class CloudSpeechParsersTest extends TestCase
                 '{"speaker": 1, "sentences": [{"text": "Hello there.", "start": 0.2, "end": 1.1}]}]}}]}]}}';
         $parser = new DeepgramParser();
 
-        $this->assertSame([[0.2, 1.1, "<v 1>Hello there."]], self::cues($parser->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]))));
+        $this->assertSame([[0.2, 1.1, "<v 1>Hello there."]], TestSubtitles::describe($parser->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]))));
     }
 
 
@@ -170,7 +166,7 @@ class CloudSpeechParsersTest extends TestCase
                 '{"startTime": "0.300s", "endTime": "0.600s", "word": "there", "speakerTag": 2}]}]}]}';
         $parser = new GoogleSpeechParser();
 
-        $this->assertSame([[0.0, 0.3, "<v 1>hi"], [0.3, 0.6, "<v 2>there"]], self::cues($parser->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]))));
+        $this->assertSame([[0.0, 0.3, "<v 1>hi"], [0.3, 0.6, "<v 2>there"]], TestSubtitles::describe($parser->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]))));
     }
 
 
@@ -180,7 +176,7 @@ class CloudSpeechParsersTest extends TestCase
                 '{"resultEndTime": "5s"},' .
                 '{"alternatives": [{"transcript": " second part"}], "resultEndTime": {"seconds": "9", "nanos": 250000000}}]}';
 
-        $this->assertSame([[0.0, 4.5, "first part"], [5.0, 9.25, "second part"]], self::cues((new GoogleSpeechParser())->parse($json, new ReadOptions())));
+        $this->assertSame([[0.0, 4.5, "first part"], [5.0, 9.25, "second part"]], TestSubtitles::describe((new GoogleSpeechParser())->parse($json, new ReadOptions())));
     }
 
 
@@ -209,7 +205,7 @@ class CloudSpeechParsersTest extends TestCase
         $parser   = new $parserClass();
         $subtitle = $parser->parse($json, new ReadOptions(lenient: true));
 
-        $this->assertSame($cues, self::cues($subtitle));
+        $this->assertSame($cues, TestSubtitles::describe($subtitle));
         $this->assertCount(1, $subtitle->getParseWarnings());
         $this->assertSame([$message, 0, ParseWarningAction::Skipped],
                           [$subtitle->getParseWarnings()[0]->message, $subtitle->getParseWarnings()[0]->blockIndex, $subtitle->getParseWarnings()[0]->action]);
@@ -224,7 +220,7 @@ class CloudSpeechParsersTest extends TestCase
     {
         $subtitle = (new AssemblyAiParser())->parse('{"words": [], "utterances": [{"start": 0, "text": "Hi"}, {"start": 1000, "end": 2000, "text": "Bye"}]}', new ReadOptions(lenient: true));
 
-        $this->assertSame([[1.0, 2.0, "Bye"]], self::cues($subtitle));
+        $this->assertSame([[1.0, 2.0, "Bye"]], TestSubtitles::describe($subtitle));
         $this->assertSame("The field utterances[0].end must be a time.", $subtitle->getParseWarnings()[0]->message);
     }
 
@@ -238,7 +234,7 @@ class CloudSpeechParsersTest extends TestCase
 
         $subtitle = (new DeepgramParser())->parse($json, new ReadOptions(lenient: true));
 
-        $this->assertSame([[1.0, 2.0, "Bye."]], self::cues($subtitle));
+        $this->assertSame([[1.0, 2.0, "Bye."]], TestSubtitles::describe($subtitle));
         $this->assertSame([["{$path}[0].sentences[0].end must be a time.", 0], ["{$path}[1].sentences[0].end must be a time.", 0]],
                           array_map(fn ($warning): array => [$warning->message, $warning->blockIndex], $subtitle->getParseWarnings()));
     }

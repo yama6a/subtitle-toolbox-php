@@ -9,13 +9,13 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
-use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Tests\Support\RealFiles;
 use SubtitleToolbox\WriteOptions;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class TmPlayerParserTest extends TestCase
 {
@@ -169,7 +169,7 @@ class TmPlayerParserTest extends TestCase
                 [1, 0, ParseWarningAction::Skipped, "The line \"Movie.Name.2004.DVDRip\" is not a TMPlayer line."],
                 [3, 2, ParseWarningAction::Skipped, "The line \"00:0x:06:Entry is free on Mondays.\" is not a TMPlayer line."],
             ],
-            array_map(fn (ParseWarning $warning): array => [$warning->lineNumber, $warning->blockIndex, $warning->action, $warning->message], $subtitle->getParseWarnings())
+            TestSubtitles::warnings($subtitle)
         );
     }
 

@@ -11,7 +11,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Streaming\WebVttStreamReader;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class RepeatedBomTest extends TestCase
 {
@@ -71,7 +71,7 @@ class RepeatedBomTest extends TestCase
     {
         $cues = Subtitle::fromString($content, $format)->getCues();
 
-        $this->assertSame([[1.0, 2.0, "The ferry leaves."], [3.0, 4.0, "It is late."]], self::rows($cues));
+        $this->assertSame([[1.0, 2.0, "The ferry leaves."], [3.0, 4.0, "It is late."]], TestSubtitles::describe($cues));
     }
 
 
@@ -83,7 +83,7 @@ class RepeatedBomTest extends TestCase
             fwrite($stream, self::BOM . self::BOM . $content);
             rewind($stream);
 
-            $this->assertSame([[1.0, 2.0, "The ferry leaves."], [3.0, 4.0, "It is late."]], self::rows(iterator_to_array($reader->read($stream))));
+            $this->assertSame([[1.0, 2.0, "The ferry leaves."], [3.0, 4.0, "It is late."]], TestSubtitles::describe(iterator_to_array($reader->read($stream))));
         }
     }
 
@@ -95,14 +95,4 @@ class RepeatedBomTest extends TestCase
         $this->assertSame([], $subtitle->getParseWarnings());
     }
 
-
-    /**
-     * @param list<SubtitleCue> $cues
-     *
-     * @return list<array{float, float, string}>
-     */
-    private static function rows(array $cues): array
-    {
-        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $cues);
-    }
 }
