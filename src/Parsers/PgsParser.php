@@ -8,6 +8,7 @@ use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Image\PgsColors;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -53,19 +54,6 @@ final class PgsParser extends SubtitleParser
     private const FLAG_CROPPED      = 0x80;
     private const FLAG_FORCED       = 0x40;
     private const SEQUENCE_FIRST    = 0x80;
-
-    // libavcodec/pgssubdec.c uses BT.601 up to this video height and BT.709 above it.
-    private const SD_MAX_HEIGHT = 576;
-
-    // Kr and Kb of the YCbCr matrices in ITU-R BT.709 and BT.601.
-    private const MATRIX_BT709 = [0.2126, 0.0722];
-    private const MATRIX_BT601 = [0.299, 0.114];
-
-    // The limited range of 8-bit video: luma from 16 to 235, chroma from 16 to 240 around 128.
-    private const LUMA_MIN      = 16;
-    private const LUMA_RANGE    = 219;
-    private const CHROMA_CENTER = 128;
-    private const CHROMA_RANGE  = 224;
 
     /** @var array<int, array<int, array{int, int, int, int}>> palette id => entry id => [Y, Cr, Cb, alpha] */
     private array $palettes = [];
@@ -258,7 +246,7 @@ final class PgsParser extends SubtitleParser
             return null;
         }
 
-        $colors = $this->colorMap($palette, $presentation["screenHeight"] > self::SD_MAX_HEIGHT);
+        $colors = $this->colorMap($palette, PgsColors::matrix($presentation["screenHeight"]));
         $parts  = [];
         $forced = false;
         foreach ($presentation["references"] as $reference) {
@@ -442,24 +430,14 @@ final class PgsParser extends SubtitleParser
     /**
      * Maps each palette entry byte to 4 RGBA bytes. Entries that the palette does not define are transparent.
      *
+     * @param array{float, float} $matrix
      * @return array<string, string>
      */
-    private function colorMap(array $palette, bool $highDefinition): array
+    private function colorMap(array $palette, array $matrix): array
     {
-        [$kr, $kb] = $highDefinition ? self::MATRIX_BT709 : self::MATRIX_BT601;
-        $kg        = 1 - $kr - $kb;
-
         $map = array_fill(0, 256, "\0\0\0\0");
         foreach ($palette as $entryId => [$luma, $chromaRed, $chromaBlue, $alpha]) {
-            $y  = ($luma - self::LUMA_MIN) * 255 / self::LUMA_RANGE;
-            $cr = ($chromaRed - self::CHROMA_CENTER) * 255 / self::CHROMA_RANGE;
-            $cb = ($chromaBlue - self::CHROMA_CENTER) * 255 / self::CHROMA_RANGE;
-
-            $map[$entryId] = pack("C4",
-                                  $this->clampByte($y + 2 * (1 - $kr) * $cr),
-                                  $this->clampByte($y - 2 * $kb * (1 - $kb) / $kg * $cb - 2 * $kr * (1 - $kr) / $kg * $cr),
-                                  $this->clampByte($y + 2 * (1 - $kb) * $cb),
-                                  $alpha);
+            $map[$entryId] = pack("C3", ...PgsColors::toRgb($luma, $chromaRed, $chromaBlue, $matrix)) . chr($alpha);
         }
 
         $colors = [];
@@ -468,12 +446,6 @@ final class PgsParser extends SubtitleParser
         }
 
         return $colors;
-    }
-
-
-    private function clampByte(float $value): int
-    {
-        return max(0, min(255, (int) round($value)));
     }
 
 

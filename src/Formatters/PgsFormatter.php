@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PaletteReducer;
+use SubtitleToolbox\Image\PgsColors;
 use SubtitleToolbox\Image\PngDecoder;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -43,23 +44,6 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
     private const OBJECT_HEADER       = 4;
     private const OBJECT_DATA_LENGTH  = 3;
     private const FIRST_OBJECT_HEADER = self::OBJECT_HEADER + self::OBJECT_DATA_LENGTH;
-
-    // PgsParser uses BT.601 up to this video height and BT.709 above it.
-    private const SD_MAX_HEIGHT = 576;
-    private const MATRIX_BT709  = [0.2126, 0.0722];
-    private const MATRIX_BT601  = [0.299, 0.114];
-
-    // The limited range of 8-bit video: luma from 16 to 235, chroma from 16 to 240 around 128.
-    private const LUMA_MIN      = 16;
-    private const LUMA_MAX      = 235;
-    private const LUMA_RANGE    = self::LUMA_MAX - self::LUMA_MIN;
-    private const CHROMA_MIN    = 16;
-    private const CHROMA_MAX    = 240;
-    private const CHROMA_CENTER = 128;
-    private const CHROMA_RANGE  = self::CHROMA_MAX - self::CHROMA_MIN;
-
-    // Clamped colors such as BT.601 yellow need a step of 2 to find the code that the parser decodes to the same RGB.
-    private const SEARCH_STEPS = [0, -1, 1, -2, 2];
 
     // PGS shows at most 2 objects at one time. A third cue replaces the cue that started first.
     private const MAX_SHOWN = 2;
@@ -147,7 +131,7 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
         return $this->segment($pts, self::SEGMENT_PRESENTATION,
                               $this->presentation($context, $images[0], self::STATE_EPOCH_START, count($shown)) . $references)
             . $this->segment($pts, self::SEGMENT_WINDOW, $this->window($windows))
-            . $this->segment($pts, self::SEGMENT_PALETTE, $this->palette($context, $palette, $images[0]->screenHeight > self::SD_MAX_HEIGHT))
+            . $this->segment($pts, self::SEGMENT_PALETTE, $this->palette($context, $palette, PgsColors::matrix($images[0]->screenHeight)))
             . $objects
             . $this->segment($pts, self::SEGMENT_END, "");
     }
@@ -236,13 +220,15 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
 
     /**
      * @param list<int> $palette 0xRRGGBBAA colors
+     * @param array{float, float} $matrix
      */
-    private function palette(PgsContext $context, array $palette, bool $highDefinition): string
+    private function palette(PgsContext $context, array $palette, array $matrix): string
     {
         $data = pack("CC", 0, 0);
         foreach ($palette as $entryId => $color) {
-            [$luma, $chromaRed, $chromaBlue] = $this->toYcrcb($context, $color >> 8 & 0xFFFFFF, $highDefinition);
-            $data .= pack("C5", $entryId, $luma, $chromaRed, $chromaBlue, $color & 0xFF);
+            $rgb   = $color >> 8 & 0xFFFFFF;
+            $code  = $context->ycrcb["$matrix[0]:$rgb"] ??= PgsColors::toYcrcb($rgb, $matrix);
+            $data .= chr($entryId) . pack("C3", ...$code) . chr($color & 0xFF);
         }
 
         return $data;
@@ -298,99 +284,6 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
         }
 
         return $rle;
-    }
-
-
-    /**
-     * Returns the limited range [Y, Cr, Cb] that PgsParser turns back into the same RGB color, or the nearest one.
-     *
-     * @return array{int, int, int}
-     */
-    private function toYcrcb(PgsContext $context, int $rgb, bool $highDefinition): array
-    {
-        $key = ($highDefinition ? "709:" : "601:") . $rgb;
-        if (isset($context->ycrcb[$key])) {
-            return $context->ycrcb[$key];
-        }
-
-        [$kr, $kb] = $highDefinition ? self::MATRIX_BT709 : self::MATRIX_BT601;
-        $target    = [$rgb >> 16, $rgb >> 8 & 0xFF, $rgb & 0xFF];
-        $y         = $kr * $target[0] + (1 - $kr - $kb) * $target[1] + $kb * $target[2];
-        $center    = [(int) round(self::LUMA_MIN + $y * self::LUMA_RANGE / 255),
-                      (int) round(self::CHROMA_CENTER + ($target[0] - $y) / (2 * (1 - $kr)) * self::CHROMA_RANGE / 255),
-                      (int) round(self::CHROMA_CENTER + ($target[2] - $y) / (2 * (1 - $kb)) * self::CHROMA_RANGE / 255)];
-
-        return $context->ycrcb[$key] = $this->bestCandidate($center, $target, $kr, $kb);
-    }
-
-
-    /**
-     * Returns the color near $center whose RGB value has the smallest squared error to $target. The first one wins a tie.
-     *
-     * @param array{int, int, int} $center
-     * @param array{int, int, int} $target
-     * @return array{int, int, int}
-     */
-    private function bestCandidate(array $center, array $target, float $kr, float $kb): array
-    {
-        $best      = $center;
-        $bestError = PHP_INT_MAX;
-        foreach (self::searchSteps() as [$lumaStep, $redStep, $blueStep]) {
-            $candidate = [max(self::LUMA_MIN, min(self::LUMA_MAX, $center[0] + $lumaStep)),
-                          max(self::CHROMA_MIN, min(self::CHROMA_MAX, $center[1] + $redStep)),
-                          max(self::CHROMA_MIN, min(self::CHROMA_MAX, $center[2] + $blueStep))];
-            $error     = 0;
-            foreach ($this->toRgb($candidate, $kr, $kb) as $channel => $value) {
-                $error += ($value - $target[$channel]) ** 2;
-            }
-            if ($error < $bestError) {
-                [$best, $bestError] = [$candidate, $error];
-            }
-        }
-
-        return $best;
-    }
-
-
-    /**
-     * Returns each combination of a luma, a red and a blue step, with the luma step outermost.
-     *
-     * @return list<array{int, int, int}>
-     */
-    private static function searchSteps(): array
-    {
-        $steps = [];
-        foreach (self::SEARCH_STEPS as $lumaStep) {
-            foreach (self::SEARCH_STEPS as $redStep) {
-                foreach (self::SEARCH_STEPS as $blueStep) {
-                    $steps[] = [$lumaStep, $redStep, $blueStep];
-                }
-            }
-        }
-
-        return $steps;
-    }
-
-
-    /**
-     * The conversion of PgsParser::colorMap().
-     *
-     * @param array{int, int, int} $ycrcb
-     * @return array{int, int, int}
-     */
-    private function toRgb(array $ycrcb, float $kr, float $kb): array
-    {
-        [$luma, $chromaRed, $chromaBlue] = $ycrcb;
-        $kg = 1 - $kr - $kb;
-        $y  = ($luma - self::LUMA_MIN) * 255 / self::LUMA_RANGE;
-        $cr = ($chromaRed - self::CHROMA_CENTER) * 255 / self::CHROMA_RANGE;
-        $cb = ($chromaBlue - self::CHROMA_CENTER) * 255 / self::CHROMA_RANGE;
-
-        return array_map(fn (float $value): int => max(0, min(255, (int) round($value))), [
-            $y + 2 * (1 - $kr) * $cr,
-            $y - 2 * $kb * (1 - $kb) / $kg * $cb - 2 * $kr * (1 - $kr) / $kg * $cr,
-            $y + 2 * (1 - $kb) * $cb,
-        ]);
     }
 
 
