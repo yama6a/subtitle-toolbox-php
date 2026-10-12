@@ -20,7 +20,8 @@ final class WriteGoldens
      * The fixture folders under tests/files whose real files get a round trip golden, and their format.
      */
     private const ROUND_TRIPS = [
-        "whisper" => Format::Whisper,
+        "whisper"        => Format::Whisper,
+        "aws-transcribe" => Format::AwsTranscribe,
     ];
 
     /**

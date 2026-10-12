@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Formatters\AssFormatter;
+use SubtitleToolbox\Formatters\AwsTranscribeFormatter;
 use SubtitleToolbox\Formatters\CsvFormatter;
 use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\FfMetadataChaptersFormatter;
@@ -81,7 +82,7 @@ final class FormatRegistry
         Format::Itt->value                => [IttParser::class, IttFormatter::class, ["itt"]],
         Format::Json->value               => [JsonParser::class, JsonFormatter::class, ["json"]],
         Format::AssemblyAi->value         => [AssemblyAiParser::class, null, ["json"]],
-        Format::AwsTranscribe->value      => [AwsTranscribeParser::class, null, ["json"]],
+        Format::AwsTranscribe->value      => [AwsTranscribeParser::class, AwsTranscribeFormatter::class, ["json"]],
         Format::Deepgram->value           => [DeepgramParser::class, null, ["json"]],
         Format::GoogleSpeech->value       => [GoogleSpeechParser::class, null, ["json"]],
         Format::Lyrics->value             => [LyricsParser::class, LyricsFormatter::class, ["lrc"]],

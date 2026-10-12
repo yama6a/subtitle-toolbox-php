@@ -12,6 +12,10 @@
                 "accountId": "111122223333",
                 "status": "COMPLETED",
                 "results": {
+                    "speaker_labels": {
+                        "channel_label": "ch_0",
+                        "speakers": 2
+                    },
                     "language_code": "en-GB",
                     "language_identification": [
                         {
@@ -42,6 +46,9 @@
                 "formatData": {
                     "aws-transcribe": {
                         "id": 0,
+                        "transcript": "The library opens at nine.",
+                        "start_time": "0.52",
+                        "end_time": "2.3",
                         "speaker_label": "spk_0",
                         "items": [
                             {
@@ -135,6 +142,9 @@
                 "formatData": {
                     "aws-transcribe": {
                         "id": 1,
+                        "transcript": "Can I return books on Sunday?",
+                        "start_time": "3.04",
+                        "end_time": "5.2",
                         "speaker_label": "spk_1",
                         "items": [
                             {
@@ -241,6 +251,9 @@
                 "formatData": {
                     "aws-transcribe": {
                         "id": 2,
+                        "transcript": "Yes, use the box by the door.",
+                        "start_time": "5.78",
+                        "end_time": "8.6",
                         "speaker_label": "spk_0",
                         "items": [
                             {

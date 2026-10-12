@@ -6,7 +6,7 @@ html                .html .htm          yes   yes
 itt                 .itt                yes   yes
 json                .json               yes   yes
 assemblyai          .json               yes   no
-aws-transcribe      .json               yes   no
+aws-transcribe      .json               yes   yes
 deepgram            .json               yes   no
 google-speech       .json               yes   no
 lrc                 .lrc                yes   yes
