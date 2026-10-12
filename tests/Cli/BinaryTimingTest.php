@@ -10,9 +10,6 @@ use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\Sync\ReferenceSync;
-use SubtitleToolbox\Sync\ReferenceSyncOptions;
-use SubtitleToolbox\Sync\SpeechReference;
 use SubtitleToolbox\SyncPoint;
 use SubtitleToolbox\Tests\Support\CliTestCase;
 use SubtitleToolbox\Timing\ShotChangeOptions;
@@ -27,12 +24,13 @@ class BinaryTimingTest extends CliTestCase
 {
     public function testRetimeShiftWritesOneInputToStandardOutput(): void
     {
-        $expected = Subtitle::fromString($this->file("trip.srt"), Format::SubRip)->shift(-0.5)->toString(Format::SubRip);
+        copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");
+        $expected = (string)file_get_contents(self::FILES . "editing/own_ferry_drift_shifted_all.vtt");
 
-        $this->assertSame([0, $expected, ""], $this->runCli(["retime", "trip.srt", "--shift", "-0.5"]));
-        $this->assertSame([0, $expected, ""], $this->runCli(["retime", "trip.srt", "--shift=-0.5"]));
-        $this->assertSame([0, "trip.srt -> shifted.srt\n", ""], $this->runCli(["retime", "trip.srt", "--shift", "-0.5", "-o", "shifted.srt"]));
-        $this->assertSame($expected, $this->file("shifted.srt"));
+        $this->assertSame([0, $expected, ""], $this->runCli(["retime", "ferry.vtt", "--shift", "-1.5"]));
+        $this->assertSame([0, $expected, ""], $this->runCli(["retime", "ferry.vtt", "--shift=-1.5"]));
+        $this->assertSame([0, "ferry.vtt -> shifted.vtt\n", ""], $this->runCli(["retime", "ferry.vtt", "--shift", "-1.5", "-o", "shifted.vtt"]));
+        $this->assertSame($expected, $this->file("shifted.vtt"));
     }
 
 
@@ -253,10 +251,19 @@ class BinaryTimingTest extends CliTestCase
 
     public function testRetimeScale(): void
     {
-        [$code, $stdout] = $this->runCli(["retime", "shop.vtt", "--scale", "2"]);
+        copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");
 
-        $this->assertSame(0, $code);
-        $this->assertStringContainsString("00:00:20.000 --> 00:00:24.000", $stdout);
+        $this->assertSame([0, (string)file_get_contents(self::FILES . "editing/own_ferry_drift_scaled.vtt"), ""],
+                          $this->runCli(["retime", "ferry.vtt", "--scale", "1.001"]));
+    }
+
+
+    public function testRetimeChangesTheFrameRate(): void
+    {
+        copy(self::FILES . "sync/own_target_de_25fps.srt", "$this->dir/de.srt");
+
+        $this->assertSame([0, (string)file_get_contents(self::FILES . "sync/own_target_de_23976fps.srt"), ""],
+                          $this->runCli(["retime", "de.srt", "--from-fps", "25", "--to-fps", "23.976"]));
     }
 
 
@@ -275,14 +282,8 @@ class BinaryTimingTest extends CliTestCase
 
     public function testRetimeChangesTheFrameRateAndTheFormat(): void
     {
-        $expected = Subtitle::fromString($this->file("frames.sub"), Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]))
-            ->convertFrameRate(25, 23.976)
-            ->toString(Format::WebVtt);
-
-        [$code, $stdout, $stderr] = $this->runCli(["retime", "frames.sub", "--input-fps", "25", "--from-fps", "25", "--to-fps", "23.976", "--to", "vtt"]);
-
-        $this->assertSame([0, $expected, ""], [$code, $stdout, $stderr]);
-        $this->assertStringContainsString("00:00:01.043 --> 00:00:03.128\nHello from the frames.\n", $stdout);
+        $this->assertSame([0, (string)file_get_contents(self::FILES . "cli/frames_23976.vtt"), ""],
+                          $this->runCli(["retime", "frames.sub", "--input-fps", "25", "--from-fps", "25", "--to-fps", "23.976", "--to", "vtt"]));
     }
 
 
@@ -316,12 +317,9 @@ class BinaryTimingTest extends CliTestCase
     {
         copy(self::FILES . "sync/own_target_de_25fps.srt", "$this->dir/de.srt");
         copy(self::FILES . "sync/own_ffmpeg_silencedetect.log", "$this->dir/silence.log");
-        $expected = Subtitle::fromStringAutoDetectFormat($this->file("de.srt"));
-        ReferenceSync::apply($expected, new ReferenceSyncOptions(SpeechReference::fromFfmpegSilencedetect($this->file("silence.log"), 840)));
 
-        [$code, $stdout, $stderr] = $this->runCli(["sync", "de.srt", "--silence-log", "silence.log", "--media-duration", "00:14:00"]);
-        $this->assertSame([0, $expected->toString(Format::SubRip), "de.srt: scale 1.04271, offset -2.3 s, score 0.78\n"],
-                          [$code, $stdout, $stderr]);
+        $this->assertSame([0, (string)file_get_contents(self::FILES . "sync/own_target_de_synced.srt"), "de.srt: scale 1.04271, offset -2.3 s, score 0.78\n"],
+                          $this->runCli(["sync", "de.srt", "--silence-log", "silence.log", "--media-duration", "00:14:00"]));
 
         file_put_contents("$this->dir/mono.log", "[silencedetect @ 0x1] channel: 0 | silence_start: 1.5\n");
         $this->assertSame(3, $this->runCli(["sync", "de.srt", "--silence-log", "mono.log", "--media-duration", "840"])[0]);

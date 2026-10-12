@@ -8,3 +8,4 @@
 | frames.sub | self-written MicroDVD without a `{1}{1}<fps>` line | MIT |
 | latin1.srt | self-written in Windows-1252 | MIT |
 | notes.txt | self-written text that is not a subtitle | MIT |
+| frames_23976.vtt | expected `retime frames.sub --input-fps 25 --from-fps 25 --to-fps 23.976 --to vtt` output | MIT |
