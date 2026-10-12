@@ -147,8 +147,8 @@ class ApplicationTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication(["convert", "--help"]);
 
         $this->assertSame([0, ""], [$code, $stderr]);
-        $this->assertStringStartsWith("Usage: subtitle-toolbox convert <input> --to FORMAT [-o FILE] [options]\n" .
-                                      "       subtitle-toolbox convert <input>... --to FORMAT --output-dir DIR\n" .
+        $this->assertStringStartsWith("Usage: subtitle-toolbox convert <input> [--to FORMAT] [-o FILE] [options]\n" .
+                                      "       subtitle-toolbox convert <input>... [--to FORMAT] --output-dir DIR\n" .
                                       "                                [options]\n", $stdout);
         $this->assertMatchesRegularExpression('/^  --encoding NAME +/m', $stdout);
         $this->assertMatchesRegularExpression('/^  --language CODE +/m', $stdout);

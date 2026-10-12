@@ -36,13 +36,13 @@ final class ConvertCommand extends WriteCommand
 
     protected function usageLines(): array
     {
-        return ["<input> --to FORMAT [-o FILE] [options]", "<input>... --to FORMAT --output-dir DIR [options]"];
+        return ["<input> [--to FORMAT] [-o FILE] [options]", "<input>... [--to FORMAT] --output-dir DIR [options]"];
     }
 
 
     protected function details(): string
     {
-        return "--to sets the output format, also when it stays the same. " . self::OUTPUT_DETAILS . " " .
+        return "Without --to, the output keeps the format of the input. " . self::OUTPUT_DETAILS . " " .
                "An input argument can be a file, a directory, a glob such as \"season1/*.srt\", or -. The tool never overwrites a file.";
     }
 
@@ -132,18 +132,9 @@ final class ConvertCommand extends WriteCommand
     }
 
 
-    protected function toDescription(): string
-    {
-        return "Output format. Required, also when the format stays the same.";
-    }
-
-
     protected function prepare(Arguments $arguments): void
     {
         parent::prepare($arguments);
-        if ($this->toFormat === null) {
-            self::fail("Pass --to FORMAT, also when the format stays the same, for example --to srt.");
-        }
 
         $this->edits     = EditPipeline::fromArguments($arguments);
         $this->assOutput = AssOutput::fromArguments($arguments);
