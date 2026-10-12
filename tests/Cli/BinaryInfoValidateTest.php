@@ -121,6 +121,18 @@ class BinaryInfoValidateTest extends CliTestCase
     }
 
 
+    public function testParseWarningsNameTheCliOptionAndNoPhpOption(): void
+    {
+        $message = "The content is not valid UTF-8. The first bad byte is at offset 35. Pass --encoding with the source encoding of the file.";
+
+        [$code, , $stderr] = $this->runCli(["info", "latin1.srt", "--encoding", "UTF-8", "--lenient"]);
+        $this->assertSame([0, "latin1.srt: $message (repaired)\n"], [$code, $stderr]);
+
+        [$code, $stdout] = $this->runCli(["info", "latin1.srt", "--encoding", "UTF-8", "--lenient", "--json"]);
+        $this->assertSame([0, $message], [$code, json_decode($stdout, true)[0]["warnings"][0]["message"]]);
+    }
+
+
     public function testInfoListsTheParseWarnings(): void
     {
         $this->assertSame([], json_decode($this->runCli(["info", "trip.srt", "--json"])[1], true)[0]["warnings"]);

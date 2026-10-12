@@ -186,7 +186,7 @@ final class StringHelpers
 
         [$encoding, $converted] = $detected;
 
-        return new DecodedText($converted, $encoding, "The content is not UTF-8. Detection picked $encoding. Pass --encoding if that is wrong.");
+        return new DecodedText($converted, $encoding, "The content is not UTF-8. Detection picked $encoding. Set ReadOptions::\$encoding if that is wrong.");
     }
 
 

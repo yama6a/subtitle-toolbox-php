@@ -121,7 +121,7 @@ class EncodingTest extends TestCase
         $this->assertEquals($strict->getCues(), $lenient->getCues());
         $this->assertSame($encoding, $lenient->findSourceEncoding());
         $this->assertSame(
-            [["The content is not UTF-8. Detection picked $encoding. Pass --encoding if that is wrong.", null, ParseWarningAction::Repaired]],
+            [["The content is not UTF-8. Detection picked $encoding. Set ReadOptions::\$encoding if that is wrong.", null, ParseWarningAction::Repaired]],
             array_map(fn (ParseWarning $warning) => [$warning->message, $warning->lineNumber, $warning->action], $lenient->getParseWarnings())
         );
         $this->assertEquals($strict, Subtitle::fromString($raw, Format::SubRip, new ReadOptions(encoding: $encoding)));
@@ -197,7 +197,7 @@ class EncodingTest extends TestCase
         }
         $this->assertSame([], $strict->getParseWarnings());
         $this->assertSame(
-            [["The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding.", ParseWarningAction::Repaired]],
+            [["The content is not valid UTF-8. The first bad byte is at offset $offset. Set ReadOptions::\$encoding to the source encoding.", ParseWarningAction::Repaired]],
             array_map(fn (ParseWarning $warning) => [$warning->message, $warning->action], $lenient->getParseWarnings())
         );
     }
@@ -224,7 +224,7 @@ class EncodingTest extends TestCase
         $this->assertSame(["Le café ouvre à midi.", "Caf\u{FFFD} noir, s'il vous plaît."],
                           array_map(fn (SubtitleCue $cue) => $cue->getText(), $subtitle->getCues()));
         $this->assertSame(
-            [["The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding. The parser read the bad bytes as U+FFFD.",
+            [["The content is not valid UTF-8. The first bad byte is at offset $offset. Set ReadOptions::\$encoding to the source encoding. The parser read the bad bytes as U+FFFD.",
               ParseWarningAction::Repaired]],
             array_map(fn (ParseWarning $warning) => [$warning->message, $warning->action], $subtitle->getParseWarnings())
         );
@@ -238,7 +238,7 @@ class EncodingTest extends TestCase
         $offset = strpos(file_get_contents($path), "f\xE9 noir") + 1;
 
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding.");
+        $this->expectExceptionMessage("The content is not valid UTF-8. The first bad byte is at offset $offset. Set ReadOptions::\$encoding to the source encoding.");
         Subtitle::load($path, $format);
     }
 
@@ -256,7 +256,7 @@ class EncodingTest extends TestCase
         }
         $this->assertSame([], $strict->getParseWarnings());
         $this->assertSame(
-            [["The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding.", ParseWarningAction::Repaired]],
+            [["The content is not valid UTF-8. The first bad byte is at offset $offset. Set ReadOptions::\$encoding to the source encoding.", ParseWarningAction::Repaired]],
             array_map(fn (ParseWarning $warning) => [$warning->message, $warning->action], $lenient->getParseWarnings())
         );
     }

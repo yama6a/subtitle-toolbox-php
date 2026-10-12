@@ -279,7 +279,7 @@ class SamiParserTest extends TestCase
         $content = "<SAMI>\n<BODY>\n<SYNC Start=0><P Class=KRCC>\xbf\xc0\xb4\xc3\n</BODY>\n</SAMI>\n";
 
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("The content is not valid UTF-8. The first bad byte is at offset 42. Pass --encoding.");
+        $this->expectExceptionMessage("The content is not valid UTF-8. The first bad byte is at offset 42. Set ReadOptions::\$encoding to the source encoding.");
         (new SamiParser())->parse($content, new ReadOptions());
     }
 
