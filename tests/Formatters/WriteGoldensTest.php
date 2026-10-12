@@ -12,10 +12,10 @@ use SubtitleToolbox\Tests\Support\TestFiles;
 use SubtitleToolbox\Tests\Support\WriteGoldens;
 
 /**
- * Compares the output of the transcript formatters with the write goldens.
+ * Compares the output of the formatters with the write goldens.
  * After an intended change, run tests/files/generate-write-goldens.php and review the diff.
  */
-class TranscriptWriteGoldensTest extends TestCase
+class WriteGoldensTest extends TestCase
 {
     /**
      * @return array<string, array{string, Format, Format, string}>
@@ -29,7 +29,7 @@ class TranscriptWriteGoldensTest extends TestCase
     #[DataProvider("goldens")]
     public function testTheOutputMatchesTheGolden(string $path, Format $inputFormat, Format $outputFormat, string $golden): void
     {
-        $this->assertStringEqualsFile(TestFiles::DIR . $golden, WriteGoldens::render($path, $inputFormat, $outputFormat));
+        $this->assertMatchesGolden($path, $golden, WriteGoldens::render($path, $inputFormat, $outputFormat));
     }
 
 
@@ -40,6 +40,18 @@ class TranscriptWriteGoldensTest extends TestCase
             $this->markTestSkipped("A conversion is no round trip.");
         }
 
-        $this->assertStringEqualsFile(TestFiles::DIR . $golden, WriteGoldens::render($path, $inputFormat, $outputFormat, new ReadOptions()));
+        $this->assertMatchesGolden($path, $golden, WriteGoldens::render($path, $inputFormat, $outputFormat, new ReadOptions()));
+    }
+
+
+    private function assertMatchesGolden(string $path, string $golden, string $output): void
+    {
+        if (is_file(TestFiles::DIR . $golden)) {
+            $this->assertStringEqualsFile(TestFiles::DIR . $golden, $output);
+
+            return;
+        }
+
+        $this->assertSame(WriteGoldens::normalize(file_get_contents(TestFiles::DIR . $path)), WriteGoldens::normalize($output), "No golden file $golden, so the output must equal the input.");
     }
 }

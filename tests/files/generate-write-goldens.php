@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /*
- * Writes the write goldens of the transcript formatters again. Review each diff by hand before a commit.
+ * Writes the write goldens again. Review each diff by hand before a commit.
  * Run: php tests/files/generate-write-goldens.php
  */
 
@@ -12,9 +12,16 @@ use SubtitleToolbox\Tests\Support\WriteGoldens;
 
 require __DIR__ . "/../../vendor/autoload.php";
 
+$written = 0;
 foreach (WriteGoldens::cases() as [$path, $inputFormat, $outputFormat, $golden]) {
+    $output = WriteGoldens::render($path, $inputFormat, $outputFormat);
+    if ($inputFormat === $outputFormat && WriteGoldens::normalize($output) === WriteGoldens::normalize(file_get_contents(TestFiles::DIR . $path))) {
+        @unlink(TestFiles::DIR . $golden);
+        continue;
+    }
     @mkdir(dirname(TestFiles::DIR . $golden));
-    file_put_contents(TestFiles::DIR . $golden, WriteGoldens::render($path, $inputFormat, $outputFormat));
+    file_put_contents(TestFiles::DIR . $golden, $output);
+    $written++;
 }
 
-echo count(WriteGoldens::cases()) . " golden files written.\n";
+echo "$written golden files written.\n";

@@ -31,3 +31,25 @@
 | `own_font_colors_from_srt.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `srt/real/own_font_colors.srt`. | MIT |
 | `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |
 | `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
+| `expected/astisub_carriage_return.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `astisub_carriage_return.vtt`: LF for the CR line ends | MIT |
+| `expected/astisub_html_entities.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `astisub_html_entities.vtt`: the no-break space as a character for `&nbsp;` | MIT |
+| `expected/mantas_styles.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `mantas_styles.vtt`: the comment after the `STYLE` blocks | MIT |
+| `expected/own_empty_cues.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `own_empty_cues.vtt`: numbers for the cues without an identifier | MIT |
+| `expected/own_hour_digits.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `own_hour_digits.vtt`: cue numbers, hours with at least 2 digits | MIT |
+| `expected/own_max_hours.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `own_max_hours.vtt`: cue numbers | MIT |
+| `expected/own_max_word_timestamp.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `own_max_word_timestamp.vtt`: cue numbers | MIT |
+| `expected/own_note_before_earlier_cue.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `own_note_before_earlier_cue.vtt`: cue numbers, cues in time order with each comment before its cue | MIT |
+| `expected/own_settings_without_space.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `own_settings_without_space.vtt`: cue numbers, hours, a space before the cue settings | MIT |
+| `expected/own_ytdlp_auto_captions.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `own_ytdlp_auto_captions.vtt`: cue numbers, one cue for each rolling line without the 10 ms repeats | MIT |
+| `expected/own_ytdlp_rolling.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `own_ytdlp_rolling.vtt`: cue numbers, one cue for each rolling line without the 10 ms repeats | MIT |
+| `expected/w3c_chapters.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `w3c_chapters.vtt`: the comment on the `NOTE` line | MIT |
+| `expected/w3c_comments.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `w3c_comments.vtt`: cue numbers, hours | MIT |
+| `expected/w3c_cue_settings.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `w3c_cue_settings.vtt`: cue numbers | MIT |
+| `expected/w3c_identifiers.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `w3c_identifiers.vtt`: hours | MIT |
+| `expected/w3c_regions.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `w3c_regions.vtt`: cue numbers | MIT |
+| `expected/w3c_styles.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `w3c_styles.vtt`: the comments after the `STYLE` blocks | MIT |
+| `expected/w3c_timestamps.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `w3c_timestamps.vtt`: cue numbers | MIT |
+| `expected/w3c_voices.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `w3c_voices.vtt`: cue numbers, hours | MIT |
+| `expected/webvttpy_comments.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `webvttpy_comments.vtt`: no spaces at the line ends, a final line end | MIT |
+| `expected/webvttpy_netflix.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `webvttpy_netflix.vtt`: comments of several lines start after `NOTE`, single spaces between the cue settings, no lines of only spaces | MIT |
+| `expected/webvttpy_youtube.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `webvttpy_youtube.vtt`: cue numbers, no space before the closing tag on its own line | MIT |
