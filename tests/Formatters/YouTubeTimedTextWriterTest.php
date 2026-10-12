@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
@@ -16,7 +17,7 @@ use SubtitleToolbox\Tests\Support\WriteGoldens;
 
 class YouTubeTimedTextWriterTest extends TestCase
 {
-    private const WRITTEN = ["srv1", "srv2"];
+    private const WRITTEN = ["srv1", "srv2", "srv3"];
 
 
     /**
@@ -101,6 +102,78 @@ class YouTubeTimedTextWriterTest extends TestCase
         $this->assertSame(
             '<?xml version="1.0" encoding="utf-8" ?><transcript><text start="1.5" dur="2.5">Fish &amp; chips' . "\n" .
             'today</text><text start="5" dur="2.25">Done</text></transcript>',
+            self::write($subtitle)
+        );
+    }
+
+
+    public function testANewStyleGetsANewPenAndAnEqualStyleSharesThePen(): void
+    {
+        $subtitle = self::read("styled.en.srv3");
+        $cues     = $subtitle->getCues();
+        $cues[1]->setLines("<i>The ferry</i> leaves at <u>noon</u>.");
+        $cues[2]->setLines(str_replace("four euros", "five euros", $cues[2]->getLines()));
+
+        $srv3 = self::write($subtitle);
+
+        $this->assertStringContainsString("<pen id=\"4\" i=\"1\"/>\n<pen id=\"5\" u=\"1\"/>\n", $srv3);
+        $this->assertStringContainsString('<p t="2500" d="3000" wp="2" ws="1"><s p="4">The ferry</s> leaves at <s p="5">noon</s>.</p>', $srv3);
+        $this->assertStringContainsString('<p t="5500" d="3200" wp="2" ws="1"><s p="1">Tickets cost </s><s p="2">five euros</s><s p="1">.</s></p>', $srv3);
+        $this->assertStringContainsString('<s p="3">Pier 3 &amp;#39;North&amp;#39;</s>', $srv3);
+    }
+
+
+    public function testANewAlignmentGetsAWindowPosition(): void
+    {
+        $subtitle = self::read("styled.en.srv3");
+        $subtitle->getCues()[4]->setAlignment(Alignment::TopRight);
+        $subtitle->getCues()[1]->setAlignment(Alignment::TopLeft);
+
+        $srv3 = self::write($subtitle);
+
+        $this->assertStringContainsString("<wp id=\"3\" ap=\"0\" ah=\"0\" av=\"0\"/>\n<wp id=\"4\" ap=\"2\" ah=\"100\" av=\"0\"/>\n", $srv3);
+        $this->assertStringContainsString('<p t="2500" d="3000" p="1" wp="3" ws="1">', $srv3);
+        $this->assertStringContainsString("<p t=\"11500\" d=\"3000\" wp=\"4\">Please keep\nyour ticket.</p>", $srv3);
+    }
+
+
+    public function testAnEditedWordKeepsTheOtherWordsAndTheAppendEvents(): void
+    {
+        $subtitle = self::read("auto.en.srv3");
+        $cue      = $subtitle->getCues()[1];
+        $cue->setLines(str_replace("plant", "sow", $cue->getLines()));
+        $subtitle->shift(1.0);
+
+        $srv3 = self::write($subtitle);
+
+        $this->assertStringContainsString('<p t="3950" d="1610" w="1" a="1">' . "\n</p>\n" .
+            '<p t="3960" d="4480" w="1"><s ac="0">today</s><s t="320" ac="0"> we</s><s t="480"> sow</s><s t="800" ac="0"> tomatoes</s></p>', $srv3);
+    }
+
+
+    public function testAWordChangedWithoutWordTimestampsKeepsTheOffsetOfItsSourceSegment(): void
+    {
+        $subtitle = self::read("auto.en.srv3", new ReadOptions());
+        $subtitle->getCues()[1]->setLines("today we sow tomatoes");
+
+        $this->assertStringContainsString(
+            '<p t="2960" d="4480" w="1"><s ac="0">today</s><s t="320" ac="0"> we</s><s t="480"> sow</s><s t="800" ac="0"> tomatoes</s></p>',
+            self::write($subtitle)
+        );
+    }
+
+
+    public function testCuesFromAnotherFormatGiveSrv3WithPensAndWordTimes(): void
+    {
+        $subtitle = (new Subtitle())->addCues([
+            new SubtitleCue(1, 2, "<i>Hi</i> <00:00:01.500>there"),
+            (new SubtitleCue(3, 4, ['<font color="red">Red</font>', "two"]))->setAlignment(Alignment::TopLeft),
+        ]);
+
+        $this->assertSame(
+            "<?xml version=\"1.0\" encoding=\"utf-8\" ?><timedtext format=\"3\">\n<head>\n<pen id=\"1\" i=\"1\"/>\n<pen id=\"2\" fc=\"#FF0000\"/>\n" .
+            "<wp id=\"1\" ap=\"0\" ah=\"0\" av=\"0\"/>\n</head>\n<body>\n<p t=\"1000\" d=\"1000\"><s p=\"1\">Hi</s><s t=\"500\"> there</s></p>\n" .
+            "<p t=\"3000\" d=\"1000\" wp=\"1\"><s p=\"2\">Red</s>\ntwo</p>\n</body>\n</timedtext>\n",
             self::write($subtitle)
         );
     }

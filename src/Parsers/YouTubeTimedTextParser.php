@@ -104,7 +104,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
                 "end"        => $end,
                 "window"     => $event["wWinId"] ?? null,
                 "append"     => !empty($event["aAppend"]),
-                "alignment"  => $this->alignment($this->entry($positions, $event["wpWinPosId"] ?? null)["apPoint"] ?? null),
+                "alignment"  => self::alignment($this->entry($positions, $event["wpWinPosId"] ?? null)["apPoint"] ?? null),
                 "segments"   => $segments,
                 "formatData" => $formatData,
                 "source"     => $event,
@@ -277,7 +277,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
                 "end"        => $end,
                 "window"     => $attributes["w"] ?? null,
                 "append"     => ($attributes["a"] ?? "") === "1",
-                "alignment"  => $this->alignment($anchors[$attributes["wp"] ?? ""] ?? null),
+                "alignment"  => self::alignment($anchors[$attributes["wp"] ?? ""] ?? null),
                 "segments"   => $segments,
                 "formatData" => $formatData,
                 "source"     => $attributes + ["text" => $paragraph->textContent],
@@ -397,9 +397,25 @@ final class YouTubeTimedTextParser extends SubtitleParser
     }
 
 
-    private function alignment(mixed $anchorPoint): ?int
+    /**
+     * Returns the Alignment value of a window anchor point, or null for a value that is no anchor point.
+     *
+     * @internal
+     */
+    public static function alignment(mixed $anchorPoint): ?int
     {
         return is_int($anchorPoint) ? self::ALIGNMENTS[$anchorPoint] ?? null : null;
+    }
+
+
+    /**
+     * Returns the window anchor point of an alignment.
+     *
+     * @internal
+     */
+    public static function anchorPoint(Alignment $alignment): int
+    {
+        return (int) array_search($alignment->value, self::ALIGNMENTS, true);
     }
 
 
