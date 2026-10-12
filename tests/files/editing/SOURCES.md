@@ -18,5 +18,7 @@
 | `own_ferry_drift.vtt` | Written for this repository. WebVTT with a cue before, at, across and after 3 sync points, and word timestamps in the cue across 600 s. | MIT |
 | `own_ferry_drift_synced.vtt` | Written for this repository. Expected `WebVttFormatter` output for `own_ferry_drift.vtt` after `syncByPoints()` with 10 s to 12 s, 600 s to 610 s and 1200 s to 1205 s. | MIT |
 | `own_ferry_drift_shifted.vtt` | Written for this repository. Expected `WebVttFormatter` output for `own_ferry_drift.vtt` after `shift()` by 2 s from 6 s to 600 s. | MIT |
+| `own_ferry_drift_shifted_all.vtt` | Written for this repository. Expected `WebVttFormatter` output for `own_ferry_drift.vtt` after `shift(-1.5)`. | MIT |
+| `own_ferry_drift_scaled.vtt` | Written for this repository. Expected `WebVttFormatter` output for `own_ferry_drift.vtt` after `scale(1.001)`. The word timestamps move too. | MIT |
 | `own_same_time_speakers.ass` | Written for this repository. ASS with 2 dialogue events of 2 speakers at the same times, each with its own style, and a later event. | MIT |
 | `own_same_time_speakers_merged.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_same_time_speakers.ass` after `mergeSameTimeCues()`. | MIT |

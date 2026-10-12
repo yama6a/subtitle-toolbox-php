@@ -43,6 +43,7 @@ class SpeechReferenceTest extends TestCase
         $this->assertEqualsWithDelta(25 / 23.976, $result->scale, 0.00001);
         $this->assertEqualsWithDelta(-2.3, $result->offset, 0.15);
         $this->assertGreaterThan(0.7, $result->score);
+        $this->assertStringEqualsFile(__DIR__ . "/../files/sync/own_target_de_synced.srt", $target->toString(Format::SubRip));
     }
 
 

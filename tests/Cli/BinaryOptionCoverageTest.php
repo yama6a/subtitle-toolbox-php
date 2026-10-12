@@ -19,8 +19,6 @@ use SubtitleToolbox\Http\LocalServer;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\Sync\ReferenceSync;
-use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Tests\Support\CliTestCase;
 use SubtitleToolbox\Validation\ValidationRules;
 use SubtitleToolbox\Validation\ValidationViolation;
@@ -149,16 +147,13 @@ class BinaryOptionCoverageTest extends CliTestCase
     {
         copy(self::FILES . "sync/own_target_de_25fps.srt", "$this->dir/de.srt");
         copy(self::FILES . "sync/own_reference_en_tv_break.srt", "$this->dir/tv.srt");
-        $expected = Subtitle::load("$this->dir/de.srt", Format::SubRip);
-        ReferenceSync::apply($expected, new ReferenceSyncOptions(Subtitle::load("$this->dir/tv.srt", Format::SubRip), -180, 180, maxSplits: 2,
-                                                                  splitPenalty: 5));
 
         [$code, $stdout, $stderr] = $this->runCli(["sync", "de.srt", "--reference", "tv.srt", "--min-offset", "-180", "--max-offset", "180",
                                                       "--max-splits", "2", "--split-penalty", "5"]);
 
-        $this->assertSame([0, $expected->toString(Format::SubRip)], [$code, $stdout]);
+        $this->assertSame(0, $code);
+        $this->assertStringEqualsFile(self::FILES . "sync/own_target_de_split_penalty_synced.srt", $stdout);
         $this->assertStringNotContainsString("from 414.32 s", $stderr);
-        $this->assertStringNotEqualsFile(self::FILES . "sync/own_target_de_split_synced.srt", $stdout);
         $this->assertSame(self::usageError("sync", "The option --split-penalty must not be negative."),
                           $this->runCli(["sync", "de.srt", "--reference", "tv.srt", "--split-penalty", "-1"]));
     }

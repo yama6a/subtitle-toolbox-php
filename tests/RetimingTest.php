@@ -77,6 +77,36 @@ class RetimingTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testShiftWithoutARangeMovesEveryCueAndWordTimestamp(): void
+    {
+        $subtitle = Subtitle::load(self::EDITING . "own_ferry_drift.vtt", Format::WebVtt);
+
+        $subtitle->shift(-1.5);
+
+        $this->assertStringEqualsFile(self::EDITING . "own_ferry_drift_shifted_all.vtt", $subtitle->toString(Format::WebVtt));
+    }
+
+
+    public function testScaleMovesEveryCueAndWordTimestamp(): void
+    {
+        $subtitle = Subtitle::load(self::EDITING . "own_ferry_drift.vtt", Format::WebVtt);
+
+        $subtitle->scale(1.001);
+
+        $this->assertStringEqualsFile(self::EDITING . "own_ferry_drift_scaled.vtt", $subtitle->toString(Format::WebVtt));
+    }
+
+
+    public function testConvertFrameRateOfARealFile(): void
+    {
+        $subtitle = Subtitle::load(__DIR__ . "/files/sync/own_target_de_25fps.srt", Format::SubRip);
+
+        $subtitle->convertFrameRate(25, 23.976);
+
+        $this->assertStringEqualsFile(__DIR__ . "/files/sync/own_target_de_23976fps.srt", $subtitle->toString(Format::SubRip));
+    }
+
+
     public function testSyncByPointsWithTwoPoints(): void
     {
         $subtitle = TestSubtitles::fromTimes([[10, 12], [3130, 3132], [6260, 6262]]);

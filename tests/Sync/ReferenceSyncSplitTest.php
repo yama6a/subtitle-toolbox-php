@@ -73,6 +73,18 @@ class ReferenceSyncSplitTest extends TestCase
     }
 
 
+    public function testAPenaltyAboveTheGainOfTheSplitKeepsOnePart(): void
+    {
+        $target = $this->load("own_target_de_25fps.srt");
+
+        $result = ReferenceSync::apply($target, new ReferenceSyncOptions($this->load("own_reference_en_tv_break.srt"), -180, 180,
+                                                                         maxSplits: 2, splitPenalty: 5));
+
+        $this->assertCount(1, $result->getSegments());
+        $this->assertStringEqualsFile(__DIR__ . "/../files/sync/own_target_de_split_penalty_synced.srt", $target->toString(Format::SubRip));
+    }
+
+
     public function testWithoutSplitsTheAdBreakFileDoesNotSync(): void
     {
         $result = ReferenceSync::apply($this->load("own_target_de_25fps.srt"),
