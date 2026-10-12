@@ -29,7 +29,7 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
 - **Unicode**: with `ext-mbstring`, the full Unicode case mapping applies. `ß` becomes `SS`, and Greek `Σ` at the end of a word becomes `ς` in lower case. Without `ext-mbstring`, or for text that is not valid UTF-8, only the letters A to Z change.
 - **Turkish and Azerbaijani**: pass `'tr'` or `'az'` as the second argument of `changeCase()`. Then `i` and `İ` pair, and `ı` and `I` pair. Without it, `İ` becomes `i` with a combining dot, U+0307.
 - **Sentence case**: a sentence starts at the first letter or digit after `.`, `!`, `?` or the ellipsis U+2026, and a space or line break. `www.example.com` stays lower case.
-- **Abbreviations**: a comma after the period ends no sentence, so `I.E., NOW` becomes `i.e., now`. After `i.e.`, `e.g.`, `etc.` and `vs.`, a lower case word also continues the sentence. An upper case word after them starts a new sentence.
+- **Abbreviations**: a comma after the period ends no sentence, so `I.E., NOW` becomes `i.e., now`. After `i.e.`, `e.g.`, `etc.` and `vs.`, a lower case word also continues the sentence. A tag between them does not change that. An upper case word after them starts a new sentence.
 - **Sentences across cues**: a cue continues the sentence of the cue before it, so `WE WENT TO THE` / `STORE.` becomes `We went to the` / `store.`. A cue starts a new sentence in these cases:
   - It is the first cue.
   - The cue before it ends with `.`, `!`, `?` or U+2026. Closing quotes and brackets may follow, as in `"STOP."`.

@@ -24,6 +24,9 @@ final class SentenceCaser
     private bool $endsSentence       = true;
     private bool $capitalizeNext     = true;
     private bool $afterPunctuation   = false;
+    private bool $abbreviation       = false;
+    /** A space after an abbreviation ended the previous run, so the first letter of the next run decides. */
+    private bool $abbreviationSpace = false;
 
 
     public function __construct(private readonly bool $turkic)
@@ -45,6 +48,10 @@ final class SentenceCaser
             $this->previousEnd      = $cue->getEnd();
             $this->endsSentence     = self::endsSentence($visible);
         }
+        if ($startsLine) {
+            $this->abbreviation      = false;
+            $this->abbreviationSpace = false;
+        }
         if ($startsLine && ($this->afterPunctuation || self::startsTurn($text))) {
             $this->capitalizeNext = true;
         }
@@ -58,32 +65,39 @@ final class SentenceCaser
      */
     private function caseRun(string $text): string
     {
-        $chars        = Markup::characters(TextCase::lower($text, $this->turkic));
-        $original     = Markup::characters($text);
-        $word         = "";
-        $abbreviation = false;
-        $result       = "";
+        $chars    = Markup::characters(TextCase::lower($text, $this->turkic));
+        $original = Markup::characters($text);
+        // Lowering İ adds a combining dot, so the original case is known only when the counts match.
+        $sameCount = count($chars) === count($original);
+        $word      = "";
+        $result    = "";
         foreach ($chars as $index => $char) {
             if (preg_match('/^[\p{L}\p{N}]$/u', $char) === 1) {
-                if ($this->capitalizeNext) {
+                $keepsLowerCase = $this->abbreviationSpace && $sameCount && preg_match('/^\p{Ll}$/u', $original[$index]) === 1;
+                if ($this->capitalizeNext && !$keepsLowerCase) {
                     $char = TextCase::title($char, $this->turkic);
                 }
-                $this->capitalizeNext   = false;
-                $this->afterPunctuation = false;
-                $word                  .= $char;
+                $this->capitalizeNext    = false;
+                $this->afterPunctuation  = false;
+                $this->abbreviationSpace = false;
+                $word                   .= $char;
             } elseif (in_array($char, [".", "!", "?", "\u{2026}"], true)) {
-                $this->afterPunctuation = true;
-                $abbreviation           = $char === "." && in_array(strtolower($word), self::ABBREVIATIONS, true);
-                $word                   = $char === "." && $word !== "" ? "$word." : "";
+                $this->afterPunctuation  = true;
+                $this->abbreviationSpace = false;
+                $this->abbreviation      = $char === "." && in_array(strtolower($word), self::ABBREVIATIONS, true);
+                $word                    = $char === "." && $word !== "" ? "$word." : "";
             } else {
                 $word = "";
+                if (!in_array($char, self::ASCII_SPACES, true)) {
+                    $this->abbreviationSpace = false;
+                }
                 if ($this->afterPunctuation && $char === ",") {
                     $this->afterPunctuation = false;
                 } elseif ($this->afterPunctuation && in_array($char, self::ASCII_SPACES, true)) {
-                    // Lowering İ adds a combining dot, so the original case is known only when the counts match.
-                    $lowerCaseFollows       = count($chars) === count($original) && self::lowerCaseFollows($original, $index);
-                    $this->afterPunctuation = !($abbreviation && $lowerCaseFollows);
-                    $this->capitalizeNext   = $this->capitalizeNext || $this->afterPunctuation;
+                    $lowerCaseFollows        = $sameCount ? self::lowerCaseFollows($original, $index) : false;
+                    $this->abbreviationSpace = $this->abbreviation && $lowerCaseFollows === null;
+                    $this->afterPunctuation  = !($this->abbreviation && $lowerCaseFollows === true);
+                    $this->capitalizeNext    = $this->capitalizeNext || $this->afterPunctuation;
                 }
             }
             $result .= $char;
@@ -95,10 +109,11 @@ final class SentenceCaser
 
     /**
      * Tells if the first letter after $index in $chars is a lower case letter.
+     * Returns null when only white space follows.
      *
      * @param list<string> $chars
      */
-    private static function lowerCaseFollows(array $chars, int $index): bool
+    private static function lowerCaseFollows(array $chars, int $index): ?bool
     {
         foreach (array_slice($chars, $index + 1) as $char) {
             if (preg_match('/^\p{L}$/u', $char) === 1) {
@@ -109,7 +124,7 @@ final class SentenceCaser
             }
         }
 
-        return false;
+        return null;
     }
 
 
