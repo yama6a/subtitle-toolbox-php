@@ -55,6 +55,12 @@ class StartAfterEndTest extends TestCase
                                             [[2.0, 5.0], $good], $swap],
             "MicroDVD"                  => [Format::MicroDvd, "{1}{1}25\n{125}{50}Hello\n{250}{300}World\n", 2,
                                             [[2.0, 5.0], $good], $swap],
+            "Library JSON"              => [Format::Json, '{"version": 1, "cues": [{"start": 5, "end": 2, "lines": ["Hello"]}, ' .
+                                            '{"start": 10, "end": 12, "lines": ["World"]}]}', null,
+                                            [[2.0, 5.0], $good], $swap],
+            "Library JSON over 30 s"    => [Format::Json, '{"version": 1, "cues": [{"start": 65, "end": 2, "lines": ["Hello"]}, ' .
+                                            '{"start": 10, "end": 12, "lines": ["World"]}]}', null,
+                                            [$good], $drop],
             "Podcast transcript"        => [Format::PodcastTranscript, '{"version": "1.0.0", "segments": [' .
                                             '{"startTime": 5, "endTime": 2, "body": "Hello."}, {"startTime": 10, "endTime": 12, "body": "World."}]}', null,
                                             [[2.0, 5.0], $good], $swap],

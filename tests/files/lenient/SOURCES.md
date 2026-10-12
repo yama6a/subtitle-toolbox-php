@@ -47,6 +47,7 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `open_paragraphs.ttml` | three `p` elements without `end`, one of them with an empty `dur`, and a last `p` without `end`, LF | MIT |
 | `bad_time_code.stl` | written by `generate-stl.php`. Frame 30 in a 25 fps time code out, the last TTI block cut off after 60 bytes | MIT |
 | `missing_end.json` | a cue without `end`, a cue with a number as line, a comment after the first broken cue, LF | MIT |
+| `start_after_end.json` | in the shape of `JsonFormatter` output, a cue that ends 2 s before it starts and a cue that ends 68 s before it starts, LF | MIT |
 | `missing_segment_end.whisper.json` | the OpenAI API shape, a segment without `end`, LF | MIT |
 | `absurd_hours.vtt` | a cue with 20 hour digits between two good cues, LF | MIT |
 | `absurd_hours.sbv` | a cue with 20 hour digits between two good cues, LF | MIT |
