@@ -141,17 +141,17 @@ class SubtitleCueTest extends TestCase
 
     public function testIdentifierIsNullByDefault(): void
     {
-        $this->assertNull((new SubtitleCue())->getIdentifier());
+        $this->assertNull((new SubtitleCue())->findIdentifier());
     }
 
 
     public function testGetAndSetIdentifier(): void
     {
         $cue = (new SubtitleCue())->setIdentifier("intro");
-        $this->assertSame("intro", $cue->getIdentifier());
+        $this->assertSame("intro", $cue->findIdentifier());
 
         $cue->setIdentifier(null);
-        $this->assertNull($cue->getIdentifier());
+        $this->assertNull($cue->findIdentifier());
     }
 
 

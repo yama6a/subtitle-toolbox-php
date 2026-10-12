@@ -166,7 +166,7 @@ class EbuStlFormatterTest extends TestCase
     #[DataProvider("stylesOverTwoLines")]
     public function testStyleThatSpansTwoLinesStylesBoth(string $file, int $index, array $lines): void
     {
-        $stl = Subtitle::load(__DIR__ . "/../files/$file", Format::fromPath($file))->toString(Format::EbuStl);
+        $stl = Subtitle::load(__DIR__ . "/../files/$file", Format::tryFromPath($file))->toString(Format::EbuStl);
 
         $this->assertSame($lines, Subtitle::fromString($stl, Format::EbuStl)->getCues()[$index]->getLines());
     }

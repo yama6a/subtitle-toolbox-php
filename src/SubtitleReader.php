@@ -110,7 +110,7 @@ final class SubtitleReader
     public static function detectFormat(string $content, ?string $path = null): ?Format
     {
         $format      = Format::detect($content);
-        $byExtension = $path === null ? null : Format::fromPath($path);
+        $byExtension = $path === null ? null : Format::tryFromPath($path);
         // Detection returns TTML for an iTT file. IttParser reads the same cues and keeps the iTT timing.
         if ($format === Format::Ttml && $byExtension === Format::Itt) {
             return Format::Itt;
@@ -166,7 +166,7 @@ final class SubtitleReader
 
     private static function formatOfExtension(string $path): ?Format
     {
-        $byExtension = Format::fromPath($path);
+        $byExtension = Format::tryFromPath($path);
 
         // An extension that a format without detection also uses, such as .json for Deepgram, says nothing.
         return $byExtension !== null && self::extensionOnlyOfAutoDetectedFormats($path) && $byExtension->canRead() ? $byExtension : null;

@@ -62,7 +62,7 @@ class LoadSaveTest extends TestCase
     {
         $subtitle = Subtitle::loadAutoDetectFormat(self::FILES . $file);
 
-        $this->assertSame($format, $subtitle->getFormat());
+        $this->assertSame($format, $subtitle->findFormat());
         $this->assertSame(Subtitle::fromString(file_get_contents(self::FILES . $file), $format)->toArray(), $subtitle->toArray());
     }
 
@@ -97,7 +97,7 @@ class LoadSaveTest extends TestCase
     {
         $subtitle = Subtitle::load(self::FILES . $file, $format);
 
-        $this->assertSame($format, $subtitle->getFormat());
+        $this->assertSame($format, $subtitle->findFormat());
         $this->assertNotSame([], $subtitle->getCues());
         $this->assertSame(Subtitle::fromString(file_get_contents(self::FILES . $file), $format)->toArray(), $subtitle->toArray());
     }
@@ -133,7 +133,7 @@ class LoadSaveTest extends TestCase
         $this->assertSame([3, 4, 5, 6, 7, 8], array_map(fn (SubtitleTrack $track): int => $track->number, Subtitle::tracks($mkv)));
 
         $german = Subtitle::loadTrack($mkv, 3);
-        $this->assertSame(Format::SubRip, $german->getFormat());
+        $this->assertSame(Format::SubRip, $german->findFormat());
         $this->assertSame("de", $german->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame(MatroskaReader::open($mkv)->extract(3)->toArray(), $german->toArray());
 
@@ -155,7 +155,7 @@ class LoadSaveTest extends TestCase
     {
         $subtitle = Subtitle::loadAutoDetectFormat(self::FILES . "mkv/seek_head.mkv");
 
-        $this->assertSame(Format::WebVtt, $subtitle->getFormat());
+        $this->assertSame(Format::WebVtt, $subtitle->findFormat());
         $this->assertSame(MatroskaReader::open(self::FILES . "mkv/seek_head.mkv")->extract(2)->toArray(), $subtitle->toArray());
         $this->assertSame($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "mkv/seek_head.mkv"))->toArray());
     }
@@ -187,7 +187,7 @@ class LoadSaveTest extends TestCase
 
         $subtitle = Subtitle::loadAutoDetectFormat("$this->dir/$name");
 
-        $this->assertSame([$format, []], [$subtitle->getFormat(), $subtitle->getCues()]);
+        $this->assertSame([$format, []], [$subtitle->findFormat(), $subtitle->getCues()]);
     }
 
 
@@ -235,7 +235,7 @@ class LoadSaveTest extends TestCase
     {
         $subtitle = Subtitle::loadAutoDetectFormat(self::FILES . "mp4/one_track.mp4");
 
-        $this->assertSame(Format::SubRip, $subtitle->getFormat());
+        $this->assertSame(Format::SubRip, $subtitle->findFormat());
         $this->assertSame(["The museum opens at ten.", "Entry is free on Sundays."], array_map(fn ($cue): string => $cue->getText(), $subtitle->getCues()));
         $this->assertSame($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "mp4/one_track.mp4"))->toArray());
     }
@@ -244,7 +244,7 @@ class LoadSaveTest extends TestCase
     public function testPgsTracksOfAnMkvFile(): void
     {
         $subtitle = Subtitle::loadTrack(self::FILES . "mkv/pgs.mkv", 3);
-        $this->assertSame(Format::Pgs, $subtitle->getFormat());
+        $this->assertSame(Format::Pgs, $subtitle->findFormat());
         $this->assertNotSame([], $subtitle->getCues());
         $this->assertTrue(Image\CueImage::isImageCue($subtitle->getCues()[0]));
 
@@ -266,7 +266,7 @@ class LoadSaveTest extends TestCase
     {
         $subtitle = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
 
-        $this->assertSame(Format::MicroDvd, $subtitle->getFormat());
+        $this->assertSame(Format::MicroDvd, $subtitle->findFormat());
         $this->assertSame(1.0, $subtitle->getCues()[0]->getStart());
         $this->assertSame(3.0, $subtitle->getCues()[0]->getEnd());
     }
@@ -321,7 +321,7 @@ class LoadSaveTest extends TestCase
     }
 
 
-    public function testSaveSetsTheCsvDelimiterFromTheTargetFormat(): void
+    public function testSaveSetsTheCsvDelimiterFromTheTarfindFormat(): void
     {
         $subtitle = Subtitle::loadAutoDetectFormat(self::FILES . "csv/real/sheets_export.tsv");
 
@@ -385,7 +385,7 @@ class LoadSaveTest extends TestCase
 
     public function testGetFormatIsNullForASubtitleThatNoParserRead(): void
     {
-        $this->assertNull((new Subtitle())->getFormat());
-        $this->assertSame(Format::WebVtt, Subtitle::fromStringAutoDetectFormat("WEBVTT\n\n00:01.000 --> 00:02.000\nHi\n")->getFormat());
+        $this->assertNull((new Subtitle())->findFormat());
+        $this->assertSame(Format::WebVtt, Subtitle::fromStringAutoDetectFormat("WEBVTT\n\n00:01.000 --> 00:02.000\nHi\n")->findFormat());
     }
 }

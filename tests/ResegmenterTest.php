@@ -300,7 +300,7 @@ class ResegmenterTest extends TestCase
 
         $cues = array_values($subtitle->getCues());
         $this->assertCount(5, $cues);
-        $this->assertSame(["long", null, null], [$cues[1]->getIdentifier(), $cues[2]->getIdentifier(), $cues[3]->getIdentifier()]);
+        $this->assertSame(["long", null, null], [$cues[1]->findIdentifier(), $cues[2]->findIdentifier(), $cues[3]->findIdentifier()]);
         $this->assertSame([Alignment::TopCenter, Alignment::TopCenter, Alignment::TopCenter], [$cues[1]->getAlignment(), $cues[2]->getAlignment(), $cues[3]->getAlignment()]);
         $this->assertTrue($cues[3]->isForced());
         $this->assertEquals([new Comment("before long", 1), new Comment("before after", 4)],
@@ -371,7 +371,7 @@ class ResegmenterTest extends TestCase
         Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::ByWords));
 
         $cues = array_values($subtitle->getCues());
-        $this->assertSame(["first", null], [$cues[0]->getIdentifier(), $cues[1]->getIdentifier()]);
+        $this->assertSame(["first", null], [$cues[0]->findIdentifier(), $cues[1]->findIdentifier()]);
         $this->assertEquals([new Comment("before second", 0)], $subtitle->getComments());
     }
 

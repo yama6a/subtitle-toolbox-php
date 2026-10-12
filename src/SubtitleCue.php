@@ -135,7 +135,7 @@ final class SubtitleCue
     }
 
 
-    public function getIdentifier(): ?string
+    public function findIdentifier(): ?string
     {
         return $this->identifier;
     }

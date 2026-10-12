@@ -101,7 +101,17 @@ These methods were public and marked `@internal`. 5.0 removes the ones in this t
 
 ## Renamed methods
 
-TODO #969 #971
+| 4.x | 5.0 |
+|:--- |:--- |
+| `$subtitle->getFormat()` | `$subtitle->findFormat()` |
+| `$cue->getIdentifier()` | `$cue->findIdentifier()` |
+| `Format::fromPath('movie.srt')` | `Format::tryFromPath('movie.srt')` |
+
+- `get*` methods return a value or throw. `find*` methods return null when there is no value. PHP enums name the null-returning form `tryFrom()`.
+- The three new names return what the old names returned. Only the names change.
+- There are no aliases. A call to an old name is a fatal error.
+
+TODO #971
 
 ## Load and parse
 

@@ -36,7 +36,7 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
 | `default` | `bool` | `FlagDefault` |
 | `forced` | `bool` | `FlagForced` |
 
-- **Format**: `getFormat()` of the subtitle is the format of the codec in the table.
+- **Format**: `findFormat()` of the subtitle is the format of the codec in the table.
 - **Detection**: `loadAutoDetectFormat()` and `fromStringAutoDetectFormat()` know an MKV or WebM file by its first 4 bytes, not by its extension.
 - **Language**: the reader takes `LanguageBCP47`. Without it, the reader takes `Language`. Without either, the language is `eng`, as the spec defines. `loadTrack()` puts it into the `language` metadata.
 - **Forced**: on a track with the forced flag, `loadTrack()` sets the forced flag of every cue. PGS cues also keep the forced flag of their objects.
@@ -77,7 +77,7 @@ Subtitle::loadTrack('/media/phone-video.mp4', 2)->save('phone-video.srt');
 
 - **Tracks**: `tracks()` lists tracks with the handler `text`, `sbtl`, `subt` or `clcp` (closed captions).
 - **Cues**: each `tx3g` sample with text becomes a cue with the sample times. An empty sample is a gap. The text is UTF-8, or UTF-16 after a byte order mark. The reader turns the bold, italic and underline runs of a `styl` box into `<b>`, `<i>` and `<u>` tags, so `ffmpeg -c:s mov_text` output keeps the tags of the SubRip input. It ignores the font, the size and the color of a run, and other modifier boxes such as `hlit`.
-- **Format**: `getFormat()` is `Format::SubRip`. The cues hold text with SubRip tags, as from an `S_TEXT/UTF8` track of an MKV file.
+- **Format**: `findFormat()` is `Format::SubRip`. The cues hold text with SubRip tags, as from an `S_TEXT/UTF8` track of an MKV file.
 - **Detection**: `loadAutoDetectFormat()` and `fromStringAutoDetectFormat()` know an MP4 file by the `ftyp` box at byte 4.
 - **Memory**: the reader reads the sample tables of the wanted track and its samples only. It skips the media data with `fseek()`.
 - **Errors**: `extract()` throws `ParsingException` for a `c608` track, another codec and an encrypted track (`enct` or a `sinf` box). It also throws `ParsingException` for a sample outside the file. The same applies when the `stsz` box lists more sample bytes than the file has.

@@ -93,7 +93,7 @@ class WebVttRealFileTest extends TestCase
     {
         $cues = Subtitle::fromString(file_get_contents(self::DIR . "own_empty_cues.vtt"), Format::WebVtt)->getCues();
 
-        $this->assertSame(["2", 23.292, 28.898, []], [$cues[1]->getIdentifier(), $cues[1]->getStart(), $cues[1]->getEnd(), $cues[1]->getLines()]);
+        $this->assertSame(["2", 23.292, 28.898, []], [$cues[1]->findIdentifier(), $cues[1]->getStart(), $cues[1]->getEnd(), $cues[1]->getLines()]);
         $this->assertSame([32.0, 36.1, [], ["align" => "middle", "line" => "90%"]],
                           [$cues[3]->getStart(), $cues[3]->getEnd(), $cues[3]->getLines(), $cues[3]->findFormatData("vtt")]);
     }

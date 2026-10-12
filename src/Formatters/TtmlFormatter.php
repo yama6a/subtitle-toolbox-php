@@ -90,7 +90,7 @@ final class TtmlFormatter extends SubtitleFormatter
 
     private function paragraphId(SubtitleCue $cue): ?string
     {
-        $identifier = $cue->getIdentifier();
+        $identifier = $cue->findIdentifier();
 
         return $identifier !== null && preg_match("/^[A-Za-z_][\w.-]*$/", $identifier) ? $identifier : null;
     }

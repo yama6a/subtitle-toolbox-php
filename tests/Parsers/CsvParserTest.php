@@ -394,7 +394,7 @@ class CsvParserTest extends TestCase
         $subtitle = (new CsvParser())->parse("ID,Start,End,Text,Take\nshot-1,1,2,a,3\n\n", new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(identifier: "id"))]));
         $cue      = $subtitle->getCues()[0];
 
-        $this->assertSame("shot-1", $cue->getIdentifier());
+        $this->assertSame("shot-1", $cue->findIdentifier());
         $this->assertSame(["columns" => ["Take" => "3"]], $cue->findFormatData("csv"));
         $this->assertSame([
             "delimiter"  => ",",
@@ -409,7 +409,7 @@ class CsvParserTest extends TestCase
 
     public function testIdentifierHeaderMapsToTheCueIdentifier(): void
     {
-        $this->assertSame("intro", (new CsvParser())->parse("identifier,start,text\nintro,1,a\n", new ReadOptions())->getCues()[0]->getIdentifier());
+        $this->assertSame("intro", (new CsvParser())->parse("identifier,start,text\nintro,1,a\n", new ReadOptions())->getCues()[0]->findIdentifier());
     }
 
 

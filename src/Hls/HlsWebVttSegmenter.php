@@ -37,7 +37,7 @@ final class HlsWebVttSegmenter
         $fileData["headerLines"] = [$options->timestampMap->toHeader(), ...TimestampMap::withoutHeader($fileData["headerLines"] ?? [])];
 
         $copy = (new Subtitle())->addCues(array_map(
-            fn (SubtitleCue $cue, int $cueIndex): SubtitleCue => (clone $cue)->setIdentifier($cue->getIdentifier() ?? (string) ($cueIndex + 1)),
+            fn (SubtitleCue $cue, int $cueIndex): SubtitleCue => (clone $cue)->setIdentifier($cue->findIdentifier() ?? (string) ($cueIndex + 1)),
             $cues,
             array_keys($cues),
         ));

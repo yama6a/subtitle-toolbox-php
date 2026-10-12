@@ -263,7 +263,7 @@ final class Resegmenter
 
         $first = $group[0];
         $cue   = (clone $first->cue)
-            ->setIdentifier($first->index === 0 ? $first->cue->getIdentifier() : null)
+            ->setIdentifier($first->index === 0 ? $first->cue->findIdentifier() : null)
             ->setStart($first->start)
             ->setEnd(end($group)->end)
             ->setLines(self::wrap(self::groupLines($group), $options));

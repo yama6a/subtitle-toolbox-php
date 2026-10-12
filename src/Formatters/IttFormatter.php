@@ -132,7 +132,7 @@ final class IttFormatter extends SubtitleFormatter
         foreach ($subtitle->getCues() as $cue) {
             $lines = array_map(fn (string $line): string => $this->keepSupportedMarkup($line), $cue->getLines());
             $copy  = (new SubtitleCue($cue->getStart(), $cue->getEnd(), $lines))
-                ->setIdentifier($cue->getIdentifier())
+                ->setIdentifier($cue->findIdentifier())
                 ->setForced($cue->isForced());
             $copy->setFormatData(TtmlParser::FORMAT_DATA_KEY, in_array($cue->getAlignment(), [Alignment::TopLeft, Alignment::TopCenter, Alignment::TopRight], true) ? self::TOP_REGION : self::BOTTOM_REGION);
             $copies[] = $copy;

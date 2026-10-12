@@ -57,7 +57,7 @@ final class InputFiles
         $files     = [];
         foreach (scandir($directory) ?: [] as $name) {
             $path   = "$directory/$name";
-            $format = Format::fromPath($name);
+            $format = Format::tryFromPath($name);
             if (!is_file($path) || $format === null || !$format->canRead()) {
                 continue;
             }

@@ -184,7 +184,7 @@ class CueEditingTest extends TestCase
         $this->assertSame(["title" => "Clip"], $slice->getAllMetadata());
         $this->assertSame(["header" => "clip"], $slice->findFormatData("vtt"));
         $this->assertSame(["line" => "0"], $slice->getCues()[1]->findFormatData("vtt"));
-        $this->assertSame("middle", $slice->getCues()[1]->getIdentifier());
+        $this->assertSame("middle", $slice->getCues()[1]->findIdentifier());
         $this->assertNotSame($subtitle->getCues()[1], $slice->getCues()[1]);
         $this->assertSame([1.0, 3.0, "one"], TestSubtitles::describe($subtitle)[0]);
     }
@@ -246,7 +246,7 @@ class CueEditingTest extends TestCase
             [[0.0, 3.0, "First sentence."], [3.0, 6.0, "Second sentence."], [7.0, 8.0, "next"]],
             TestSubtitles::describe($subtitle)
         );
-        $this->assertSame(["intro", null], [$cues[0]->getIdentifier(), $cues[1]->getIdentifier()]);
+        $this->assertSame(["intro", null], [$cues[0]->findIdentifier(), $cues[1]->findIdentifier()]);
         $this->assertSame([Alignment::TopCenter, Alignment::TopCenter], [$cues[0]->getAlignment(), $cues[1]->getAlignment()]);
         $this->assertSame(
             [["about the split cue", "First sentence."], ["about next", "next"]],
@@ -327,7 +327,7 @@ class CueEditingTest extends TestCase
 
         $cues = $subtitle->getCues();
         $this->assertSame([[0.0, 1.0, "zero"], [1.0, 6.0, "one\ntwo\nthree"], [7.0, 8.0, "four"]], TestSubtitles::describe($subtitle));
-        $this->assertSame(["first", Alignment::TopLeft], [$cues[1]->getIdentifier(), $cues[1]->getAlignment()]);
+        $this->assertSame(["first", Alignment::TopLeft], [$cues[1]->findIdentifier(), $cues[1]->getAlignment()]);
         $this->assertSame([
             ["about one", "one\ntwo\nthree"],
             ["about two", "one\ntwo\nthree"],

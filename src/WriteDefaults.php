@@ -23,7 +23,7 @@ final class WriteDefaults
         $formats   = $options->formats;
         $delimiter = match (true) {
             $format === Format::Tsv                                         => "\t",
-            $format === Format::Csv && $subtitle->getFormat() === Format::Tsv => ",",
+            $format === Format::Csv && $subtitle->findFormat() === Format::Tsv => ",",
             default                                                         => null,
         };
         $csv = FormatOptionsList::find($formats, CsvWriteOptions::class) ?? new CsvWriteOptions();

@@ -94,21 +94,21 @@ class FormatTest extends TestCase
 
     public function testFromPath(): void
     {
-        $this->assertSame(Format::MicroDvd, Format::fromPath("season1/Movie.SUB"));
-        $this->assertSame(Format::Json, Format::fromPath("chapters.json"));
-        $this->assertSame(Format::PlainText, Format::fromPath("notes.txt"));
-        $this->assertSame(Format::Ass, Format::fromPath("signs.ssa"));
-        $this->assertSame(Format::Ttml, Format::fromPath("movie.dfxp"));
-        $this->assertSame(Format::Tsv, Format::fromPath("script.TSV"));
-        $this->assertSame(Format::YouTubeTimedText, Format::fromPath("video.en.json3"));
-        $this->assertNull(Format::fromPath("README"));
-        $this->assertNull(Format::fromPath("report.doc"));
+        $this->assertSame(Format::MicroDvd, Format::tryFromPath("season1/Movie.SUB"));
+        $this->assertSame(Format::Json, Format::tryFromPath("chapters.json"));
+        $this->assertSame(Format::PlainText, Format::tryFromPath("notes.txt"));
+        $this->assertSame(Format::Ass, Format::tryFromPath("signs.ssa"));
+        $this->assertSame(Format::Ttml, Format::tryFromPath("movie.dfxp"));
+        $this->assertSame(Format::Tsv, Format::tryFromPath("script.TSV"));
+        $this->assertSame(Format::YouTubeTimedText, Format::tryFromPath("video.en.json3"));
+        $this->assertNull(Format::tryFromPath("README"));
+        $this->assertNull(Format::tryFromPath("report.doc"));
     }
 
 
     public function testFfMetadataLoadsByItsExtensionButIsNotDetected(): void
     {
-        $this->assertSame(Format::FfMetadataChapters, Format::fromPath("chapters.ffmeta"));
+        $this->assertSame(Format::FfMetadataChapters, Format::tryFromPath("chapters.ffmeta"));
         $this->assertFalse(Format::FfMetadataChapters->isAutoDetected());
         $this->assertNull(Format::detect(file_get_contents(self::FILES . "chapters/ffmetadata/real/m4b_audiobook.ffmeta")));
     }
@@ -164,7 +164,7 @@ class FormatTest extends TestCase
     #[DataProvider("fixtures")]
     public function testFromPathGivesTheFormatOfVersion1(string $path, ?string $byPath): void
     {
-        $this->assertSame($byPath, Format::fromPath($path)?->value);
+        $this->assertSame($byPath, Format::tryFromPath($path)?->value);
     }
 
 

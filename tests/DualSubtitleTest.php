@@ -206,7 +206,7 @@ class DualSubtitleTest extends TestCase
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
-        $this->assertSame(Format::SubRip, $dual->getFormat());
+        $this->assertSame(Format::SubRip, $dual->findFormat());
         $this->assertSame("UTF-8", $dual->findSourceEncoding());
     }
 
@@ -230,7 +230,7 @@ class DualSubtitleTest extends TestCase
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
-        $this->assertNull($dual->getCues()[1]->getIdentifier());
+        $this->assertNull($dual->getCues()[1]->findIdentifier());
         $this->assertSame([], $dual->getCues()[1]->findFormatData("ass"));
     }
 

@@ -20,14 +20,14 @@ $subtitle = Subtitle::fromStringAutoDetectFormat($content);   // see detection.m
 $vtt      = $subtitle->toString(Format::WebVtt);
 
 Format::from('srt');                          // Format::SubRip, for a name from user input
-Format::fromPath('movie.sub');                // Format::MicroDvd
+Format::tryFromPath('movie.sub');                // Format::MicroDvd
 Format::Ass->extensions();                    // ['ass', 'ssa'], the first one for new files
 Format::VobSub->canWrite();                   // false
 Format::PlainText->canRead();                 // false
 Format::FfMetadataChapters->isAutoDetected(); // false
 ```
 
-- **Shared extensions**: when two formats share an extension, the earlier case owns it. So `fromPath()` returns `Format::MicroDvd` for `.sub`, `Format::Json` for `.json` and `Format::PlainText` for `.txt`.
+- **Shared extensions**: when two formats share an extension, the earlier case owns it. So `tryFromPath()` returns `Format::MicroDvd` for `.sub`, `Format::Json` for `.json` and `Format::PlainText` for `.txt`.
 - **Parser and formatter classes**: the classes in `Parsers` and `Formatters` are public. `ReadOptions` holds the format-neutral read settings, for example `new ReadOptions(lenient: true)`. A class in `Parsers\Options` holds the settings of one format, for example `new MicroDvdReadOptions(frameRate: 23.976)`. See [read-options.md](read-options.md).
 - **Time limit**: the parsers reject a time of 100,000 hours or more in every form. Examples are `99999999999999999999:00:04.000`, a JSON time of `1e20` seconds, a MicroDVD frame number of 13 digits and a word timestamp. The limit also applies to a sum, such as a time plus the SubViewer `[DELAY]` or a TTML `begin` plus the `begin` of its `div`. Strict mode throws `ParsingException`, and lenient mode skips the cue with a warning. The AssemblyAI, Amazon Transcribe, Deepgram and Google parsers skip only the word when a word time is too large. The YouTube chapter parser skips such a line, and the other chapter parsers throw.
 
@@ -48,7 +48,7 @@ Subtitle::load('call.json', Format::Deepgram, new ReadOptions(formats: [new Tran
 Subtitle::loadTrack('/media/movie.mkv', 3);           // see mkv.md
 
 $subtitle = Subtitle::load('movie.srt', Format::SubRip);
-$subtitle->getFormat();                               // Format::SubRip, the format that the load call read
+$subtitle->findFormat();                               // Format::SubRip, the format that the load call read
 $subtitle->save('movie.txt', Format::WebVtt);         // the format argument wins over the extension
 ```
 
@@ -61,7 +61,7 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 - **No cues**: a header without cues is valid, such as `WEBVTT` alone or LRC ID tags alone. Text that gives no cue throws `ParsingException` with its line, such as LRC lines without time tags. Lenient mode returns an empty subtitle with 1 warning.
 - **Chapters and cloud speech-to-text JSON**: they load only with `load()` and their format.
 - **MKV, WebM and MP4**: `load()` throws for them. `loadAutoDetectFormat()` reads a file with exactly 1 subtitle track and throws with the track list for other files.
-- **`getFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV or MP4 track, it is the format of the codec, for example `Format::SubRip`.
+- **`findFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV or MP4 track, it is the format of the codec, for example `Format::SubRip`.
 - **`findSourceEncoding()`**: the encoding that the load call read the text from, for example `Windows-1252`. See [encodings.md](encodings.md#order-of-the-checks).
 - **`save()`**: writes the format argument. Without it, `save()` writes the format of the extension. It throws `UnsupportedFormatException` for an unknown extension.
 - **Frame rate**: MicroDVD output takes the frame rate from `MicroDvdWriteOptions::$frameRate`. Without it, the frame rate comes from a MicroDVD input. iTT output takes it from `IttWriteOptions::$frameRate`. Without it, the frame rate comes from an iTT input. Without either, `toString()` and `save()` throw `InvalidArgumentException`.
@@ -522,7 +522,7 @@ $subtitle->toString(Format::Ttml);
 | Input | Goes to |
 |:--- |:--- |
 | `NOTE` block | `$subtitle->getComments()` |
-| Cue identifier | `$cue->getIdentifier()` |
+| Cue identifier | `$cue->findIdentifier()` |
 | Text after `WEBVTT`, lines up to the first empty line | `$subtitle->findFormatData('vtt')`, keys `header` and `headerLines` |
 | `STYLE` blocks, CSS not parsed | `$subtitle->findFormatData('vtt')['styles']` |
 | `REGION` blocks | `$subtitle->findFormatData('vtt')['regions']`, one `name => value` array per region |

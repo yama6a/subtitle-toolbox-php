@@ -118,7 +118,7 @@ class SccFormatterTest extends TestCase
     #[DataProvider("stylesOverTwoLines")]
     public function testStyleThatSpansTwoLinesStylesBoth(string $file, int $index, array $lines): void
     {
-        $scc = Subtitle::load(__DIR__ . "/../files/$file", Format::fromPath($file))->toString(Format::Scc, new WriteOptions(formats: [new SccWriteOptions(fit: true)]));
+        $scc = Subtitle::load(__DIR__ . "/../files/$file", Format::tryFromPath($file))->toString(Format::Scc, new WriteOptions(formats: [new SccWriteOptions(fit: true)]));
 
         $this->assertSame($lines, Subtitle::fromString($scc, Format::Scc)->getCues()[$index]->getLines());
     }
