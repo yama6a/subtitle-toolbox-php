@@ -136,74 +136,92 @@ final class SubRipParser extends SubtitleParser
 
         $secondLine = $rawLines[1] ?? null;
         $lineNumber = $lineNumber === null || $secondLine === null ? $lineNumber : $lineNumber + 1;
-        $timingLine = $this->replaceFullWidthDelimiters($secondLine ?? "");
-        if (!preg_match("/^(.*?)(?<!-)\s*(" . $this->arrowRegex() . ")\s*(.*)$/", $timingLine, $times)) {
-            $quote = $secondLine === null ? "" : " The line is " . self::quote($secondLine) . ".";
-            throw new ParsingException("Block #$index has no timing line on its second line.$quote", $lineNumber);
-        }
+        $timing     = $this->readTimingLine($secondLine, $index, $lineNumber);
 
-        [, $startTime, $arrow, $endPart] = $times;
-        [$endTime, $rest] = array_pad(preg_split('/\s+/', $endPart, 2), 2, "");
         $looseTimes = [];
         [$start, $end] = $this->orderedTimes(
-            $this->secondsFromString($startTime, $lineNumber, $looseTimes),
-            $this->secondsFromString($endTime, $lineNumber, $looseTimes),
+            $this->secondsFromString($timing["start"], $lineNumber, $looseTimes),
+            $this->secondsFromString($timing["end"], $lineNumber, $looseTimes),
             $lineNumber,
             $index,
             $rawLines
         );
-        $cue         = new SubtitleCue($start, $end, array_map($this->escapeText(...), array_slice($rawLines, 2)));
-        $alignment   = $this->convertOverrideTags($cue);
-        $coordinates = $this->coordinates($rest);
-        if ($coordinates !== null) {
-            $cue->setFormatData(self::FORMAT_DATA_KEY, ["coordinates" => $coordinates]);
-        } else {
-            [$settings, $unknown] = $this->cueSettings($rest);
-            if ($unknown !== [] && !$this->options->lenient) {
-                throw new ParsingException("The text \"" . implode(" ", $unknown) . "\" after the end time is not valid.", $lineNumber);
-            }
-            if ($settings !== []) {
-                $cue->setFormatData(WebVttParser::FORMAT_DATA_KEY, $alignment === null ? $settings : [...$settings, "alignment" => $alignment]);
-            }
-            if ($unknown !== []) {
-                $this->warn(
-                    "Block #$index has the unknown text \"" . implode(" ", $unknown) . "\" after the end time. The parser ignored it.",
-                    $lineNumber,
-                    $index,
-                    $rawLines,
-                    ParseWarningAction::Repaired
-                );
-            }
-        }
+        $cue       = new SubtitleCue($start, $end, array_map($this->escapeText(...), array_slice($rawLines, 2)));
+        $alignment = $this->convertOverrideTags($cue);
+        $this->applyTextAfterEndTime($cue, $timing["textAfterEndTime"], $alignment, $index, $lineNumber, $rawLines);
+
         foreach ($looseTimes as $time => $seconds) {
-            $this->warn(
-                "Block #$index has the time \"$time\", which is not in the form hh:mm:ss,mmm. The parser read it as $seconds s.",
-                $lineNumber,
-                $index,
-                $rawLines,
-                ParseWarningAction::Repaired
-            );
+            $message = "Block #$index has the time \"$time\", which is not in the form hh:mm:ss,mmm. The parser read it as $seconds s.";
+            $this->warnRepairedTimingLine($message, $index, $lineNumber, $rawLines);
         }
-        if ($timingLine !== $rawLines[1]) {
-            $this->warn(
-                "Block #$index has full-width delimiters in its timing line. The parser read them as ASCII.",
-                $lineNumber,
-                $index,
-                $rawLines,
-                ParseWarningAction::Repaired
-            );
+        if ($timing["hasFullWidthDelimiters"]) {
+            $message = "Block #$index has full-width delimiters in its timing line. The parser read them as ASCII.";
+            $this->warnRepairedTimingLine($message, $index, $lineNumber, $rawLines);
         }
-        if ($arrow !== "-->") {
-            $this->warn(
-                "Block #$index has the arrow \"$arrow\" in its timing line. The parser read it as \"-->\".",
-                $lineNumber,
-                $index,
-                $rawLines,
-                ParseWarningAction::Repaired
-            );
+        if ($timing["arrow"] !== "-->") {
+            $message = "Block #$index has the arrow \"{$timing["arrow"]}\" in its timing line. The parser read it as \"-->\".";
+            $this->warnRepairedTimingLine($message, $index, $lineNumber, $rawLines);
         }
 
         return $cue;
+    }
+
+
+    /**
+     * Throws when the second line of the block is no timing line.
+     *
+     * @return array{start: string, arrow: string, end: string, textAfterEndTime: string, hasFullWidthDelimiters: bool}
+     */
+    private function readTimingLine(?string $secondLine, int $index, ?int $lineNumber): array
+    {
+        $timingLine = $this->replaceFullWidthDelimiters($secondLine ?? "");
+        if (!preg_match("/^(.*?)(?<!-)\s*(" . $this->arrowRegex() . ")\s*(.*)$/", $timingLine, $timingParts)) {
+            $quote = $secondLine === null ? "" : " The line is " . self::quote($secondLine) . ".";
+            throw new ParsingException("Block #$index has no timing line on its second line.$quote", $lineNumber);
+        }
+
+        [, $start, $arrow, $endAndSettings] = $timingParts;
+        [$end, $textAfterEndTime] = array_pad(preg_split('/\s+/', $endAndSettings, 2), 2, "");
+
+        return [
+            "start"                  => $start,
+            "arrow"                  => $arrow,
+            "end"                    => $end,
+            "textAfterEndTime"       => $textAfterEndTime,
+            "hasFullWidthDelimiters" => $timingLine !== $secondLine,
+        ];
+    }
+
+
+    /**
+     * Stores the text after the end time as SubRip coordinates or as WebVTT cue settings. Lenient mode ignores unknown text.
+     */
+    private function applyTextAfterEndTime(SubtitleCue $cue, string $textAfterEndTime, ?int $alignment, int $index, ?int $lineNumber, array $rawLines): void
+    {
+        $coordinates = $this->coordinates($textAfterEndTime);
+        if ($coordinates !== null) {
+            $cue->setFormatData(self::FORMAT_DATA_KEY, ["coordinates" => $coordinates]);
+
+            return;
+        }
+
+        [$settings, $unknown] = $this->cueSettings($textAfterEndTime);
+        if ($unknown !== [] && !$this->options->lenient) {
+            throw new ParsingException("The text \"" . implode(" ", $unknown) . "\" after the end time is not valid.", $lineNumber);
+        }
+        if ($settings !== []) {
+            $cue->setFormatData(WebVttParser::FORMAT_DATA_KEY, $alignment === null ? $settings : [...$settings, "alignment" => $alignment]);
+        }
+        if ($unknown !== []) {
+            $message = "Block #$index has the unknown text \"" . implode(" ", $unknown) . "\" after the end time. The parser ignored it.";
+            $this->warnRepairedTimingLine($message, $index, $lineNumber, $rawLines);
+        }
+    }
+
+
+    private function warnRepairedTimingLine(string $message, int $index, ?int $lineNumber, array $rawLines): void
+    {
+        $this->warn($message, $lineNumber, $index, $rawLines, ParseWarningAction::Repaired);
     }
 
 
@@ -255,9 +273,9 @@ final class SubRipParser extends SubtitleParser
     /**
      * @return array{x1: int, x2: int, y1: int, y2: int}|null
      */
-    private function coordinates(string $rest): ?array
+    private function coordinates(string $textAfterEndTime): ?array
     {
-        if (!preg_match("/^X1:(\d+)\s+X2:(\d+)\s+Y1:(\d+)\s+Y2:(\d+)$/", $rest, $matches)) {
+        if (!preg_match("/^X1:(\d+)\s+X2:(\d+)\s+Y1:(\d+)\s+Y2:(\d+)$/", $textAfterEndTime, $matches)) {
             return null;
         }
 
@@ -271,11 +289,11 @@ final class SubRipParser extends SubtitleParser
      *
      * @return array{array<string, string>, list<string>}
      */
-    private function cueSettings(string $rest): array
+    private function cueSettings(string $textAfterEndTime): array
     {
         $settings = [];
         $unknown  = [];
-        foreach (preg_split('/\s+/', $rest, -1, PREG_SPLIT_NO_EMPTY) as $token) {
+        foreach (preg_split('/\s+/', $textAfterEndTime, -1, PREG_SPLIT_NO_EMPTY) as $token) {
             if (preg_match('/^(' . implode("|", self::CUE_SETTINGS) . '):(\S+)$/', $token, $matches)) {
                 $settings[$matches[1]] = $matches[2];
             } else {
