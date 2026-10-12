@@ -18,7 +18,12 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "start": "0.16",
+                        "dur": "4.4"
+                    }
+                }
             },
             {
                 "start": 2.96,
@@ -28,7 +33,13 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "start": "2.96",
+                        "dur": "4.48",
+                        "text": "today we&#39;re planting tomatoes"
+                    }
+                }
             },
             {
                 "start": 4.56,
@@ -38,7 +49,13 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "start": "4.56",
+                        "dur": "5.12",
+                        "text": "in the garden bed &amp; the pots"
+                    }
+                }
             },
             {
                 "start": 7.44,
@@ -48,7 +65,12 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "start": "7.44",
+                        "dur": "3"
+                    }
+                }
             },
             {
                 "start": 10.5,
@@ -58,7 +80,12 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "start": "10.5",
+                        "dur": "3.62"
+                    }
+                }
             }
         ]
     }

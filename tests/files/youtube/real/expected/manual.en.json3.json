@@ -28,7 +28,17 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "tStartMs": 1200,
+                        "dDurationMs": 2300,
+                        "segments": [
+                            {
+                                "utf8": "Welcome to the bakery tour."
+                            }
+                        ]
+                    }
+                }
             },
             {
                 "start": 3.5,
@@ -39,7 +49,17 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "tStartMs": 3500,
+                        "dDurationMs": 2840,
+                        "segments": [
+                            {
+                                "utf8": "First we mix flour, water\nand a pinch of salt."
+                            }
+                        ]
+                    }
+                }
             },
             {
                 "start": 6.34,
@@ -49,7 +69,17 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "tStartMs": 6340,
+                        "dDurationMs": 2160,
+                        "segments": [
+                            {
+                                "utf8": "The dough rests for an hour."
+                            }
+                        ]
+                    }
+                }
             },
             {
                 "start": 8.5,
@@ -59,7 +89,17 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "tStartMs": 8500,
+                        "dDurationMs": 3000,
+                        "segments": [
+                            {
+                                "utf8": "Bread & rolls bake at <220> degrees."
+                            }
+                        ]
+                    }
+                }
             },
             {
                 "start": 11.5,
@@ -69,7 +109,17 @@
                 ],
                 "identifier": null,
                 "alignment": null,
-                "formatData": {}
+                "formatData": {
+                    "youtube": {
+                        "tStartMs": 11500,
+                        "dDurationMs": 2500,
+                        "segments": [
+                            {
+                                "utf8": "That's all for today."
+                            }
+                        ]
+                    }
+                }
             }
         ]
     }

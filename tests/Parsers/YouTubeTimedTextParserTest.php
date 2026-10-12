@@ -115,9 +115,28 @@ class YouTubeTimedTextParserTest extends TestCase
             [[Alignment::TopLeft, '<font color="#ff0000"><b>red</b></font>'], [Alignment::MiddleRight, "<i><u>styled</u></i> plain"], [Alignment::BottomCenter, "no anchor"]],
             array_map(fn ($cue) => [$cue->getAlignment(), $cue->getText()], $cues)
         );
-        $this->assertSame(["wp" => "1", "p" => "1"], $cues[0]->findFormatData("youtube"));
-        $this->assertSame(["wp" => "2", "segments" => [["p" => "2"], []]], $cues[1]->findFormatData("youtube"));
+        $this->assertSame(["t" => "0", "d" => "1000", "wp" => "1", "p" => "1", "segments" => [["text" => "red"]]], $cues[0]->findFormatData("youtube"));
+        $this->assertSame(["p" => "2", "text" => "styled"], $cues[1]->findFormatData("youtube")["segments"][0]);
+        $this->assertSame(["text" => " plain"], $cues[1]->findFormatData("youtube")["segments"][1]);
         $this->assertSame(["id" => "1", "fc" => "#FF0000", "b" => "1", "et" => "3"], $subtitle->findFormatData("youtube")["pen"][0]);
+    }
+
+
+    public function testAppendEventsAndDoubleEscapedTextStayInTheFormatData(): void
+    {
+        $srv3 = '<?xml version="1.0" encoding="utf-8" ?><timedtext format="3"><body>' .
+                '<p t="0" d="3000" w="1">one</p><p t="900" d="2100" w="1" a="1">' . "\n" . '</p>' .
+                '<p t="1000" d="3000" w="1">it&amp;#39;s two</p><p t="5000" w="1" a="1">' . "\n" . '</p>' .
+                '</body></timedtext>';
+
+        $subtitle = (new YouTubeTimedTextParser())->parse($srv3, new ReadOptions());
+        $cues     = $subtitle->getCues();
+
+        $this->assertSame([[0.0, 1.0, "one"], [1.0, 4.0, "it's two"]], array_map(fn ($cue) => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $cues));
+        $this->assertSame([["t" => "900", "d" => "2100", "w" => "1", "a" => "1", "text" => "\n"]], $cues[1]->findFormatData("youtube")["appends"]);
+        $this->assertSame([["text" => "it&#39;s two"]], $cues[1]->findFormatData("youtube")["segments"]);
+        $this->assertSame([["t" => "5000", "w" => "1", "a" => "1", "text" => "\n"]], $subtitle->findFormatData("youtube")["appends"]);
+        $this->assertSame("3000", $cues[0]->findFormatData("youtube")["d"]);
     }
 
 
@@ -132,7 +151,10 @@ class YouTubeTimedTextParserTest extends TestCase
 
         $this->assertSame(Alignment::BottomRight, $cue->getAlignment());
         $this->assertSame('<font color="#00ff00"><b>green</b></font> text', $cue->getText());
-        $this->assertSame(["wpWinPosId" => 1, "segments" => [["pPenId" => 1], []]], $cue->findFormatData("youtube"));
+        $this->assertSame(
+            ["tStartMs" => 0, "dDurationMs" => 1000, "wpWinPosId" => 1, "segments" => [["utf8" => "green", "pPenId" => 1], ["utf8" => " text"]]],
+            $cue->findFormatData("youtube")
+        );
         $this->assertSame("pb3", $subtitle->findFormatData("youtube")["wireMagic"]);
         $this->assertSame("json3", $subtitle->findFormatData("youtube")["format"]);
     }
