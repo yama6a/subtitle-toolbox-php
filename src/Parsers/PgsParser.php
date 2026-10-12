@@ -255,7 +255,8 @@ final class PgsParser extends SubtitleParser
     private function addCue(float $end): void
     {
         $image = $this->shownImage["image"];
-        $cue   = $image->toCue(new SubtitleCue($this->shownImage["start"], $end));
+        $cue   = new SubtitleCue($this->shownImage["start"], $end);
+        $image->applyTo($cue);
         if ((2 * $image->y + $image->height) * 3 < 2 * $image->screenHeight) {
             $cue->setAlignment(Alignment::TopCenter);
         }

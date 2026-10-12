@@ -112,7 +112,7 @@ final class CommonErrorFixer
             CommonErrorRule::OcrZeroInWords  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => self::ocrZero($text, $first)),
             CommonErrorRule::OcrLowercaseL   => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrLowercaseL($text, $language)),
             CommonErrorRule::LoneLowercaseI  => array_map(self::loneLowercaseI(...), $lines),
-            CommonErrorRule::Ellipsis        => Markup::mapTextRuns($lines, fn (string $text): string => self::ellipsis($text, $options->unicodeEllipsis)),
+            CommonErrorRule::Ellipsis        => Markup::mapTextRuns($lines, fn (string $text): string => self::ellipsis($text, $options->ellipsis)),
             CommonErrorRule::UnneededPeriods => Markup::mapTextRuns($lines, fn (string $text): string =>
                 self::replace('/(?<=[?!])\\.(?![.\\x{2026}])/u', "", $text)),
             CommonErrorRule::DoubleSpaces    => self::doubleSpaces($lines),
@@ -129,9 +129,9 @@ final class CommonErrorFixer
     }
 
 
-    private static function ellipsis(string $text, bool $unicode): string
+    private static function ellipsis(string $text, EllipsisStyle $style): string
     {
-        return self::replace('/\.(?: ?\.){2,}' . ($unicode ? '|\x{2026}' : '') . '/u', $unicode ? "\u{2026}" : "...", $text);
+        return self::replace('/\.(?: ?\.){2,}' . ($style === EllipsisStyle::Unicode ? '|\x{2026}' : '') . '/u', $style->value, $text);
     }
 
 

@@ -218,7 +218,7 @@ class ShortCueMergingTest extends TestCase
 
         $subtitle = (new Subtitle())
             ->addCue(new SubtitleCue(0, 0.5, "One"))
-            ->addCue((new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(0.5, 1, "two")));
+            ->addCue(TestSubtitles::imageCue(new CueImage("png", 0, 0, 1, 1, 1, 1), new SubtitleCue(0.5, 1, "two")));
         $this->assertCount(2, $subtitle->mergeShortCues(new MergeShortCuesOptions())->getCues());
     }
 

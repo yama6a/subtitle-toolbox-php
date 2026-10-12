@@ -132,7 +132,7 @@ class WordTimestampRetimingTest extends TestCase
 
         $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference, -180, 180, maxSplits: 2));
 
-        $this->assertCount(2, $result->getSegments());
+        $this->assertCount(2, $result->segments);
         foreach ([$target->getCues()[0], $target->getCues()[count($cues) - 1]] as $cue) {
             preg_match(Markup::WORD_TIMESTAMP_REGEX, $cue->getText(), $match);
             $this->assertEqualsWithDelta($cue->getStart() + 0.5 * $result->scale, Markup::wordTimestampSeconds($match[1]), 0.0015);

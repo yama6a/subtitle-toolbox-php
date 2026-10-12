@@ -114,7 +114,7 @@ class SubtitleStatisticsTest extends TestCase
     public function testImageCueAndCueWithoutTextCountOnlyAsCuesAndInTimes(): void
     {
         $subtitle = TestSubtitles::fromCues([[1, 3, "One two"], [9, 10, "<i> </i>"]]);
-        $subtitle->addCue((new CueImage("png", 0, 0, 1, 1, 720, 576))->toCue(new SubtitleCue(4, 8)));
+        $subtitle->addCue(TestSubtitles::imageCue(new CueImage("png", 0, 0, 1, 1, 720, 576), new SubtitleCue(4, 8)));
         $statistics = SubtitleStatistics::of($subtitle);
 
         $this->assertSame(3, $statistics->cueCount);

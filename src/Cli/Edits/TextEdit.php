@@ -71,10 +71,10 @@ final class TextEdit extends Edit
     private static function speakerModes(): array
     {
         return [
-            "prefix"      => new SpeakerLabelOptions(to: SpeakerStyle::Prefix),
-            "dashes"      => new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes),
-            "colors"      => new SpeakerLabelOptions(to: SpeakerStyle::Colors),
-            "from-prefix" => new SpeakerLabelOptions(readPrefixes: true),
+            "prefix"      => new SpeakerLabelOptions(style: SpeakerStyle::Prefix),
+            "dashes"      => new SpeakerLabelOptions(style: SpeakerStyle::DialogueDashes),
+            "colors"      => new SpeakerLabelOptions(style: SpeakerStyle::Colors),
+            "from-prefix" => new SpeakerLabelOptions(speakerLabels: true),
         ];
     }
 

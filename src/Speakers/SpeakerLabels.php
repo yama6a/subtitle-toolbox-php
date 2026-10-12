@@ -51,13 +51,13 @@ final class SpeakerLabels
     {
         $before = array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $subtitle->getCues());
 
-        if ($options->readPrefixes) {
-            self::fromPrefix($subtitle, $options->readUpperCaseOnly);
+        if ($options->speakerLabels) {
+            self::fromPrefix($subtitle, $options->speakerLabelsUpperCaseOnly);
         }
         if ($options->rename !== []) {
             self::rename($subtitle, $options->rename);
         }
-        match ($options->to) {
+        match ($options->style) {
             SpeakerStyle::Prefix         => self::toPrefix($subtitle, $options->writeUpperCase, $options->separator),
             SpeakerStyle::DialogueDashes => self::toDialogueDashes($subtitle, $options->dialogueDashStyle->value),
             SpeakerStyle::Colors         => self::toColors($subtitle, $options->colors),

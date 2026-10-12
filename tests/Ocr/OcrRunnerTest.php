@@ -10,6 +10,7 @@ use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 require_once __DIR__ . "/FakeOcrEngine.php";
 
@@ -24,10 +25,10 @@ class OcrRunnerTest extends TestCase
     private function subtitleWithImageCues(): Subtitle
     {
         $subtitle = new Subtitle();
-        $subtitle->addCue($this->makeImage(10)->toCue(new SubtitleCue(1, 2)));
+        $subtitle->addCue(TestSubtitles::imageCue($this->makeImage(10), new SubtitleCue(1, 2)));
         $subtitle->addCue(new SubtitleCue(3, 4, "Text cue"));
-        $subtitle->addCue($this->makeImage(30)->toCue(new SubtitleCue(5, 6, "Already read")));
-        $subtitle->addCue($this->makeImage(40)->toCue(new SubtitleCue(7, 8)));
+        $subtitle->addCue(TestSubtitles::imageCue($this->makeImage(30), new SubtitleCue(5, 6, "Already read")));
+        $subtitle->addCue(TestSubtitles::imageCue($this->makeImage(40), new SubtitleCue(7, 8)));
 
         return $subtitle;
     }

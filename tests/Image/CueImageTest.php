@@ -7,16 +7,17 @@ namespace SubtitleToolbox\Image;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class CueImageTest extends TestCase
 {
-    public function testToCueWritesTheFormatDataThatFromCueReads(): void
+    public function testApplyToWritesTheFormatDataThatFromCueReads(): void
     {
         $png   = PngEncoder::encode(2, 1, [0xFF0000FF, 0x00000000]);
         $image = new CueImage($png, 640, 940, 2, 1, 1920, 1080, true);
         $cue   = new SubtitleCue(1, 2);
 
-        $this->assertSame($cue, $image->toCue($cue));
+        $image->applyTo($cue);
 
         $this->assertSame([
             "png"          => $png,
@@ -38,8 +39,8 @@ class CueImageTest extends TestCase
         $image = new CueImage("png", 0, 0, 1, 1, 720, 576);
 
         $this->assertFalse(CueImage::isImageCue(new SubtitleCue(1, 2, "Text")));
-        $this->assertTrue(CueImage::isImageCue($image->toCue(new SubtitleCue(1, 2))));
-        $this->assertTrue(CueImage::isImageCue($image->toCue(new SubtitleCue(1, 2, "Text"))));
+        $this->assertTrue(CueImage::isImageCue(TestSubtitles::imageCue($image, new SubtitleCue(1, 2))));
+        $this->assertTrue(CueImage::isImageCue(TestSubtitles::imageCue($image, new SubtitleCue(1, 2, "Text"))));
     }
 
 

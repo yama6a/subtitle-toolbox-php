@@ -125,11 +125,11 @@ final class SyncCommand extends WriteCommand
         $label = self::label($input);
         $text  = "$label: scale " . self::number($result->scale, self::SCALE_DECIMALS) . ", offset " .
                  self::number($result->offset, self::SECONDS_DECIMALS) . " s, score " . self::number($result->score, self::SCORE_DECIMALS) . "\n";
-        $segments = $result->getSegments();
+        $segments = $result->segments;
         if (count($segments) > 1) {
             foreach ($segments as $segment) {
-                $text .= "$label: from " . self::number($segment["from"], self::SECONDS_DECIMALS) . " s: offset " .
-                         self::number($segment["offset"], self::SECONDS_DECIMALS) . " s\n";
+                $text .= "$label: from " . self::number($segment->from, self::SECONDS_DECIMALS) . " s: offset " .
+                         self::number($segment->offset, self::SECONDS_DECIMALS) . " s\n";
             }
         }
         $console->err($text);

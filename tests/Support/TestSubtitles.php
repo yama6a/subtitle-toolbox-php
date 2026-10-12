@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Tests\Support;
 
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Subtitle;
@@ -15,6 +16,14 @@ use SubtitleToolbox\SubtitleCue;
  */
 final class TestSubtitles
 {
+    public static function imageCue(CueImage $image, SubtitleCue $cue): SubtitleCue
+    {
+        $image->applyTo($cue);
+
+        return $cue;
+    }
+
+
     /**
      * Builds a subtitle from cues or from [start, end, text] tuples, for example [[1.0, 2.5, "Hello"]].
      * The text can also be a list of lines.

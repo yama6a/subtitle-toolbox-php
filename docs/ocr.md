@@ -26,7 +26,7 @@ $subtitle->toString(Format::SubRip, new WriteOptions(skipImageCues: true));   //
 - **After OCR**: the cue keeps its image, so `PgsFormatter` can still write it.
 - **Language**: pass an `OcrLanguage` case, for example `OcrLanguage::German`. The engine receives its value, the Tesseract model name `deu`. A string such as `'deu+eng'` or the name of a custom trained model reaches the engine as it is.
 - **Confidence**: `(new OcrRunner($engine))->run($subtitle, 'eng')` does the same as `recognizeText()`. It returns an `OcrReport` whose `texts` hold the `RecognizedText` of each cue by cue index.
-- **Forced flag**: `CueImage::toCue()` sets the forced flag of the cue from the `forced` field of the image. OCR keeps the flag.
+- **Forced flag**: `CueImage::applyTo()` sets the forced flag of the cue from the `forced` field of the image. OCR keeps the flag.
 - **PNG**: `PngEncoder::encode($width, $height, $pixels)` makes a PNG from a list of `0xRRGGBBAA` integers. It needs no ext-gd. It compresses with ext-zlib when it is loaded. Otherwise it writes larger, uncompressed PNG files. `PngDecoder::decode($png)` returns the width, the height and the pixels of a PNG without interlacing. It needs ext-zlib.
 - **Size limit**: an image is at most 7,680 pixels wide or high. It has at most 8,294,400 pixels, the pixels of a 3840x2160 frame. A larger PGS object or VobSub bitmap throws `ParsingException`. `new CueImage()` and `PngDecoder::decode()` throw `InvalidArgumentException`. The limits are `CueImage::MAX_SIDE` and `CueImage::MAX_PIXELS`. `PgsParser` and `PgsFormatter` read and write a full 3840x2160 object in about 35 MB of PHP memory. A VobSub bitmap or an RGBA PNG of that size needs about 330 MB, so raise `memory_limit` for such files.
 - **Text errors**: [common error fixes](text.md#fixing-common-errors) correct OCR errors such as `lt's` for `It's`.
@@ -91,15 +91,15 @@ use SubtitleToolbox\Ocr\OcrEngineChooser;
 use SubtitleToolbox\Ocr\OcrEngineName;
 use SubtitleToolbox\Ocr\OcrLanguage;
 
-$subtitle->recognizeText(OcrEngineChooser::create());                            // Tesseract in English, or php-glyph-ocr
-$subtitle->recognizeText(OcrEngineChooser::create(null, OcrLanguage::German));   // Tesseract in German
-$subtitle->recognizeText(OcrEngineChooser::create(null, 'deu+eng'));             // Tesseract in German and English
-$subtitle->recognizeText(OcrEngineChooser::create(OcrEngineName::Glyph));        // always php-glyph-ocr
-OcrEngineChooser::choose();                                                      // OcrEngineName::Tesseract or OcrEngineName::Glyph
+$subtitle->recognizeText(OcrEngineChooser::create());                         // Tesseract in English, or php-glyph-ocr
+$subtitle->recognizeText(OcrEngineChooser::create(), OcrLanguage::German);    // Tesseract in German
+$subtitle->recognizeText(OcrEngineChooser::create(), 'deu+eng');              // Tesseract in German and English
+$subtitle->recognizeText(OcrEngineChooser::create(OcrEngineName::Glyph));     // always php-glyph-ocr
+OcrEngineChooser::choose();                                                   // OcrEngineName::Tesseract or OcrEngineName::Glyph
 ```
 
 - **Missing engines**: `choose()` and `create()` throw `InvalidArgumentException` when neither engine is installed, or when the engine that the first argument names is missing. The message holds the install commands. For a missing Tesseract language, see [Tesseract](#tesseract).
-- **Program path**: the third argument of `create()` and the second argument of `choose()` set the path of the `tesseract` program. The default is `tesseract` on the `PATH`.
+- **Program path**: the second argument of `create()` and of `choose()` sets the path of the `tesseract` program. The default is `tesseract` on the `PATH`.
 
 | | Tesseract | php-glyph-ocr |
 |:--- |:--- |:--- |

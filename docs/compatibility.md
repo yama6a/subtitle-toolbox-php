@@ -41,7 +41,7 @@ A major release can remove or change anything above. Its upgrade guide lists eac
 - **`@internal`**: a class, method or constant marked `@internal` can change in any release. An example is `ImageFormatter`.
 - **Constructors of reports and results**: only the library creates reports and results. Read their fields, but do not create them. `RecognizedText` and `Comment` are the 2 exceptions with a public constructor, because an `OcrEngine` returns `RecognizedText`. These constructors are `@internal`:
   - Reports: `CommonErrorReport`, `HearingImpairedReport`, `OcrReport`, `ProfanityReport`, `ReferenceSyncReport`, `ResegmentReport`, `SccWriteReport`, `ShotChangeReport`, `SpeakerLabelReport`, `TranslationReport`, `WebVttWriteReport` and `WordHighlightReport`.
-  - Results: `AppliedFix`, `CueDifference`, `ValidationViolation`, `TranslationWarning`, `MuteRange`, `SccFitChange`, `SubtitleTrack`, `WebVttDroppedColor` and `HlsWebVttRendition`.
+  - Results: `AppliedFix`, `CueDifference`, `ValidationViolation`, `TranslationWarning`, `MuteRange`, `SccFitChange`, `SubtitleTrack`, `SyncSegment`, `WebVttDroppedColor` and `HlsWebVttRendition`.
   - `ParseWarning`, also `ParseWarning::skipped()`.
 - **Parsers and formatters as base classes**: do not extend `SubtitleParser` or `SubtitleFormatter`. Their protected members can change in any release. Call a parser or formatter from your own class.
 - **Exceptions as base classes**: do not extend an exception class. `UnsupportedFormatException` is not `final`, because `UnknownFormatException` extends it. The protected `CODE` constant of an exception class is not API. `GenericException` is not API, also as a parent.

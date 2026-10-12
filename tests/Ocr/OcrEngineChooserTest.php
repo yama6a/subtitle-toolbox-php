@@ -43,23 +43,18 @@ class OcrEngineChooserTest extends TestCase
 
     public function testCreatesTheChosenEngine(): void
     {
-        $tesseract = OcrEngineChooser::create(null, "deu", self::FAKE);
+        $tesseract = OcrEngineChooser::create(null, self::FAKE);
         $image     = new CueImage(PngEncoder::encode(1, 1, [0]), 0, 0, 1, 1, 1920, 1080);
 
         $this->assertInstanceOf(TesseractOcrEngine::class, $tesseract);
-        $this->assertSame("deu psm6", $tesseract->recognize($image, null)->lines[0]);
-        $this->assertInstanceOf(GlyphOcrEngine::class, OcrEngineChooser::create(null, "deu", self::MISSING));
+        $this->assertSame("eng psm6", $tesseract->recognize($image, null)->lines[0]);
+        $this->assertSame("deu psm6", $tesseract->recognize($image, "deu")->lines[0]);
+        $this->assertInstanceOf(GlyphOcrEngine::class, OcrEngineChooser::create(null, self::MISSING));
     }
 
 
-    public function testCreatesTesseractWithAnOcrLanguageCaseAsItsModelName(): void
+    public function testTesseractOptionsTakeAnOcrLanguageCaseAsItsModelName(): void
     {
-        $fromCase   = OcrEngineChooser::create(null, OcrLanguage::German, self::FAKE);
-        $fromString = OcrEngineChooser::create(null, "deu", self::FAKE);
-        $image      = new CueImage(PngEncoder::encode(1, 1, [0]), 0, 0, 1, 1, 1920, 1080);
-
-        $this->assertSame("deu psm6", $fromCase->recognize($image, null)->lines[0]);
-        $this->assertSame($fromString->recognize($image, null)->lines, $fromCase->recognize($image, null)->lines);
         $this->assertSame("deu", (new TesseractOcrOptions(OcrLanguage::German))->language);
         $this->assertSame("deu+eng", (new TesseractOcrOptions(language: "deu+eng"))->language);
     }

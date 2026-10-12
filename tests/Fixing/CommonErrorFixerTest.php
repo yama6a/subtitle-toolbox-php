@@ -18,6 +18,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 require_once __DIR__ . "/../files/fixing/generate.php";
 
@@ -32,7 +33,7 @@ class CommonErrorFixerTest extends TestCase
         "unbalancedTags"               => false,
         "emptyTags"                    => false,
         "dialogueDashes"               => false,
-        "ellipsis"                     => false,
+        "ellipsis"                     => null,
         "ocrLowercaseL"                => false,
         "ocrPipe"                      => false,
         "ocrZeroInWords"               => false,
@@ -161,7 +162,7 @@ class CommonErrorFixerTest extends TestCase
     #[DataProvider("ruleCases")]
     public function testRuleFixesTheTextBetweenTags(string $rule, ?string $language, array $before, array $after): void
     {
-        $only = array_merge(self::ALL_OFF, [$rule => true]);
+        $only = array_merge(self::ALL_OFF, [$rule => $rule === "ellipsis" ? EllipsisStyle::ThreeDots : true]);
 
         [$lines, $fixes] = self::fixLines($before, new CommonErrorOptions($language, ...$only));
 
@@ -377,7 +378,7 @@ class CommonErrorFixerTest extends TestCase
 
     public function testUnicodeEllipsisReplacesAllEllipses(): void
     {
-        [$lines] = self::fixLines(["Well... no. . . yes....", "Wait\u{2026}"], new CommonErrorOptions(language: "en", unicodeEllipsis: true));
+        [$lines] = self::fixLines(["Well... no. . . yes....", "Wait\u{2026}"], new CommonErrorOptions(language: "en", ellipsis: EllipsisStyle::Unicode));
 
         $this->assertSame(["Well\u{2026} no\u{2026} yes\u{2026}", "Wait\u{2026}"], $lines);
     }
@@ -460,7 +461,7 @@ class CommonErrorFixerTest extends TestCase
 
     public function testSkipsImageCuesWithoutText(): void
     {
-        $subtitle = (new Subtitle())->addCue((new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2)));
+        $subtitle = (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage("png", 0, 0, 1, 1, 1, 1), new SubtitleCue(1, 2)));
 
         $this->assertSame([], CommonErrorFixer::apply($subtitle, new CommonErrorOptions())->fixes);
         $this->assertCount(1, $subtitle->getCues());
