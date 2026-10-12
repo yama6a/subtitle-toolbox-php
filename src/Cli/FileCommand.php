@@ -128,7 +128,8 @@ abstract class FileCommand extends Command
         $names = $this->fileOptionNames();
 
         return [
-            Option::value($names["secondFrom"], "FORMAT", "Format of the $file file. Default: as for --$names[from]."),
+            Option::value($names["secondFrom"], "FORMAT", "Format of the $file file. Default: " .
+                          ($this->secondFileInherits() ? "as for --$names[from]." : "the format detected from the content.")),
             Option::value($names["secondTrack"], "NUMBER", "Subtitle track of an MKV, WebM or MP4 $file file. Needed when the file has 2 or more subtitle tracks."),
         ];
     }

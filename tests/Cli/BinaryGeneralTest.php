@@ -67,7 +67,7 @@ class BinaryGeneralTest extends CliTestCase
 
     /** Defaults that the help describes in words. */
     private const DESCRIBED_DEFAULTS = [
-        "the format detected from the content", "as for --from", "as for --primary-from",
+        "the format detected from the content", "as for --from",
         "UTF-8", "stop at the first failure", "the input format", "the format of the primary file",
         "the frame rate of a MicroDVD or iTT input", "the BOM rule of the output format", "the end of the last cue",
         "half the --video-fps, rounded to the nearest frame", "tesseract when it is installed", "the subtitle fonts database of php-glyph-ocr",
