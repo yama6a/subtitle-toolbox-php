@@ -196,7 +196,7 @@ class TmPlayerParserTest extends TestCase
 
     public function testSubtitleParseDetectsTmPlayer(): void
     {
-        $this->assertCount(2, Subtitle::fromStringAutoDetectFormat("00:00:01:Where are you?\r\n00:00:04:Home.\r\n")->getCues());
+        $this->assertCount(2, Subtitle::fromString("00:00:01:Where are you?\r\n00:00:04:Home.\r\n")->getCues());
     }
 
 

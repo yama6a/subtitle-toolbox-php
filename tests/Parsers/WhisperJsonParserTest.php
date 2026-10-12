@@ -40,7 +40,7 @@ class WhisperJsonParserTest extends TestCase
 
     public function testReadsOneCuePerSegmentAndKeepsTheFieldsAsFormatData(): void
     {
-        $subtitle = Subtitle::fromStringAutoDetectFormat(self::TWO_SEGMENTS_WITH_WORDS);
+        $subtitle = Subtitle::fromString(self::TWO_SEGMENTS_WITH_WORDS);
 
         $this->assertSame("en", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame(["format" => "openai-api", "task" => "transcribe", "language" => "english", "duration" => 8.47],

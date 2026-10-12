@@ -75,7 +75,7 @@ class SubtitleReaderTest extends TestCase
     {
         file_put_contents("$this->dir/empty.srt", " \n");
 
-        $subtitle = SubtitleReader::loadAutoDetect("$this->dir/empty.srt", new ReadOptions());
+        $subtitle = SubtitleReader::load("$this->dir/empty.srt", null, new ReadOptions());
 
         $this->assertSame(Format::SubRip, $subtitle->findFormat());
         $this->assertCount(0, $subtitle);
@@ -87,6 +87,6 @@ class SubtitleReaderTest extends TestCase
         file_put_contents("$this->dir/empty.json", "");
 
         $this->expectException(UnknownFormatException::class);
-        SubtitleReader::loadAutoDetect("$this->dir/empty.json", new ReadOptions());
+        SubtitleReader::load("$this->dir/empty.json", null, new ReadOptions());
     }
 }

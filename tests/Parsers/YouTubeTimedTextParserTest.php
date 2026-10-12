@@ -34,7 +34,7 @@ class YouTubeTimedTextParserTest extends TestCase
     #[DataProvider("shapes")]
     public function testEveryShapeGivesTheSameCue(string $content): void
     {
-        $cues = Subtitle::fromStringAutoDetectFormat($content)->getCues();
+        $cues = Subtitle::fromString($content)->getCues();
 
         $this->assertCount(1, $cues);
         $this->assertSame([1.2, 3.5, "Hello world"], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);

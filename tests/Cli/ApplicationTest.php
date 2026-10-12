@@ -59,7 +59,7 @@ class ApplicationTest extends TestCase
     {
         $srt = file_get_contents(__DIR__ . "/../files/cli/trip.srt");
 
-        $this->assertSame([0, Subtitle::fromStringAutoDetectFormat($srt)->toString(Format::WebVtt), ""], self::runApplication(["convert", "-", "--to", "vtt"], $srt));
+        $this->assertSame([0, Subtitle::fromString($srt)->toString(Format::WebVtt), ""], self::runApplication(["convert", "-", "--to", "vtt"], $srt));
     }
 
 

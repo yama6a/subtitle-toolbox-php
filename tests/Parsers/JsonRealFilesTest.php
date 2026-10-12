@@ -60,7 +60,7 @@ class JsonRealFilesTest extends TestCase
     {
         $json = file_get_contents(self::DIR . $fileName);
 
-        $this->assertSame($json, Subtitle::fromStringAutoDetectFormat($json)->toString(Format::Json, new WriteOptions(formats: [new JsonWriteOptions(prettyPrint: true)])));
+        $this->assertSame($json, Subtitle::fromString($json)->toString(Format::Json, new WriteOptions(formats: [new JsonWriteOptions(prettyPrint: true)])));
     }
 
 
@@ -94,8 +94,8 @@ class JsonRealFilesTest extends TestCase
 
     public function testAegisubFileKeepsMetadataCommentsAndFormatData(): void
     {
-        $json     = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::DIR . "own_aegisub.json"));
-        $original = Subtitle::fromStringAutoDetectFormat(file_get_contents(__DIR__ . "/../files/ass/real/own_aegisub.ass"));
+        $json     = Subtitle::fromString(file_get_contents(self::DIR . "own_aegisub.json"));
+        $original = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/ass/real/own_aegisub.ass"));
 
         $this->assertEquals($original->toArray(), $json->toArray());
         $this->assertSame("Morning train to the coast", $json->findMetadata(Subtitle::METADATA_TITLE));
@@ -106,7 +106,7 @@ class JsonRealFilesTest extends TestCase
 
     public function testImageCueFileHoldsThePngBytes(): void
     {
-        $image = CueImage::fromCue(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::DIR . "own_image_cues.json"))->getCues()[0]);
+        $image = CueImage::fromCue(Subtitle::fromString(file_get_contents(self::DIR . "own_image_cues.json"))->getCues()[0]);
 
         $this->assertStringStartsWith("\x89PNG\r\n\x1a\n", $image->png);
         $this->assertSame([640, 940, 2, 1, 1920, 1080, true],

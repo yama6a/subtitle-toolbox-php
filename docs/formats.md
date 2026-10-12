@@ -16,7 +16,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString($content, Format::MicroDvd);
-$subtitle = Subtitle::fromStringAutoDetectFormat($content);   // see detection.md
+$subtitle = Subtitle::fromString($content);   // detects the format, see detection.md
 $vtt      = $subtitle->toString(Format::WebVtt);
 
 Format::from('srt');                          // Format::SubRip, for a name from user input
@@ -41,7 +41,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 Subtitle::load('movie.srt', Format::SubRip)->save('movie.vtt');
-Subtitle::loadAutoDetectFormat('movie.srt')->save('movie.vtt');
+Subtitle::load('movie.srt')->save('movie.vtt');
 Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(encoding: 'Windows-1252', formats: [new MicroDvdReadOptions(frameRate: 23.976)]))->save('movie.srt');
 Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(formats: [new VobSubReadOptions(language: 'de')]));
 Subtitle::load('call.json', Format::Deepgram, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]));
@@ -52,15 +52,15 @@ $subtitle->findFormat();                               // Format::SubRip, the fo
 $subtitle->save('movie.txt', Format::WebVtt);         // the format argument wins over the extension
 ```
 
-- **`load()`**: reads the file in the given format and never guesses. For VobSub, pass the `.idx` or the `.sub` file. The other file must lie next to it. A path without extension, such as `d/movie`, is the `.sub` file, and `d/movie.idx` must exist. Otherwise `load()` throws `InvalidArgumentException`.
-- **`loadAutoDetectFormat()`**: tries only formats whose `isAutoDetected()` is true. It reads the format that [detection](detection.md) finds in the content. An iTT file with the `.itt` extension reads as iTT, not TTML.
-- **Extension fallback**: when detection finds nothing, `loadAutoDetectFormat()` takes the format of the extension, for example `.tsv`. It skips an extension that a format without detection also uses, such as `.json` and `.txt`. Then it throws `UnknownFormatException`.
+- **`load()` with a format**: reads the file in that format and never guesses. For VobSub, pass the `.idx` or the `.sub` file. The other file must lie next to it. A path without extension, such as `d/movie`, is the `.sub` file, and `d/movie.idx` must exist. Otherwise `load()` throws `InvalidArgumentException`.
+- **`load()` without a format**: tries only formats whose `isAutoDetected()` is true. It reads the format that [detection](detection.md) finds in the content. An iTT file with the `.itt` extension reads as iTT, not TTML.
+- **Extension fallback**: when detection finds nothing, `load()` takes the format of the extension, for example `.tsv`. It skips an extension that a format without detection also uses, such as `.json` and `.txt`. Then it throws `UnknownFormatException`.
 - **Control characters**: the text parsers drop Ctrl-Z characters at the end of a file, as DOS editors write them. They remove the other C0 control characters except tab and the line endings, and DEL. Lenient mode warns once per file for a removed character. A NUL throws `ParsingException` with its line in strict mode, because it marks UTF-16 or UTF-32 read with the wrong encoding. Lenient mode removes it with the same warning. The WebVTT parsers replace NUL with U+FFFD in both modes, as the WebVTT spec says. Format characters such as U+200E and U+200D stay.
-- **Empty files**: `loadAutoDetectFormat()` reads a file that is empty, or holds only a BOM and whitespace, as an empty subtitle in the format of its extension. The extension fallback rules apply. `fromStringAutoDetectFormat()` has no extension, so it throws `UnknownFormatException` for empty content.
+- **Empty files**: `load()` reads a file that is empty, or holds only a BOM and whitespace, as an empty subtitle in the format of its extension. The extension fallback rules apply. `fromString()` has no extension, so it throws `UnknownFormatException` for empty content.
 - **Empty file in every format**: a text file with only white space or a BOM gives an empty subtitle in every format and mode, also WebVTT without `WEBVTT`.
 - **No cues**: a header without cues is valid, such as `WEBVTT` alone or LRC ID tags alone. Text that gives no cue throws `ParsingException` with its line, such as LRC lines without time tags. Lenient mode returns an empty subtitle with 1 warning.
 - **Chapters and cloud speech-to-text JSON**: they load only with `load()` and their format.
-- **MKV, WebM and MP4**: `load()` throws for them. `loadAutoDetectFormat()` reads a file with exactly 1 subtitle track and throws with the track list for other files.
+- **MKV, WebM and MP4**: `load()` with a format throws for them. Without a format, it reads a file with exactly 1 subtitle track and throws with the track list for other files.
 - **`findFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV or MP4 track, it is the format of the codec, for example `Format::SubRip`.
 - **`findSourceEncoding()`**: the encoding that the load call read the text from, for example `Windows-1252`. See [encodings.md](encodings.md#order-of-the-checks).
 - **`save()`**: writes the format argument. Without it, `save()` writes the format of the extension. It throws `UnsupportedFormatException` for an unknown extension.
@@ -229,7 +229,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
-$subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('news.stl'));  // detects EBU STL
+$subtitle = Subtitle::fromString(file_get_contents('news.stl'));                  // detects EBU STL
 $subtitle = Subtitle::fromString(file_get_contents('news.stl'), Format::EbuStl,
     new ReadOptions(formats: [new EbuStlReadOptions(subtractStartOfProgramme: true)])); // cue times minus the start of programme
 $subtitle->findFormatData('stl')['gsi']['TCP'];                                   // '10000000'
@@ -263,7 +263,7 @@ use SubtitleToolbox\WriteOptions;
 $subtitle = Subtitle::fromString(file_get_contents('movie.itt'), Format::Itt);
 $subtitle->findFormatData('itt');  // ['timeBase' => 'smpte', 'frameRate' => '24', 'frameRateMultiplier' => '999 1000', 'dropMode' => 'nonDrop']
 $subtitle->toString(Format::Itt);
-Subtitle::fromStringAutoDetectFormat($srt)->toString(Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 23.976)]));
+Subtitle::fromString($srt)->toString(Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 23.976)]));
 ```
 
 - **Parser**: `IttParser` is `TtmlParser` plus the `itt` format data. Format detection returns `Format::Ttml` for an iTT file. Both read the same cues.
@@ -330,7 +330,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
-$subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('film.txt'), new ReadOptions(encoding: 'Windows-1250'));   // detects MPL2 or TMPlayer
+$subtitle = Subtitle::fromString(file_get_contents('film.txt'), options: new ReadOptions(encoding: 'Windows-1250'));   // detects MPL2 or TMPlayer
 $subtitle = Subtitle::fromString(file_get_contents('film.txt'), Format::TmPlayer, new ReadOptions(lastCueDuration: 3));
 $subtitle->toString(Format::Mpl2);                                         // [12][45]Where are you?|/Home.
 $subtitle->toString(Format::TmPlayer);                                     // 00:00:01:Where are you?|Home.
@@ -406,7 +406,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
-$subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('show.scc'));  // detects SCC
+$subtitle = Subtitle::fromString(file_get_contents('show.scc'));                  // detects SCC
 $subtitle->findFormatData('scc');                                                 // ['dropFrame' => true]
 $subtitle->getCues()[0]->findFormatData('scc');                                   // ['mode' => 'pop-on', 'rows' => [14, 15], 'columns' => [4, 8]]
 Subtitle::fromString($content, Format::Scc, new ReadOptions(formats: [new SccReadOptions(channel: 2)]));   // CC2 or CC4

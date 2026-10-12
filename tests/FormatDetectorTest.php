@@ -105,7 +105,7 @@ class FormatDetectorTest extends TestCase
 
         // The parsers do not detect CP949, so this file needs the encoding.
         $options  = $file === "sami/real/own_korean_cp949.smi" ? new ReadOptions(TextEncoding::Cp949) : new ReadOptions();
-        $detected = Subtitle::fromStringAutoDetectFormat($content, $options);
+        $detected = Subtitle::fromString($content, options: $options);
         $explicit = Subtitle::fromString($content, $format, $options);
 
         $this->assertEquals($explicit->getCues(), $detected->getCues());
@@ -210,7 +210,7 @@ class FormatDetectorTest extends TestCase
         $content = "\xEF\xBB\xBF\r\n\r\n  \n1\r\n00:00:01,000 --> 00:00:04,000\r\nHello\r\n";
 
         $this->assertSame(Format::SubRip, FormatDetector::detect($content));
-        $this->assertCount(1, Subtitle::fromStringAutoDetectFormat($content)->getCues());
+        $this->assertCount(1, Subtitle::fromString($content)->getCues());
     }
 
 
@@ -229,7 +229,7 @@ class FormatDetectorTest extends TestCase
         $content = file_get_contents(self::DIR . "lenient/$file");
 
         $this->assertSame(Format::SubRip, FormatDetector::detect($content));
-        $this->assertCount($cueCount, Subtitle::fromStringAutoDetectFormat($content, new ReadOptions(lenient: true))->getCues());
+        $this->assertCount($cueCount, Subtitle::fromString($content, options: new ReadOptions(lenient: true))->getCues());
     }
 
 
@@ -376,11 +376,11 @@ class FormatDetectorTest extends TestCase
         $this->expectException(UnsupportedFormatException::class);
         $this->expectExceptionMessage("Format detection found no subtitle format.");
 
-        Subtitle::fromStringAutoDetectFormat("Just some text.");
+        Subtitle::fromString("Just some text.");
     }
 
 
-    public function testDetectFormatAppliesTheIttAndExtensionRulesOfLoadAutoDetectFormat(): void
+    public function testDetectFormatAppliesTheIttAndExtensionRulesOfLoadWithoutFormat(): void
     {
         $ttml = "<?xml version=\"1.0\"?>\n<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div>" .
                 "<p begin=\"00:00:01.000\" end=\"00:00:02.000\">Hi</p></div></body></tt>";

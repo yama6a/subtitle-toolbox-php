@@ -147,7 +147,7 @@ class BinaryEditTest extends CliTestCase
     {
         copy(self::FILES . "profanity/radio.vtt", "$this->dir/radio.vtt");
         copy(self::FILES . "profanity/words.txt", "$this->dir/words.txt");
-        $subtitle = Subtitle::fromStringAutoDetectFormat($this->file("radio.vtt"));
+        $subtitle = Subtitle::fromString($this->file("radio.vtt"));
         $ranges   = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"], ProfanityMask::None, 0.1))->muteRanges;
 
         [$code, $stdout, $stderr] = $this->runCli(["convert", "radio.vtt", "--to", "vtt", "-o", "out.vtt", "--mask-words", "words.txt", "--mask", "none",
@@ -283,7 +283,7 @@ class BinaryEditTest extends CliTestCase
     public function testFixMergeShort(): void
     {
         copy(__DIR__ . "/../files/short-cues/own_speech_to_text.srt", "$this->dir/speech.srt");
-        $narrow = Subtitle::fromStringAutoDetectFormat($this->file("speech.srt"))
+        $narrow = Subtitle::fromString($this->file("speech.srt"))
             ->mergeShortCues(new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 20, maxLinesPerCue: 3)))
             ->toString(Format::SubRip);
 
@@ -299,7 +299,7 @@ class BinaryEditTest extends CliTestCase
     {
         copy(__DIR__ . "/../files/resegmenting/own_whisper_long_segments.json", "$this->dir/whisper.json");
         $split = function (ResegmentOptions $options): string {
-            $subtitle = Subtitle::fromStringAutoDetectFormat($this->file("whisper.json"));
+            $subtitle = Subtitle::fromString($this->file("whisper.json"));
             Resegmenter::apply($subtitle, $options);
 
             return $subtitle->toString(Format::WebVtt);

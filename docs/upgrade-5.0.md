@@ -125,7 +125,17 @@ These methods were public and marked `@internal`. 5.0 removes the ones in this t
 
 ## Load and parse
 
-TODO #970
+| 4.x | 5.0 |
+|:--- |:--- |
+| `Subtitle::loadAutoDetectFormat('movie.srt')` | `Subtitle::load('movie.srt')` |
+| `Subtitle::loadAutoDetectFormat('movie.srt', $options)` | `Subtitle::load('movie.srt', options: $options)` |
+| `Subtitle::fromStringAutoDetectFormat($content)` | `Subtitle::fromString($content)` |
+| `Subtitle::fromStringAutoDetectFormat($content, $options)` | `Subtitle::fromString($content, options: $options)` |
+| `Subtitle::load('movie.srt', Format::SubRip)` | unchanged |
+
+- `load()` and `fromString()` detect the format when you pass no format. Detection, the extension fallback and the exceptions are the same as in the removed methods.
+- There are no aliases. A call to `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` is a fatal error.
+- Pass the options by name, or pass `null` as the format: `Subtitle::load('movie.srt', null, $options)`. The positional call `load('movie.srt', $options)` throws `TypeError`.
 
 ## Options and results
 

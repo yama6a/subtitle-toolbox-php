@@ -207,20 +207,20 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testFromStringAutoDetectFormatSkipsFormatsThatAreNotAutoDetected(): void
+    public function testFromStringWithoutFormatSkipsFormatsThatAreNotAutoDetected(): void
     {
         $this->expectException(UnsupportedFormatException::class);
-        Subtitle::fromStringAutoDetectFormat(file_get_contents(__DIR__ . "/files/chapters/ffmetadata/real/m4b_audiobook.ffmeta"));
+        Subtitle::fromString(file_get_contents(__DIR__ . "/files/chapters/ffmetadata/real/m4b_audiobook.ffmeta"));
     }
 
 
-    public function testFromStringAutoDetectFormatConvertsTheEncoding(): void
+    public function testFromStringWithoutFormatConvertsTheEncoding(): void
     {
         $content = file_get_contents(__DIR__ . "/files/encoding/french-windows-1252.srt");
 
         $this->assertEquals(
             Subtitle::fromString($content, Format::SubRip, new ReadOptions(encoding: "Windows-1252")),
-            Subtitle::fromStringAutoDetectFormat($content, new ReadOptions(encoding: "Windows-1252"))
+            Subtitle::fromString($content, options: new ReadOptions(encoding: "Windows-1252"))
         );
     }
 
