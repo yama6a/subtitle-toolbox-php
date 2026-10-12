@@ -49,28 +49,44 @@ final class Timecode
      */
     public static function parse(string $timecode, ?FrameRate $frameRate = null): float
     {
-        $problem = null;
+        $seconds = self::parseOrReason($timecode, $frameRate);
+        if (is_float($seconds)) {
+            return $seconds;
+        }
+
+        throw new InvalidArgumentException("The timecode \"$timecode\" " . ($seconds ?? "is not h:mm:ss.mmm, m:ss.mmm or h:mm:ss:ff") . ".");
+    }
+
+
+    /**
+     * Returns the seconds of a timecode string as parse() does. For a string of a valid shape that parse() rejects,
+     * it returns the reason, such as "is not below 100000 hours". For a string of another shape, it returns null.
+     *
+     * @internal
+     */
+    public static function parseOrReason(string $timecode, ?FrameRate $frameRate): float|string|null
+    {
         if (preg_match(self::CLOCK_REGEX, $timecode, $matches)) {
             $hours   = $matches[1] === "" ? "0" : $matches[1];
             $minutes = $matches[1] === "" ? $matches[3] : $matches[2];
             if ((float) $hours * 3600 + (float) $minutes * 60 < self::MAX_HOURS * 3600) {
                 return self::toSeconds((int) $hours, (int) $minutes, (int) $matches[4], $matches[5] ?? "");
             }
-            $problem = "is not below " . self::MAX_HOURS . " hours";
-        } elseif (preg_match(self::FRAMES_REGEX, $timecode, $matches)) {
-            $labels  = $frameRate === null ? null : self::labels($frameRate);
-            $problem = match (true) {
-                $labels === null                               => "counts frames and needs a frame rate",
-                (float) $matches[1] >= self::MAX_HOURS         => "is not below " . self::MAX_HOURS . " hours",
-                (float) $matches[4] >= $labels                 => "has a frame number that is not below $labels",
-                default                                        => null,
+
+            return "is not below " . self::MAX_HOURS . " hours";
+        }
+        if (preg_match(self::FRAMES_REGEX, $timecode, $matches)) {
+            $labels = $frameRate === null ? null : self::labels($frameRate);
+
+            return match (true) {
+                $labels === null                       => "counts frames and needs a frame rate",
+                (float) $matches[1] >= self::MAX_HOURS => "is not below " . self::MAX_HOURS . " hours",
+                (float) $matches[4] >= $labels         => "has a frame number that is not below $labels",
+                default                                => self::toSecondsFromFrames((int) $matches[1], (int) $matches[2], (int) $matches[3], (int) $matches[4], $frameRate),
             };
-            if ($problem === null) {
-                return self::toSecondsFromFrames((int) $matches[1], (int) $matches[2], (int) $matches[3], (int) $matches[4], $frameRate);
-            }
         }
 
-        throw new InvalidArgumentException("The timecode \"$timecode\" " . ($problem ?? "is not h:mm:ss.mmm, m:ss.mmm or h:mm:ss:ff") . ".");
+        return null;
     }
 
 

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatDataSchema;
@@ -41,41 +40,42 @@ final class CsvParser extends SubtitleParser
     protected function read(string $content): Subtitle
     {
         $this->columns = $this->formatOptions()->columns ?? new CsvColumns();
-        $delimiter     = $this->formatOptions()->delimiter ?? self::detectDelimiter($content);
+        $delimiter     = $this->formatOptions()->delimiter ?? CsvTokenizer::detectDelimiter($content);
         $records       = array_values(array_filter(
             $this->records($content, $delimiter),
-            fn (array $record): bool => array_filter($record[1], fn (string $cell): bool => trim($cell) !== "") !== []
+            fn (array $record): bool => array_filter($record["cells"], fn (string $cell): bool => trim($cell) !== "") !== []
         ));
         self::checkWidth($records);
         if ($this->columns->header && $this->options->lenient) {
             $records = $this->skipRowsBeforeHeader($records, $delimiter);
         }
 
-        [$headerLine, $header] = $this->columns->header && $records !== [] ? array_shift($records) : [null, null];
-        $roles                 = $this->resolveRoles($header);
-        $this->warnSynonymColumns($header, $roles, $headerLine, $delimiter);
+        $headerRecord = $this->columns->header && $records !== [] ? array_shift($records) : null;
+        $header       = $headerRecord["cells"] ?? null;
+        $roles        = $this->resolveRoles($header);
+        $this->warnSynonymColumns($header, $roles, $headerRecord["line"] ?? null, $delimiter);
 
-        $subtitle   = new Subtitle();
-        $parsedCues = [];
-        $rate       = $this->formatOptions()->frameRate;
-        $frameRate  = $rate === null ? null : new FrameRate($rate);
-        $timeFormat   = null;
-        $openEnds     = [];
-        $milliseconds = $this->hasMillisecondTimes($records, $roles, $delimiter);
-        foreach (array_values($records) as $rowIndex => [$lineNumber, $cells]) {
-            $cell = fn (string $role): string => isset($roles[$role]) ? trim($cells[$roles[$role]] ?? "") : "";
+        $subtitle       = new Subtitle();
+        $parsedCues     = [];
+        $frameRateValue = $this->formatOptions()->frameRate;
+        $frameRate      = $frameRateValue === null ? null : new FrameRate($frameRateValue);
+        $timeFormat     = null;
+        $openEnds       = [];
+        $milliseconds   = $this->hasMillisecondTimes($records, $roles, $delimiter);
+        foreach (array_values($records) as $rowIndex => ["line" => $lineNumber, "cells" => $cells]) {
+            $roleCell = fn (string $role): string => isset($roles[$role]) ? trim($cells[$roles[$role]] ?? "") : "";
             try {
-                [$start, $end] = self::readTimes($cell, $frameRate, $milliseconds, $lineNumber);
+                [$start, $end] = self::readTimes($roleCell, $frameRate, $milliseconds, $lineNumber);
                 // A cut-off row or a time with a comma that split the cells gives the wrong end, so lenient mode drops the row.
                 $end = $end === null ? null : $this->orderedTimes($start, $end, $lineNumber, $rowIndex, [implode($delimiter, $cells)], false)[1];
             } catch (ParsingException $exception) {
                 $this->fail($exception, $lineNumber, $rowIndex, [implode($delimiter, $cells)]);
                 continue;
             }
-            $timeFormat ??= $milliseconds ? CsvTimeFormat::Milliseconds->value : self::timeFormatOf($cell("start"));
+            $timeFormat ??= $milliseconds ? CsvTimeFormat::Milliseconds->value : self::timeFormatOf($roleCell("start"));
 
-            $cue = new SubtitleCue($start, $end ?? $start, $this->textLines($cells[$roles["text"]] ?? "", $cell("speaker")));
-            self::addCellData($cue, $cell, $cells, $roles, $header);
+            $cue = new SubtitleCue($start, $end ?? $start, $this->textLines($cells[$roles["text"]] ?? "", $roleCell("speaker")));
+            self::addCellData($cue, $roleCell, $cells, $roles, $header);
             if ($end === null) {
                 $openEnds[] = $cue;
             }
@@ -88,9 +88,9 @@ final class CsvParser extends SubtitleParser
             "delimiter"  => $delimiter,
             "header"     => $header,
             "roles"      => $roles,
-            "width"      => max([count($header ?? []), ...array_map("count", array_column($records, 1))]),
+            "width"      => max([count($header ?? []), ...array_map("count", array_column($records, "cells"))]),
             "timeFormat" => $timeFormat ?? CsvTimeFormat::Dot->value,
-            "frameRate"  => $rate,
+            "frameRate"  => $frameRateValue,
         ]);
 
         return $subtitle;
@@ -100,15 +100,15 @@ final class CsvParser extends SubtitleParser
     /**
      * Returns the start and the end of a record. The end is null when the record has neither an end nor a duration.
      *
-     * @param \Closure(string): string $cell the trimmed cell of a role
+     * @param \Closure(string): string $roleCell the trimmed cell of a role
      * @return array{float, ?float}
      */
-    private static function readTimes(\Closure $cell, ?FrameRate $frameRate, bool $milliseconds, int $lineNumber): array
+    private static function readTimes(\Closure $roleCell, ?FrameRate $frameRate, bool $milliseconds, int $lineNumber): array
     {
-        $start = self::parseTime($cell("start"), $frameRate, $milliseconds, $lineNumber);
+        $start = self::parseTime($roleCell("start"), $frameRate, $milliseconds, $lineNumber);
         $end   = match (true) {
-            $cell("end") !== ""      => self::parseTime($cell("end"), $frameRate, $milliseconds, $lineNumber),
-            $cell("duration") !== "" => $start + self::parseTime($cell("duration"), $frameRate, $milliseconds, $lineNumber),
+            $roleCell("end") !== ""      => self::parseTime($roleCell("end"), $frameRate, $milliseconds, $lineNumber),
+            $roleCell("duration") !== "" => $start + self::parseTime($roleCell("duration"), $frameRate, $milliseconds, $lineNumber),
             default                  => null,
         };
 
@@ -121,13 +121,13 @@ final class CsvParser extends SubtitleParser
      * MILLISECONDS_MEDIAN_DURATION or more, read as seconds. Then it warns once, also in strict mode.
      * openai-whisper and whisper.cpp write such tables with times in milliseconds.
      *
-     * @param list<array{int, list<string>}> $records
-     * @param array<string, int>             $roles
+     * @param list<array{line: int, cells: list<string>}> $records
+     * @param array<string, int>                          $roles
      */
     private function hasMillisecondTimes(array $records, array $roles, string $delimiter): bool
     {
         $durations = [];
-        foreach ($records as [, $cells]) {
+        foreach ($records as ["cells" => $cells]) {
             $times = array_map(fn (string $role): string => isset($roles[$role]) ? trim($cells[$roles[$role]] ?? "") : "", ["start" => "start", "end" => "end", "duration" => "duration"]);
             foreach ($times as $time) {
                 if ($time !== "" && preg_match('/^[0-9]+$/D', $time) !== 1) {
@@ -152,9 +152,9 @@ final class CsvParser extends SubtitleParser
 
         $this->warn(
             "The times are whole numbers, and the median cue lasts $median seconds. The parser reads the times as milliseconds.",
-            $records[0][0],
+            $records[0]["line"],
             null,
-            [implode($delimiter, $records[0][1])],
+            [implode($delimiter, $records[0]["cells"])],
             ParseWarningAction::Repaired
         );
 
@@ -166,15 +166,15 @@ final class CsvParser extends SubtitleParser
      * Sets the identifier of $cue, and keeps the cells without a role as format data.
      * The format data keys them by their header name, else by their column index.
      *
-     * @param \Closure(string): string $cell
+     * @param \Closure(string): string $roleCell
      * @param list<string>             $cells
      * @param array<string, int>       $roles
      * @param list<string>|null        $header
      */
-    private static function addCellData(SubtitleCue $cue, \Closure $cell, array $cells, array $roles, ?array $header): void
+    private static function addCellData(SubtitleCue $cue, \Closure $roleCell, array $cells, array $roles, ?array $header): void
     {
-        if ($cell("identifier") !== "") {
-            $cue->setIdentifier($cell("identifier"));
+        if ($roleCell("identifier") !== "") {
+            $cue->setIdentifier($roleCell("identifier"));
         }
         $named = [];
         foreach (array_diff_key($cells + array_fill(0, count($header ?? $cells), ""), array_flip($roles)) as $index => $value) {
@@ -187,11 +187,11 @@ final class CsvParser extends SubtitleParser
 
 
     /**
-     * @param array<int, array{int, list<string>}> $records
+     * @param list<array{line: int, cells: list<string>}> $records
      */
     private static function checkWidth(array $records): void
     {
-        foreach ($records as [$lineNumber, $cells]) {
+        foreach ($records as ["line" => $lineNumber, "cells" => $cells]) {
             if (count($cells) > FormatDataSchema::CSV_MAX_COLUMNS) {
                 throw new ParsingException("The table has " . count($cells) . " columns. The limit is " . FormatDataSchema::CSV_MAX_COLUMNS . ".", $lineNumber);
             }
@@ -200,98 +200,14 @@ final class CsvParser extends SubtitleParser
 
 
     /**
-     * Returns the delimiter that occurs most often in the first line that has one, outside quotes. A comma wins a tie.
-     */
-    private static function detectDelimiter(string $content): string
-    {
-        $counts = array_fill_keys(CsvReadOptions::DELIMITERS, 0);
-        $quoted = false;
-        $length = strlen($content);
-        for ($i = 0; $i < $length; $i++) {
-            $char = $content[$i];
-            if ($char === '"') {
-                $quoted = !$quoted;
-            } elseif (!$quoted && ($char === "\n" || $char === "\r") && max($counts) > 0) {
-                break;
-            } elseif (!$quoted && isset($counts[$char])) {
-                $counts[$char]++;
-            }
-        }
-
-        return array_search(max($counts), $counts, true);
-    }
-
-
-    /**
-     * Splits RFC 4180 content into records of cells, keyed by order, each with the 1-based line number of its start.
-     * Line breaks inside quotes become LF. A quote inside an unquoted cell stays text.
-     * In lenient mode, a quote without a closing quote ends at the end of its line.
-     *
-     * @return list<array{int, list<string>}>
+     * @return list<array{line: int, cells: list<string>}>
      */
     private function records(string $content, string $delimiter): array
     {
-        $records = [];
-        $cells   = [];
-        $cell    = "";
-        $line    = 1;
-        $start   = 1;
-        $quoted  = false;
-        $quoteAt = 0;
-        $length  = strlen($content);
-        for ($i = 0; ; $i = $lineEnd) {
-            for (; $i < $length; $i++) {
-                $char = $content[$i];
-                if ($quoted) {
-                    if ($char === '"' && ($content[$i + 1] ?? "") === '"') {
-                        $cell .= '"';
-                        $i++;
-                    } elseif ($char === '"') {
-                        $quoted = false;
-                    } elseif ($char === "\r" || $char === "\n") {
-                        $i    += $char === "\r" && ($content[$i + 1] ?? "") === "\n" ? 1 : 0;
-                        $cell .= "\n";
-                        $line++;
-                    } else {
-                        $cell .= $char;
-                    }
-                } elseif ($char === '"' && $cell === "") {
-                    [$quoted, $quoteAt, $quoteLine] = [true, $i, $line];
-                } elseif ($char === $delimiter) {
-                    $cells[] = $cell;
-                    $cell    = "";
-                } elseif ($char === "\r" || $char === "\n") {
-                    $i        += $char === "\r" && ($content[$i + 1] ?? "") === "\n" ? 1 : 0;
-                    $cells[]   = $cell;
-                    $records[] = [$start, $cells];
-                    $cells     = [];
-                    $cell      = "";
-                    $start     = ++$line;
-                } else {
-                    $cell .= $char;
-                }
-            }
-            if (!$quoted) {
-                break;
-            }
-            if (!$this->options->lenient) {
-                throw new ParsingException("A quoted CSV cell has no closing quote.", $start);
-            }
-            $lineStart = $quoteAt - strcspn(strrev(substr($content, 0, $quoteAt)), "\r\n");
-            $lineEnd   = $quoteAt + 1 + strcspn($content, "\r\n", $quoteAt + 1);
-            $cell      = substr($content, $quoteAt + 1, $lineEnd - $quoteAt - 1);
-            $quoted    = false;
-            $line      = $quoteLine;
-            $this->warn(
-                "A quoted CSV cell has no closing quote. The cell ends at the end of the line.",
-                $line,
-                null,
-                [substr($content, $lineStart, $lineEnd - $lineStart)],
-                ParseWarningAction::Repaired
-            );
-        }
-        if ($cell !== "" || $cells !== []) {
-            $records[] = [$start, [...$cells, $cell]];
+        $tokenizer = new CsvTokenizer();
+        $records   = $tokenizer->records($content, $delimiter, $this->options->lenient);
+        foreach ($tokenizer->unclosedQuotes() as ["line" => $line, "text" => $text]) {
+            $this->warn("A quoted CSV cell has no closing quote. The cell ends at the end of the line.", $line, null, [$text], ParseWarningAction::Repaired);
         }
 
         return $records;
@@ -302,13 +218,13 @@ final class CsvParser extends SubtitleParser
      * Drops the rows before the first row that has the columns of the header, and warns once for them.
      * Without such a row, it keeps all rows, so that resolveRoles() names the missing column.
      *
-     * @param list<array{int, list<string>}> $records
+     * @param list<array{line: int, cells: list<string>}> $records
      *
-     * @return list<array{int, list<string>}>
+     * @return list<array{line: int, cells: list<string>}>
      */
     private function skipRowsBeforeHeader(array $records, string $delimiter): array
     {
-        foreach ($records as $index => [, $cells]) {
+        foreach ($records as $index => ["cells" => $cells]) {
             try {
                 $this->resolveRoles($cells);
             } catch (ParsingException) {
@@ -317,9 +233,9 @@ final class CsvParser extends SubtitleParser
             if ($index > 0) {
                 $this->warn(
                     "The table has " . ($index === 1 ? "1 row" : "$index rows") . " before the header row.",
-                    $records[0][0],
+                    $records[0]["line"],
                     null,
-                    array_map(fn (array $record): string => implode($delimiter, $record[1]), array_slice($records, 0, $index)),
+                    array_map(fn (array $record): string => implode($delimiter, $record["cells"]), array_slice($records, 0, $index)),
                     ParseWarningAction::Skipped
                 );
             }
@@ -347,11 +263,11 @@ final class CsvParser extends SubtitleParser
             }
             $problem = "counts frames. Set CsvReadOptions::\$frameRate.";
         } else {
-            try {
-                return Timecode::parse((string) preg_replace('/:(\d)(?=$|[.,])/', ':0$1', $time));
-            } catch (InvalidArgumentException $e) {
-                $problem = str_contains($e->getMessage(), " is not below ") ? ltrim(substr($e->getMessage(), (int) strpos($e->getMessage(), " is not below "))) : $problem;
+            $seconds = Timecode::parseOrReason((string) preg_replace('/:(\d)(?=$|[.,])/', ':0$1', $time), null);
+            if (is_float($seconds)) {
+                return $seconds;
             }
+            $problem = $seconds === null ? $problem : "$seconds.";
         }
 
         throw new ParsingException("The time \"$time\" $problem", $lineNumber);

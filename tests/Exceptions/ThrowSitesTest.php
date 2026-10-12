@@ -494,7 +494,7 @@ class ThrowSitesTest extends TestCase
             "Parsers/Options/CsvColumns.php: negative index"        => [fn () => new CsvColumns(start: -1), ...$invalid],
             "Parsers/Options/CsvColumns.php: name without header"   => [fn () => new CsvColumns(start: 0, text: "Text", header: false), ...$invalid],
             "Parsers/Options/CsvReadOptions.php: delimiter" => [fn () => new CsvReadOptions(delimiter: "|"), ...$invalid],
-            "Parsers/CsvParser.php: open quote"             => [fn () => (new CsvParser())->parse("start,text\n1,\"a", new ReadOptions()), ...$parsing],
+            "Parsers/CsvTokenizer.php: open quote"          => [fn () => (new CsvParser())->parse("start,text\n1,\"a", new ReadOptions()), ...$parsing],
             "Parsers/CsvParser.php: bad time"               => [fn () => (new CsvParser())->parse("start,text\nsoon,a", new ReadOptions()), ...$parsing],
             "Parsers/CsvParser.php: missing column"         => [fn () => (new CsvParser())->parse("start,end\n1,2", new ReadOptions()), ...$parsing],
             "Parsers/CsvParser.php: too many columns"       => [fn () => (new CsvParser())->parse(str_repeat("a,", 1000) . "a", new ReadOptions()), ...$parsing],

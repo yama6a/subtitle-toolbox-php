@@ -147,6 +147,15 @@ class CsvParserTest extends TestCase
     }
 
 
+    public function testATimeOf100000HoursNamesTheLimit(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The time \"100000:00:00.000\" is not below 100000 hours. (line 2)");
+
+        (new CsvParser())->parse("start,end,text\n100000:00:00.000,100000:00:01.000,a\n", new ReadOptions());
+    }
+
+
     public function testLenientModeSkipsABadRow(): void
     {
         $subtitle = (new CsvParser())->parse("start,end,text\nsoon,2,a\n3,4,b\n", new ReadOptions(lenient: true));
