@@ -201,36 +201,27 @@ trait CueEditing
     public function removeDuplicateCues(float $maxGap = 0.0): self
     {
         OptionChecks::nonNegativeFinite($maxGap, "The maximum gap must be a finite number of 0 or more seconds, got %s.");
-        $maxGap  = Timecode::roundToMilliseconds($maxGap);
-        $anchors = CommentAnchors::of($this->cues, $this->comments);
-        $groups  = [];
+        $maxGap     = Timecode::roundToMilliseconds($maxGap);
+        $anchors    = CommentAnchors::of($this->cues, $this->comments);
+        $joinedInto = new \SplObjectStorage();
+        $runCues    = [];
+        $runStart   = 0.0;
+        $runEnd     = 0.0;
         foreach ($this->cues as $cue) {
-            $last  = array_key_last($groups);
-            $group = $last === null ? null : $groups[$last];
-            $first = $group["cues"][0] ?? null;
-            if ($first !== null && $first->getText() === $cue->getText() && CueList::canJoin($first, $cue)
-                && $first->getAllFormatData() === $cue->getAllFormatData()
-                && Timecode::roundToMilliseconds($cue->getStart() - $group["end"]) <= $maxGap
-                && Timecode::roundToMilliseconds($group["start"] - $cue->getEnd()) <= $maxGap) {
-                $groups[$last]["cues"][] = $cue;
-                $groups[$last]["start"]  = min($group["start"], $cue->getStart());
-                $groups[$last]["end"]    = max($group["end"], $cue->getEnd());
+            if ($runCues !== [] && self::cueEditingContinuesRun($runCues[0], $cue, $runStart, $runEnd, $maxGap)) {
+                $runCues[] = $cue;
+                $runStart  = min($runStart, $cue->getStart());
+                $runEnd    = max($runEnd, $cue->getEnd());
                 continue;
             }
 
-            $groups[] = ["cues" => [$cue], "start" => $cue->getStart(), "end" => $cue->getEnd()];
+            self::cueEditingJoinRun($runCues, $runStart, $joinedInto);
+            $runCues  = [$cue];
+            $runStart = $cue->getStart();
+            $runEnd   = $cue->getEnd();
         }
+        self::cueEditingJoinRun($runCues, $runStart, $joinedInto);
 
-        $joinedInto = new \SplObjectStorage();
-        foreach ($groups as ["cues" => $group, "start" => $start]) {
-            if (count($group) > 1) {
-                CueList::join($group, false, $joinedInto);
-                // A setStart() after addCue() can leave a later cue of the run with an earlier start.
-                if ($start < $group[0]->getStart()) {
-                    $group[0]->setStart($start);
-                }
-            }
-        }
         [$this->cues, $anchors] = CueList::removeJoined($this->cues, $anchors, $joinedInto);
         $this->comments         = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
@@ -298,6 +289,39 @@ trait CueEditing
         $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
+    }
+
+
+    /**
+     * Returns true when $cue has the text, the join properties and the format data of $first, the first cue of the run,
+     * and is at most $maxGap seconds away from the run.
+     */
+    private static function cueEditingContinuesRun(SubtitleCue $first, SubtitleCue $cue, float $runStart, float $runEnd, float $maxGap): bool
+    {
+        return $first->getText() === $cue->getText() && CueList::canJoin($first, $cue)
+            && $first->getAllFormatData() === $cue->getAllFormatData()
+            && Timecode::roundToMilliseconds($cue->getStart() - $runEnd) <= $maxGap
+            && Timecode::roundToMilliseconds($runStart - $cue->getEnd()) <= $maxGap;
+    }
+
+
+    /**
+     * Joins a run of 2 or more cues into its first cue, which then starts at $runStart.
+     *
+     * @param list<SubtitleCue>                           $runCues
+     * @param \SplObjectStorage<SubtitleCue, SubtitleCue> $joinedInto
+     */
+    private static function cueEditingJoinRun(array $runCues, float $runStart, \SplObjectStorage $joinedInto): void
+    {
+        if (count($runCues) < 2) {
+            return;
+        }
+
+        CueList::join($runCues, false, $joinedInto);
+        // A setStart() after addCue() can leave a later cue of the run with an earlier start.
+        if ($runStart < $runCues[0]->getStart()) {
+            $runCues[0]->setStart($runStart);
+        }
     }
 
 

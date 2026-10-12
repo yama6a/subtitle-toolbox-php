@@ -61,6 +61,37 @@ trait Retiming
      */
     public function syncByPoints(array $points): self
     {
+        $points = self::retimingCheckSyncPoints($points);
+        if (count($points) === 1) {
+            return $this->retimingApplyLinearCorrection(1, $points[0]->newSeconds - $points[0]->oldSeconds);
+        }
+
+        $segments = self::retimingPointSegments($points);
+        foreach ($this->getCues() as $cue) {
+            $cue->mapTimes(function (float $time) use ($segments): float {
+                $segment = $segments[0];
+                foreach ($segments as $candidate) {
+                    if ($time < $candidate["from"]) {
+                        break;
+                    }
+                    $segment = $candidate;
+                }
+
+                return $time * $segment["factor"] + $segment["offset"];
+            });
+        }
+
+        return $this;
+    }
+
+
+    /**
+     * @param array<SyncPoint> $points
+     *
+     * @return list<SyncPoint>
+     */
+    private static function retimingCheckSyncPoints(array $points): array
+    {
         if ($points === []) {
             throw new InvalidArgumentException("The sync points must not be empty.");
         }
@@ -79,31 +110,28 @@ trait Retiming
                 );
             }
         }
-        if (count($points) === 1) {
-            return $this->retimingApplyLinearCorrection(1, $points[0]->newSeconds - $points[0]->oldSeconds);
-        }
 
+        return $points;
+    }
+
+
+    /**
+     * Returns the line between each 2 neighbouring points: a time from "from" on maps to time * factor + offset.
+     *
+     * @param list<SyncPoint> $points
+     *
+     * @return list<array{from: float, factor: float, offset: float}>
+     */
+    private static function retimingPointSegments(array $points): array
+    {
         $segments = [];
         for ($index = 1; $index < count($points); $index++) {
             [$a, $b]    = [$points[$index - 1], $points[$index]];
             $factor     = ($b->newSeconds - $a->newSeconds) / ($b->oldSeconds - $a->oldSeconds);
-            $segments[] = [$a->oldSeconds, $factor, $a->newSeconds - $a->oldSeconds * $factor];
-        }
-        foreach ($this->getCues() as $cue) {
-            $cue->mapTimes(function (float $time) use ($segments): float {
-                $segment = $segments[0];
-                foreach ($segments as $candidate) {
-                    if ($time < $candidate[0]) {
-                        break;
-                    }
-                    $segment = $candidate;
-                }
-
-                return $time * $segment[1] + $segment[2];
-            });
+            $segments[] = ["from" => $a->oldSeconds, "factor" => $factor, "offset" => $a->newSeconds - $a->oldSeconds * $factor];
         }
 
-        return $this;
+        return $segments;
     }
 
 
