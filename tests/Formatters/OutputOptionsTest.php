@@ -39,6 +39,9 @@ class OutputOptionsTest extends TestCase
     // EBU STL and PGS are binary, so they have no line ending and no BOM.
     private const BINARY = [Format::EbuStl, Format::Pgs];
 
+    // Compact JSON without a write option for line breaks.
+    private const ONE_LINE = [Format::Whisper];
+
     private const WRITES_BOM = [Format::Ass, Format::Csv, Format::Lyrics, Format::MpSub, Format::SubRip, Format::Tsv, Format::WebVtt];
 
     // The options that a format needs for a subtitle without format data, or that give JSON output line breaks.
@@ -140,7 +143,7 @@ class OutputOptionsTest extends TestCase
         $output  = self::subtitle($format)->toString($format, self::options($format, LineEnding::Crlf));
 
         $this->assertSame(str_replace("\n", "\r\n", $default), $output);
-        $this->assertGreaterThan(0, substr_count($output, "\r\n"));
+        $this->assertSame(in_array($format, self::ONE_LINE, true), substr_count($output, "\r\n") === 0);
     }
 
 
@@ -171,7 +174,7 @@ class OutputOptionsTest extends TestCase
         $output    = (new $formatter())->format(self::subtitle($format), self::options($format, LineEnding::Crlf, false));
 
         $this->assertFalse(StringHelpers::hasUtf8Bom($output));
-        $this->assertStringContainsString("\r\n", $output);
+        $this->assertSame(!in_array($format, self::ONE_LINE, true), str_contains($output, "\r\n"));
         $this->assertDoesNotMatchRegularExpression('/(?<!\r)\n/', $output);
     }
 

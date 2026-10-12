@@ -69,6 +69,7 @@ class RubyFallbackTest extends TestCase
             "OGM chapters"        => [Format::OgmChapters, new WriteOptions()],
             "Podcast chapters"    => [Format::PodcastChapters, new WriteOptions()],
             "YouTube chapters"    => [Format::YouTubeChapters, new WriteOptions()],
+            "Whisper JSON"        => [Format::Whisper, new WriteOptions()],
         ];
     }
 

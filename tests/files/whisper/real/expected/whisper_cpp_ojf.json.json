@@ -8,6 +8,7 @@
         "comments": [],
         "formatData": {
             "whisper": {
+                "format": "whisper.cpp",
                 "systeminfo": "WHISPER : COREML = 0 | OPENVINO = 0 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | OPENMP = 1 | REPACK = 1 | ",
                 "model": {
                     "type": "base",
@@ -49,6 +50,15 @@
                 "alignment": null,
                 "formatData": {
                     "whisper": {
+                        "timestamps": {
+                            "from": "00:00:00,000",
+                            "to": "00:00:02,120"
+                        },
+                        "offsets": {
+                            "from": 0,
+                            "to": 2120
+                        },
+                        "text": " The museum opens at ten.",
                         "tokens": [
                             {
                                 "text": "[_BEG_]",
@@ -176,6 +186,15 @@
                 "alignment": null,
                 "formatData": {
                     "whisper": {
+                        "timestamps": {
+                            "from": "00:00:02,120",
+                            "to": "00:00:04,600"
+                        },
+                        "offsets": {
+                            "from": 2120,
+                            "to": 4600
+                        },
+                        "text": " Children enter for free.",
                         "tokens": [
                             {
                                 "text": "[_BEG_]",

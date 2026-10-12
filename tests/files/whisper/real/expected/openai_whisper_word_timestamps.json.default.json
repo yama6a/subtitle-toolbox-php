@@ -8,6 +8,7 @@
         "comments": [],
         "formatData": {
             "whisper": {
+                "format": "openai-whisper",
                 "language": "en"
             }
         },
@@ -24,6 +25,9 @@
                     "whisper": {
                         "id": 0,
                         "seek": 0,
+                        "start": 0.0,
+                        "end": 2.2,
+                        "text": " The bakery opens at seven.",
                         "tokens": [
                             50364,
                             440,
@@ -85,6 +89,9 @@
                     "whisper": {
                         "id": 1,
                         "seek": 0,
+                        "start": 2.2,
+                        "end": 4.6,
+                        "text": " The café sells rolls & buns.",
                         "tokens": [
                             50474,
                             440,
@@ -154,6 +161,9 @@
                     "whisper": {
                         "id": 3,
                         "seek": 460,
+                        "start": 4.62,
+                        "end": 7.36,
+                        "text": " Fresh bread is ready by eight.",
                         "tokens": [
                             50364,
                             22843,

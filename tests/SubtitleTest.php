@@ -156,8 +156,8 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     public function testToStringThrowsForAFormatWithoutFormatter(): void
     {
         $this->expectException(UnsupportedFormatException::class);
-        $this->expectExceptionMessage("The format whisper can be read but not written.");
-        (new Subtitle())->toString(Format::Whisper);
+        $this->expectExceptionMessage("The format vobsub can be read but not written.");
+        (new Subtitle())->toString(Format::VobSub);
     }
 
 

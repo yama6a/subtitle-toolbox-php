@@ -43,10 +43,11 @@ class WhisperJsonParserTest extends TestCase
         $subtitle = Subtitle::fromStringAutoDetectFormat(self::ISSUE_EXAMPLE);
 
         $this->assertSame("en", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame(["task" => "transcribe", "language" => "english", "duration" => 8.47], $subtitle->findFormatData("whisper"));
+        $this->assertSame(["format" => "openai-api", "task" => "transcribe", "language" => "english", "duration" => 8.47],
+                          $subtitle->findFormatData("whisper"));
         $this->assertSame([[0.0, 3.32, "The beach was quiet."], [3.9, 5.1, "Nobody came."]],
                           array_map(fn (SubtitleCue $cue) => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues()));
-        $this->assertSame(["id" => 0, "words" => [["word" => "The", "start" => 0.0, "end" => 0.24], ["word" => "beach", "start" => 0.24, "end" => 0.71]]],
+        $this->assertSame(["id" => 0, "start" => 0.0, "end" => 3.32, "text" => " The beach was quiet.", "words" => [["word" => "The", "start" => 0.0, "end" => 0.24], ["word" => "beach", "start" => 0.24, "end" => 0.71]]],
                           $subtitle->getCues()[0]->findFormatData("whisper"));
     }
 

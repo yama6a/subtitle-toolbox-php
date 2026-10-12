@@ -49,7 +49,7 @@ final class WhisperJsonParser extends SubtitleParser
 
         $language = $data["language"] ?? $data["result"]["language"] ?? null;
         $language = is_string($language) ? WhisperLanguages::CODES[strtolower($language)] ?? $language : $language;
-        $fileData = array_diff_key($data, array_flip(["segments", "transcription", "words", "word_segments", "text"]));
+        $fileData = ["format" => self::variant($data)] + array_diff_key($data, array_flip(["segments", "transcription", "words", "word_segments", "text"]));
 
         return $this->transcript($cues, $language, $fileData);
     }
@@ -100,7 +100,7 @@ final class WhisperJsonParser extends SubtitleParser
                 continue;
             }
 
-            $result[] = [$start, $end, $text, $timedWords, array_diff_key($segment, array_flip(["start", "end", "text"])), $index, $segment];
+            $result[] = [$start, $end, $text, $timedWords, $segment, $index, $segment];
         }
 
         return $result;
@@ -122,22 +122,12 @@ final class WhisperJsonParser extends SubtitleParser
                 continue;
             }
 
-            // A token with a leading space starts a new word, as in should_split_on_word() of whisper.cpp.
             $words = [];
             try {
-                foreach (is_array($segment["tokens"] ?? null) ? $segment["tokens"] : [] as $tokenIndex => $token) {
-                    $tokenText = $token["text"] ?? null;
-                    if (!is_string($tokenText) || str_starts_with($tokenText, "[_")) {
-                        continue;
-                    }
-
-                    if ($words === [] || str_starts_with($tokenText, " ")) {
-                        $from    = $token["offsets"]["from"] ?? null;
-                        $words[] = ["text" => "", "start" => self::isTime($from)
-                            ? self::boundedField(Timecode::roundToMilliseconds($from / 1000), "$path.tokens[$tokenIndex].offsets.from")
-                            : null];
-                    }
-                    $words[count($words) - 1]["text"] .= $tokenText;
+                foreach (self::tokenWords(is_array($segment["tokens"] ?? null) ? $segment["tokens"] : []) as [$wordText, $from, $tokenIndex]) {
+                    $words[] = ["text" => $wordText, "start" => self::isTime($from)
+                        ? self::boundedField(Timecode::roundToMilliseconds($from / 1000), "$path.tokens[$tokenIndex].offsets.from")
+                        : null];
                 }
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($segment)]);
@@ -148,14 +138,55 @@ final class WhisperJsonParser extends SubtitleParser
                 $start,
                 $end,
                 $text,
-                array_map(fn (array $word): array => ["text" => trim($word["text"]), "start" => $word["start"]], $words),
-                array_diff_key($segment, array_flip(["timestamps", "offsets", "text"])),
+                $words,
+                $segment,
                 $index,
                 $segment,
             ];
         }
 
         return $result;
+    }
+
+
+    /**
+     * Returns the words of whisper.cpp tokens: the trimmed text, the "offsets.from" of the first token and the key of the first token.
+     * A token with a leading space starts a new word, as in should_split_on_word() of whisper.cpp. Special tokens such as "[_BEG_]" are no words.
+     *
+     * @internal
+     *
+     * @return list<array{string, mixed, int|string}>
+     */
+    public static function tokenWords(array $tokens): array
+    {
+        $words = [];
+        foreach ($tokens as $tokenIndex => $token) {
+            $tokenText = is_array($token) ? $token["text"] ?? null : null;
+            if (!is_string($tokenText) || str_starts_with($tokenText, "[_")) {
+                continue;
+            }
+
+            if ($words === [] || str_starts_with($tokenText, " ")) {
+                $words[] = ["", $token["offsets"]["from"] ?? null, $tokenIndex];
+            }
+            $words[count($words) - 1][0] .= $tokenText;
+        }
+
+        return array_map(fn (array $word): array => [trim($word[0]), $word[1], $word[2]], $words);
+    }
+
+
+    /**
+     * Returns the name of the tool whose JSON shape $data has. The formatter writes this shape again.
+     */
+    private static function variant(array $data): string
+    {
+        return match (true) {
+            !self::isList($data["segments"] ?? null)                     => WhisperJsonVariant::WhisperCpp->value,
+            isset($data["word_segments"])                                => WhisperJsonVariant::WhisperX->value,
+            isset($data["task"]) || self::isList($data["words"] ?? null) => WhisperJsonVariant::OpenAiApi->value,
+            default                                                      => WhisperJsonVariant::OpenAiWhisper->value,
+        };
     }
 
 

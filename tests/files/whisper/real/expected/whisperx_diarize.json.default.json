@@ -8,6 +8,7 @@
         "comments": [],
         "formatData": {
             "whisper": {
+                "format": "whisperx",
                 "language": "en"
             }
         },
@@ -22,6 +23,9 @@
                 "alignment": null,
                 "formatData": {
                     "whisper": {
+                        "start": 0.031,
+                        "end": 2.412,
+                        "text": " The market opens on Saturday.",
                         "words": [
                             {
                                 "word": "The",
@@ -74,6 +78,9 @@
                 "alignment": null,
                 "formatData": {
                     "whisper": {
+                        "start": 2.733,
+                        "end": 4.937,
+                        "text": "Apples cost less this week.",
                         "words": [
                             {
                                 "word": "Apples",
@@ -126,6 +133,9 @@
                 "alignment": null,
                 "formatData": {
                     "whisper": {
+                        "start": 5.338,
+                        "end": 6.12,
+                        "text": "15.",
                         "words": [
                             {
                                 "word": "15.",

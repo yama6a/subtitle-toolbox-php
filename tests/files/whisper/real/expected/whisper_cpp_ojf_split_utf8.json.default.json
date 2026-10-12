@@ -8,6 +8,7 @@
         "comments": [],
         "formatData": {
             "whisper": {
+                "format": "whisper.cpp",
                 "systeminfo": "WHISPER : COREML = 0 | OPENVINO = 0 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | OPENMP = 1 | REPACK = 1 | ",
                 "model": {
                     "type": "small",
@@ -49,6 +50,15 @@
                 "alignment": null,
                 "formatData": {
                     "whisper": {
+                        "timestamps": {
+                            "from": "00:00:00,000",
+                            "to": "00:00:01,800"
+                        },
+                        "offsets": {
+                            "from": 0,
+                            "to": 1800
+                        },
+                        "text": "電車が来ます。",
                         "tokens": [
                             {
                                 "text": "[_BEG_]",

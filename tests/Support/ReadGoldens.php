@@ -62,7 +62,7 @@ final class ReadGoldens
 
 
     /**
-     * Returns the golden files on disk, relative to tests/files.
+     * Returns the read golden files on disk, relative to tests/files. The write goldens in the same folder have ".out." or ".to." in their names.
      *
      * @return list<string>
      */
@@ -71,7 +71,9 @@ final class ReadGoldens
         $files = [];
         foreach (array_keys(self::FOLDERS) as $folder) {
             foreach (glob(TestFiles::DIR . "$folder/real/expected/*.json") ?: [] as $path) {
-                $files[] = "$folder/real/expected/" . basename($path);
+                if (preg_match('/\.(?:out|to)\./', basename($path)) !== 1) {
+                    $files[] = "$folder/real/expected/" . basename($path);
+                }
             }
         }
 

@@ -50,7 +50,7 @@ The command line tool also comes as a PHAR file and as two container images. The
 | VobSub | `VobSub` | `vobsub` | `.idx` with `.sub` | yes | no | DVD bitmaps as image cues |
 | JSON of this library | `Json` | `json` | `.json` | yes | yes | |
 | Plain text | `PlainText` | `txt` | `.txt` | no | yes | transcript |
-| Whisper JSON | `Whisper` | `whisper` | `.json` | yes | no | OpenAI API, openai-whisper, faster-whisper, WhisperX, whisper.cpp |
+| Whisper JSON | `Whisper` | `whisper` | `.json` | yes | yes | OpenAI API, openai-whisper, faster-whisper, WhisperX, whisper.cpp |
 | Cloud speech-to-text JSON | `AwsTranscribe`, `Deepgram`, `AssemblyAi`, `GoogleSpeech` | `aws-transcribe`, `deepgram`, `assemblyai`, `google-speech` | `.json` | yes | no | not detected from the content |
 | YouTube timed text | `YouTubeTimedText` | `youtube` | `.json3`, `.srv3`, `.srv1` | yes | no | json3, srv1, srv2, srv3 and transcript XML |
 | Podcasting 2.0 transcript JSON | `PodcastTranscript` | `podcast-transcript` | `.json` | yes | yes | |

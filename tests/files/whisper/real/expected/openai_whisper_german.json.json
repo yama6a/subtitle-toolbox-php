@@ -8,6 +8,7 @@
         "comments": [],
         "formatData": {
             "whisper": {
+                "format": "openai-whisper",
                 "language": "de"
             }
         },
@@ -24,6 +25,9 @@
                     "whisper": {
                         "id": 0,
                         "seek": 0,
+                        "start": 0.0,
+                        "end": 3.0,
+                        "text": " Der Zug fährt um neun Uhr ab.",
                         "tokens": [
                             50364,
                             5618,
@@ -56,6 +60,9 @@
                     "whisper": {
                         "id": 1,
                         "seek": 0,
+                        "start": 3.0,
+                        "end": 6.48,
+                        "text": " Bitte steigen Sie vorne ein.",
                         "tokens": [
                             50514,
                             34223,
@@ -87,6 +94,9 @@
                     "whisper": {
                         "id": 3,
                         "seek": 648,
+                        "start": 8.16,
+                        "end": 13.120000000000001,
+                        "text": " Der nächste Halt ist der Hauptbahnhof.",
                         "tokens": [
                             50364,
                             5618,

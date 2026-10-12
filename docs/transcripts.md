@@ -1,6 +1,26 @@
 # Transcripts
 
-Speech-to-text tools, YouTube and podcast apps use their own transcript formats. The parsers on this page turn them into cues, so you can write SubRip or WebVTT. Whisper, cloud speech-to-text and YouTube formats are read only. The library also writes the podcast transcript formats and plain text.
+Speech-to-text tools, YouTube and podcast apps use their own transcript formats. The parsers on this page turn them into cues, so you can write SubRip or WebVTT. The library writes Whisper JSON, the podcast transcript formats and plain text. Cloud speech-to-text and YouTube formats are read only.
+
+## Edit and save a transcript
+Read a transcript, fix the cues, and write it in its own format. The writer keeps the fields of the source, so other tools still read the file.
+
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
+use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
+
+$subtitle = Subtitle::load('lecture.json', Format::Whisper, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
+$subtitle->replaceText('Hamburg', 'Hannover');
+$subtitle->save('lecture.fixed.json', Format::Whisper);
+```
+
+- **Round trip**: a file read and written without edits gives the same JSON data. The output is compact JSON with UTF-8 characters, so white space and `\u` escapes can differ from the source.
+- **Unedited values**: a time, a text or a word that the cue did not change keeps its source form, for example the time `2.8399999141693115`.
+- **Edited cues**: the writer takes the times, the text and the speaker from the cue. It builds the words of the cue again, so the file never contradicts itself.
+- **Words**: with `TranscriptReadOptions::$wordTimestamps`, the words come from the word timestamps of the cue. A word with the text and the start of a source word keeps all its fields, such as its confidence. A new or changed word gets confidence 1.0, because a person checked it. Without word timestamps, a cue with unchanged times keeps its source words. When its text keeps the number of words, a changed word keeps the times of its source word and gets confidence 1.0. Else the cue has no words. So read with word timestamps before you change times or the number of words.
+- **Other sources**: cues from another format, for example SubRip, give the smallest document of the format. A cue with word timestamps gets words. A cue with a `<v>` speaker gets the speaker field of the format.
 
 ## Whisper JSON
 A speech-to-text tool based on OpenAI Whisper writes a JSON transcript.
@@ -29,7 +49,9 @@ $subtitle->getCues()[0]->findFormatData('whisper')['avg_logprob'];           // 
 - **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each word that has a start time and occurs in the segment text gets a word timestamp before it. The parser skips the other words. The OpenAI API lists the words at the top level. A word then goes to the segment that holds the middle of the word.
 - **Speakers**: off by default. `TranscriptReadOptions::$speakerVoices` writes the segment `speaker` as a `<v>` tag. See [text.md](text.md#speakers).
 - **Language**: the `language` metadata. A name such as `english` becomes `en`. A code such as `en` stays.
-- **Format data**: the subtitle keeps the top-level fields except the segments, words and text, for example `duration`. Each cue keeps the fields of its segment except the times and the text, for example `avg_logprob`, `no_speech_prob`, `words` and `speaker`.
+- **Format data**: the subtitle keeps the top-level fields except the segments, words and text, for example `duration`. Its `format` field names the shape of the file: `openai-whisper` (also faster-whisper), `openai-api`, `whisperx` or `whisper.cpp`. Each cue keeps all fields of its segment, for example `start`, `avg_logprob`, `no_speech_prob`, `words` and `speaker`. The words of the OpenAI API go to the `words` of their segment.
+- **Writing**: `Format::Whisper` writes the shape that `format` names, `openai-whisper` when there is none. See [Edit and save a transcript](#edit-and-save-a-transcript). A new word gets `probability` 1.0, `score` 1.0 for WhisperX, and no confidence for the OpenAI API. A new speaker on a WhisperX cue goes to its words too.
+- **Not kept**: a segment without text gives no cue, so the writer drops it. A segment with an edited text has no `tokens`, because the writer cannot make token ids. A whisper.cpp segment also loses them with edited times or word timestamps, as its tokens hold times. JSON cannot hold invalid UTF-8, so a character that whisper.cpp splits across 2 tokens becomes U+FFFD.
 - **Errors**: JSON without a `segments` or `transcription` list throws `ParsingException`. A response with only `words` or `text` has no cue times, so it throws too.
 
 ## Cloud speech-to-text JSON

@@ -28,6 +28,7 @@ use SubtitleToolbox\Formatters\SubViewerFormatter;
 use SubtitleToolbox\Formatters\TmPlayerFormatter;
 use SubtitleToolbox\Formatters\TtmlFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Formatters\WhisperJsonFormatter;
 use SubtitleToolbox\Formatters\YouTubeChaptersFormatter;
 use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
@@ -100,7 +101,7 @@ final class FormatRegistry
         Format::TmPlayer->value           => [TmPlayerParser::class, TmPlayerFormatter::class, ["txt"]],
         Format::VobSub->value             => [VobSubParser::class, null, ["idx"]],
         Format::WebVtt->value             => [WebVttParser::class, WebVttFormatter::class, ["vtt"]],
-        Format::Whisper->value            => [WhisperJsonParser::class, null, ["json"]],
+        Format::Whisper->value            => [WhisperJsonParser::class, WhisperJsonFormatter::class, ["json"]],
         Format::YouTubeTimedText->value   => [YouTubeTimedTextParser::class, null, ["json3", "srv3", "srv1"]],
         Format::OgmChapters->value        => [OgmChaptersParser::class, OgmChaptersFormatter::class, ["txt"]],
         Format::PodcastChapters->value    => [PodcastChaptersParser::class, PodcastChaptersFormatter::class, ["json"]],

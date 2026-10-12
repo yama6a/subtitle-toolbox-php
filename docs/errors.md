@@ -38,7 +38,7 @@ try {
 `UnsupportedFormatException` covers these cases:
 
 - `fromString()` or `load()` with a format that the library cannot read, such as `Format::PlainText`.
-- `toString()` or `save()` with a format that the library cannot write, such as `Format::Whisper`.
+- `toString()` or `save()` with a format that the library cannot write, such as `Format::VobSub`.
 - `save()` without a format and with an unknown extension, such as `out.unknown`.
 - An MKV, WebM or MP4 file in `load()` or `fromString()`. Call `loadTrack()` instead.
 - An MKV, WebM or MP4 file without exactly 1 subtitle track in `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()`.
