@@ -143,11 +143,4 @@ class StringHelpersTest extends TestCase
         $this->assertSame("deu", StringHelpers::primaryLanguage("deu"));
         $this->assertSame("", StringHelpers::primaryLanguage(null));
     }
-
-
-    public function testCanUseMultibyteRejectsInvalidUtf8(): void
-    {
-        $this->assertSame(extension_loaded("mbstring"), StringHelpers::canUseMultibyte("Grüße"));
-        $this->assertFalse(StringHelpers::canUseMultibyte("Gr\xFC\xDFe"));
-    }
 }

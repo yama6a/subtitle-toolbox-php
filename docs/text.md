@@ -26,7 +26,7 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
 - **Word timestamps**: `stripFormatting()` keeps them. Pass `false` as the second argument to remove them too.
 - **Empty cues**: a transform removes a cue that had text before and has only tags or spaces after. Comments stay before the next cue.
 - **Case modes**: `CaseMode::Upper`, `CaseMode::Lower` and `CaseMode::Sentence`.
-- **Unicode**: with `ext-mbstring`, the full Unicode case mapping applies. `ß` becomes `SS`, and Greek `Σ` at the end of a word becomes `ς` in lower case. Without `ext-mbstring`, or for text that is not valid UTF-8, only the letters A to Z change.
+- **Unicode**: the full Unicode case mapping applies. `ß` becomes `SS`, and Greek `Σ` at the end of a word becomes `ς` in lower case. For text that is not valid UTF-8, only the letters A to Z change.
 - **Turkish and Azerbaijani**: pass `'tr'` or `'az'` as the second argument of `changeCase()`. Then `i` and `İ` pair, and `ı` and `I` pair. Without it, `İ` becomes `i` with a combining dot, U+0307.
 - **Sentence case**: a sentence starts at the first letter or digit after `.`, `!`, `?` or the ellipsis U+2026, and a space or line break. `www.example.com` stays lower case.
 - **Abbreviations**: a comma after the period ends no sentence, so `I.E., NOW` becomes `i.e., now`. After `i.e.`, `e.g.`, `etc.` and `vs.`, a lower case word also continues the sentence. A tag between them does not change that. An upper case word after them starts a new sentence.
