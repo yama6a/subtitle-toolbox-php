@@ -70,8 +70,9 @@ final class MicroDvdFormatter extends SubtitleFormatter
             if (!$stripTags) {
                 $codes .= $line["color"] === null ? "" : "{c:$" . strtoupper(MarkupColors::rgbToBgr(substr($line["color"], 1))) . "}";
                 $codes .= implode("", array_map(fn (string $tag): string => "{y:$tag}", $line["tags"]));
+                $codes .= $storedLines[$index]["otherCodes"] ?? "";
             }
-            $texts[] = $codes . ($storedLines[$index]["otherCodes"] ?? "") . $line["text"];
+            $texts[] = $codes . $line["text"];
         }
 
         return implode("|", $texts);

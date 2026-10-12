@@ -136,6 +136,18 @@ class MicroDvdFormatterTest extends TestCase
     }
 
 
+    public function testStripAllTagsOptionDropsTheFontAndSizeCodesOfARealFile(): void
+    {
+        $subtitle = Subtitle::load(__DIR__ . "/../files/microdvd/real/sub_microdvd_with_styles.sub", Format::MicroDvd,
+            new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 23.976)]));
+
+        $this->assertSame(
+            "{3294}{3366}Passengers, the train is now|arriving at the central station.\n{89682}{89730}Thank you, conductor.\n",
+            $subtitle->toString(Format::MicroDvd, new WriteOptions(stripTags: true))
+        );
+    }
+
+
     public function testChangedStyleWritesNewCodesAndKeepsOtherCodes(): void
     {
         $subtitle = Subtitle::fromString("{1}{1}25\n{25}{50}{Y:i}{f:Arial}One|Two", Format::MicroDvd);
