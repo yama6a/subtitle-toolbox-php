@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Diff;
 
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\SortedSearch;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -238,7 +239,7 @@ final class SubtitleDiff
         $candidates = [];
         foreach ($this->oldTexts as $i => $text) {
             $partners = array_fill_keys($newByText[$text] ?? [], true);
-            for ($k = self::firstAtOrAfter($sortedStarts, $this->oldStarts[$i] - $longest);
+            for ($k = SortedSearch::firstAtOrAfter($sortedStarts, $this->oldStarts[$i] - $longest);
                  $k < count($sortedStarts) && $sortedStarts[$k] < $this->oldEnds[$i]; $k++) {
                 $partners[$newOrder[$k]] = true;
             }
@@ -252,24 +253,6 @@ final class SubtitleDiff
         }
 
         return $candidates;
-    }
-
-
-    /** @param list<float> $sorted */
-    private static function firstAtOrAfter(array $sorted, float $value): int
-    {
-        $low  = 0;
-        $high = count($sorted);
-        while ($low < $high) {
-            $middle = intdiv($low + $high, 2);
-            if ($sorted[$middle] < $value) {
-                $low = $middle + 1;
-            } else {
-                $high = $middle;
-            }
-        }
-
-        return $low;
     }
 
 

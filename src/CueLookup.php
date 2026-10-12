@@ -110,17 +110,7 @@ trait CueLookup
                 ($includeTo ? $cue->getStart() <= $to : $cue->getStart() < $to));
         }
 
-        $low  = 0;
-        $high = count($index["starts"]);
-        while ($low < $high) {
-            $middle = ($low + $high) >> 1;
-            $start  = $index["starts"][$middle];
-            if ($includeTo ? $start <= $to : $start < $to) {
-                $low = $middle + 1;
-            } else {
-                $high = $middle;
-            }
-        }
+        $low = $includeTo ? SortedSearch::firstAfter($index["starts"], $to) : SortedSearch::firstAtOrAfter($index["starts"], $to);
 
         $positions = [];
         self::cueLookupCollectEndingAfter($index["maxEnds"], 1, 0, $index["leafCount"], ["position" => $low, "time" => $from], $positions);
