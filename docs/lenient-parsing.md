@@ -9,7 +9,7 @@ use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString($download, Format::SubRip, new ReadOptions(lenient: true));
 foreach ($subtitle->getParseWarnings() as $warning) {
-    $line = $warning->lineNumber ?? '-';   // lineNumber is null for EBU STL and JSON
+    $line = $warning->lineNumber ?? '-';   // lineNumber is null for EBU STL, PGS, VobSub and JSON
     $logger->warning("line $line: $warning->message ({$warning->action->value})");
 }
 // line 6: Block #1 has no timing line on its second line. The line is "00:00:05,000 => 00:00:07,000". (skipped)
@@ -56,6 +56,9 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | SAMI | a `<SYNC>` tag without a valid `Start`. A negative `Start` gets a `repaired` warning, and the parser reads it as 0. A file whose `<P>` classes are all missing from the STYLE block gets a `repaired` warning with `blockIndex` null | `<SYNC>` tags |
 | TTML, iTT | a `<p>` with a bad time or without an end time | `<p>` elements |
 | EBU STL | a subtitle with a time code out of range, a cut-off last TTI block | TTI blocks |
+| SCC | a line without a time code, and an invalid byte pair such as the `9` of a cut-off last line. The other byte pairs of the line keep their frames. In roll-up and paint-on captions, the last cue keeps the characters before the damage | non-empty lines, the header line is 0 |
+| PGS | the rest of the file from a segment that is cut off or does not start with `PG`. A display set that the damage cut off ends the cue on the screen and shows nothing | segments |
+| VobSub | a subpicture packet that is cut off, starts outside the `.sub` content or fails to decode. The cues of the other packets stay | timestamp lines of the track in the `.idx` |
 | CSV, TSV | a row with a bad time. The rows before the header row, with 1 warning that has `blockIndex` null. A quoted cell without a closing quote gets a `repaired` warning, and the cell ends at the end of its line | rows after the header, without empty rows |
 | JSON | a cue with a bad field. The parser also drops a bad metadata field, a bad comment and the bad format data of one format. Their warnings have `blockIndex` null | cues |
 | Whisper JSON | a segment without `start`, `end` or `text`, or with a time that is negative or not a finite number | segments |
@@ -64,9 +67,9 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | Podcasting 2.0 transcript JSON | a segment with a bad field, for example `"startTime": -5` | segments |
 | HTML transcript | a paragraph with a bad time or without a `<time>` | the paragraphs that each `<cite>` or `<time>` starts |
 
-- **Ignored**: the SCC, PGS and VobSub parsers and the chapter parsers ignore `ReadOptions::$lenient` and always throw. For example, the Podcasting 2.0 chapters parser throws for `"startTime": -5`.
+- **Ignored**: the chapter parsers ignore `ReadOptions::$lenient` and always throw. For example, the Podcasting 2.0 chapters parser throws for `"startTime": -5`.
 - **`ParseWarning`**: see [ParseWarning fields](#parsewarning-fields). A skipped block reports the line of the error, as `ParsingException::getLineNumber()` does in strict mode. A repair reports the line where the parser split or read the cue. SubRip and WebVTT report a repaired time or arrow on the timing line.
-- **No line numbers**: binary EBU STL and the JSON formats have no line numbers, so their warnings have `lineNumber` null. The YouTube XML formats report the line of the XML element.
+- **No line numbers**: binary EBU STL, PGS, VobSub and the JSON formats have no line numbers, so their warnings have `lineNumber` null. The YouTube XML formats report the line of the XML element.
 - **Warnings**: `Subtitle::getParseWarnings()` returns the warnings of the read that made the subtitle.
 - **Not the format**: lenient mode still throws for a WebVTT file without `WEBVTT` when the first timing line is not a WebVTT timing line, for example `00:00:01,000 --> 00:00:02,000`. Autodetection still needs the `WEBVTT` line. SubRip and SBV have no signature, so a file without one readable cue gives no cues and warnings.
 - **Whole-file errors**: lenient mode still throws for a problem outside one cue. Examples:

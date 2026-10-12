@@ -1024,6 +1024,6 @@ class LenientParsingTest extends TestCase
     public function testParsersWithoutLenientModeStillThrow(): void
     {
         $this->expectException(ParsingException::class);
-        (new SccParser())->parse("Scenarist_SCC V1.0\n\nbroken\n", new ReadOptions(lenient: true));
+        (new OgmChaptersParser())->parse("CHAPTER01=00:00:xx.000\nCHAPTER01NAME=Intro\n", new ReadOptions(lenient: true));
     }
 }

@@ -11,6 +11,9 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccRollUp;
+use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -198,5 +201,36 @@ class SccRealFileTest extends TestCase
             ],
             $subtitle->getCues()
         );
+    }
+
+
+    public function testLenientModeKeepsTheCuesBeforeACutOffLine(): void
+    {
+        $content = file_get_contents(self::DIR . "popon_broadcast_df.scc");
+        $cut     = substr($content, 0, intdiv(strlen($content) * 9, 10));
+
+        $subtitle = (new SccParser())->parse($cut, new ReadOptions(lenient: true));
+
+        $this->assertEquals(array_slice((new SccParser())->parse($content)->getCues(), 0, 9), $subtitle->getCues());
+        $this->assertEquals([new ParseWarning("The SCC line has the invalid byte pair \"9\".", 35, 17, ["01:00:03;00\t942c 9"], ParseWarningAction::Skipped)],
+                            $subtitle->getParseWarnings());
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The SCC line has the invalid byte pair \"9\".");
+        (new SccParser())->parse($cut);
+    }
+
+
+    public function testLenientModeSkipsALineWithoutTimeCodeAndKeepsTheFramesOfTheOtherBytePairs(): void
+    {
+        $content = file_get_contents(self::DIR . "popon_broadcast_df.scc");
+        $damaged = str_replace(["01:00:00;00\t94ae 94ae 9420", "01:00:03;00\t942c"], ["01:00:00;00\t94ae 94ae 94x0", "01:00:03;0\t942c"], $content);
+        $padded  = str_replace(["01:00:00;00\t94ae 94ae 9420", "01:00:03;00\t942c 942c"], ["01:00:00;00\t94ae 94ae 8080", ""], $content);
+
+        $subtitle = (new SccParser())->parse($damaged, new ReadOptions(lenient: true));
+
+        $this->assertEquals((new SccParser())->parse($padded, new ReadOptions(lenient: true))->getCues(), $subtitle->getCues());
+        $this->assertSame([[33, "The SCC line has the invalid byte pair \"94x0\"."], [35, "The SCC line \"01:00:03;0\t942c 942c\" does not start with a time code."]],
+                          array_map(fn (ParseWarning $warning): array => [$warning->lineNumber, $warning->message], $subtitle->getParseWarnings()));
     }
 }

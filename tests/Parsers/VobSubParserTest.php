@@ -13,6 +13,8 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\FakeOcrEngine;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
+use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -364,6 +366,41 @@ class VobSubParserTest extends TestCase
         $this->expectExceptionMessage("The filepos 000002000 of timestamp 11.000 is outside the .sub content of 8192 bytes.");
 
         (new VobSubParser())->parse(substr($sub, 0, 0x2000), new ReadOptions(formats: [new VobSubReadOptions($idx)]));
+    }
+
+
+    public function testLenientModeSkipsAPacketThatTheEndOfTheFileCutOff(): void
+    {
+        $sub     = file_get_contents(self::DIR . "text-pal.sub");
+        $cut     = substr($sub, 0, intdiv(strlen($sub) * 9, 10));
+        $options = fn (bool $lenient): ReadOptions => new ReadOptions(lenient: $lenient, formats: [new VobSubReadOptions(file_get_contents(self::DIR . "text-pal.idx"))]);
+
+        $subtitle = (new VobSubParser())->parse($cut, $options(true));
+
+        $this->assertEquals(array_slice($this->parseFixture("text-pal")->getCues(), 0, 5), $subtitle->getCues());
+        $this->assertEquals([new ParseWarning("The .sub packet at byte 14350 is longer than the content.", null, 5, [], ParseWarningAction::Skipped)],
+                            $subtitle->getParseWarnings());
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The .sub packet at byte 14350 is longer than the content.");
+        (new VobSubParser())->parse($cut, $options(false));
+    }
+
+
+    public function testLenientModeSkipsADamagedPacketAndReadsTheNextOnes(): void
+    {
+        $idx    = file_get_contents(self::DIR . "two-tracks-pal.idx");
+        $sub    = file_get_contents(self::DIR . "two-tracks-pal.sub");
+        preg_match_all("/filepos: ([0-9a-f]+)/", $idx, $matches);
+        $sub[(int) hexdec($matches[1][1])] = "\xFF";
+
+        $subtitle = (new VobSubParser())->parse($sub, new ReadOptions(lenient: true, formats: [new VobSubReadOptions($idx, track: 0)]));
+
+        $expected = $this->parseFixture("two-tracks-pal", 0)->getCues();
+        unset($expected[1]);
+        $this->assertSame(array_map(fn (SubtitleCue $cue): float => $cue->getStart(), array_values($expected)),
+                          array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $subtitle->getCues()));
+        $this->assertSame([1, ParseWarningAction::Skipped], [$subtitle->getParseWarnings()[0]->blockIndex, $subtitle->getParseWarnings()[0]->action]);
     }
 
 

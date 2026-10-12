@@ -13,7 +13,7 @@ final class ParseWarning
      *
      * @internal
      *
-     * @param ?int         $lineNumber 1-based input line of the problem. Null for binary EBU STL and the JSON formats, which have no lines.
+     * @param ?int         $lineNumber 1-based input line of the problem. Null for binary EBU STL, PGS, VobSub and the JSON formats, which have no lines.
      * @param ?int         $blockIndex 0-based number of the block, as in the "Block #n" messages. Null for a library JSON field outside the cues.
      * @param list<string> $block      the lines of the block, trimmed as the parser reads them
      */

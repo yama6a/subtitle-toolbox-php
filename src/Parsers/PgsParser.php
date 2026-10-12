@@ -83,22 +83,23 @@ final class PgsParser extends SubtitleParser
         $this->presentation = null;
         $this->shownImage   = null;
 
-        $length = strlen($content);
-        $offset = 0;
+        $length  = strlen($content);
+        $offset  = 0;
+        $segment = 0;
+        $cutOff  = false;
         while ($offset < $length) {
-            if (substr($content, $offset, 2) !== self::MAGIC) {
-                throw new ParsingException("The segment at byte $offset does not start with the PG magic bytes.");
-            }
-            if ($length - $offset < self::HEADER_LENGTH) {
-                throw new ParsingException("The segment header at byte $offset is cut off.");
+            try {
+                self::checkSegment($content, $offset);
+            } catch (ParsingException $exception) {
+                // Lenient mode keeps the cues before the damage, which is usually the end of a cut-off file.
+                $this->fail($exception, null, $segment, []);
+                $cutOff = true;
+                break;
             }
 
             ["pts" => $pts, "type" => $type, "size" => $size] = unpack("Npts/Ndts/Ctype/nsize", $content, $offset + 2);
-            if ($length - $offset - self::HEADER_LENGTH < $size) {
-                throw new ParsingException("The segment at byte $offset has $size bytes of data, but the file ends before.");
-            }
-
             $data    = substr($content, $offset + self::HEADER_LENGTH, $size);
+            $segment++;
             $offset += self::HEADER_LENGTH + $size;
 
             match ($type) {
@@ -111,12 +112,32 @@ final class PgsParser extends SubtitleParser
             };
         }
 
-        $this->endDisplaySet();
+        $this->endDisplaySet($cutOff);
         if ($this->shownImage !== null) {
             $this->addCue($this->shownImage["start"] + $this->options->lastCueDuration);
         }
 
         return (new Subtitle())->addCues($this->cues);
+    }
+
+
+    /**
+     * Throws when the file does not hold the whole segment at $offset.
+     */
+    private static function checkSegment(string $content, int $offset): void
+    {
+        $length = strlen($content);
+        if (substr($content, $offset, 2) !== self::MAGIC) {
+            throw new ParsingException("The segment at byte $offset does not start with the PG magic bytes.");
+        }
+        if ($length - $offset < self::HEADER_LENGTH) {
+            throw new ParsingException("The segment header at byte $offset is cut off.");
+        }
+
+        $size = unpack("n", $content, $offset + self::HEADER_LENGTH - 2)[1];
+        if ($length - $offset - self::HEADER_LENGTH < $size) {
+            throw new ParsingException("The segment at byte $offset has $size bytes of data, but the file ends before.");
+        }
     }
 
 
@@ -206,14 +227,18 @@ final class PgsParser extends SubtitleParser
     }
 
 
-    private function endDisplaySet(): void
+    /**
+     * Shows the image of the display set. A display set that the damage cut off ends the shown cue and shows nothing,
+     * as a decoder shows a display set at its end segment.
+     */
+    private function endDisplaySet(bool $cutOff = false): void
     {
         if ($this->presentation === null) {
             return;
         }
 
         $time               = $this->presentation["time"];
-        $image              = $this->render($this->presentation);
+        $image              = $cutOff ? null : $this->render($this->presentation);
         $this->presentation = null;
 
         if ($this->shownImage !== null) {

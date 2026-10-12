@@ -26,8 +26,7 @@ use SubtitleToolbox\SubtitleReader;
  */
 final class InputReader
 {
-    private const IGNORE_LENIENT = [Format::Scc, Format::Pgs, Format::VobSub, Format::FfMetadataChapters, Format::OgmChapters,
-                                    Format::PodcastChapters, Format::YouTubeChapters];
+    private const IGNORE_LENIENT = [Format::FfMetadataChapters, Format::OgmChapters, Format::PodcastChapters, Format::YouTubeChapters];
 
     private readonly ?Format $fromFormat;
 
