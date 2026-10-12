@@ -37,6 +37,7 @@ $cue->setIdentifier('intro');
 - **Metadata keys**: `Subtitle` has constants for the shared keys `title`, `author`, `artist`, `album` and `language`.
 - **Comments**: `getComments()` returns `Comment` objects with the readonly fields `text` and `beforeCueIndex`. A comment comes before the cue at `beforeCueIndex`. An index equal to the cue count puts it after the last cue.
 - **Re-index**: `reIndexCues()` sorts the cues by start time and numbers them from 0. It moves each comment together with its cue. A comment before a removed cue moves to the next cue.
+- **Start time edits**: `$subtitle->getCues()[0]->setStart(10)` can put a cue out of start order. The subtitle puts it back before the next call that reads the cues, as `reIndexCues()` would. Each comment moves with its cue, and cues with the same start keep their order. So a cue index that you keep across a start time edit can point to another cue. A read after no start time edit costs nothing extra.
 
 ## Alignment and format data
 ```php
@@ -95,7 +96,7 @@ $subtitle->removeCuesWhere(fn (SubtitleCue $cue) => $cue->getEnd() - $cue->getSt
 - **Overlaps**: cues can overlap, so `findCuesAt()` returns an array. `findCueIndexAt()` returns the lowest index of these cues.
 - **Keys**: `findCuesAt()`, `findCuesBetween()` and `findCues()` keep the cue index as the array key.
 - **Remove**: `removeCuesWhere()` moves a comment before a removed cue to the next kept cue, and then calls `reIndexCues()`.
-- **Add and remove**: `addCue()` and `addCues()` sort the cues by start time after each call, also after a start time edit through `getCues()`. A cue that starts at or after the last cue of a sorted list goes to the end without a sort, so `addCue(new SubtitleCue(...))` in a loop over cues in start order is as fast as `addCues()`. After a `setStart()` or `setEnd()` on a cue that a subtitle holds, the next call checks the order of every cue once. A comment after the last cue stays after the last cue, also when the added cue sorts last. `removeCue()` numbers the remaining cues from 0 again, and sorts them when a start time edit left them out of order.
+- **Add and remove**: `addCue()` and `addCues()` sort the cues by start time after each call. A cue that starts at or after the last cue goes to the end without a sort, so `addCue()` in a loop over cues in start order is as fast as `addCues()`. A comment after the last cue stays after the last cue, also when the added cue sorts last. `removeCue()` numbers the remaining cues from 0 again.
 - **No array access**: `$subtitle[3]` does not work. Use `getCues()`, `addCue()` and `removeCue()`, so the cue indexes and comments stay correct.
 - **Structure check**: `validate(ValidationRules::structure())` returns one violation per problem. It reports a subtitle without cues. It also reports a cue that starts before the previous cue starts or ends, and a cue that ends before it starts. See [validation](validation.md).
 

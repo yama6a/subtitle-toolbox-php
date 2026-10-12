@@ -64,6 +64,56 @@ final class CueList
 
 
     /**
+     * Returns $cues in start order, or null when they are in start order already.
+     * Only the cues in $moved can be out of order. The result equals a stable sort: equal starts keep their order in $cues.
+     *
+     * @param list<SubtitleCue> $cues
+     * @param list<SubtitleCue> $moved
+     *
+     * @return ?list<SubtitleCue>
+     */
+    public static function withCuesMoved(array $cues, array $moved): ?array
+    {
+        $movedAt = [];
+        foreach ($moved as $cue) {
+            foreach (array_keys($cues, $cue, true) as $position) {
+                $movedAt[$position] = $cue;
+            }
+        }
+        $inPlace = true;
+        foreach ($movedAt as $position => $cue) {
+            $inPlace = $inPlace && ($position === 0 || $cues[$position - 1]->getStart() <= $cue->getStart())
+                && (!isset($cues[$position + 1]) || $cue->getStart() <= $cues[$position + 1]->getStart());
+        }
+        if ($inPlace) {
+            return null;
+        }
+
+        ksort($movedAt);
+        $rest      = array_diff_key($cues, $movedAt);
+        $positions = array_keys($rest);
+        $rest      = array_values($rest);
+        foreach ($movedAt as $position => $cue) {
+            $low  = 0;
+            $high = count($rest);
+            while ($low < $high) {
+                $middle = ($low + $high) >> 1;
+                $start  = $rest[$middle]->getStart();
+                if ($start < $cue->getStart() || ($start === $cue->getStart() && $positions[$middle] < $position)) {
+                    $low = $middle + 1;
+                } else {
+                    $high = $middle;
+                }
+            }
+            array_splice($rest, $low, 0, [$cue]);
+            array_splice($positions, $low, 0, [$position]);
+        }
+
+        return $rest;
+    }
+
+
+    /**
      * Joins the cues of $group into the first cue of $group and adds each other cue to $joinedInto.
      * The first cue ends at the latest end of the group. With $joinLines, it also gets the lines of the others.
      * removeJoined() then removes the other cues from the cue list.

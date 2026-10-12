@@ -110,14 +110,14 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testRemoveCueSortsCuesThatAStartTimeEditLeftOutOfOrder(): void
+    public function testRemoveCueCountsTheIndexInTheSortedCues(): void
     {
         $subtitle = TestSubtitles::fromTimes([[1, 2], [3, 4], [5, 6]]);
         $subtitle->getCues()[0]->setStart(10)->setEnd(11);
 
         $subtitle->removeCue(1);
 
-        $this->assertSame(["text2", "text0"], TestSubtitles::texts($subtitle));
+        $this->assertSame(["text1", "text0"], TestSubtitles::texts($subtitle));
     }
 
 
@@ -160,9 +160,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $subtitle = new Subtitle();
         $this->assertSame([[null, ValidationRule::RequireCues, 0]], $problems($subtitle));
 
-        $subtitle->addCues([new SubtitleCue(1, 2, "text1"), new SubtitleCue(3, 4, "text2"), new SubtitleCue(5, 6, "text3")]);
-        $subtitle->getCues()[1]->setStart(5)->setEnd(6);
-        $subtitle->getCues()[2]->setStart(3)->setEnd(4);
+        $subtitle = TestSubtitles::inGivenOrder([[1, 2, "text1"], [5, 6, "text2"], [3, 4, "text3"]]);
         $this->assertSame([
             [2, ValidationRule::NoUnsortedCues, 2.0],
             [2, ValidationRule::NoOverlap, 3.0],
@@ -333,12 +331,10 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
     public function testReIndexKeepsEachCommentBeforeItsCue(): void
     {
-        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "late"), new SubtitleCue(3, 4, "early")]);
+        $subtitle = TestSubtitles::inGivenOrder([[5, 6, "late"], [1, 2, "early"]]);
         $subtitle->addComment("before late", 0);
         $subtitle->addComment("before early", 1);
         $subtitle->addComment("at the end", 2);
-        $subtitle->getCues()[0]->setStart(5)->setEnd(6);
-        $subtitle->getCues()[1]->setStart(1)->setEnd(2);
 
         $subtitle->reIndexCues();
 
@@ -351,6 +347,58 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
             ],
             $subtitle->getComments()
         );
+    }
+
+
+    public function testAStartTimeEditSortsTheCuesWithTheirCommentsBeforeTheNextRead(): void
+    {
+        $subtitle = Subtitle::load(__DIR__ . "/files/editing/harbour_tour.vtt", Format::WebVtt);
+
+        $subtitle->getCues()[3]->setStart(19)->setEnd(20);
+
+        $this->assertStringEqualsFile(__DIR__ . "/files/editing/harbour_tour_start_edited.vtt", $subtitle->toString(Format::WebVtt));
+    }
+
+
+    public function testAStartTimeEditChangesTheIndexesOfTheLookups(): void
+    {
+        $subtitle = TestSubtitles::fromTimes([[1, 2], [3, 4], [5, 6]]);
+
+        $subtitle->getCues()[0]->setStart(10)->setEnd(11);
+
+        $this->assertSame(2, $subtitle->findCueIndexAt(10.5));
+        $this->assertSame(["text1", "text2", "text0"], TestSubtitles::texts($subtitle));
+        $this->assertSame(["text1", "text2", "text0"], TestSubtitles::texts(iterator_to_array($subtitle)));
+        $this->assertSame(["text1", "text2"], TestSubtitles::texts($subtitle->removeCue(2)));
+    }
+
+
+    public function testACopySortsTheCuesOfAStartTimeEditBeforeTheCopy(): void
+    {
+        $subtitle = TestSubtitles::fromTimes([[1, 2], [3, 4], [3, 5]]);
+        $cues     = $subtitle->getCues();
+        $cues[0]->setStart(3);
+
+        $this->assertSame(["text0", "text1", "text2"], TestSubtitles::texts(clone $subtitle));
+        $cues[1]->setStart(4);
+        $this->assertSame(["text0", "text2", "text1"], TestSubtitles::texts(clone $subtitle));
+        $this->assertSame(["text0", "text2", "text1"], TestSubtitles::texts($subtitle));
+    }
+
+
+    public function testFromArrayKeepsItsCueOrderUntilTheFirstStartTimeEdit(): void
+    {
+        $subtitle = TestSubtitles::inGivenOrder([[5, 6, "late"], [1, 2, "early"], [3, 4, "middle"]]);
+
+        (new SubtitleCue(0, 1))->setStart(2);
+        $subtitle->getCues()[0]->setEnd(6.5);
+
+        $this->assertSame(["late", "early", "middle"], TestSubtitles::texts($subtitle));
+        $this->assertSame(["late", "early", "middle"], TestSubtitles::texts(clone $subtitle));
+        $subtitle->getCues()[1]->setStart(1.5);
+        $this->assertSame(["early", "middle", "late"], TestSubtitles::texts($subtitle));
+        $subtitle->getCues()[0]->setStart(7);
+        $this->assertSame(["middle", "late", "early"], TestSubtitles::texts($subtitle));
     }
 
 

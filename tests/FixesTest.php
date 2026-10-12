@@ -72,9 +72,7 @@ class FixesTest extends \PHPUnit\Framework\TestCase
 
     public function testFixOverlapsUsesTheNextCueInTimeOrder(): void
     {
-        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "late"), new SubtitleCue(3, 4, "early")]);
-        $subtitle->getCues()[0]->setStart(10)->setEnd(14);
-        $subtitle->getCues()[1]->setStart(1)->setEnd(12);
+        $subtitle = TestSubtitles::inGivenOrder([[10, 14, "late"], [1, 12, "early"]]);
 
         $subtitle->fixOverlaps();
 
@@ -216,13 +214,11 @@ class FixesTest extends \PHPUnit\Framework\TestCase
 
     public function testAddLeadInOutUsesTheTimeOrderOfTheCues(): void
     {
-        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "late"), new SubtitleCue(3, 4, "early")]);
-        $subtitle->getCues()[0]->setStart(5)->setEnd(6);
-        $subtitle->getCues()[1]->setStart(1)->setEnd(4.9);
+        $subtitle = TestSubtitles::inGivenOrder([[5, 6, "late"], [1, 4.9, "early"]]);
 
         $subtitle->addLeadInOut(0.2, 0.3);
 
-        $this->assertSame([[5.0, 6.3], [0.8, 5.0]], TestSubtitles::times($subtitle));
+        $this->assertSame([[0.8, 5.0], [5.0, 6.3]], TestSubtitles::times($subtitle));
     }
 
 

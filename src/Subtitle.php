@@ -53,8 +53,11 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     private ?Format $format = null;
 
-    /** @var ?\WeakMap<Subtitle, int> the cue time edit count at which each subtitle last had its cues in start order */
-    private static ?\WeakMap $cuesSortedAt = null;
+    /** True while the cues keep the order that fromArray() read, out of start order. */
+    private bool $keepsArrayCueOrder = false;
+
+    /** Above this count of start changes, the next read checks the order of all cues instead of moving each changed cue. */
+    private const MAX_MOVED_CUES = 100;
 
 
     /**
@@ -64,6 +67,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     {
         $this->cues           = array_map(fn (SubtitleCue $cue): SubtitleCue => clone $cue, $this->cues);
         $this->cueLookupIndex = null;
+        $this->holdCuesInStartOrder();
     }
 
 
@@ -73,7 +77,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     public function __wakeup(): void
     {
         $this->cueLookupIndex = null;
-        SubtitleCue::countTimeEditsOf($this->cues);
+        $this->holdCuesInStartOrder();
     }
 
 
@@ -238,6 +242,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
      */
     public function toString(Format $format, ?WriteOptions $options = null): string
     {
+        $this->sortStartChanges();
         $options ??= new WriteOptions();
         $options = WriteDefaults::for($this, $format, $options);
         $formatterClass = FormatRegistry::formatterClass($format)
@@ -266,6 +271,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
      */
     public function getCues(): array
     {
+        $this->sortStartChanges();
+
         return $this->cues;
     }
 
@@ -294,15 +301,15 @@ final class Subtitle implements \IteratorAggregate, \Countable
             $added[] = $cue;
         }
 
+        $this->sortStartChanges();
+        CueHolders::hold($this, $added);
         $count = count($this->cues);
-        if ($this->cuesInStartOrder() && CueList::startsInOrder(array_merge(array_slice($this->cues, -1), $added))) {
+        if (!$this->keepsArrayCueOrder && CueList::startsInOrder(array_merge(array_slice($this->cues, -1), $added))) {
             array_push($this->cues, ...$added);
             // A comment after the last cue stays after the last cue.
             for ($index = count($this->comments) - 1; $index >= 0 && $this->comments[$index]->beforeCueIndex >= $count; $index--) {
                 $this->comments[$index] = $this->comments[$index]->withBeforeCueIndex(count($this->cues));
             }
-            SubtitleCue::countTimeEditsOf($added);
-            $this->markCuesSorted();
 
             return $this;
         }
@@ -327,8 +334,13 @@ final class Subtitle implements \IteratorAggregate, \Countable
             throw new CueNotFoundException("Cannot remove cue $cueIndex: the cue does not exist.");
         }
 
+        $this->sortStartChanges();
+        $removed = $this->cues[$cueIndex];
         unset($this->cues[$cueIndex]);
-        if (!$this->cuesInStartOrder()) {
+        if (!in_array($removed, $this->cues, true)) {
+            CueHolders::release($this, [$removed]);
+        }
+        if ($this->keepsArrayCueOrder) {
             return $this->reIndexCues();
         }
 
@@ -385,6 +397,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
      */
     public function setLinesAndRemoveEmptied(callable $linesOf, ?callable $hasText = null): \SplObjectStorage
     {
+        $this->sortStartChanges();
         $hasText ??= Markup::hasVisibleText(...);
         $emptied   = new \SplObjectStorage();
         foreach ($this->cues as $index => $cue) {
@@ -442,6 +455,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
      */
     public function getComments(): array
     {
+        $this->sortStartChanges();
+
         return $this->comments;
     }
 
@@ -454,6 +469,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         if ($beforeCueIndex < 0) {
             throw new InvalidArgumentException("The cue index of a comment must not be negative, got $beforeCueIndex.");
         }
+        $this->sortStartChanges();
 
         $last             = $this->comments === [] ? null : $this->comments[count($this->comments) - 1];
         $this->comments[] = new Comment($text, $beforeCueIndex);
@@ -489,39 +505,50 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     private function sortCues(): void
     {
-        $this->cues = CueList::inStartOrder($this->cues);
-        SubtitleCue::countTimeEditsOf($this->cues);
-        $this->markCuesSorted();
+        $this->cues               = CueList::inStartOrder($this->cues);
+        $this->keepsArrayCueOrder = false;
+        CueHolders::takeStartChanges($this);
     }
 
 
     /**
-     * Returns true when the cues are in start order. It checks every cue only after a time edit since the last check.
+     * Puts the cues whose start changed since the last read back in start order, with their comments.
+     * A few changed cues move one by one. Many changed cues lead to one check, and a sort when the check fails.
      */
-    private function cuesInStartOrder(): bool
+    private function sortStartChanges(): void
     {
-        self::$cuesSortedAt ??= new \WeakMap();
-        if ((self::$cuesSortedAt[$this] ?? null) === SubtitleCue::timeEditCount()) {
-            return true;
+        $changed = CueHolders::takeStartChanges($this);
+        if ($changed === []) {
+            return;
         }
-        if (!CueList::startsInOrder($this->cues)) {
-            return false;
+        if ($this->keepsArrayCueOrder) {
+            $this->reIndexCues();
+
+            return;
         }
 
-        SubtitleCue::countTimeEditsOf($this->cues);
-        $this->markCuesSorted();
-
-        return true;
+        if (count($changed) > self::MAX_MOVED_CUES) {
+            $cues = CueList::startsInOrder($this->cues) ? null : CueList::inStartOrder($this->cues);
+        } else {
+            $cues = CueList::withCuesMoved($this->cues, $changed);
+        }
+        if ($cues !== null) {
+            $anchors        = CommentAnchors::of($this->cues, $this->comments);
+            $this->cues     = $cues;
+            $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
+        }
     }
 
 
     /**
-     * Records that the cues are in start order now. Their time edits must count, see SubtitleCue::countTimeEditsOf().
+     * Holds the cues after a copy or an unserialize, and sorts them unless they keep the order of fromArray().
      */
-    private function markCuesSorted(): void
+    private function holdCuesInStartOrder(): void
     {
-        self::$cuesSortedAt ??= new \WeakMap();
-        self::$cuesSortedAt[$this] = SubtitleCue::timeEditCount();
+        CueHolders::hold($this, $this->cues);
+        if (!$this->keepsArrayCueOrder && !CueList::startsInOrder($this->cues)) {
+            $this->reIndexCues();
+        }
     }
 
 
@@ -548,6 +575,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         $kept = array_diff_key($this->cues, array_flip($cueIndexes));
 
         $copy->cues     = array_values($kept);
+        CueHolders::hold($copy, $copy->cues);
         $copy->comments = CommentAnchors::comments($copy->cues, $this->comments, CommentAnchors::of($kept, $this->comments));
 
         return $copy;

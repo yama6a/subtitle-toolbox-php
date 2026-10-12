@@ -63,6 +63,20 @@ final class TestSubtitles
 
 
     /**
+     * Builds a subtitle from [start, end, text] tuples through fromArray(), which keeps cues out of start order.
+     *
+     * @param list<array{float|int, float|int, string}> $cues
+     */
+    public static function inGivenOrder(array $cues): Subtitle
+    {
+        return Subtitle::fromArray([
+            "version" => Subtitle::ARRAY_VERSION,
+            "cues"    => array_map(fn (array $cue): array => ["start" => $cue[0], "end" => $cue[1], "lines" => [$cue[2]]], $cues),
+        ]);
+    }
+
+
+    /**
      * @param Subtitle|iterable<SubtitleCue> $cues
      *
      * @return list<array{float, float, string}> [start, end, text] of each cue
