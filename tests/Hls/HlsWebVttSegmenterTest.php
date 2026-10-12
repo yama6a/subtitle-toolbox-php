@@ -126,6 +126,37 @@ class HlsWebVttSegmenterTest extends TestCase
     }
 
 
+    // A scan of all cues for each segment takes about 9 s here.
+    public function testRealFileRepeatedToFiftyOneThousandCuesSegmentsUnderFiveSeconds(): void
+    {
+        $file  = Subtitle::fromString(file_get_contents(self::FILES . "node-webvtt-subs1.vtt"), Format::WebVtt);
+        $texts = fn (string $vtt): array => array_map(fn (SubtitleCue $cue): string => $cue->getText(),
+                                                      array_values(Subtitle::fromString($vtt, Format::WebVtt)->getCues()));
+        $once  = array_map($texts, array_values(iterator_to_array(HlsWebVttSegmenter::segment($file, new HlsSegmentOptions(mediaDuration: 132))->getSegments())));
+        $cues  = [];
+        for ($copy = 0; $copy < 1700; $copy++) {
+            foreach ($file->getCues() as $cue) {
+                $cues[] = new SubtitleCue($cue->getStart() + 132 * $copy, $cue->getEnd() + 132 * $copy, $cue->getText());
+            }
+        }
+        $hls = HlsWebVttSegmenter::segment((new Subtitle())->addCues($cues));
+
+        $start    = microtime(true);
+        $count    = 0;
+        $copy1000 = [];
+        foreach ($hls->getSegments() as $vtt) {
+            if (intdiv($count++, 22) === 1000) {
+                $copy1000[] = $texts($vtt);
+            }
+        }
+
+        $this->assertLessThan(5, microtime(true) - $start);
+        $this->assertSame(37399, $count);
+        $this->assertCount(22, $once);
+        $this->assertSame($once, $copy1000);
+    }
+
+
     public function testTargetDurationRoundsToTheNearestInteger(): void
     {
         $hls = HlsWebVttSegmenter::segment($this->ferry(), new HlsSegmentOptions(segmentDuration: 6.006));
