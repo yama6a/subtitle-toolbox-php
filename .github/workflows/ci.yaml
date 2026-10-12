@@ -2,11 +2,11 @@ name: ci
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, 5.x]
     # labeled/unlabeled so the gate re-runs on a label change, not just on a push.
     types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
-    branches: [master]
+    branches: [master, 5.x]
 
 concurrency:
   group: ci-${{ github.ref }}
