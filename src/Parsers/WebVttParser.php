@@ -11,6 +11,7 @@ use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -400,7 +401,7 @@ final class WebVttParser extends SubtitleParser
             throw new ParsingException("The time \"$end\" is not valid.", $lineNumber);
         }
 
-        $lines      = str_replace(array_keys(self::ENTITIES), array_values(self::ENTITIES), array_slice($rawLines, 1));
+        $lines      = array_map(self::escapeBareAmpersands(...), str_replace(array_keys(self::ENTITIES), array_values(self::ENTITIES), array_slice($rawLines, 1)));
         $looseTimes = [];
         foreach ($lines as $offset => $line) {
             self::checkWordTimestamps([$line], $lineNumber === null ? null : $lineNumber + 1 + $offset);
@@ -430,6 +431,19 @@ final class WebVttParser extends SubtitleParser
         $cue->setAlignment($alignment ?? Alignment::BottomCenter);
 
         return $cue;
+    }
+
+
+    /**
+     * The WebVTT spec reads an & that starts no character reference, as in "Rye & spelt" or "&foo;", as text.
+     */
+    private static function escapeBareAmpersands(string $line): string
+    {
+        return preg_replace_callback(
+            '/&(?:[a-zA-Z][a-zA-Z0-9]*;|#[0-9]+;|#[xX][0-9a-fA-F]+;)?/',
+            fn (array $match): string => $match[0] === "&" || Markup::decodeEntities($match[0]) === $match[0] ? "&amp;" . substr($match[0], 1) : $match[0],
+            $line
+        ) ?? $line;
     }
 
 
