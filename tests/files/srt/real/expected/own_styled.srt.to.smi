@@ -19,7 +19,7 @@ P { font-family: Arial; text-align: center; }
 <SYNC Start=89590><P Class=SUBTTL>[station speaker]<br><i>Thebakeryopensat7:35.</i>
 <SYNC Start=91992><P Class=SUBTTL>&nbsp;
 <SYNC Start=480000><P Class=SUBTTL><i>Italics over two lines<br>that close on the second line</i>
-<SYNC Start=540000><P Class=SUBTTL><i>Italics that never close
+<SYNC Start=540000><P Class=SUBTTL><i>Italics that never close</i>
 <SYNC Start=600000><P Class=SUBTTL>The next cue is not italic
 <SYNC Start=660000><P Class=SUBTTL>&nbsp;
 <SYNC Start=720000><P Class=SUBTTL><i>x</i>^3 * <i>x</i> = 100
