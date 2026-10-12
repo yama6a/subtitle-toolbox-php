@@ -30,8 +30,9 @@ final class Application
      * @param resource|null $stdin
      * @param resource|null $stdout
      * @param resource|null $stderr
+     * @param (\Closure(string): void)|null $beforeCreate a test hook that runs before each output file is created, see OutputFiles
      */
-    public function __construct($stdin = null, $stdout = null, $stderr = null)
+    public function __construct($stdin = null, $stdout = null, $stderr = null, ?\Closure $beforeCreate = null)
     {
         $this->console  = new Console(
             $stdin ?? fopen("php://stdin", "rb"),
@@ -39,15 +40,15 @@ final class Application
             $stderr ?? fopen("php://stderr", "wb"),
         );
         $this->commands = [
-            new ConvertCommand(),
-            new RetimeCommand(),
-            new InfoCommand(),
-            new ValidateCommand(),
-            new SyncCommand(),
-            new DiffCommand(),
-            new TranslateCommand(),
-            new DualCommand(),
-            new HlsCommand(),
+            new ConvertCommand($beforeCreate),
+            new RetimeCommand($beforeCreate),
+            new InfoCommand($beforeCreate),
+            new ValidateCommand($beforeCreate),
+            new SyncCommand($beforeCreate),
+            new DiffCommand($beforeCreate),
+            new TranslateCommand($beforeCreate),
+            new DualCommand($beforeCreate),
+            new HlsCommand($beforeCreate),
             new FormatsCommand(),
         ];
     }

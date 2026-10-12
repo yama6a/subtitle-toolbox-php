@@ -35,6 +35,14 @@ abstract class FileCommand extends Command
 
 
     /**
+     * @param (\Closure(string): void)|null $beforeCreate a test hook that runs before each output file is created, see OutputFiles
+     */
+    public function __construct(private readonly ?\Closure $beforeCreate = null)
+    {
+    }
+
+
+    /**
      * @return list<Option>
      */
     abstract protected function commandOptions(): array;
@@ -130,7 +138,7 @@ abstract class FileCommand extends Command
     {
         $this->succeeded   = 0;
         $this->failed      = 0;
-        $this->outputFiles = new OutputFiles();
+        $this->outputFiles = new OutputFiles($this->beforeCreate);
         $this->inputReader = new InputReader($arguments, $this->fileOptionNames(), $this->secondFileInherits(), $this->needsWordTimestamps($arguments));
     }
 
