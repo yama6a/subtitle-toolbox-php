@@ -24,10 +24,11 @@ final class LyricsFormatter extends SubtitleFormatter
         $output   = $this->formatIdTags($subtitle);
         $cues     = array_values($subtitle->getCues());
         $comments = $this->commentsByCue($subtitle);
+        $spaced   = $subtitle->findFormatData(LyricsParser::FORMAT_DATA_KEY)["spacedWordTimes"] ?? false;
 
         foreach ($cues as $cueIndex => $cue) {
             $output .= $this->formatComments($comments[$cueIndex] ?? []);
-            $output .= $this->formatCue($cue);
+            $output .= $this->formatCue($cue, $spaced);
             $output .= LineEnding::Lf->value;
 
             if ($cue->findFormatData(LyricsParser::FORMAT_DATA_KEY)["endLine"] ?? false) {
@@ -73,14 +74,25 @@ final class LyricsFormatter extends SubtitleFormatter
     }
 
 
-    private function formatCue(SubtitleCue $cue): string
+    /**
+     * $spaced writes a space on both sides of each word time, as in "<00:03.20> Slow <00:03.75> river", when the parser read that form.
+     */
+    private function formatCue(SubtitleCue $cue, bool $spaced): string
     {
         $timestamp = "[" . $this->stamp($cue->getStart()) . "]";
 
         $parts = preg_split(Markup::WORD_TIMESTAMP_REGEX, Markup::rubyAsText(implode(" ", $cue->getLines())), -1, PREG_SPLIT_DELIM_CAPTURE);
         $lines = "";
         foreach ($parts as $index => $part) {
-            $lines .= $index % 2 === 1 ? "<" . $this->stamp(Markup::wordTimestampSeconds($part)) . ">" : Markup::plainText($part);
+            if ($index % 2 === 0) {
+                $lines .= Markup::plainText($part);
+                continue;
+            }
+
+            $next   = Markup::plainText($parts[$index + 1]);
+            $before = $spaced && $index === count($parts) - 2 && $next === "" && $lines !== "" && trim(substr($lines, -1)) !== "" ? " " : "";
+            $after  = $spaced && $next !== "" && ltrim($next) === $next ? " " : "";
+            $lines .= $before . "<" . $this->stamp(Markup::wordTimestampSeconds($part)) . ">" . $after;
         }
 
         return $timestamp . " " . $lines;

@@ -11,6 +11,6 @@ Style: Default,Arial,16,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Dialogue: 0,0:00:03.00,0:00:05.90,Default,,0,0,0,,{\k55} Slow {\k85} river {\k150} runs
-Dialogue: 0,0:00:05.90,0:00:09.60,Default,,0,0,0,,{\k45} Past {\k35} the {\k50} old {\k240} mill
-Dialogue: 0,0:00:09.60,0:00:14.60,Default,,0,0,0,,{\k50} Into {\k55} the {\k395} sea
+Dialogue: 0,0:00:03.00,0:00:05.90,Default,,0,0,0,,{\k55}Slow {\k85}river {\k150}runs
+Dialogue: 0,0:00:05.90,0:00:09.60,Default,,0,0,0,,{\k45}Past {\k35}the {\k50}old {\k240}mill
+Dialogue: 0,0:00:09.60,0:00:14.60,Default,,0,0,0,,{\k50}Into {\k55}the {\k395}sea
