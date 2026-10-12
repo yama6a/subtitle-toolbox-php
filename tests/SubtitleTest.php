@@ -121,6 +121,23 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testACueInTwoSubtitlesSortsBothAfterAStartTimeEdit(): void
+    {
+        $shared = new SubtitleCue(1, 2, "shared");
+        $first  = TestSubtitles::fromTimes([[3, 4], [5, 6]])->addCue($shared);
+        $second = TestSubtitles::fromTimes([[3, 4], [5, 6]])->addCue($shared);
+        $first->removeCue(1);
+
+        $first->getCues()[0]->setStart(9)->setEnd(10);
+        $second->addCue(new SubtitleCue(7, 8, "new"));
+        $first->addCue(new SubtitleCue(7, 8, "new"));
+
+        $this->assertSame(["text0", "text1", "new", "shared"], TestSubtitles::texts($second));
+        $this->assertSame(["text1", "new", "shared"], TestSubtitles::texts($first));
+        $this->assertSame(3, $second->findCueIndexAt(9.5));
+    }
+
+
     public function testRemoveCueNumbersTheCuesFromZeroAgain(): void
     {
         $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "one"), new SubtitleCue(3, 4, "two"), new SubtitleCue(5, 6, "three")]);

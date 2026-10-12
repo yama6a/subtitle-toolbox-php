@@ -155,6 +155,7 @@ trait CueEditing
 
         $this->cues = $cues;
         $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
+        unset(self::$cuesSortedAt[$this]);
 
         return $this;
     }

@@ -129,7 +129,7 @@ trait CueLookup
      * Returns the start and end times of the cues.
      * For cues in start order, it adds a tree in which each node holds the latest end of its cues.
      * It does not sort. For unsorted cues, maxEnds is null and the caller scans every cue.
-     * A time setter of any cue or a change of the cue list makes the next call rebuild the tree.
+     * A time setter of a cue in the list or a change of the cue list makes the next call rebuild the tree.
      *
      * @return CueLookupIndex
      */
@@ -142,6 +142,7 @@ trait CueLookup
             return $index;
         }
 
+        SubtitleCue::countTimeEditsOf($this->cues);
         $starts = [];
         $ends   = [];
         foreach ($this->cues as $cue) {

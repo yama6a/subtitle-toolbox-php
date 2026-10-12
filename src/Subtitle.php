@@ -73,6 +73,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     public function __wakeup(): void
     {
         $this->cueLookupIndex = null;
+        SubtitleCue::countTimeEditsOf($this->cues);
     }
 
 
@@ -300,6 +301,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
             for ($index = count($this->comments) - 1; $index >= 0 && $this->comments[$index]->beforeCueIndex >= $count; $index--) {
                 $this->comments[$index] = $this->comments[$index]->withBeforeCueIndex(count($this->cues));
             }
+            SubtitleCue::countTimeEditsOf($added);
             $this->markCuesSorted();
 
             return $this;
@@ -488,6 +490,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     private function sortCues(): void
     {
         $this->cues = CueList::inStartOrder($this->cues);
+        SubtitleCue::countTimeEditsOf($this->cues);
         $this->markCuesSorted();
     }
 
@@ -505,12 +508,16 @@ final class Subtitle implements \IteratorAggregate, \Countable
             return false;
         }
 
+        SubtitleCue::countTimeEditsOf($this->cues);
         $this->markCuesSorted();
 
         return true;
     }
 
 
+    /**
+     * Records that the cues are in start order now. Their time edits must count, see SubtitleCue::countTimeEditsOf().
+     */
     private function markCuesSorted(): void
     {
         self::$cuesSortedAt ??= new \WeakMap();
