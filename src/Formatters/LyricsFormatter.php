@@ -90,8 +90,8 @@ final class LyricsFormatter extends SubtitleFormatter
             }
 
             $next   = Markup::plainText($parts[$index + 1]);
-            $before = $spaced && $index === count($parts) - 2 && $next === "" && $lines !== "" && !ctype_space(substr($lines, -1)) ? " " : "";
-            $after  = $spaced && $next !== "" && !ctype_space($next[0]) ? " " : "";
+            $before = $spaced && $index === count($parts) - 2 && $next === "" && $lines !== "" && trim(substr($lines, -1)) !== "" ? " " : "";
+            $after  = $spaced && $next !== "" && ltrim($next) === $next ? " " : "";
             $lines .= $before . "<" . $this->stamp(Markup::wordTimestampSeconds($part)) . ">" . $after;
         }
 
