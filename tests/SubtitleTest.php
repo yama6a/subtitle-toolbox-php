@@ -386,6 +386,17 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testASliceSortsItsCuesAfterAStartTimeEdit(): void
+    {
+        $slice = TestSubtitles::fromTimes([[1, 2], [3, 4], [5, 6]])->withSlice(0, 10);
+
+        $slice->getCues()[0]->setStart(4.5)->setEnd(5.5);
+
+        $this->assertSame(["text1", "text0", "text2"], TestSubtitles::texts($slice));
+        $this->assertSame(["text1", "text0"], TestSubtitles::texts($slice->findCuesBetween(3.5, 5)));
+    }
+
+
     public function testACopySortsTheCuesOfAStartTimeEditBeforeTheCopy(): void
     {
         $subtitle = TestSubtitles::fromTimes([[1, 2], [3, 4], [3, 5]]);
