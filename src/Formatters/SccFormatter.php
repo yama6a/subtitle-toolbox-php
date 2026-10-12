@@ -61,38 +61,21 @@ final class SccFormatter extends SubtitleFormatter
         $cues = $subtitle->getCues();
         uasort($cues, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
 
-        $timeline     = [];
-        $nextFree     = 0;
-        $previousEnd  = null;
+        $timeline    = [];
+        $nextFree    = 0;
+        $previousEnd = null;
         foreach ($cues as $index => $cue) {
-            $load = $this->loadWords($cue, $index, $fit);
-            if ($load === []) {
+            $loadWords = $this->loadWords($cue, $index, $fit);
+            if ($loadWords === []) {
                 continue;
             }
 
             $start       = $this->secondsToFrame($cue->getStart());
-            [$eoc, $edm] = $this->schedule(count($load), $start, $nextFree, $previousEnd);
-            if ($fit && $eoc > $start) {
-                $end = $this->secondsToFrame($cue->getEnd());
-                if ($eoc >= $end) {
-                    $this->change($index, SccFitAction::Dropped, "Cue #$index at {$cue->getStart()} s is left out. " .
-                                  "Its caption data needs the frames up to " . $this->frameToSeconds($eoc) . " s, but the cue ends at {$cue->getEnd()} s.");
-                    continue;
-                }
-                $this->change($index, SccFitAction::Delayed, "Cue #$index at {$cue->getStart()} s shows at " . $this->frameToSeconds($eoc) . " s. " .
-                              "The frames before its start cannot hold its caption data.");
+            [$eoc, $edm] = $this->schedule(count($loadWords), $start, $nextFree, $previousEnd);
+            if ($fit && $eoc > $start && !$this->fitReport($index, $cue, $eoc)) {
+                continue;
             }
-            if ($edm !== null) {
-                [$timeline[$edm], $timeline[$edm + 1]] = $this->commandTwice(Cea608::ERASE_DISPLAYED_MEMORY);
-            }
-            $frame = $eoc - 1;
-            foreach (array_reverse($load) as $word) {
-                while (isset($timeline[$frame])) {
-                    $frame--;
-                }
-                $timeline[$frame--] = $word;
-            }
-            [$timeline[$eoc], $timeline[$eoc + 1]] = $this->commandTwice(Cea608::END_OF_CAPTION);
+            $this->placeCaption($timeline, $loadWords, $eoc, $edm);
 
             $nextFree    = $eoc + 2;
             $previousEnd = $this->secondsToFrame($cue->getEnd());
@@ -103,6 +86,47 @@ final class SccFormatter extends SubtitleFormatter
         }
 
         return new SccWriteReport($this->applyOutputOptions($this->writeLines($timeline, $dropFrame), $options), $this->changes);
+    }
+
+
+    /**
+     * Records that the caption of a cue shows after the cue start at the EOC frame $eoc.
+     * Returns false and records a dropped cue when the EOC is not before the cue end.
+     */
+    private function fitReport(int $index, SubtitleCue $cue, int $eoc): bool
+    {
+        if ($eoc >= $this->secondsToFrame($cue->getEnd())) {
+            $this->change($index, SccFitAction::Dropped, "Cue #$index at {$cue->getStart()} s is left out. " .
+                          "Its caption data needs the frames up to " . $this->frameToSeconds($eoc) . " s, but the cue ends at {$cue->getEnd()} s.");
+
+            return false;
+        }
+        $this->change($index, SccFitAction::Delayed, "Cue #$index at {$cue->getStart()} s shows at " . $this->frameToSeconds($eoc) . " s. " .
+                      "The frames before its start cannot hold its caption data.");
+
+        return true;
+    }
+
+
+    /**
+     * Puts the EDM of the caption before, the load words in the free frames before the EOC, and the EOC on the timeline.
+     *
+     * @param array<int, int> $timeline the words by frame
+     * @param list<int>       $loadWords
+     */
+    private function placeCaption(array &$timeline, array $loadWords, int $eoc, ?int $edm): void
+    {
+        if ($edm !== null) {
+            [$timeline[$edm], $timeline[$edm + 1]] = $this->commandTwice(Cea608::ERASE_DISPLAYED_MEMORY);
+        }
+        $frame = $eoc - 1;
+        foreach (array_reverse($loadWords) as $word) {
+            while (isset($timeline[$frame])) {
+                $frame--;
+            }
+            $timeline[$frame--] = $word;
+        }
+        [$timeline[$eoc], $timeline[$eoc + 1]] = $this->commandTwice(Cea608::END_OF_CAPTION);
     }
 
 
@@ -265,40 +289,61 @@ final class SccFormatter extends SubtitleFormatter
     {
         $count     = count($cells);
         $alignment = $cue->getAlignment()->value;
-        $cueData   = $cue->findFormatData(SccParser::FORMAT_DATA_KEY);
-        $rows      = $cueData["rows"] ?? null;
-        $columns   = $cueData["columns"] ?? null;
-        $storedOk  = is_array($rows) && is_array($columns) && count($rows) === $count && count($columns) === $count
-                     && array_is_list($rows) && array_is_list($columns)
-                     && (($rows[0] ?? 0) <= Cea608::MAX_LINES) === in_array($alignment, [7, 8, 9], true);
-        for ($index = 0; $storedOk && $index < $count; $index++) {
-            $storedOk = is_int($rows[$index]) && is_int($columns[$index]) && $rows[$index] >= 1 && $rows[$index] <= Cea608::ROWS
-                        && ($index === 0 || $rows[$index] > $rows[$index - 1]);
-        }
-
-        $firstRow = match (true) {
-            in_array($alignment, [7, 8, 9], true) => 1,
-            in_array($alignment, [4, 5, 6], true) => intdiv(Cea608::ROWS - $count, 2) + 1,
-            default                               => Cea608::ROWS - $count + 1,
-        };
+        $stored    = $this->storedPositions($cue, $count, $alignment);
 
         $positions = [];
         foreach ($cells as $index => $lineCells) {
-            $width = count($lineCells) - Cea608Encoder::leadingMidRowCount($lineCells);
-            if ($storedOk) {
-                $positions[] = [$rows[$index], max(0, min($columns[$index], Cea608::COLUMNS - $width))];
-                continue;
-            }
-
-            $column      = match (true) {
-                in_array($alignment, [1, 4, 7], true) => 0,
-                in_array($alignment, [3, 6, 9], true) => Cea608::COLUMNS - $width,
-                default                               => intdiv(Cea608::COLUMNS - $width, 2),
-            };
-            $positions[] = [$firstRow + $index, $column];
+            $width       = count($lineCells) - Cea608Encoder::leadingMidRowCount($lineCells);
+            $positions[] = $stored === null
+                ? $this->alignedPosition($alignment, $index, $count, $width)
+                : [$stored[0][$index], max(0, min($stored[1][$index], Cea608::COLUMNS - $width))];
         }
 
         return $positions;
+    }
+
+
+    /**
+     * Returns the rows and the columns of the scc format data, or null when they do not fit the lines and the alignment.
+     *
+     * @return array{list<int>, list<int>}|null
+     */
+    private function storedPositions(SubtitleCue $cue, int $lineCount, int $alignment): ?array
+    {
+        $cueData            = $cue->findFormatData(SccParser::FORMAT_DATA_KEY);
+        $rows               = $cueData["rows"] ?? null;
+        $columns            = $cueData["columns"] ?? null;
+        $storedPositionsFit = is_array($rows) && is_array($columns) && count($rows) === $lineCount && count($columns) === $lineCount
+                              && array_is_list($rows) && array_is_list($columns)
+                              && (($rows[0] ?? 0) <= Cea608::MAX_LINES) === in_array($alignment, [7, 8, 9], true);
+        for ($index = 0; $storedPositionsFit && $index < $lineCount; $index++) {
+            $storedPositionsFit = is_int($rows[$index]) && is_int($columns[$index]) && $rows[$index] >= 1 && $rows[$index] <= Cea608::ROWS
+                                  && ($index === 0 || $rows[$index] > $rows[$index - 1]);
+        }
+
+        return $storedPositionsFit ? [$rows, $columns] : null;
+    }
+
+
+    /**
+     * Returns the row and the text column of a line from the alignment.
+     *
+     * @return array{int, int}
+     */
+    private function alignedPosition(int $alignment, int $lineIndex, int $lineCount, int $width): array
+    {
+        $firstRow = match (true) {
+            in_array($alignment, [7, 8, 9], true) => 1,
+            in_array($alignment, [4, 5, 6], true) => intdiv(Cea608::ROWS - $lineCount, 2) + 1,
+            default                               => Cea608::ROWS - $lineCount + 1,
+        };
+        $column   = match (true) {
+            in_array($alignment, [1, 4, 7], true) => 0,
+            in_array($alignment, [3, 6, 9], true) => Cea608::COLUMNS - $width,
+            default                               => intdiv(Cea608::COLUMNS - $width, 2),
+        };
+
+        return [$firstRow + $lineIndex, $column];
     }
 
 
