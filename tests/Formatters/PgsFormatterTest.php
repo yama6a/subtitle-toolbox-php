@@ -373,7 +373,7 @@ class PgsFormatterTest extends TestCase
         $image = new CueImage(PngEncoder::encode(2, 2, [0, 0, 0, 0]), 0, 0, 2, 2, 720, 576);
 
         return [
-            "text cue"     => [new SubtitleCue(1, 2, "text"), "does not render text"],
+            "text cue"     => [new SubtitleCue(1, 2, "text"), "the cue holds no image, and PGS output cannot hold text"],
             "size"         => [(new CueImage($image->png, 0, 0, 3, 2, 720, 576))->toCue(new SubtitleCue(1, 2)), "the PNG has 2x2 pixels"],
             "negative x"   => [(new CueImage($image->png, -1, 0, 2, 2, 720, 576))->toCue(new SubtitleCue(1, 2)), "from 0 to 65535"],
             "negative time" => [$image->toCue(new SubtitleCue(-0.5, 2)), "ticks of 90 kHz"],

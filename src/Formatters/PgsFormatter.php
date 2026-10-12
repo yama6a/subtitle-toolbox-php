@@ -75,7 +75,7 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
         $shown   = [];
         foreach ($cues as $index => $cue) {
             if (!CueImage::isImageCue($cue)) {
-                throw new UnwritableContentException($this->cueError($cue, "the cue holds no image, and PgsFormatter does not render text"));
+                throw new UnwritableContentException($this->cueError($cue, "the cue holds no image, and PGS output cannot hold text"));
             }
 
             $start   = $this->pts($cue, $cue->getStart());

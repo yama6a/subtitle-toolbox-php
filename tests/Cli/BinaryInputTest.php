@@ -149,6 +149,15 @@ class BinaryInputTest extends CliTestCase
     }
 
 
+    public function testWriteErrorsNameCliOptionsAndNoPhpClass(): void
+    {
+        $this->assertSame([3, "", "latin1.srt: The output cannot hold text that is not valid UTF-8. Pass --encoding with the source encoding of the file.\n"],
+                          $this->runCli(["convert", "latin1.srt", "--encoding", "UTF-8", "--to", "ttml", "-o", "-"]));
+        $this->assertSame([3, "", "trip.srt: Cannot write cue 1 to 3 as PGS: the cue holds no image, and PGS output cannot hold text.\n"],
+                          $this->runCli(["convert", "trip.srt", "--to", "pgs", "-o", "-"]));
+    }
+
+
     public function testMicroDvdNeedsTheFrameRate(): void
     {
         [$code, , $stderr] = $this->runCli(["convert", "frames.sub", "--to", "srt", "-o", "-"]);

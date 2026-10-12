@@ -50,6 +50,7 @@ final class CliMessages
             "Set MicroDvdReadOptions::\$frameRate, start the file with {1}{1}<fps>, or read the file in lenient mode for 23.976 fps." =>
                 "Pass --fps or --input-fps, start the file with {1}{1}<fps>, or pass --lenient for 23.976 fps.",
             "Set CsvReadOptions::\$frameRate."                                         => "Pass --fps or --input-fps.",
+            "Read a file in another encoding with ReadOptions::\$encoding set to its source encoding." => "Pass --encoding with the source encoding of the file.",
             "Call wrapLines(32, 4) first."                                      => "Pass --structure-wrap --structure-max-cpl 32 --structure-max-lines 4.",
             "Call Resegmenter::apply() with ResegmentMode::SplitLong and new CueLimits(32, 4), then wrapLines(32, 4)." =>
                 "Pass --structure-split-long --structure-wrap --structure-max-cpl 32 --structure-max-lines 4.",

@@ -93,6 +93,9 @@ final class DiffCommand extends ReportCommand
         if (count($arguments->positionals) !== 2) {
             self::fail("Pass two files, the old one and the new one.");
         }
+        if ($arguments->positionals[1] === self::DASH) {
+            self::fail("Standard input works only for the old file. Pass the new file by name.");
+        }
 
         return [$arguments->positionals[0]];
     }

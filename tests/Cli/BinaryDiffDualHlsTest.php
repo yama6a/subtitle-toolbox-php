@@ -32,6 +32,7 @@ class BinaryDiffDualHlsTest extends CliTestCase
     {
         return [
             "diff with one file"              => [["diff", "v1.srt"], "diff", "Pass two files, the old one and the new one."],
+            "diff with - as the new file"     => [["diff", "v1.srt", "-"], "diff", "Standard input works only for the old file. Pass the new file by name."],
             "diff --time-tolerance -1"        => [["diff", "v1.srt", "v2.srt", "--time-tolerance", "-1"], "diff", "The option --time-tolerance must not be negative."],
             "diff --new-from docx"            => [["diff", "trip.srt", "frames.sub", "--new-from", "docx"], "diff",
                                                   "Unknown format \"docx\". Run \"subtitle-toolbox formats\" for the list."],
