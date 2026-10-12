@@ -18,6 +18,9 @@
 | `own_font_colors.srt` | Written for this repository. `<font color>` as hex, short hex and a name, a color without a WebVTT class and a `<font>` without a color | MIT |
 | `own_color_classes_from_vtt.srt` | Generated for this repository. Expected `SubRipFormatter` output for `vtt/real/own_color_classes.vtt`. | MIT |
 | `swift_subtitle_kit_embedded_bom.srt` | https://github.com/dioKaratzas/swift-subtitle-kit/blob/728d62dac9fbda7fabd299eed3673ce36c85c267/Tests/SubtitleKitTests/Fixtures/embedded-bom-srt-fixture.srt. Two joined files: LF, then a UTF-8 BOM before cue 1 of the second file and CR LF | swift-subtitle-kit, MIT |
+| `own_openai_whisper.srt` | Written for this repository in the shape of openai-whisper `--output_format srt` output, longer than 1 hour. Made with `WriteSRT` of https://github.com/openai/whisper/blob/86098128c0b4f24f0e2aa2994de830614b474227/whisper/utils.py from our own segments | MIT |
+| `own_whisper_cpp_diarize.srt` | Written for this repository in the shape of whisper.cpp `-osrt -di` output: times in steps of 10 ms, a `(speaker N)` prefix before the text with its leading space. Shape from `output_srt` in https://github.com/ggml-org/whisper.cpp/blob/60c0be6ac8fa71b1a2ae2dd938a31a34a508e774/examples/cli/cli.cpp | MIT |
+| `own_ffmpeg.srt` | Output of FFmpeg 7.0.2 for `ffmpeg -i ass/real/own_ffmpeg.ass own_ffmpeg.srt`, unchanged: CR LF between the text lines of a cue, LF elsewhere, `{\an8}`, `<font color>` | MIT |
 | `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |
 | `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
 | `expected/language_subtitles_dots_tester.srt.out.srt` | Generated for this repository. Expected `SubRipFormatter` output for `language_subtitles_dots_tester.srt`: commas in the times, no final empty line | MIT |
@@ -31,3 +34,6 @@
 | `expected/own_timestamp_without_millis.srt.out.srt` | Generated for this repository. Expected `SubRipFormatter` output for `own_timestamp_without_millis.srt`: 3-digit milliseconds in every time | MIT |
 | `expected/own_vtt_cue_settings.srt.out.srt` | Generated for this repository. Expected `SubRipFormatter` output for `own_vtt_cue_settings.srt`: no WebVTT cue settings, coordinates without leading zeros | MIT |
 | `expected/swift_subtitle_kit_embedded_bom.srt.out.srt` | Generated for this repository. Expected `SubRipFormatter` output for `swift_subtitle_kit_embedded_bom.srt`: cues numbered from 1, no BOM inside the file | MIT |
+| `expected/own_openai_whisper.srt.out.srt` | Generated for this repository. Expected `SubRipFormatter` output for `own_openai_whisper.srt`: no final empty line | MIT |
+| `expected/own_whisper_cpp_diarize.srt.out.srt` | Generated for this repository. Expected `SubRipFormatter` output for `own_whisper_cpp_diarize.srt`: no final empty line | MIT |
+| `expected/own_ffmpeg.srt.out.srt` | Generated for this repository. Expected `SubRipFormatter` output for `own_ffmpeg.srt`: LF line ends, no `<today>`, which the parser reads as an unknown tag (#905), no final empty line | MIT |

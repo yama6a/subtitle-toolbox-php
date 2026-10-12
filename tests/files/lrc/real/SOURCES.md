@@ -10,6 +10,7 @@
 | handwritten-core.lrc | Written for this repository from the core format and ID tag description at https://en.wikipedia.org/wiki/LRC_(file_format) | MIT |
 | handwritten-enhanced.lrc | Written for this repository from the enhanced LRC (A2 extension) description at https://en.wikipedia.org/wiki/LRC_(file_format) | MIT |
 | own-comment-before-earlier-line.lrc | Written for this repository. Lines out of time order, and a `[#:...]` comment before a line that starts earlier than the line before it | MIT |
+| `own_whisper_cpp.lrc` | Written for this repository in the shape of whisper.cpp `-olrc` output: `[by:whisper.cpp]`, `[mm:ss.xx]` times and the text with its leading space. Shape from `output_lrc` in https://github.com/ggml-org/whisper.cpp/blob/60c0be6ac8fa71b1a2ae2dd938a31a34a508e774/examples/cli/cli.cpp | MIT |
 | `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
 | `expected/handwritten-core.lrc.out.lrc` | Generated for this repository. Expected `LyricsFormatter` output for `handwritten-core.lrc`: a space after each time tag, one line per time tag in time order | MIT |
 | `expected/handwritten-enhanced.lrc.out.lrc` | Generated for this repository. Expected `LyricsFormatter` output for `handwritten-enhanced.lrc`: no space in the ID tags, times shifted by the `[offset:+200]` tag and no `[offset:]` tag | MIT |

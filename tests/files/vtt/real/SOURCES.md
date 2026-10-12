@@ -29,6 +29,9 @@
 | `own_srt_cue_settings_converted.vtt` | Written for this repository. Expected `WebVttFormatter` output for `srt/real/own_vtt_cue_settings.srt`. | MIT |
 | `own_color_classes.vtt` | Written for this repository. The 8 color classes of https://www.w3.org/TR/webvtt1/#default-text-color, a background class and a class without a color | MIT |
 | `own_font_colors_from_srt.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `srt/real/own_font_colors.srt`. | MIT |
+| `own_openai_whisper.vtt` | Written for this repository in the shape of openai-whisper `--output_format vtt` output: no cue identifiers, `MM:SS.mmm` times below 1 hour and `HH:MM:SS.mmm` from 1 hour. Made with `WriteVTT` of https://github.com/openai/whisper/blob/86098128c0b4f24f0e2aa2994de830614b474227/whisper/utils.py from our own segments | MIT |
+| `own_openai_whisper_highlight_words.vtt` | Written for this repository in the shape of openai-whisper `--output_format vtt --highlight_words True` output: one cue per word with the word in `<u>`, and a cue without `<u>` for a gap between 2 words. Made with `SubtitlesWriter.iterate_result` of https://github.com/openai/whisper/blob/86098128c0b4f24f0e2aa2994de830614b474227/whisper/utils.py from our own word timings | MIT |
+| `own_ffmpeg.vtt` | Output of FFmpeg 7.0.2 for `ffmpeg -i ass/real/own_ffmpeg.ass own_ffmpeg.vtt`, unchanged: no cue identifiers, no hours below 1 hour, a bare `&`, no colours and no alignment | MIT |
 | `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |
 | `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
 | `expected/astisub_carriage_return.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `astisub_carriage_return.vtt`: LF for the CR line ends | MIT |
@@ -53,3 +56,6 @@
 | `expected/webvttpy_comments.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `webvttpy_comments.vtt`: no spaces at the line ends, a final line end | MIT |
 | `expected/webvttpy_netflix.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `webvttpy_netflix.vtt`: comments of several lines start after `NOTE`, single spaces between the cue settings, no lines of only spaces | MIT |
 | `expected/webvttpy_youtube.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `webvttpy_youtube.vtt`: cue numbers, no space before the closing tag on its own line | MIT |
+| `expected/own_openai_whisper.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `own_openai_whisper.vtt`: cue numbers, hours in every time | MIT |
+| `expected/own_openai_whisper_highlight_words.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `own_openai_whisper_highlight_words.vtt`: cue numbers, hours in every time | MIT |
+| `expected/own_ffmpeg.vtt.out.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `own_ffmpeg.vtt`: cue numbers, hours in every time, no `<today>` (#905), the bare `&` (#902) | MIT |

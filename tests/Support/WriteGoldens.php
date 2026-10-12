@@ -53,19 +53,20 @@ final class WriteGoldens
      * subtitle format, with markup where the format has it.
      */
     private const SUBTITLE_CONVERSIONS = [
-        "srt/real/own_styled.srt"                    => Format::SubRip,
-        "vtt/real/w3c_voices.vtt"                    => Format::WebVtt,
-        "vtt/real/own_ytdlp_rolling.vtt"             => Format::WebVtt,
-        "ass/real/own_aegisub.ass"                   => Format::Ass,
-        "ass/real/own_signs_crlf.ass"                => Format::Ass,
-        "sbv/real/youtube_studio_lf.sbv"             => Format::Sbv,
-        "subviewer/real/subviewer2_crlf.sub"         => Format::SubViewer,
-        "microdvd/real/sub_microdvd_with_styles.sub" => Format::MicroDvd,
-        "mpl2/real/subtitle_edit_shape.txt"          => Format::Mpl2,
-        "mpsub/real/mplayer_doc_time.sub"            => Format::MpSub,
-        "tmplayer/real/tmplayer_multiline_bom.txt"   => Format::TmPlayer,
-        "lrc/real/handwritten-enhanced.lrc"          => Format::Lyrics,
-        "csv/real/mantas_done_shape.csv"             => Format::Csv,
+        "srt/real/own_styled.srt"                         => Format::SubRip,
+        "vtt/real/w3c_voices.vtt"                         => Format::WebVtt,
+        "vtt/real/own_ytdlp_rolling.vtt"                  => Format::WebVtt,
+        "vtt/real/own_openai_whisper_highlight_words.vtt" => Format::WebVtt,
+        "ass/real/own_aegisub.ass"                        => Format::Ass,
+        "ass/real/own_signs_crlf.ass"                     => Format::Ass,
+        "sbv/real/youtube_studio_lf.sbv"                  => Format::Sbv,
+        "subviewer/real/subviewer2_crlf.sub"              => Format::SubViewer,
+        "microdvd/real/sub_microdvd_with_styles.sub"      => Format::MicroDvd,
+        "mpl2/real/subtitle_edit_shape.txt"               => Format::Mpl2,
+        "mpsub/real/mplayer_doc_time.sub"                 => Format::MpSub,
+        "tmplayer/real/tmplayer_multiline_bom.txt"        => Format::TmPlayer,
+        "lrc/real/handwritten-enhanced.lrc"               => Format::Lyrics,
+        "csv/real/mantas_done_shape.csv"                  => Format::Csv,
     ];
 
     /**

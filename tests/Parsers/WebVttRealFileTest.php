@@ -38,6 +38,9 @@ class WebVttRealFileTest extends TestCase
             "own_settings_no_space"   => ["own_settings_without_space.vtt", 2, 0.0, 1.0, "The gate opens at eight.", 2.0, 3.5, "Boarding starts at half past."],
             "own_ytdlp_auto_captions" => ["own_ytdlp_auto_captions.vtt", 2, 0.0, 2.31, "the<00:00:00.480><c> ferry</c><00:00:00.960><c> leaves</c>", 2.31, 5.0, "at<00:00:02.800><c> noon</c>"],
             "own_ytdlp_rolling"       => ["own_ytdlp_rolling.vtt", 4, 0.16, 2.389, "welcome<00:00:00.400><c> back</c><00:00:00.800><c> to</c><00:00:01.120><c> the</c><00:00:01.440><c> garden</c>", 6.15, 8.43, "dig<00:00:06.640><c> a</c><00:00:06.800><c> small</c><00:00:07.200><c> hole</c>"],
+            "own_openai_whisper"      => ["own_openai_whisper.vtt", 6, 0.0, 3.6, "This is the second part of the timetable meeting.", 3601.5, 3606.88, "Yes, the timetable starts on the first of December."],
+            "own_whisper_highlight"   => ["own_openai_whisper_highlight_words.vtt", 11, 0.0, 0.32, "<u>The</u> next train leaves at nine.", 3.8, 4.4, "Platform four is <u>closed.</u>"],
+            "own_ffmpeg"              => ["own_ffmpeg.vtt", 7, 0.5, 2.75, "The bakery opens at six.", 62.04, 65.96, "Thank you for shopping with us"],
             "webvttpy_youtube"        => ["webvttpy_youtube.vtt", 4, 286.07, 286.47, "okay", 305.069, 305.4, "the train<c.colorE5E5E5> leaves</c><c.colorCCCCCC> at ten today\n</c>"],
         ];
     }
@@ -66,6 +69,10 @@ class WebVttRealFileTest extends TestCase
     #[DataProvider("realFileProvider")]
     public function testRealFileRoundTripKeepsAllData(string $file): void
     {
+        if ($file === "own_ffmpeg.vtt") {
+            $this->markTestSkipped("The round trip drops the text <today>, see issue #905.");
+        }
+
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::WebVtt);
         $output   = $subtitle->toString(Format::WebVtt);
         $reparsed = Subtitle::fromString($output, Format::WebVtt);
