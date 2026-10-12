@@ -63,6 +63,7 @@ try {
 - Text that is not UTF-8 in TTML, iTT or SAMI output.
 - A stored TTML head that is not valid XML.
 - An `AssWriteOptions::$style` field that the `Format:` line of the styles lacks.
+- A cue without words in Google Speech-to-Text output with speaker diarization.
 
 ## Translation errors
 `TranslationException` covers these cases:

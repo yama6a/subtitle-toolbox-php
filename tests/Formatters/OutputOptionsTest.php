@@ -40,7 +40,7 @@ class OutputOptionsTest extends TestCase
     private const BINARY = [Format::EbuStl, Format::Pgs];
 
     // Compact JSON without a write option for line breaks.
-    private const ONE_LINE = [Format::Whisper, Format::AwsTranscribe, Format::Deepgram, Format::AssemblyAi];
+    private const ONE_LINE = [Format::Whisper, Format::AwsTranscribe, Format::Deepgram, Format::AssemblyAi, Format::GoogleSpeech];
 
     private const WRITES_BOM = [Format::Ass, Format::Csv, Format::Lyrics, Format::MpSub, Format::SubRip, Format::Tsv, Format::WebVtt];
 

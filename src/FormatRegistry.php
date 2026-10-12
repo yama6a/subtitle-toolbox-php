@@ -11,6 +11,7 @@ use SubtitleToolbox\Formatters\CsvFormatter;
 use SubtitleToolbox\Formatters\DeepgramFormatter;
 use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\FfMetadataChaptersFormatter;
+use SubtitleToolbox\Formatters\GoogleSpeechFormatter;
 use SubtitleToolbox\Formatters\HtmlTranscriptFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\JsonFormatter;
@@ -86,7 +87,7 @@ final class FormatRegistry
         Format::AssemblyAi->value         => [AssemblyAiParser::class, AssemblyAiFormatter::class, ["json"]],
         Format::AwsTranscribe->value      => [AwsTranscribeParser::class, AwsTranscribeFormatter::class, ["json"]],
         Format::Deepgram->value           => [DeepgramParser::class, DeepgramFormatter::class, ["json"]],
-        Format::GoogleSpeech->value       => [GoogleSpeechParser::class, null, ["json"]],
+        Format::GoogleSpeech->value       => [GoogleSpeechParser::class, GoogleSpeechFormatter::class, ["json"]],
         Format::Lyrics->value             => [LyricsParser::class, LyricsFormatter::class, ["lrc"]],
         Format::MicroDvd->value           => [MicroDvdParser::class, MicroDvdFormatter::class, ["sub"]],
         Format::MpSub->value              => [MpSubParser::class, MpSubFormatter::class, ["mpsub"]],

@@ -34,6 +34,7 @@
                     "google-speech": {
                         "resultEndTime": "4.390s",
                         "languageCode": "en-us",
+                        "transcript": "okay the bus to the airport leaves every twenty minutes",
                         "confidence": 0.9612345,
                         "words": [
                             {
@@ -102,6 +103,7 @@
                     "google-speech": {
                         "resultEndTime": "9.170s",
                         "languageCode": "en-us",
+                        "transcript": " the first one is at five thirty in the morning",
                         "confidence": 0.9512345,
                         "words": [
                             {
