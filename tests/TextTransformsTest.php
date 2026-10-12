@@ -214,6 +214,9 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
             "etc. before upper case"  => ["Apples, pears, etc. Then we left.", "Apples, pears, etc. Then we left."],
             "etc. in upper case text" => ["APPLES, ETC. THEN WE LEFT.", "Apples, etc. Then we left."],
             "comma after a question"  => ["\"WHY?,\" HE ASKED.", "\"Why?,\" he asked."],
+            "tag after i.e."          => ["We mean <i>i.e.</i> this one.", "We mean <i>i.e.</i> this one."],
+            "space, tag after i.e."   => ["We mean <i>i.e. </i>this one.", "We mean <i>i.e. </i>this one."],
+            "tag before upper case"   => ["We mean <i>e.g. </i>Then we left.", "We mean <i>e.g. </i>Then we left."],
         ];
     }
 
