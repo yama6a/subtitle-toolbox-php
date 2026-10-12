@@ -275,7 +275,7 @@ class BinaryEditTest extends CliTestCase
 
         $this->assertSame(self::usageError("convert", "Pass --to ass with --ass-karaoke-tag."),
                           $this->runCli(["convert", "song.json", "--to", "srt", "--ass-karaoke-tag", "kf", "--output-dir", "out"]));
-        $this->assertSame(self::usageError("convert", "Pass --to FORMAT, also when the format stays the same, for example --to srt."),
+        $this->assertSame(self::usageError("convert", "Pass --to ass with --ass-karaoke-tag."),
                           $this->runCli(["convert", "song.json", "-o", "song.srt", "--ass-karaoke-tag", "kf"]));
         $this->assertSame(self::usageError("convert", "Pass --to ass with --ass-karaoke-tag and --ass-style."),
                           $this->runCli(["convert", "song.json", "--to", "srt", "-o", "-", "--ass-karaoke-tag", "kf", "--ass-style", "Fontsize=48"]));

@@ -8,7 +8,7 @@ vendor/bin/subtitle-toolbox convert season1/ --to vtt --output-dir out/ --keep-g
 vendor/bin/subtitle-toolbox convert movie.sub --to srt -o movie.srt --fps 23.976
 vendor/bin/subtitle-toolbox retime movie.srt --shift -2.5 --output movie.fixed.srt
 vendor/bin/subtitle-toolbox retime *.srt --from-fps 25 --to-fps 23.976 --output-dir fixed/
-vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.fixed.srt --timing-fix-overlaps --timing-min-gap 0.083 --structure-wrap
+vendor/bin/subtitle-toolbox convert movie.srt -o movie.fixed.srt --timing-fix-overlaps --timing-min-gap 0.083 --structure-wrap
 vendor/bin/subtitle-toolbox validate movie.srt --preset netflix-en --json
 curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --to vtt > movie.vtt
 ```
@@ -36,7 +36,7 @@ php subtitle-toolbox.phar --version
 ## Commands
 | Command | Does |
 |:--- |:--- |
-| `convert` | writes each input in the format of `--to`, and runs OCR, text, structure and timing edits on the way, see [Convert](#convert) |
+| `convert` | writes each input in the format of `--to` or in its own format, and runs OCR, text, structure and timing edits on the way, see [Convert](#convert) |
 | `retime` | shifts and scales all cue times, or fits them to a video with another frame rate, see [Retime](#retime) |
 | `info` | prints the format, the cue count and statistics, as text or with `--json`. Lists the tracks of an MKV, WebM or MP4 file |
 | `validate` | prints each broken rule, as text or with `--json`, see [Validate](#validate) |
@@ -80,8 +80,8 @@ php subtitle-toolbox.phar --version
 | `retime a.srt b.srt --shift 1 -o fixed.srt` | nothing. Exit code 2, because `-o` takes one input |
 
 - **Output names**: in `--output-dir`, each output takes the base name of its input and the extension of the output format. An input keeps its extension when the output format uses it, so `movie.ssa` with `--to ass` writes `out/movie.ssa`.
-- **Output format**: `--to FORMAT`. `convert` requires it, also when the format stays the same, for example `convert movie.srt --to srt --timing-fix-overlaps`. Without `--to`, `retime`, `sync` and `translate` keep the input format, and `dual` keeps the format of the primary file.
-- **Output extension**: the extension of `-o` never picks the format. An extension of another format than `--to` fails with exit code 2, for example `convert movie.srt --to srt -o movie.vtt`. An extension of no format, such as `.bak`, works.
+- **Output format**: `--to FORMAT`. Without `--to`, `convert`, `retime`, `sync` and `translate` keep the input format, for example `convert movie.srt --timing-fix-overlaps -o fixed.srt`. `dual` keeps the format of the primary file. A format that the tool can read but not write, such as VobSub, needs `--to`. Without it, the file fails with exit code 3.
+- **Output extension**: the extension of `-o` never picks the format. An extension of another format than `--to` fails with exit code 2, for example `convert movie.srt --to srt -o movie.vtt`. Without `--to`, `retime`, `sync` and `dual` keep the input format whatever the extension, so `retime movie.srt --shift 1 -o movie.vtt` writes SubRip. `convert` without `--to` fails with exit code 2 when the extension belongs to another format that the tool writes, for example `convert movie.srt -o movie.vtt`. Pass `--to vtt` to convert. For standard input, the format is known only after the read, so the file fails with exit code 3. An extension of no format, such as `.bak`, works.
 - **Never overwrite**: no command overwrites a file. This covers subtitle outputs, the files of `--mute-edl` and `--mute-filter`, and the `hls` playlist and segments.
 - **Check before the work**: before it reads the first input, the tool collects every output path. It fails with exit code 2 and writes nothing in these cases:
 
@@ -169,7 +169,7 @@ movie.mkv
 - **Detection**: the tool knows an MKV, WebM or MP4 file by its first 8 bytes, not by its extension. Standard input works too.
 - **Memory**: the tool reads an MKV, WebM or MP4 file the same way as `MatroskaReader` and `Mp4Reader`, see [mkv.md](mkv.md). Standard input is different. The tool reads the whole input into memory first.
 - **Track**: a file with one subtitle track needs no `--track`. For a file with more, the tool fails and lists the tracks.
-- **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT, `S_HDMV/PGS` is PGS and `S_VOBSUB` is VobSub. An MP4 `tx3g` track is SubRip. Without `--to`, `retime` and `sync` keep this format. `convert movie.mkv --to srt --track 3 --output-dir out` writes `out/movie.srt`.
+- **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT, `S_HDMV/PGS` is PGS and `S_VOBSUB` is VobSub. An MP4 `tx3g` track is SubRip. Without `--to`, `convert`, `retime` and `sync` keep this format. `convert movie.mkv --to srt --track 3 --output-dir out` writes `out/movie.srt`.
 - **Second file**: `diff` applies `--track` to both files. `--new-track` sets the track of the new file, for example `diff old.mkv new.mkv --track 3 --new-track 8`. `dual` takes `--primary-track` and `--secondary-track`.
 - **Info**: without `--track`, `info` lists the tracks of a file whose extension names no subtitle format, such as `.mkv`, `.webm` and `.mp4`. The JSON object has `file`, `container` and `tracks`. Each track has `number`, `codecId`, `language`, `name`, `default` and `forced`. With `--track`, `info` prints the statistics of the track.
 - **Directories**: a directory argument skips MKV, WebM and MP4 files. Pass them by name or with a glob.
@@ -199,13 +199,13 @@ vendor/bin/subtitle-toolbox retime movie.srt --sync first=00:00:12.5 --sync '#12
 - **Sync errors**: `--sync` with `--shift` or `--scale` is a usage error, exit code 2. So are points whose old or new times do not increase in the order of the options. A point that does not fit a file, such as `#120` in a file with 80 cues, fails that file with exit code 3.
 
 ## Convert
-`convert` reads each input, runs the edits of its options, and writes the result in the format of `--to`. One call can run OCR, fix text, remove hearing-impaired annotations (`--sdh`), retime and convert:
+`convert` reads each input, runs the edits of its options, and writes the result in the format of `--to`, or else in the format of the input. One call can run OCR, fix text, remove hearing-impaired annotations (`--sdh`), retime and convert:
 
 ```sh
 vendor/bin/subtitle-toolbox convert movie.sup --to srt -o movie.srt --ocr --errors-fix --sdh --shift -1.5
 vendor/bin/subtitle-toolbox convert lecture.json --to srt -o lecture.srt --structure-resegment --timing-min-duration 1
 vendor/bin/subtitle-toolbox convert song.json --to ass -o song.ass --ass-karaoke-tag kf
-vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ --errors-fix
+vendor/bin/subtitle-toolbox convert season1/*.srt --output-dir fixed/ --errors-fix
 ```
 
 ### Order
