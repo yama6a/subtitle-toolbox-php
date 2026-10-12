@@ -26,8 +26,9 @@ final class Streams
      */
     public static function lines($stream, ?Closure $onInvalidUtf8 = null): Generator
     {
-        $handle = self::open($stream, "rb");
-        $offset = 0;
+        $ownsHandle = !is_resource($stream);
+        $handle     = self::open($stream, "rb");
+        $offset     = 0;
         try {
             while (($chunk = fgets($handle)) !== false) {
                 $badByte = $onInvalidUtf8 === null ? null : StringHelpers::findInvalidUtf8Offset($chunk);
@@ -48,7 +49,8 @@ final class Streams
                 }
             }
         } finally {
-            if (!is_resource($stream)) {
+            // The caller may close its stream before a stopped generator runs this block.
+            if ($ownsHandle) {
                 fclose($handle);
             }
         }
