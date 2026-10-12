@@ -15,11 +15,8 @@ use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Tests\Support\TestFiles;
 use SubtitleToolbox\Tests\Support\WriteGoldens;
 
-class YouTubeTimedTextWriterTest extends TestCase
+class YouTubeTimedTextFormatterTest extends TestCase
 {
-    private const WRITTEN = ["srv1", "srv2", "srv3"];
-
-
     /**
      * @return array<string, array{string, ReadOptions}>
      */
@@ -27,9 +24,6 @@ class YouTubeTimedTextWriterTest extends TestCase
     {
         $cases = [];
         foreach (WriteGoldens::realFiles("youtube") as $file) {
-            if (!in_array(pathinfo($file, PATHINFO_EXTENSION), self::WRITTEN, true)) {
-                continue;
-            }
             $cases["$file default"] = [$file, new ReadOptions()];
             $cases["$file words"]   = [$file, self::withWords()];
         }
@@ -52,17 +46,26 @@ class YouTubeTimedTextWriterTest extends TestCase
 
     private static function write(Subtitle $subtitle): string
     {
-        return (new YouTubeTimedTextWriter())->write($subtitle);
+        return (new YouTubeTimedTextFormatter())->format($subtitle);
     }
 
 
     /**
-     * blank-lines.en.srv3 has white space before the XML declaration, which the parser skips.
+     * The XML variants give the bytes of the source. blank-lines.en.srv3 has white space before the XML declaration,
+     * which the parser skips. json3 gives the same JSON with the same key order, without the indents of YouTube.
      */
     #[DataProvider("realFiles")]
-    public function testARoundTripGivesTheBytesOfTheSource(string $file, ReadOptions $options): void
+    public function testARoundTripGivesTheSource(string $file, ReadOptions $options): void
     {
-        $this->assertSame(ltrim(file_get_contents(TestFiles::DIR . "youtube/real/$file")), self::write(self::read($file, $options)));
+        $source = file_get_contents(TestFiles::DIR . "youtube/real/$file");
+        $output = self::write(self::read($file, $options));
+        if (str_ends_with($file, ".json3")) {
+            $this->assertSame(json_encode(json_decode($source)), json_encode(json_decode($output)));
+
+            return;
+        }
+
+        $this->assertSame(ltrim($source), $output);
     }
 
 
@@ -174,6 +177,35 @@ class YouTubeTimedTextWriterTest extends TestCase
             "<?xml version=\"1.0\" encoding=\"utf-8\" ?><timedtext format=\"3\">\n<head>\n<pen id=\"1\" i=\"1\"/>\n<pen id=\"2\" fc=\"#FF0000\"/>\n" .
             "<wp id=\"1\" ap=\"0\" ah=\"0\" av=\"0\"/>\n</head>\n<body>\n<p t=\"1000\" d=\"1000\"><s p=\"1\">Hi</s><s t=\"500\"> there</s></p>\n" .
             "<p t=\"3000\" d=\"1000\" wp=\"1\"><s p=\"2\">Red</s>\ntwo</p>\n</body>\n</timedtext>\n",
+            self::write($subtitle)
+        );
+    }
+
+
+    public function testAJson3EditGetsPensAndAWindowPositionAsInSrv3(): void
+    {
+        $subtitle = self::read("manual.en.json3");
+        $subtitle->getCues()[0]->setLines('Welcome to the <font color="#ff0000"><b>bakery</b></font> tour.')->setAlignment(Alignment::TopCenter);
+
+        $json = json_decode(self::write($subtitle), true);
+
+        $this->assertSame([[], ["bAttr" => 1, "fcForeColor" => 0xFF0000]], $json["pens"]);
+        $this->assertSame([[], ["apPoint" => 1, "ahHorPos" => 50, "avVerPos" => 0]], $json["wpWinPositions"]);
+        $this->assertSame(
+            ["tStartMs" => 1200, "dDurationMs" => 2300, "wpWinPosId" => 1, "segs" => [["utf8" => "Welcome to the "], ["utf8" => "bakery", "pPenId" => 1], ["utf8" => " tour."]]],
+            $json["events"][0]
+        );
+    }
+
+
+    public function testCuesFromAnotherFormatGiveJson3WhenTheFormatDataSaysSo(): void
+    {
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "<i>Hi</i> <00:00:01.500>there")]);
+        $subtitle->setFormatData("youtube", ["format" => "json3"]);
+
+        $this->assertSame(
+            '{"wireMagic":"pb3","pens":[{},{"iAttr":1}],"wsWinStyles":[{}],"wpWinPositions":[{}],' .
+            '"events":[{"tStartMs":1000,"dDurationMs":1000,"segs":[{"utf8":"Hi","pPenId":1},{"utf8":" there","tOffsetMs":500}]}]}',
             self::write($subtitle)
         );
     }

@@ -9,13 +9,9 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
-/**
- * Writes YouTube timed text. The YouTube timed text formatter will use it once it writes every variant.
- *
- * @internal
- */
-final class YouTubeTimedTextWriter
+final class YouTubeTimedTextFormatter extends SubtitleFormatter
 {
     private const KEY = YouTubeTimedTextParser::FORMAT_DATA_KEY;
 
@@ -28,17 +24,19 @@ final class YouTubeTimedTextWriter
     /**
      * Writes YouTube timed text in the variant that the "format" field of the subtitle format data names.
      */
-    public function write(Subtitle $subtitle): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $fileData = $subtitle->findFormatData(self::KEY);
         $cues     = $subtitle->getCues();
         $cueData  = array_map(fn (SubtitleCue $cue): array => $cue->findFormatData(self::KEY), $cues);
-
-        return match ($fileData["format"] ?? null) {
+        $output   = match ($fileData["format"] ?? null) {
             "srv1"  => $this->srv1($cues, $cueData),
             "srv2"  => $this->srv2($cues, $cueData),
+            "json3" => $this->json3($cues, $cueData, $fileData),
             default => $this->srv3($cues, $cueData, $fileData),
         };
+
+        return $this->applyOutputOptions($output, $options ?? new WriteOptions());
     }
 
 
@@ -71,6 +69,105 @@ final class YouTubeTimedTextWriter
         }
 
         return $xml . "</timedtext>\n";
+    }
+
+
+    /**
+     * Writes json3: the pens, window styles and window positions, then the events. The window events come first,
+     * and each cue has the append events before it. Styles and alignments become pens and window positions as in srv3.
+     *
+     * @param list<SubtitleCue> $cues
+     */
+    private function json3(array $cues, array $cueData, array $fileData): string
+    {
+        $lists = [];
+        foreach (["pens", "wsWinStyles", "wpWinPositions"] as $name) {
+            $lists[$name] = is_array($fileData[$name] ?? null) ? array_values($fileData[$name]) : [[]];
+        }
+        $penStyles = array_map(fn (mixed $pen): array => YouTubeTimedTextParser::jsonPenStyle(is_array($pen) ? $pen : []), $lists["pens"]);
+
+        $events = is_array($fileData["windows"] ?? null) ? array_values($fileData["windows"]) : [];
+        foreach ((new YouTubeCaptionTimes("tStartMs", "dDurationMs", "wWinId", 1000, false))->captions($cues, $cueData) as $index => $caption) {
+            array_push($events, ...$caption["appends"]);
+            $events[] = $this->json3Event($cues[$index], $caption["fields"], $lists, $penStyles);
+        }
+        array_push($events, ...(is_array($fileData["appends"] ?? null) ? array_values($fileData["appends"]) : []));
+
+        $document = array_replace(
+            ["wireMagic" => "pb3"],
+            array_diff_key($fileData, ["format" => true, "windows" => true, "appends" => true]),
+            array_map(fn (array $list): array => array_map(self::object(...), $list), $lists),
+            ["events" => $events]
+        );
+
+        return JsonOutput::document($document, false);
+    }
+
+
+    /**
+     * @param array{pens: list<mixed>, wsWinStyles: list<mixed>, wpWinPositions: list<mixed>} $lists to which new pens and window positions go
+     */
+    private function json3Event(SubtitleCue $cue, array $fields, array &$lists, array &$penStyles): array
+    {
+        $eventPen = is_int($fields["pPenId"] ?? null) ? $fields["pPenId"] : null;
+        $source   = [];
+        foreach (is_array($fields["segments"] ?? null) ? $fields["segments"] : [] as $segment) {
+            $segment  = is_array($segment) ? $segment : [];
+            $pen      = $segment["pPenId"] ?? $eventPen;
+            $source[] = [
+                "text"   => is_string($segment["utf8"] ?? null) ? $segment["utf8"] : "",
+                "offset" => is_int($segment["tOffsetMs"] ?? null) || is_float($segment["tOffsetMs"] ?? null) ? $segment["tOffsetMs"] / 1000 : null,
+                "style"  => is_int($pen) && isset($penStyles[$pen]) ? $penStyles[$pen] : YouTubeTimedTextParser::jsonPenStyle([]),
+                "fields" => $segment,
+            ];
+        }
+
+        [$unchanged, $segments] = YouTubeSegments::forCue($cue, $source);
+        $event                  = array_diff_key($fields, ["segments" => true, "appends" => true]);
+        $anchors                = array_map(fn (mixed $position): ?int => is_int($position["apPoint"] ?? null) ? $position["apPoint"] : null, $lists["wpWinPositions"]);
+        $position               = self::findWindowPosition($anchors, $cue->getAlignment(), is_int($event["wpWinPosId"] ?? null) ? $event["wpWinPosId"] : null);
+        if ($position === false) {
+            $anchor                    = YouTubeTimedTextParser::anchorPoint($cue->getAlignment());
+            $position                  = count($lists["wpWinPositions"]);
+            $lists["wpWinPositions"][] = ["apPoint" => $anchor, "ahHorPos" => $anchor % 3 * 50, "avVerPos" => intdiv($anchor, 3) * 50];
+        }
+        if ($position === null) {
+            unset($event["wpWinPosId"]);
+        } else {
+            $event["wpWinPosId"] = $position;
+        }
+        if ($unchanged) {
+            return $event + ["segs" => array_column($segments, "fields")];
+        }
+
+        unset($event["pPenId"]);
+        $segs = [];
+        foreach ($segments as $segment) {
+            $pen = self::findPen($penStyles, $segment["style"], is_int($segment["fields"]["pPenId"] ?? null) ? $segment["fields"]["pPenId"] : null);
+            if ($pen === false) {
+                $style            = $segment["style"];
+                $pen              = count($lists["pens"]);
+                $lists["pens"][]  = ($style["b"] ? ["bAttr" => 1] : []) + ($style["i"] ? ["iAttr" => 1] : []) + ($style["u"] ? ["uAttr" => 1] : [])
+                    + ($style["color"] === null ? [] : ["fcForeColor" => (int) hexdec(substr($style["color"], 1))]);
+                $penStyles[$pen] = $style;
+            }
+            $offset = (int) round(($segment["offset"] ?? 0.0) * 1000);
+            $segs[] = ["utf8" => $segment["text"]]
+                + ($offset > 0 || isset($segment["fields"]["tOffsetMs"]) ? ["tOffsetMs" => $offset] : [])
+                + ($pen === null ? [] : ["pPenId" => $pen])
+                + array_diff_key($segment["fields"], ["utf8" => true, "tOffsetMs" => true, "pPenId" => true]);
+        }
+
+        return $event + ["segs" => $segs];
+    }
+
+
+    /**
+     * Returns an empty pen, window style or window position as a JSON object, as YouTube writes "{}".
+     */
+    private static function object(mixed $value): mixed
+    {
+        return $value === [] ? new \stdClass() : $value;
     }
 
 
@@ -201,23 +298,16 @@ final class YouTubeTimedTextWriter
 
 
     /**
-     * Returns the ID of the pen for a style: the preferred pen or the first pen with that style. Adds a pen when none has it.
-     * A segment without style gets no pen.
+     * Returns the srv3 pen for a style, and adds a pen when none has the style.
      *
      * @param list<array>          $pens
      * @param array<string, array> $penStyles
      */
     private static function pen(array &$pens, array &$penStyles, array $style, ?string $preferred): ?string
     {
-        if ($preferred !== null && ($penStyles[$preferred] ?? null) === $style) {
-            return $preferred;
-        }
-        if ($style === YouTubeTimedTextParser::xmlPenStyle([])) {
-            return null;
-        }
-        $id = array_search($style, $penStyles, true);
+        $id = self::findPen($penStyles, $style, $preferred);
         if ($id !== false) {
-            return (string) $id;
+            return $id === null ? null : (string) $id;
         }
 
         $id     = (string) (max([0, ...array_map(intval(...), array_keys($penStyles))]) + 1);
@@ -230,8 +320,26 @@ final class YouTubeTimedTextWriter
 
 
     /**
-     * Sets "wp" to a window position with the alignment of the cue. Bottom center needs none. A new window position
-     * has the anchor point and the matching position in percent.
+     * Returns the preferred pen when it has the style, else the first pen with the style. Returns null for a segment
+     * without style, which needs no pen, and false when no pen has the style.
+     *
+     * @param array<int|string, array> $penStyles the style of each pen ID
+     */
+    private static function findPen(array $penStyles, array $style, int|string|null $preferred): int|string|null|false
+    {
+        if ($preferred !== null && ($penStyles[$preferred] ?? null) === $style) {
+            return $preferred;
+        }
+        if ($style === YouTubeTimedTextParser::xmlPenStyle([])) {
+            return null;
+        }
+
+        return array_search($style, $penStyles, true);
+    }
+
+
+    /**
+     * Sets "wp" to a srv3 window position with the alignment of the cue, and adds one when none has it.
      *
      * @param list<array> $positions
      */
@@ -239,31 +347,39 @@ final class YouTubeTimedTextWriter
     {
         $alignments = [];
         foreach ($positions as $position) {
-            $anchor = is_numeric($position["ap"] ?? null) ? (int) $position["ap"] : null;
-            $alignments[(string) ($position["id"] ?? "")] = YouTubeTimedTextParser::alignment($anchor) ?? Alignment::BottomCenter->value;
+            $alignments[(string) ($position["id"] ?? "")] = is_numeric($position["ap"] ?? null) ? (int) $position["ap"] : null;
         }
 
-        $alignment = $cue->getAlignment()->value;
-        $current   = is_scalar($fields["wp"] ?? null) ? (string) $fields["wp"] : null;
-        if (($current === null ? Alignment::BottomCenter->value : $alignments[$current] ?? Alignment::BottomCenter->value) === $alignment) {
-            return $fields;
-        }
-        if ($alignment === Alignment::BottomCenter->value) {
-            unset($fields["wp"]);
-
-            return $fields;
-        }
-
-        $id = array_search($alignment, $alignments, true);
+        $id = self::findWindowPosition($alignments, $cue->getAlignment(), is_scalar($fields["wp"] ?? null) ? (string) $fields["wp"] : null);
         if ($id === false) {
             $anchor      = YouTubeTimedTextParser::anchorPoint($cue->getAlignment());
             $id          = (string) (max([0, ...array_map(intval(...), array_keys($alignments))]) + 1);
             $positions[] = ["id" => $id, "ap" => (string) $anchor, "ah" => (string) ($anchor % 3 * 50), "av" => (string) (intdiv($anchor, 3) * 50)];
         }
-
-        $fields["wp"] = (string) $id;
+        if ($id === null) {
+            unset($fields["wp"]);
+        } else {
+            $fields["wp"] = (string) $id;
+        }
 
         return $fields;
+    }
+
+
+    /**
+     * Returns the current window position when it has the alignment, else the first one with the alignment.
+     * Returns null for bottom center without a window position, which needs none, and false when none has the alignment.
+     *
+     * @param array<int|string, ?int> $anchors the anchor point of each window position ID
+     */
+    private static function findWindowPosition(array $anchors, Alignment $alignment, int|string|null $current): int|string|null|false
+    {
+        $alignments = array_map(fn (?int $anchor): int => YouTubeTimedTextParser::alignment($anchor) ?? Alignment::BottomCenter->value, $anchors);
+        if ($current === null ? $alignment === Alignment::BottomCenter : ($alignments[$current] ?? Alignment::BottomCenter->value) === $alignment->value) {
+            return $current;
+        }
+
+        return $alignment === Alignment::BottomCenter ? null : array_search($alignment->value, $alignments, true);
     }
 
 
@@ -272,7 +388,7 @@ final class YouTubeTimedTextWriter
      */
     private function text(array $fields, SubtitleCue $cue): string
     {
-        $text = implode("\n", Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines())));
+        $text = implode("\n", $this->plainLines($cue));
         $raw  = $fields["text"] ?? null;
 
         return "<text" . self::attributes(array_diff_key($fields, self::NOT_ATTRIBUTES)) . ">"

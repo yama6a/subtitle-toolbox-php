@@ -74,6 +74,7 @@ class RubyFallbackTest extends TestCase
             "Deepgram"            => [Format::Deepgram, new WriteOptions()],
             "AssemblyAI"          => [Format::AssemblyAi, new WriteOptions()],
             "Google"              => [Format::GoogleSpeech, new WriteOptions()],
+            "YouTube timed text"  => [Format::YouTubeTimedText, new WriteOptions()],
         ];
     }
 

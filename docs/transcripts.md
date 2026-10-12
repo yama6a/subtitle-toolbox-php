@@ -1,6 +1,6 @@
 # Transcripts
 
-Speech-to-text tools, YouTube and podcast apps use their own transcript formats. The parsers on this page turn them into cues, so you can write SubRip or WebVTT. The library writes Whisper JSON, the cloud speech-to-text JSON formats, the podcast transcript formats and plain text. YouTube timed text is read only.
+Speech-to-text tools, YouTube and podcast apps use their own transcript formats. The parsers on this page turn them into cues, so you can write SubRip or WebVTT. The library writes all of them, and plain text.
 
 ## Edit and save a transcript
 Read a transcript, fix the cues, and write it in its own format. The writer keeps the fields of the source, so other tools still read the file.
@@ -119,6 +119,10 @@ $subtitle->findFormatData('youtube')['format'];                              // 
 - **Alignment**: from the anchor point of the window position of a cue. Anchor point 0 is top left and becomes `Alignment::TopLeft`. A cue without its own window position, such as an automatic caption, gets `Alignment::BottomCenter`.
 - **Pens**: the pen color becomes `<font color>`. Bold, italic and underline become `<b>`, `<i>` and `<u>`.
 - **Format data**: the subtitle keeps the `format` name, and the head elements and windows of the file. Each cue keeps all fields of its event or `<p>`, also the times, and all fields of its segments in `segments`, also the text. A srv3 segment keeps its text before the parser decodes the entities in `text`. A srv1 or srv2 cue keeps that text in `text` only when it holds entities, such as `&#39;` in a file that escaped them twice. A cue keeps the events that only add a line break before it in `appends`. The subtitle keeps such events after the last cue in `appends`.
+- **Writing**: `Format::YouTubeTimedText` writes the variant that `format` names, and srv3 without it. To write another variant, set it first: `$subtitle->setFormatData('youtube', ['format' => 'json3'] + $subtitle->findFormatData('youtube'))`. A file read and written without edits gives the same bytes for srv1, srv2 and srv3, and the same JSON data for json3. See [Edit and save a transcript](#edit-and-save-a-transcript) for the shared rules.
+- **Times**: an unedited start or duration keeps its source value. A missing duration stays missing, and the append events stay in place, while the cue ends where the parser ends it. A moved cue keeps its duration, and its append events move with it.
+- **srv3 and json3 output**: a changed cue gets its segments from the markup. Each style becomes a pen, and equal styles share one pen. A new style gets a new pen. An alignment other than bottom center gets a window position with its anchor point. Word timestamps become segments with an offset in milliseconds. A segment with the text and the offset of a source segment keeps its other fields, such as `ac`. A typo fix without word timestamps keeps the offsets of the words.
+- **srv1 and srv2 output**: plain text without styles or word times. A text that the source wrote with entities escaped twice, such as `&amp;#39;`, keeps them when the cue text is unchanged.
 
 ## Podcast transcripts
 A podcast feed links a transcript per episode with the `<podcast:transcript>` tag. Apple Podcasts, Podverse and Fountain read it. The [Podcasting 2.0 transcript spec](https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/examples/transcripts/transcripts.md) allows SubRip, WebVTT, a JSON format and an HTML format. The library reads and writes all four.
