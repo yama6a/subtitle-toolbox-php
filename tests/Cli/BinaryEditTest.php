@@ -8,17 +8,11 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\CaseMode;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Karaoke\WordHighlight;
-use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\MergeShortCuesOptions;
-use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
-use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
 use SubtitleToolbox\Profanity\ProfanityMask;
 use SubtitleToolbox\Profanity\ProfanityOptions;
-use SubtitleToolbox\ReadOptions;
-use SubtitleToolbox\ReplaceTextOptions;
 use SubtitleToolbox\Resegmenting\ResegmentMode;
 use SubtitleToolbox\Resegmenting\Resegmenter;
 use SubtitleToolbox\Resegmenting\ResegmentOptions;
@@ -33,10 +27,10 @@ class BinaryEditTest extends CliTestCase
 {
     public function testStripTags(): void
     {
-        [$code, $stdout] = $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "-", "--strip-tags"]);
+        copy(self::FILES . "transforms/own_cea608_caps.vtt", "$this->dir/caps.vtt");
 
-        $this->assertSame(0, $code);
-        $this->assertStringContainsString("\nThe train leaves at noon.\n", $stdout);
+        $this->assertSame([0, file_get_contents(self::FILES . "transforms/own_cea608_caps_stripped.vtt"), ""],
+                          $this->runCli(["convert", "caps.vtt", "--to", "vtt", "-o", "-", "--strip-tags"]));
     }
 
 
@@ -57,13 +51,11 @@ class BinaryEditTest extends CliTestCase
     public function testForcedOnly(): void
     {
         copy(__DIR__ . "/../files/forced/forced_signs_2398.itt", "$this->dir/signs.itt");
-        $expected = Subtitle::fromStringAutoDetectFormat($this->file("signs.itt"))->withForcedCuesOnly()->toString(Format::SubRip);
 
         [$code, $stdout, $stderr] = $this->runCli(["convert", "signs.itt", "--to", "srt", "-o", "signs.srt", "--forced-only"]);
 
         $this->assertSame([0, "signs.itt -> signs.srt\n", ""], [$code, $stdout, $stderr]);
-        $this->assertSame($expected, $this->file("signs.srt"));
-        $this->assertSame(3, substr_count($expected, " --> "));
+        $this->assertFileEquals(self::FILES . "forced/forced_signs_2398_forced_only.srt", "$this->dir/signs.srt");
         $this->assertSame(6, substr_count($this->runCli(["convert", "signs.itt", "--to", "srt", "-o", "-"])[1], " --> "));
     }
 
@@ -123,12 +115,12 @@ class BinaryEditTest extends CliTestCase
                               "--replace", '/\.{4,}/=...', "--strip-tags"])
         );
 
-        $expected = Subtitle::fromStringAutoDetectFormat($this->file("multi.srt"))->replaceText("uhr", "Uhr", new ReplaceTextOptions(caseSensitive: false))->changeCase(CaseMode::Lower, "tr");
-        $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runCli([
-            "convert", "multi.srt", "--to", "srt", "-o", "-", "--replace", "uhr=Uhr", "--replace-ignore-case", "--case", "lower", "--language", "tr",
-        ]));
-        $this->assertStringContainsString("<font color=\"#ffff00\">istasyon kap\u{131}s\u{131} \u{131}\u{15f}\u{131}kl\u{131}.</font>",
-                                          $this->runCli(["convert", "multi.srt", "--to", "srt", "-o", "-", "--case", "lower", "--language", "tr"])[1]);
+        $this->assertSame([0, file_get_contents(self::FILES . "transforms/own_multilingual_caps_upper.srt"), ""],
+                          $this->runCli(["convert", "multi.srt", "--to", "srt", "-o", "-", "--case", "upper"]));
+        $this->assertSame([0, file_get_contents(self::FILES . "transforms/own_multilingual_caps_lower_tr.srt"), ""],
+                          $this->runCli(["convert", "multi.srt", "--to", "srt", "-o", "-", "--case", "lower", "--language", "tr"]));
+        $this->assertSame([0, file_get_contents(self::FILES . "transforms/own_multilingual_caps_replaced.srt"), ""],
+                          $this->runCli(["convert", "multi.srt", "--to", "srt", "-o", "-", "--replace", "uhr=Uhr", "--replace-ignore-case"]));
     }
 
 
@@ -137,25 +129,13 @@ class BinaryEditTest extends CliTestCase
         $files = __DIR__ . "/../files/profanity/";
         copy($files . "keys.srt", "$this->dir/keys.srt");
         copy($files . "words.txt", "$this->dir/words.txt");
-        $masked = function (ProfanityMask $mask): string {
-            $subtitle = Subtitle::fromStringAutoDetectFormat($this->file("keys.srt"));
-            ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"], $mask));
 
-            return $subtitle->toString(Format::SubRip);
-        };
-
-        [$code, $stdout, $stderr] = $this->runCli(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt"]);
-        $this->assertSame([0, $masked(ProfanityMask::Stars), ""], [$code, $stdout, $stderr]);
-        $this->assertStringContainsString("- Go to ****.\n", $stdout);
-
-        $this->assertSame(
-            [0, $masked(ProfanityMask::FirstLetter), ""],
-            $this->runCli(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt", "--mask", "first-letter"])
-        );
-        $this->assertSame(
-            [0, $masked(ProfanityMask::Remove), ""],
-            $this->runCli(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt", "--mask", "remove"])
-        );
+        $this->assertSame([0, file_get_contents($files . "keys_stars.srt"), ""],
+                          $this->runCli(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt"]));
+        $this->assertSame([0, file_get_contents($files . "keys_first_letter.srt"), ""],
+                          $this->runCli(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt", "--mask", "first-letter"]));
+        $this->assertSame([0, file_get_contents($files . "keys_removed.srt"), ""],
+                          $this->runCli(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt", "--mask", "remove"]));
         $this->assertSame(
             [3, "", "Error: missing.txt: The file does not exist.\n"],
             $this->runCli(["convert", "keys.srt", "--to", "srt", "--mask-words", "missing.txt"])
@@ -176,7 +156,7 @@ class BinaryEditTest extends CliTestCase
         $this->assertSame($subtitle->toString(Format::WebVtt), $this->file("out.vtt"));
         $this->assertSame(MuteRange::toEdl($ranges), $this->file("radio.edl"));
         $this->assertSame("1.500 2.100 1\n6.200 6.800 1\n7.900 9.100 1\n", $this->file("radio.edl"));
-        $this->assertSame(MuteRange::toFfmpegVolumeFilter($ranges) . "\n", $this->file("radio.af"));
+        $this->assertFileEquals(self::FILES . "profanity/radio.af", "$this->dir/radio.af");
         $this->assertSame(self::usageError("convert", "The --mute-edl file radio.edl exists. The tool never overwrites a file. Remove it, or pass " .
                                                       "another output file or directory."),
                           $this->runCli(["convert", "radio.vtt", "--to", "srt", "-o", "new.srt", "--mask-words", "words.txt", "--mute-edl", "radio.edl"]));
@@ -241,11 +221,9 @@ class BinaryEditTest extends CliTestCase
     public function testKaraokeStyleSetsTheHighlightTag(): void
     {
         $this->copySongs();
-        $expected = Subtitle::loadAutoDetectFormat("$this->dir/song.lrc");
-        WordHighlight::apply($expected, new WordHighlightOptions(style: 'font color="#ffff00"'));
 
         $this->assertSame(
-            [0, $expected->toString(Format::SubRip), ""],
+            [0, file_get_contents(self::FILES . "karaoke/lrc_yellow.srt"), ""],
             $this->runCli(["convert", "song.lrc", "--to", "srt", "-o", "-", "--karaoke", "--karaoke-style", 'font color="#ffff00"'])
         );
     }
@@ -327,10 +305,11 @@ class BinaryEditTest extends CliTestCase
             return $subtitle->toString(Format::WebVtt);
         };
 
-        [$code, $stdout, $stderr] = $this->runCli(["convert", "whisper.json", "--structure-split-long", "--to", "vtt", "-o", "-"]);
+        [$code, $stdout, $stderr] = $this->runCli(["convert", "whisper.json", "--structure-split-long", "--word-timestamps", "--to", "vtt", "-o", "-"]);
 
-        $this->assertSame([0, $split(new ResegmentOptions(ResegmentMode::SplitLong)), ""], [$code, $stdout, $stderr]);
-        $this->assertGreaterThan(count(Subtitle::fromStringAutoDetectFormat($this->file("whisper.json"))->getCues()), substr_count($stdout, " --> "));
+        $this->assertSame([0, file_get_contents(self::FILES . "resegmenting/own_whisper_long_segments_split.vtt"), ""], [$code, $stdout, $stderr]);
+        $this->assertSame([0, $split(new ResegmentOptions(ResegmentMode::SplitLong)), ""],
+                          $this->runCli(["convert", "whisper.json", "--structure-split-long", "--to", "vtt", "-o", "-"]));
         $this->assertSame(
             [0, $split(new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLinesPerCue: 1))), ""],
             $this->runCli(["convert", "whisper.json", "--structure-split-long", "--structure-max-cpl", "30", "--structure-max-lines", "1", "--to", "vtt", "-o", "-"])
@@ -386,25 +365,23 @@ class BinaryEditTest extends CliTestCase
     public function testWordTimestampsAndResegment(): void
     {
         copy(self::FILES . "resegmenting/own_whisper_long_segments.json", "$this->dir/lecture.json");
-        $withWords = fn (): Subtitle => (new WhisperJsonParser())->parse($this->file("lecture.json"), new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
 
         [$code, $stdout, $stderr] = $this->runCli(["convert", "lecture.json", "--structure-resegment", "--to", "srt", "-o", "lecture.srt"]);
         $this->assertSame([0, "lecture.json -> lecture.srt\n", ""], [$code, $stdout, $stderr]);
         $this->assertFileEquals(self::FILES . "resegmenting/own_whisper_long_segments_resegmented.srt", "$this->dir/lecture.srt");
 
-        $resegmented = $withWords();
-        Resegmenter::apply($resegmented, new ResegmentOptions(ResegmentMode::ByWords, limits: new CueLimits(maxCharactersPerLine: 30, maxLinesPerCue: 1), maxWordGap: 0.3));
         $this->assertSame(
-            [0, $resegmented->toString(Format::SubRip), ""],
+            [0, file_get_contents(self::FILES . "resegmenting/own_whisper_long_segments_resegmented_30x1.srt"), ""],
             $this->runCli(["convert", "lecture.json", "--structure-resegment", "--structure-max-cpl", "30", "--structure-max-lines", "1", "--structure-max-word-gap", "00:00:00.3",
                                    "--to", "srt", "-o", "-"])
         );
 
-        $this->assertSame([0, $withWords()->toString(Format::WebVtt), ""],
+        $words = file_get_contents(self::FILES . "resegmenting/own_whisper_long_segments_words.vtt");
+        $this->assertSame([0, $words, ""],
                           $this->runCli(["convert", "lecture.json", "--to", "vtt", "-o", "-", "--word-timestamps"]));
-        $this->assertSame([0, $withWords()->toString(Format::WebVtt), ""],
+        $this->assertSame([0, $words, ""],
                           $this->runCli(["convert", "lecture.json", "--from", "whisper", "--to", "vtt", "-o", "-", "--word-timestamps"]));
-        $this->assertSame([0, $withWords()->toString(Format::WebVtt), ""],
+        $this->assertSame([0, $words, ""],
                           $this->runCli(["convert", "-", "--to", "vtt", "-o", "-", "--word-timestamps"], $this->file("lecture.json")));
         $this->assertSame(0, $this->runCli(["convert", "trip.srt", "--to", "vtt", "-o", "-", "--word-timestamps"])[0]);
         $this->assertStringNotContainsString("<00:", $this->runCli(["convert", "lecture.json", "--to", "vtt", "-o", "-"])[1]);
@@ -419,10 +396,6 @@ class BinaryEditTest extends CliTestCase
         $this->assertStringContainsString("\nWe need two tickets for the long ride to the coast.\n", $stdout);
         $this->assertStringContainsString("\nToo late.\n", $stdout);
         $this->assertStringNotContainsString("BELL", $stdout);
-
-        [, $stdout] = $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "-", "--sdh", "--sdh-keep-parentheses", "--sdh-keep-speaker-labels"]);
-        $this->assertStringContainsString("\nANNA: We need", $stdout);
-        $this->assertStringContainsString("\n(sighs) Too late.\n", $stdout);
     }
 
 

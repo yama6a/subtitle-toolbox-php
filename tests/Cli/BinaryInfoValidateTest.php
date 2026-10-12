@@ -45,12 +45,7 @@ class BinaryInfoValidateTest extends CliTestCase
 
     public function testInfoAsText(): void
     {
-        [$code, $stdout, $stderr] = $this->runCli(["info", "trip.srt"]);
-
-        $this->assertSame(0, $code);
-        $this->assertStringStartsWith("trip.srt\n  Format:                srt\n  Encoding:              UTF-8\n  Cues:                  3\n", $stdout);
-        $this->assertStringContainsString("  Gaps:                  min -0.5, average 0.25, max 1 s\n", $stdout);
-        $this->assertSame("", $stderr);
+        $this->assertSame([0, file_get_contents(self::FILES . "cli/trip_info.txt"), ""], $this->runCli(["info", "trip.srt"]));
     }
 
 
@@ -84,15 +79,7 @@ class BinaryInfoValidateTest extends CliTestCase
 
     public function testInfoAsJson(): void
     {
-        [$code, $stdout] = $this->runCli(["info", "trip.srt", "--json"]);
-        $list = json_decode($stdout, true);
-        $info = $list[0];
-
-        $this->assertSame([0, 1], [$code, count($list)]);
-        $this->assertSame("trip.srt", $info["file"]);
-        $this->assertSame("srt", $info["format"]);
-        $this->assertSame(3, $info["statistics"]["cueCount"]);
-        $this->assertSame(["word" => "the", "count" => 3], $info["statistics"]["mostUsedWords"][0]);
+        $this->assertSame([0, file_get_contents(self::FILES . "cli/trip_info.json"), ""], $this->runCli(["info", "trip.srt", "--json"]));
 
         [$code, $stdout, $stderr] = $this->runCli(["info", "trip.srt", "shop.vtt", "broken.srt", "--json", "--keep-going"]);
         $list = json_decode($stdout, true);
