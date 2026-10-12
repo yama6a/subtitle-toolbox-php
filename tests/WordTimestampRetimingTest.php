@@ -102,9 +102,9 @@ class WordTimestampRetimingTest extends TestCase
     }
 
 
-    public function testMergeMovesTheWordTimestampsOfTheOtherSubtitle(): void
+    public function testAppendMovesTheWordTimestampsOfTheOtherSubtitle(): void
     {
-        $subtitle = (new Subtitle())->merge(self::load("profanity/radio.vtt", Format::WebVtt), 30);
+        $subtitle = (new Subtitle())->append(self::load("profanity/radio.vtt", Format::WebVtt), 30);
 
         $this->assertSame(["<00:00:37.500>Fine, <00:00:38.000>damnit."], $subtitle->getCues()[3]->getLines());
     }

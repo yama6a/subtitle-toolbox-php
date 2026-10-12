@@ -254,7 +254,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 |:--- |:--- |
 | `--structure-resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--structure-max-word-gap` sets `maxWordGap` as a [time](#times). It turns on `--word-timestamps` |
 | `--structure-unwrap` | `unwrapLines()`. Each dialogue dash line starts a line of its own |
-| `--structure-merge-same-time` | `mergeSameTimeCues()` with the default `tolerance` of 0. It runs after `--structure-unwrap`, so the lines of each joined cue stay apart |
+| `--structure-merge-same-time` | `mergeSameTimeCues()` with the default `timeTolerance` of 0. It runs after `--structure-unwrap`, so the lines of each joined cue stay apart |
 | `--structure-merge-short` | `mergeShortCues()` with the default options |
 | `--structure-split-long` | `Resegmenter::apply()` with `ResegmentMode::SplitLong` and the default options |
 | `--structure-wrap` | `wrapLines()` with `--structure-max-cpl` and `--structure-max-lines` |
@@ -276,8 +276,8 @@ vendor/bin/subtitle-toolbox convert movie.srt --sync first=00:00:12.5 --sync '#1
 | Option | Calls |
 |:--- |:--- |
 | `--shift SECONDS` | [`shift()`](editing.md#retiming) with the [time](#times) to add to every time. A negative value shows the cues earlier |
-| `--shift-after SECONDS` | `shift()` with the [time](#times) `$fromTime`, so only the cues that start at this time or later move. Needs `--shift` |
-| `--shift-before SECONDS` | `shift()` with the [time](#times) `$toTime`, so only the cues that start before this time move. It must be after `--shift-after`. Needs `--shift` |
+| `--shift-after SECONDS` | `shift()` with the [time](#times) `$from`, so only the cues that start at this time or later move. Needs `--shift` |
+| `--shift-before SECONDS` | `shift()` with the [time](#times) `$to`, so only the cues that start before this time move. It must be after `--shift-after`. Needs `--shift` |
 | `--scale FACTOR` | `scale()`. `--scale 1.001` fixes a subtitle that drifts 3.6 s per hour |
 | `--sync OLD=NEW` | `syncByPoints()` with a point that moves `OLD` to the [time](#times) `NEW`. Repeatable |
 | `--from-fps RATE`, `--to-fps RATE` | `convertFrameRate()`. `--from-fps 25 --to-fps 23.976` fits a subtitle for a 25 fps release to a 23.976 fps video |
@@ -458,7 +458,7 @@ vendor/bin/subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt
 | `--mode MODE` | `stack` or `top-bottom` |
 | `--secondary-style TAG` | `secondaryStyle`, for example `i` or `'font color="#ffff00"'` |
 | `--secondary-alignment 1-9` | `secondaryAlignment` for `top-bottom`, as the value of the `Alignment` case, for example 8 for `Alignment::TopCenter` |
-| `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom`. The value is a [time](#times) |
+| `--snap-tolerance SECONDS` | `timeTolerance` for `top-bottom`. The value is a [time](#times) |
 | `--primary-from FORMAT`, `--primary-track NUMBER` | the format and the MKV or WebM track of the primary file. `dual` has no `--from` and `--track` |
 | `--secondary-from FORMAT`, `--secondary-track NUMBER` | the format and the MKV or WebM track of the secondary file. Without `--secondary-from`, the tool detects the format of the secondary file. `--primary-from` does not apply to it |
 

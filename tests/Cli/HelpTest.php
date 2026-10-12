@@ -36,7 +36,7 @@ class HelpTest extends TestCase
         "mode"                     => [DualSubtitleOptions::class, "__construct", "mode"],
         "secondary-style"          => [DualSubtitleOptions::class, "__construct", "secondaryStyle"],
         "secondary-alignment"      => [DualSubtitleOptions::class, "__construct", "secondaryAlignment"],
-        "snap-tolerance"           => [DualSubtitleOptions::class, "__construct", "snapTolerance"],
+        "snap-tolerance"           => [DualSubtitleOptions::class, "__construct", "timeTolerance"],
         "segment"                  => [HlsSegmentOptions::class, "__construct", "segmentDuration"],
         "pattern"                  => [HlsSegmentOptions::class, "__construct", "fileNamePattern"],
         "mpegts"                   => [HlsSegmentOptions::class, "__construct", "mpegts"],

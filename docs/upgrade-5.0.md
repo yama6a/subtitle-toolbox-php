@@ -111,7 +111,17 @@ These methods were public and marked `@internal`. 5.0 removes the ones in this t
 - The three new names return what the old names returned. Only the names change.
 - There are no aliases. A call to an old name is a fatal error.
 
-TODO #971
+| 4.x | 5.0 |
+|:--- |:--- |
+| `$part1->merge($part2, offset: 3130)` | `$part1->append($part2, offset: 3130)` |
+| `$subtitle->shift(2, fromTime: 600, toTime: 900)` | `$subtitle->shift(2, from: 600, to: 900)` |
+| `$subtitle->mergeSameTimeCues(tolerance: 0.1)` | `$subtitle->mergeSameTimeCues(timeTolerance: 0.1)` |
+| `new DualSubtitleOptions(snapTolerance: 0.2)` | `new DualSubtitleOptions(timeTolerance: 0.2)` |
+
+- `append()` adds the cues of another subtitle. `mergeShortCues()`, `mergeSameTimeCues()` and `joinCues()` join cues inside one subtitle.
+- `shift()`, `withSlice()` and `findCuesBetween()` now all call the time range `from` and `to`. The positional calls `shift(2, 600, 900)` do not change.
+- `SubtitleDiffOptions` already used `timeTolerance`. All 3 names are seconds.
+- The command line does not change. `dual --snap-tolerance` keeps its name.
 
 ## Load and parse
 

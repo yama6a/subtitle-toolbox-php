@@ -10,7 +10,7 @@
 | [json.md](json.md) | the JSON and array shape of this library |
 | [subtitle.md](subtitle.md) | metadata, comments, alignment, format data, cue lookup, forced cues, statistics |
 | [markup.md](markup.md) | the inline tags of cue text and the `Markup` helpers |
-| [editing.md](editing.md) | retiming, merge, slice, split, join, short and long cues, shot changes, dual subtitles |
+| [editing.md](editing.md) | retiming, append, slice, split, join, short and long cues, shot changes, dual subtitles |
 | [text.md](text.md) | text transforms, hearing-impaired removal, speakers, profanity filter, karaoke, common error fixes |
 | [validation.md](validation.md) | reading speed, line length and timing rules, Netflix and BBC presets |
 | [sync.md](sync.md) | sync to a reference subtitle or to the speech in the audio |

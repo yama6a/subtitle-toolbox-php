@@ -124,7 +124,7 @@ class RetimingTest extends \PHPUnit\Framework\TestCase
     {
         $subtitle = Subtitle::load(self::EDITING . "own_ferry_drift.vtt", Format::WebVtt);
 
-        $this->assertSame($subtitle, $subtitle->shift(2, fromTime: 6, toTime: 600));
+        $this->assertSame($subtitle, $subtitle->shift(2, from: 6, to: 600));
         $this->assertStringEqualsFile(self::EDITING . "own_ferry_drift_shifted.vtt", $subtitle->toString(Format::WebVtt));
     }
 
@@ -133,7 +133,7 @@ class RetimingTest extends \PHPUnit\Framework\TestCase
     {
         $subtitle = Subtitle::load(self::EDITING . "harbour_tour.vtt", Format::WebVtt);
 
-        $subtitle->shift(-12.5, fromTime: 17.5);
+        $subtitle->shift(-12.5, from: 17.5);
 
         $this->assertStringEqualsFile(self::EDITING . "harbour_tour_shifted_back.vtt", $subtitle->toString(Format::WebVtt));
     }
@@ -143,7 +143,7 @@ class RetimingTest extends \PHPUnit\Framework\TestCase
     {
         $subtitle = TestSubtitles::fromTimes([[10, 12.5], [20, 22], [30, 31]]);
 
-        $subtitle->shift(-1, toTime: 20);
+        $subtitle->shift(-1, to: 20);
 
         $this->assertSame([[9.0, 11.5], [20.0, 22.0], [30.0, 31.0]], TestSubtitles::times($subtitle));
     }

@@ -152,7 +152,7 @@ class DualSubtitleTest extends TestCase
         ));
         $noSnap = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions(
             mode: DualSubtitleMode::TopBottom,
-            snapTolerance: 0,
+            timeTolerance: 0,
         ));
 
         $this->assertSame([1.0, 3.7], [$dual->getCues()[1]->getStart(), $dual->getCues()[1]->getEnd()]);
@@ -251,7 +251,7 @@ class DualSubtitleTest extends TestCase
     public static function provideInvalidOptions(): array
     {
         return [
-            "negative tolerance" => [["snapTolerance" => -0.1]],
+            "negative tolerance" => [["timeTolerance" => -0.1]],
             "unknown tag"        => [["secondaryStyle" => "c.yellow"]],
         ];
     }

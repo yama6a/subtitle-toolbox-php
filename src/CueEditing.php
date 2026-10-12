@@ -19,9 +19,9 @@ trait CueEditing
      *
      * @throws InvalidArgumentException when $offset is not finite, or a cue of $other would end at Timecode::MAX_HOURS or later.
      */
-    public function merge(Subtitle $other, float $offset = 0): self
+    public function append(Subtitle $other, float $offset = 0): self
     {
-        OptionChecks::finite($offset, "The merge offset must be a finite number of seconds, got %s.");
+        OptionChecks::finite($offset, "The append offset must be a finite number of seconds, got %s.");
         $move = fn (float $time): float => $time + $offset;
         CueList::checkTimeLimit($other->getCues(), $move);
 
@@ -244,16 +244,16 @@ trait CueEditing
 
 
     /**
-     * Joins each run of adjacent cues whose start and end both differ by at most $tolerance seconds from the first
+     * Joins each run of adjacent cues whose start and end both differ by at most $timeTolerance seconds from the first
      * cue of the run. The cues must also have the same alignment and forced flag. Image cues never join. The joined cue
      * holds the lines of the run in input order, without a repeated cue text, and runs to the latest end of the run.
      *
-     * @throws InvalidArgumentException when $tolerance is negative, NAN or INF.
+     * @throws InvalidArgumentException when $timeTolerance is negative, NAN or INF.
      */
-    public function mergeSameTimeCues(float $tolerance = 0.0): self
+    public function mergeSameTimeCues(float $timeTolerance = 0.0): self
     {
-        OptionChecks::nonNegativeFinite($tolerance, "The tolerance must be a finite number of 0 or more seconds, got %s.");
-        $tolerance = Timecode::roundToMilliseconds($tolerance);
+        OptionChecks::nonNegativeFinite($timeTolerance, "The time tolerance must be a finite number of 0 or more seconds, got %s.");
+        $timeTolerance = Timecode::roundToMilliseconds($timeTolerance);
         $this->sortStartChanges();
         $anchors   = CommentAnchors::of($this->cues, $this->comments);
         $groups    = [];
@@ -263,8 +263,8 @@ trait CueEditing
             if ($first !== null && !CueImage::isImageCue($first) && !CueImage::isImageCue($cue)
                 && $first->isForced() === $cue->isForced()
                 && $first->getAlignment() === $cue->getAlignment()
-                && abs(Timecode::roundToMilliseconds($cue->getStart() - $first->getStart())) <= $tolerance
-                && abs(Timecode::roundToMilliseconds($cue->getEnd() - $first->getEnd())) <= $tolerance) {
+                && abs(Timecode::roundToMilliseconds($cue->getStart() - $first->getStart())) <= $timeTolerance
+                && abs(Timecode::roundToMilliseconds($cue->getEnd() - $first->getEnd())) <= $timeTolerance) {
                 $groups[$last][] = $cue;
                 continue;
             }
