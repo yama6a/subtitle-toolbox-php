@@ -257,6 +257,16 @@ class SubRipParserTest extends TestCase
     }
 
 
+    public function testUnknownTagWithoutAttributesAndEndTagIsText(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n<b>Rye</b> & <b>spelt</b> <today>\n<i>open<br><foo>a\nb</FOO> <span class=\"x\">\n";
+
+        $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
+
+        $this->assertSame(["<b>Rye</b> &amp; <b>spelt</b> &lt;today&gt;", "<i>open<br><foo>a", "b</FOO> <span class=\"x\">"], $cue->getLines());
+    }
+
+
     public function testTimestampWithoutMillisecondsParses(): void
     {
         $raw = "1\n00:01:39 --> 00:01:41,000\nText\n\n2\n00:01:42,500 --> 00:01:44\nMore\n";

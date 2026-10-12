@@ -69,10 +69,6 @@ class WebVttRealFileTest extends TestCase
     #[DataProvider("realFileProvider")]
     public function testRealFileRoundTripKeepsAllData(string $file): void
     {
-        if ($file === "own_ffmpeg.vtt") {
-            $this->markTestSkipped("The round trip drops the text <today>, see issue #905.");
-        }
-
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::WebVtt);
         $output   = $subtitle->toString(Format::WebVtt);
         $reparsed = Subtitle::fromString($output, Format::WebVtt);

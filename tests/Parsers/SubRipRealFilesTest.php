@@ -136,10 +136,6 @@ class SubRipRealFilesTest extends TestCase
     #[DataProvider("realFiles")]
     public function testRealFileSurvivesARoundTrip(string $fileName): void
     {
-        if ($fileName === "own_ffmpeg.srt") {
-            $this->markTestSkipped("The round trip drops the text <today>, see issue #905.");
-        }
-
         $subtitle  = $this->parseFile($fileName);
         $formatted = $subtitle->toString(Format::SubRip);
         $reparsed  = Subtitle::fromString($formatted, Format::SubRip);

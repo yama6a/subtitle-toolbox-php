@@ -401,7 +401,7 @@ final class WebVttParser extends SubtitleParser
             throw new ParsingException("The time \"$end\" is not valid.", $lineNumber);
         }
 
-        $lines      = array_map(self::escapeBareAmpersands(...), str_replace(array_keys(self::ENTITIES), array_values(self::ENTITIES), array_slice($rawLines, 1)));
+        $lines      = Markup::unknownTagsAsText(array_map(self::escapeBareAmpersands(...), str_replace(array_keys(self::ENTITIES), array_values(self::ENTITIES), array_slice($rawLines, 1))));
         $looseTimes = [];
         foreach ($lines as $offset => $line) {
             self::checkWordTimestamps([$line], $lineNumber === null ? null : $lineNumber + 1 + $offset);
