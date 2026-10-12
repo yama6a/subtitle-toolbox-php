@@ -107,36 +107,28 @@ final class TtmlFormatter extends SubtitleFormatter
         array $containers,
         SubtitleCue $cue,
         WriteOptions $options,
-        bool $isForeignSubtitle
+        bool $writeDefaultRegion
     ): string
     {
         $attributes  = $this->formatAttribute("begin", Markup::coreTimestamp($cue->getStart()));
         $attributes .= $this->formatAttribute("end", Markup::coreTimestamp($cue->getEnd()));
 
-        $cueData     = $cue->findFormatData(TtmlParser::FORMAT_DATA_KEY);
-        $stored      = $cueData["attributes"] ?? [];
-        $realigned   = ($cueData["alignment"] ?? Alignment::BottomCenter->value) !== $cue->getAlignment()->value;
+        $cueData   = $cue->findFormatData(TtmlParser::FORMAT_DATA_KEY);
+        $stored    = $cueData["attributes"] ?? [];
+        $realigned = ($cueData["alignment"] ?? Alignment::BottomCenter->value) !== $cue->getAlignment()->value;
         if ($realigned) {
             unset($stored["region"]);
         }
-        $forcedName  = $this->forcedDisplayName($context, $stored);
-        $forced      = $forcedName === null
-            ? $this->forcedDisplay($context, $cueData["div"] ?? []) ?? $context->forcedRegions[$stored["region"] ?? ""] ?? false
-            : trim($stored[$forcedName]) === "true";
-        if ($forced !== $cue->isForced() && $forcedName !== null) {
-            $stored[$forcedName] = $cue->isForced() ? "true" : "false";
-        }
-        $stored      = $this->writableAttributes($context, $stored, ["xml:id", "begin", "end", "dur"]);
+        $stored = $this->writableAttributes($context, $stored, ["xml:id", "begin", "end", "dur"]);
         if ($realigned) {
             $stored = $this->withTextAlign($context, $styles, $containers, $stored, $cue->getAlignment());
         }
-        $attributes .= $this->formatWritableAttributes($context, $stored);
-        if (!isset($stored["region"]) && ($cue->getAlignment() !== Alignment::BottomCenter || $isForeignSubtitle || $realigned)) {
+        $forcedAttribute = $this->forcedDisplayAttributes($context, $stored, $cueData, $cue);
+        $attributes     .= $this->formatWritableAttributes($context, $stored);
+        if (!isset($stored["region"]) && ($cue->getAlignment() !== Alignment::BottomCenter || $writeDefaultRegion || $realigned)) {
             $attributes .= $this->formatAttribute("region", TtmlHead::regionId($context, $cue->getAlignment()));
         }
-        if ($forced !== $cue->isForced() && $forcedName === null) {
-            $attributes .= $this->formatAttribute($this->ittsPrefix($context) . ":forcedDisplay", $cue->isForced() ? "true" : "false");
-        }
+        $attributes .= $forcedAttribute;
 
         $text = Markup::rubyAsText(implode(LineEnding::Lf->value, $cue->getLines()));
         if ($options->stripTags) {
@@ -178,6 +170,33 @@ final class TtmlFormatter extends SubtitleFormatter
 
 
     /**
+     * Writes the forced flag of $cue where the file does not already give it. A stored itts:forcedDisplay attribute of
+     * the paragraph gets the new value. Otherwise the flag comes from the div or the region, and a differing flag
+     * gives a new attribute, which the method returns.
+     *
+     * @param array<string, string> $stored the writable attributes of the paragraph
+     */
+    private function forcedDisplayAttributes(TtmlContext $context, array &$stored, array $cueData, SubtitleCue $cue): string
+    {
+        $forcedName = $this->forcedDisplayName($context, $stored);
+        $forced     = $forcedName === null
+            ? $this->forcedDisplay($context, $cueData["div"] ?? []) ?? $context->forcedRegions[$stored["region"] ?? ""] ?? false
+            : trim($stored[$forcedName]) === "true";
+        if ($forced === $cue->isForced()) {
+            return "";
+        }
+        $value = $cue->isForced() ? "true" : "false";
+        if ($forcedName !== null) {
+            $stored[$forcedName] = $value;
+
+            return "";
+        }
+
+        return $this->formatAttribute($this->declareImscStylingPrefix($context) . ":forcedDisplay", $value);
+    }
+
+
+    /**
      * Returns the name of the stored itts:forcedDisplay attribute, or null when the attributes do not hold it.
      */
     private function forcedDisplayName(TtmlContext $context, array $attributes): ?string
@@ -203,9 +222,9 @@ final class TtmlFormatter extends SubtitleFormatter
 
 
     /**
-     * Declares the IMSC styling namespace on the root element when the input file did not.
+     * Declares the IMSC styling namespace on the root element when the input file did not, and returns its prefix.
      */
-    private function ittsPrefix(TtmlContext $context): string
+    private function declareImscStylingPrefix(TtmlContext $context): string
     {
         $prefix = TtmlHead::bindPrefix($context->namespaces, "itts", [TtmlNamespaces::IMSC_STYLING], 0);
         ksort($context->namespaces);
@@ -221,13 +240,7 @@ final class TtmlFormatter extends SubtitleFormatter
      */
     private function markupToTtml(TtmlContext $context, string $text, array $inherited): array
     {
-        $tokens = Markup::splitTags($text);
-        $agent  = null;
-        if (preg_match("/^" . Markup::VOICE_TAG . "$/", $tokens[1] ?? "", $matches) && trim($tokens[0]) === ""
-            && preg_match_all("/<\/?v[\s.>]/", $text) === 1) {
-            $agent = Markup::decodeEntities(trim($matches[2]));
-            $tokens = array_slice($tokens, 2);
-        }
+        [$agent, $tokens] = $this->takeParagraphAgent(Markup::splitTags($text), $text);
 
         $output = "";
         $stack  = [];
@@ -268,6 +281,25 @@ final class TtmlFormatter extends SubtitleFormatter
         }
 
         return [$agent, $output];
+    }
+
+
+    /**
+     * Takes the speaker out of the tokens when one <v> tag at the start covers the whole cue.
+     * Returns the speaker, or null, and the remaining tokens.
+     *
+     * @param list<string> $tokens the text and tags of $text, from Markup::splitTags()
+     *
+     * @return array{?string, list<string>}
+     */
+    private function takeParagraphAgent(array $tokens, string $text): array
+    {
+        if (preg_match("/^" . Markup::VOICE_TAG . "$/", $tokens[1] ?? "", $matches) && trim($tokens[0]) === ""
+            && preg_match_all("/<\/?v[\s.>]/", $text) === 1) {
+            return [Markup::decodeEntities(trim($matches[2])), array_slice($tokens, 2)];
+        }
+
+        return [null, $tokens];
     }
 
 
