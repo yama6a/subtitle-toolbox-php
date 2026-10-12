@@ -12,3 +12,7 @@
 | `own_multilingual_caps.srt` | Written for this repository. SubRip with UTF-8 BOM and CR LF line endings. Upper case Greek, German and Turkish text, bold, italic and colour tags, and `<` and `&` in the text. | MIT |
 | `own_rtl.srt` | Written for this repository. SubRip with Arabic and Hebrew lines, italic and bold tags, a `{\an8}` override, an ASS drawing and a left-to-right line. | MIT |
 | `own_rtl_fixed.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_rtl.srt` after `fixRightToLeft()`. | MIT |
+| `own_cea608_caps_stripped.vtt` | Generated for this repository. Output of `subtitle-toolbox convert own_cea608_caps.vtt --to vtt --strip-tags`, checked by hand | MIT |
+| `own_multilingual_caps_upper.srt` | Generated for this repository. Output of `subtitle-toolbox convert own_multilingual_caps.srt --to srt --case upper`, checked by hand: the text was already upper case | MIT |
+| `own_multilingual_caps_lower_tr.srt` | Generated for this repository. Output of `subtitle-toolbox convert own_multilingual_caps.srt --to srt --case lower --language tr`, checked by hand: the Turkish rules turn every `I` into `ı`, and the Greek word ends with `ς` | MIT |
+| `own_multilingual_caps_replaced.srt` | Generated for this repository. Output of `subtitle-toolbox convert own_multilingual_caps.srt --to srt --replace uhr=Uhr --replace-ignore-case`, checked by hand | MIT |

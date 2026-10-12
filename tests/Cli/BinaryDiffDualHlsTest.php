@@ -5,12 +5,9 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Cli;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Diff\SubtitleDiff;
-use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\Dual\DualSubtitle;
-use SubtitleToolbox\Dual\DualSubtitleMode;
 use SubtitleToolbox\Dual\DualSubtitleOptions;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
@@ -89,21 +86,29 @@ class BinaryDiffDualHlsTest extends CliTestCase
     }
 
 
-    public function testDiffOptionsChangeTheJsonDifferences(): void
+    /**
+     * @return array<string, array{list<string>, string}>
+     */
+    public static function diffJsonReports(): array
+    {
+        return [
+            "no option"           => [[], "own_report.json"],
+            "--time-tolerance"    => [["--time-tolerance", "00:00:00.5"], "own_report_time_tolerance.json"],
+            "--ignore-formatting" => [["--ignore-formatting"], "own_report_ignore_formatting.json"],
+            "--text-only"         => [["--text-only"], "own_report_text_only.json"],
+        ];
+    }
+
+
+    /**
+     * @param list<string> $options
+     */
+    #[DataProvider("diffJsonReports")]
+    public function testDiffJsonReport(array $options, string $golden): void
     {
         $this->copyDiffVersions();
-        $options  = new SubtitleDiffOptions(timeTolerance: 0.5, ignoreFormatting: true, textOnly: true);
-        $expected = SubtitleDiff::compare(Subtitle::fromStringAutoDetectFormat($this->file("v1.srt")), Subtitle::fromStringAutoDetectFormat($this->file("v2.srt")), $options);
-        [$code, $stdout, $stderr] = $this->runCli(["diff", "v1.srt", "v2.srt", "--json", "--time-tolerance", "00:00:00.5", "--ignore-formatting", "--text-only"]);
-        $this->assertSame([1, ""], [$code, $stderr]);
-        $this->assertCount(1, json_decode($stdout, true));
-        $json = json_decode($stdout, true)[0];
-        $this->assertSame(["v1.srt", "v2.srt", false], [$json["oldFile"], $json["newFile"], $json["equal"]]);
-        $this->assertSame(array_map(fn ($difference): string => $difference->kind->value, $expected), array_column($json["differences"], "kind"));
-        $old = $expected[0]->oldCue;
-        $this->assertEquals(["start" => $old->getStart(), "end" => $old->getEnd(), "lines" => $old->getLines(), "forced" => false],
-                            $json["differences"][0]["old"]);
-        $this->assertSame($expected[0]->oldIndex, $json["differences"][0]["oldIndex"]);
+
+        $this->assertSame([1, file_get_contents(self::FILES . "diff/$golden"), ""], $this->runCli(["diff", "v1.srt", "v2.srt", "--json", ...$options]));
     }
 
 
@@ -277,9 +282,7 @@ class BinaryDiffDualHlsTest extends CliTestCase
     {
         $this->copyStationPair();
 
-        $merged = DualSubtitle::fromPair(Subtitle::fromStringAutoDetectFormat($this->file("en.srt")), Subtitle::fromStringAutoDetectFormat($this->file("de.srt")),
-                                      new DualSubtitleOptions(mode: DualSubtitleMode::TopBottom, snapTolerance: 0.5, secondaryAlignment: Alignment::TopLeft));
-        $this->assertSame([0, $merged->toString(Format::SubRip), ""], $this->runCli([
+        $this->assertSame([0, file_get_contents(self::FILES . "dual/station_top_bottom_aligned.srt"), ""], $this->runCli([
             "dual", "--primary", "en.srt", "--secondary", "de.srt", "--mode", "top-bottom", "--snap-tolerance", "00:00.5", "--secondary-alignment", "7",
         ]));
     }

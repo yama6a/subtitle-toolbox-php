@@ -6,15 +6,11 @@ namespace SubtitleToolbox\Cli;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
-use SubtitleToolbox\Diff\SubtitleDiff;
-use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\Formatters\SccFitChange;
 use SubtitleToolbox\Formatters\SccFormatter;
-use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
-use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 use SubtitleToolbox\Http\LocalServer;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
@@ -57,31 +53,28 @@ class BinaryOptionCoverageTest extends CliTestCase
 
 
     /**
-     * @return array<string, array{string, HearingImpairedOptions}>
+     * @return array<string, array{string, string}>
      */
     public static function sdhKeepOptions(): array
     {
         return [
-            "--sdh-keep-square-brackets" => ["--sdh-keep-square-brackets", new HearingImpairedOptions(squareBrackets: false)],
-            "--sdh-keep-music-lines"     => ["--sdh-keep-music-lines", new HearingImpairedOptions(musicOnlyLines: false)],
-            "--sdh-any-case-labels"      => ["--sdh-any-case-labels", new HearingImpairedOptions(speakerLabelsUpperCaseOnly: false)],
+            "--sdh-keep-square-brackets" => ["--sdh-keep-square-brackets", "own_sdh_removed_keep_square_brackets.srt"],
+            "--sdh-keep-music-lines"     => ["--sdh-keep-music-lines", "own_sdh_removed_keep_music_lines.srt"],
+            "--sdh-any-case-labels"      => ["--sdh-any-case-labels", "own_sdh_removed_any_case_labels.srt"],
+            "--sdh-keep-parentheses"     => ["--sdh-keep-parentheses", "own_sdh_removed_keep_parentheses.srt"],
+            "--sdh-keep-speaker-labels"  => ["--sdh-keep-speaker-labels", "own_sdh_removed_keep_speaker_labels.srt"],
         ];
     }
 
 
     #[DataProvider("sdhKeepOptions")]
-    public function testConvertSdhKeepOption(string $option, HearingImpairedOptions $options): void
+    public function testConvertSdhKeepOption(string $option, string $golden): void
     {
         copy(self::FILES . "hearing-impaired/own_sdh.srt", "$this->dir/sdh.srt");
-        $expected = function (HearingImpairedOptions $options): string {
-            $subtitle = Subtitle::load("$this->dir/sdh.srt", Format::SubRip);
-            HearingImpairedRemover::apply($subtitle, $options);
 
-            return $subtitle->toString(Format::SubRip);
-        };
-
-        $this->assertNotSame($expected(new HearingImpairedOptions()), $expected($options));
-        $this->assertSame([0, $expected($options), ""], $this->runCli(["convert", "sdh.srt", "--to", "srt", "-o", "-", "--sdh", $option]));
+        $this->assertFileNotEquals(self::FILES . "hearing-impaired/own_sdh_removed.srt", self::FILES . "hearing-impaired/$golden");
+        $this->assertSame([0, file_get_contents(self::FILES . "hearing-impaired/$golden"), ""],
+                          $this->runCli(["convert", "sdh.srt", "--to", "srt", "-o", "-", "--sdh", $option]));
     }
 
 
@@ -161,13 +154,11 @@ class BinaryOptionCoverageTest extends CliTestCase
 
     public function testDiffIgnoreWhitespace(): void
     {
-        $old      = Subtitle::load(self::FILES . "diff/own_original.srt", Format::SubRip);
-        $new      = Subtitle::load(self::FILES . "diff/own_edited.srt", Format::SubRip);
-        $expected = SubtitleDiff::toText(SubtitleDiff::compare($old, $new, new SubtitleDiffOptions(ignoreWhitespace: true)));
+        copy(self::FILES . "diff/own_original.srt", "$this->dir/v1.srt");
+        copy(self::FILES . "diff/own_edited.srt", "$this->dir/v2.srt");
 
-        $this->assertNotSame(SubtitleDiff::toText(SubtitleDiff::compare($old, $new)), $expected);
-        $this->assertSame([1, $expected, ""],
-                          $this->runCli(["diff", self::FILES . "diff/own_original.srt", self::FILES . "diff/own_edited.srt", "--ignore-whitespace"]));
+        $this->assertSame([1, file_get_contents(self::FILES . "diff/own_report_ignore_whitespace.json"), ""],
+                          $this->runCli(["diff", "v1.srt", "v2.srt", "--json", "--ignore-whitespace"]));
     }
 
 

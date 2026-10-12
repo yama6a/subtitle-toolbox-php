@@ -5,3 +5,4 @@
 | `w3c_imsc11_forced.ttml` | https://www.w3.org/TR/ttml-imsc1.1/, section 7.8.3, `itts:forcedDisplay` example | W3C Software and Document License, https://www.w3.org/copyright/software-license-2023/ |
 | `forced_signs_2398.itt` | Written for this repository in the shape of the Final Cut Pro iTT export at 23.976 fps, with `itts:forcedDisplay` on the sign cues | MIT |
 | `forced_inheritance.ttml` | Written for this repository. `itts:forcedDisplay` on a referenced style, a `span`, a `div`, and a `p` that turns it off | MIT |
+| `forced_signs_2398_forced_only.srt` | Generated for this repository. Output of `subtitle-toolbox convert forced_signs_2398.itt --to srt --forced-only`, checked by hand: the 3 sign cues | MIT |

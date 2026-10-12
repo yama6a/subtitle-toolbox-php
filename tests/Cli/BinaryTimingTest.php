@@ -345,13 +345,16 @@ class BinaryTimingTest extends CliTestCase
         $this->assertSame([0, $timed, ""], $this->runCli(["convert", "garden.srt", "--to", "srt", "-o", "-", "--video-fps", "24", "--snap-shot-changes", "scenes.log"]));
         $this->assertSame([0, $timed, ""], $this->runCli(["convert", "garden.srt", "--to", "srt", "-o", "-", "--fps", "24", "--snap-shot-changes", "scenes.txt"]));
 
-        $expected = Subtitle::fromStringAutoDetectFormat($this->file("garden.srt"));
-        ShotChangeTiming::apply($expected, new ShotChangeOptions(frameRate: 24, shotChanges: ShotChanges::fromText($this->file("scenes.txt")),
-                                                                 snapWindowFrames: 6, minGapFrames: 3, chain: false, minDurationFrames: 12));
-        $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runCli([
-            "convert", "garden.srt", "--to", "srt", "-o", "-", "--video-fps", "24", "--snap-shot-changes", "scenes.txt", "--snap-window-frames", "6",
-            "--snap-min-gap-frames", "3", "--no-snap-chain", "--snap-min-duration-frames", "12",
-        ]));
+        foreach ([
+            "own_garden_24fps_window_6.srt"        => ["--snap-window-frames", "6"],
+            "own_garden_24fps_min_gap_3.srt"       => ["--snap-min-gap-frames", "3"],
+            "own_garden_24fps_min_duration_12.srt" => ["--snap-min-duration-frames", "12"],
+            "own_garden_24fps_no_chain.srt"        => ["--no-snap-chain"],
+        ] as $golden => $option) {
+            $this->assertSame([0, file_get_contents(self::FILES . "shot-changes/$golden"), ""], $this->runCli([
+                "convert", "garden.srt", "--to", "srt", "-o", "-", "--video-fps", "24", "--snap-shot-changes", "scenes.txt", ...$option,
+            ]), $golden);
+        }
 
         $chained = Subtitle::fromStringAutoDetectFormat($this->file("garden.srt"));
         ShotChangeTiming::apply($chained, new ShotChangeOptions(24));
