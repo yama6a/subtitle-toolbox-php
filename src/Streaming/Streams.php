@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Streaming;
 
+use Closure;
 use Generator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\LineEnding;
@@ -16,16 +17,26 @@ final class Streams
 {
     /**
      * Yields the lines of a stream resource or file path without UTF-8 BOMs at their start and without line endings.
+     * It calls $onInvalidUtf8 with the byte offset of the first byte that is not valid UTF-8.
      *
-     * @param resource|string $stream
+     * @param resource|string     $stream
+     * @param ?Closure(int): void $onInvalidUtf8
      *
      * @return Generator<int, string>
      */
-    public static function lines($stream): Generator
+    public static function lines($stream, ?Closure $onInvalidUtf8 = null): Generator
     {
         $handle = self::open($stream, "rb");
+        $offset = 0;
         try {
             while (($chunk = fgets($handle)) !== false) {
+                $badByte = $onInvalidUtf8 === null ? null : StringHelpers::findInvalidUtf8Offset($chunk);
+                if ($badByte !== null) {
+                    $onInvalidUtf8($offset + $badByte);
+                    $onInvalidUtf8 = null;
+                }
+                $offset += strlen($chunk);
+
                 // fgets() ends at LF only, so a chunk can still hold the CR line endings of old Mac files.
                 $lines = explode(LineEnding::Lf->value, StringHelpers::normalizeEOLs($chunk));
                 if (end($lines) === "") {
