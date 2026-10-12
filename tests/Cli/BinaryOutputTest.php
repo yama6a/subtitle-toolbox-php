@@ -64,8 +64,8 @@ class BinaryOutputTest extends CliTestCase
             self::usageError("convert", "The extension of --output trip.vtt names the format vtt, not the --to format srt."),
             $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "trip.vtt"])
         );
-        $this->assertSame(self::usageError("retime", "The extension of --output trip.ass names the format ass, not the --to format vtt."),
-                          $this->runCli(["retime", "trip.srt", "--shift", "1", "--to", "vtt", "-o", "trip.ass"]));
+        $this->assertSame(self::usageError("convert", "The extension of --output trip.ass names the format ass, not the --to format vtt."),
+                          $this->runCli(["convert", "trip.srt", "--shift", "1", "--to", "vtt", "-o", "trip.ass"]));
         $this->assertSame(self::usageError("dual", "The extension of --output both.srt names the format srt, not the --to format ass."),
                           $this->runCli(["dual", "--primary", "trip.srt", "--secondary", "shop.vtt", "--to", "ass", "-o", "both.srt"]));
         $this->assertSame([], array_diff(scandir($this->dir), [".", "..", ...array_map("basename", glob(self::FIXTURES . "*")), "lecture.json"]));
@@ -76,10 +76,6 @@ class BinaryOutputTest extends CliTestCase
         $this->assertSame($this->tripAs(Format::Mpl2), $this->file("trip.txt"));
         $this->assertSame(0, $this->runCli(["convert", "trip.srt", "--to", "vtt", "-o", "trip.bak"])[0]);
         $this->assertSame($this->tripAs(Format::WebVtt), $this->file("trip.bak"));
-
-        // Without --to, retime keeps the input format, whatever the extension of -o.
-        $this->assertSame(0, $this->runCli(["retime", "trip.srt", "--shift", "0", "-o", "kept.vtt"])[0]);
-        $this->assertSame($this->tripAs(Format::SubRip), $this->file("kept.vtt"));
     }
 
 
@@ -233,7 +229,7 @@ class BinaryOutputTest extends CliTestCase
         copy(self::FILES . "dual/station_de.srt", "$this->dir/de.srt");
         foreach ([
             ["convert", "trip.srt", "--to", "srt"],
-            ["retime", "trip.srt", "--shift", "1"],
+            ["convert", "trip.srt", "--shift", "1"],
             ["sync", "trip.srt", "--reference", "de.srt"],
             ["dual", "--primary", "trip.srt", "--secondary", "de.srt"],
             ["hls", "trip.srt", "--output-dir", "out"],
@@ -279,8 +275,8 @@ class BinaryOutputTest extends CliTestCase
             self::usageError("convert", "Standard input has no file name for --output-dir. Pass -o FILE."),
             $this->runCli(["convert", "-", "--to", "vtt", "--output-dir", "out"], $this->file("trip.srt"))
         );
-        $this->assertSame(self::usageError("retime", "Standard input has no file name for --output-dir. Pass -o FILE."),
-                          $this->runCli(["retime", "trip.srt", "-", "--shift", "1", "--output-dir", "out"], $this->file("trip.srt")));
+        $this->assertSame(self::usageError("convert", "Standard input has no file name for --output-dir. Pass -o FILE."),
+                          $this->runCli(["convert", "trip.srt", "-", "--shift", "1", "--output-dir", "out"], $this->file("trip.srt")));
         $this->assertDirectoryDoesNotExist("$this->dir/out");
     }
 
@@ -319,7 +315,7 @@ class BinaryOutputTest extends CliTestCase
         }
 
         $this->assertSame([3, "", "trip.srt: Cannot read the file trip.srt.\n"],
-                          $this->runCli(["retime", "trip.srt", "--shift", "1", "--output-dir", "out"]));
+                          $this->runCli(["convert", "trip.srt", "--shift", "1", "--output-dir", "out"]));
         $this->assertFileDoesNotExist("$this->dir/out");
     }
 
@@ -404,7 +400,7 @@ class BinaryOutputTest extends CliTestCase
     {
         return [
             "convert" => [["convert", "--to", "vtt"], "vtt"],
-            "retime"  => [["retime", "--shift", "1"], "srt"],
+            "convert without --to" => [["convert", "--shift", "1"], "srt"],
             "sync"    => [["sync", "--reference", "ref.srt"], "srt"],
         ];
     }

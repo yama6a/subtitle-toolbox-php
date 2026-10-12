@@ -93,7 +93,7 @@ Composer installs `vendor/bin/subtitle-toolbox`. Optional parts are in brackets.
 subtitle-toolbox convert movie.srt --to vtt [--timing-fix-overlaps] [-o movie.vtt]
 subtitle-toolbox convert movie.mkv --to srt --track 3 [-o movie.srt]
 subtitle-toolbox convert movie.sup --to srt --ocr [--ocr-language deu] [-o movie.srt]
-subtitle-toolbox retime movie.sub --input-fps 25 --from-fps 25 --to-fps 23.976 [-o movie.fixed.sub]
+subtitle-toolbox convert movie.sub --input-fps 25 --from-fps 25 --to-fps 23.976 [-o movie.fixed.sub]
 subtitle-toolbox info movie.srt [--json]
 subtitle-toolbox validate movie.srt --preset netflix-en [--video-fps 23.976]
 subtitle-toolbox sync movie.de.srt --reference movie.en.srt [-o movie.de.synced.srt]
@@ -105,7 +105,7 @@ subtitle-toolbox formats
 ```
 
 - Without `-o`, the output goes to standard output.
-- Several inputs need `--output-dir`, for example `retime season1/ --shift 2 --output-dir fixed/`.
+- Several inputs need `--output-dir`, for example `convert season1/ --shift 2 --output-dir fixed/`.
 - No command overwrites a file.
 - When detection fails, pass `--from`.
 

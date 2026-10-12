@@ -12,7 +12,7 @@ use SubtitleToolbox\Subtitle;
 /**
  * One option group of convert, with the checks of its options.
  * Most options start with the group name, such as --structure- or --sdh-.
- * --shift and --video-fps keep the names of the retime and validate commands. --case and --mute-edl read better alone.
+ * --video-fps keeps the name of the validate option. --case and --mute-edl read better alone.
  *
  * @internal
  */

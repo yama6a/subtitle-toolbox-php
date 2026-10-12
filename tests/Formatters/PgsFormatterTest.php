@@ -422,7 +422,7 @@ class PgsFormatterTest extends TestCase
         $this->assertSame(PgsFormatter::class, FormatRegistry::formatterClass(Format::Pgs));
 
         $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
-        $code    = (new Application(...$streams))->run(["subtitle-toolbox", "retime", self::FILES . "pgs/shapes_576p.sup", "--shift", "1"]);
+        $code    = (new Application(...$streams))->run(["subtitle-toolbox", "convert", self::FILES . "pgs/shapes_576p.sup", "--shift", "1"]);
         rewind($streams[1]);
 
         $this->assertSame(0, $code);
