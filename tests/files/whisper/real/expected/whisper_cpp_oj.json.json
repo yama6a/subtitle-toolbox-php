@@ -1,0 +1,74 @@
+{
+    "warnings": [],
+    "subtitle": {
+        "version": 1,
+        "metadata": {
+            "language": "en"
+        },
+        "comments": [],
+        "formatData": {
+            "whisper": {
+                "systeminfo": "WHISPER : COREML = 0 | OPENVINO = 0 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | OPENMP = 1 | REPACK = 1 | ",
+                "model": {
+                    "type": "base",
+                    "multilingual": true,
+                    "vocab": 51865,
+                    "audio": {
+                        "ctx": 1500,
+                        "state": 512,
+                        "head": 8,
+                        "layer": 6
+                    },
+                    "text": {
+                        "ctx": 448,
+                        "state": 512,
+                        "head": 8,
+                        "layer": 6
+                    },
+                    "mels": 80,
+                    "ftype": 1
+                },
+                "params": {
+                    "model": "models/ggml-base.bin",
+                    "language": "auto",
+                    "translate": false
+                },
+                "result": {
+                    "language": "en"
+                }
+            }
+        },
+        "cues": [
+            {
+                "start": 0.0,
+                "end": 2.5,
+                "lines": [
+                    "The train to the coast leaves from platform four."
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            },
+            {
+                "start": 2.5,
+                "end": 5.2,
+                "lines": [
+                    "Please keep your ticket ready."
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            },
+            {
+                "start": 5.2,
+                "end": 8.0,
+                "lines": [
+                    "The next stop is the harbour."
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            }
+        ]
+    }
+}

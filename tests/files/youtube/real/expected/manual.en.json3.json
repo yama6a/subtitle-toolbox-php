@@ -1,0 +1,76 @@
+{
+    "warnings": [],
+    "subtitle": {
+        "version": 1,
+        "metadata": {},
+        "comments": [],
+        "formatData": {
+            "youtube": {
+                "format": "json3",
+                "wireMagic": "pb3",
+                "pens": [
+                    []
+                ],
+                "wsWinStyles": [
+                    []
+                ],
+                "wpWinPositions": [
+                    []
+                ]
+            }
+        },
+        "cues": [
+            {
+                "start": 1.2,
+                "end": 3.5,
+                "lines": [
+                    "Welcome to the bakery tour."
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            },
+            {
+                "start": 3.5,
+                "end": 6.34,
+                "lines": [
+                    "First we mix flour, water",
+                    "and a pinch of salt."
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            },
+            {
+                "start": 6.34,
+                "end": 8.5,
+                "lines": [
+                    "The dough rests for an hour."
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            },
+            {
+                "start": 8.5,
+                "end": 11.5,
+                "lines": [
+                    "Bread &amp; rolls bake at &lt;220&gt; degrees."
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            },
+            {
+                "start": 11.5,
+                "end": 14.0,
+                "lines": [
+                    "That's all for today."
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            }
+        ]
+    }
+}

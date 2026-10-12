@@ -13,3 +13,4 @@ The captions of real videos belong to their authors. So every file here is writt
 | `missing-dur.en.srv1` | Written for this repository in the shape of the `<transcript>` XML of issue #393: a middle and a last `<text>` without `dur`, and one with `dur="0"` | MIT |
 | `missing-d.en.srv2` | Written for this repository in the shape of srv2 `<timedtext>` XML with `t` and `d` in milliseconds: a middle and a last `<text>` without `d`, and one with `d="0"` | MIT |
 | `missing-d.en.srv3` | Written for this repository in the shape of srv3 `<timedtext format="3">` XML with `t` and `d` in milliseconds: a middle and a last `<p>` without `d`, and one with `d="0"` | MIT |
+| `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
