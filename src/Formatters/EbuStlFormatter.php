@@ -90,12 +90,12 @@ final class EbuStlFormatter extends SubtitleFormatter
     private function subtitleSets(EbuStlContext $context, Subtitle $subtitle, array $storedComments): array
     {
         $cues     = array_values($subtitle->getCues());
-        $comments = $subtitle->getComments();
+        $comments = $this->commentsByCue($subtitle);
         $sets     = [];
         foreach ([...array_keys($cues), count($cues)] as $index) {
-            while ($comments !== [] && $comments[0]->beforeCueIndex <= $index) {
+            foreach ($comments[$index] ?? [] as $comment) {
                 $timeCode = $this->timeCode($context, isset($cues[$index]) ? $cues[$index]->getStart() : ($cues === [] ? 0 : end($cues)->getEnd()));
-                $sets[]   = ["blocks" => $this->commentBlocks($context, array_shift($comments)->text, $storedComments, $timeCode), "comment" => true];
+                $sets[]   = ["blocks" => $this->commentBlocks($context, $comment->text, $storedComments, $timeCode), "comment" => true];
             }
 
             if (isset($cues[$index])) {

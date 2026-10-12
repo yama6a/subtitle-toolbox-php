@@ -146,17 +146,14 @@ final class AssFormatter extends SubtitleFormatter
     {
         $format        = $fileData["eventFormat"] ?? AssFormatLines::ASS_EVENT_FORMAT;
         $commentEvents = $fileData["commentEvents"] ?? [];
-        $comments      = $subtitle->getComments();
+        $comments      = $this->commentsByCue($subtitle);
         $cues          = array_values($subtitle->getCues());
 
         $lines = ["Format: " . implode(", ", $format)];
         foreach ([...$cues, null] as $cueIndex => $cue) {
             $commentTime = $cue?->getStart() ?? ($cues === [] ? 0 : end($cues)->getEnd());
-            foreach ($comments as $comment) {
-                $isAtCue = $cue === null ? $comment->beforeCueIndex >= $cueIndex : $comment->beforeCueIndex === $cueIndex;
-                if ($isAtCue) {
-                    $lines[] = $this->commentLine($comment->text, $format, $commentEvents, $commentTime);
-                }
+            foreach ($comments[$cueIndex] ?? [] as $comment) {
+                $lines[] = $this->commentLine($comment->text, $format, $commentEvents, $commentTime);
             }
 
             if ($cue !== null) {

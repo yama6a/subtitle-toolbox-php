@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\FormatOptionsList;
 use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\LineEnding;
@@ -80,5 +81,22 @@ abstract class SubtitleFormatter
     protected function plainLines(SubtitleCue $cue): array
     {
         return Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines()));
+    }
+
+
+    /**
+     * Groups the comments by the index of the cue they come before. The group at the cue count holds the comments after the last cue.
+     *
+     * @return array<int, list<Comment>>
+     */
+    protected function commentsByCue(Subtitle $subtitle): array
+    {
+        $cueCount = count($subtitle->getCues());
+        $byCue    = [];
+        foreach ($subtitle->getComments() as $comment) {
+            $byCue[min($comment->beforeCueIndex, $cueCount)][] = $comment;
+        }
+
+        return $byCue;
     }
 }
