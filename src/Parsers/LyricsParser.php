@@ -26,7 +26,7 @@ final class LyricsParser extends SubtitleParser
         "au" => Subtitle::METADATA_AUTHOR,
     ];
 
-    private const TIMESTAMP_PATTERN     = "(?:(\d{1,2}):)?(\d{1,3}):([0-5]\d)(?:\.(\d{1,3}))?";
+    private const TIMESTAMP_PATTERN     = "(?:(\d{1,2}):(?=[0-5]?\d:))?(\d{1,3}):([0-5]\d)(?:\.(\d{1,3}))?";
     private const TIME_TAG_PATTERN      = "\[\s*" . self::TIMESTAMP_PATTERN . "\s*\]";
     private const TIMESTAMP_LINE_REGEX  = "/^((?:" . self::TIME_TAG_PATTERN . ")+)(.*)$/";
     private const BROKEN_TIME_TAG_REGEX = "/^\[\s*\d/";

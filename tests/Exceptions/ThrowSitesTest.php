@@ -573,6 +573,7 @@ class ThrowSitesTest extends TestCase
             "Parsers/SubRipParser.php: text after end time" => [fn () => (new SubRipParser())->parse("1\n00:00:01,000 --> 00:00:02,000 x\ntext", new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/SubViewerParser.php: version 1 header" => [fn () => (new SubViewerParser())->parse("text\n" . SubViewerParser::START_SCRIPT . "\n", new ReadOptions()), ...$parsing],
+            "Parsers/SubViewerParser.php: version 1 time"   => [fn () => (new SubViewerParser())->parse(SubViewerParser::START_SCRIPT . "\n[00:75:00]\n", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: invalid UTF-8"    => [fn () => (new SamiParser())->parse("<SAMI>\xFF</SAMI>", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: no JSON"           => [fn () => (new JsonParser())->parse("{", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: JSON root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]", new ReadOptions()), ...$parsing],

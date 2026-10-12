@@ -342,7 +342,7 @@ final class AssParser extends SubtitleParser
      */
     private function secondsFromString(string $time, int $lineNumber): float
     {
-        if (preg_match('/^(\d+):(\d{1,2}):(\d{1,2})\.(\d{1,3})$/', trim($time), $matches)) {
+        if (preg_match('/^(\d+):([0-5]?\d):([0-5]?\d)\.(\d{1,3})$/', trim($time), $matches)) {
             return self::boundedTime(Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]), $time, $lineNumber);
         }
 
