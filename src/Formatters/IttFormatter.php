@@ -40,6 +40,10 @@ final class IttFormatter extends SubtitleFormatter
         "  </head>",
     ];
 
+    // One shared array per region, so that 50,000 cue copies do not allocate 50,000 arrays.
+    private const TOP_REGION    = ["attributes" => ["region" => "top"]];
+    private const BOTTOM_REGION = ["attributes" => ["region" => "bottom"]];
+
     /**
      * Writes an Apple iTunes Timed Text file with SMPTE times, one div, and a top and a bottom region.
      *
@@ -130,9 +134,7 @@ final class IttFormatter extends SubtitleFormatter
             $copy  = (new SubtitleCue($cue->getStart(), $cue->getEnd(), $lines))
                 ->setIdentifier($cue->getIdentifier())
                 ->setForced($cue->isForced());
-            $copy->setFormatData(TtmlParser::FORMAT_DATA_KEY, [
-                "attributes" => ["region" => in_array($cue->getAlignment(), [Alignment::TopLeft, Alignment::TopCenter, Alignment::TopRight], true) ? "top" : "bottom"],
-            ]);
+            $copy->setFormatData(TtmlParser::FORMAT_DATA_KEY, in_array($cue->getAlignment(), [Alignment::TopLeft, Alignment::TopCenter, Alignment::TopRight], true) ? self::TOP_REGION : self::BOTTOM_REGION);
             $copies[] = $copy;
         }
         $ttml->addCues($copies);
