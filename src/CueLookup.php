@@ -9,7 +9,7 @@ use Iterator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 /**
- * @phpstan-type CueLookupIndex array{cues: array<int, SubtitleCue>, starts: list<float>, keys: list<int>, positions: ?array<int, int>, maxEnds: ?list<float>, leafCount: int}
+ * @phpstan-type CueLookupIndex array{cues: array<int, SubtitleCue>, starts: list<float>, keys: list<int>, positions: ?array<int, int>, maxEnds: list<float>, leafCount: int}
  *
  * @internal
  */
@@ -109,12 +109,7 @@ trait CueLookup
     private function cueLookupFindOverlapping(float $from, float $to, bool $includeTo): array
     {
         $index = $this->cueLookupCurrentIndex();
-        if ($index["maxEnds"] === null) {
-            return array_filter($this->cues, fn (SubtitleCue $cue): bool => $cue->getEnd() > $from &&
-                ($includeTo ? $cue->getStart() <= $to : $cue->getStart() < $to));
-        }
-
-        $low = $includeTo ? SortedSearch::firstAfter($index["starts"], $to) : SortedSearch::firstAtOrAfter($index["starts"], $to);
+        $low   = $includeTo ? SortedSearch::firstAfter($index["starts"], $to) : SortedSearch::firstAtOrAfter($index["starts"], $to);
 
         $positions = [];
         self::cueLookupCollectEndingAfter($index["maxEnds"], 1, 0, $index["leafCount"], ["position" => $low, "time" => $from], $positions);
@@ -130,9 +125,7 @@ trait CueLookup
 
 
     /**
-     * Returns the start and end times of the cues.
-     * For cues in start order, it adds a tree in which each node holds the latest end of its cues.
-     * It does not sort. For unsorted cues, maxEnds is null and the caller scans every cue.
+     * Returns the start and end times of the cues, and a tree in which each node holds the latest end of its cues.
      * A change of the cue list makes the next call rebuild the index. A time change of a few cues updates their entries.
      *
      * @return CueLookupIndex
@@ -159,23 +152,14 @@ trait CueLookup
             $ends[]                         = $cue->getEnd();
         }
 
-        $count  = count($starts);
-        $sorted = true;
-        for ($position = 1; $position < $count; $position++) {
-            if ($starts[$position] < $starts[$position - 1]) {
-                $sorted = false;
-                break;
-            }
-        }
-
-        [$maxEnds, $leafCount] = $sorted ? self::cueLookupMaxEndTree($ends) : [null, 1];
+        [$maxEnds, $leafCount] = self::cueLookupMaxEndTree($ends);
 
         return $this->cueLookupIndex = [
             "cues"      => $this->cues,
             "starts"    => $starts,
             "keys"      => array_keys($this->cues),
             // A cue that the list holds twice has one id, so its entries cannot update alone.
-            "positions" => count($positions) === $count ? $positions : null,
+            "positions" => count($positions) === count($starts) ? $positions : null,
             "maxEnds"   => $maxEnds,
             "leafCount" => $leafCount,
         ];
@@ -191,7 +175,7 @@ trait CueLookup
     private function cueLookupUpdate(array $changed): bool
     {
         $index = &$this->cueLookupIndex;
-        if ($index["maxEnds"] === null || $index["positions"] === null) {
+        if ($index["positions"] === null) {
             return false;
         }
 

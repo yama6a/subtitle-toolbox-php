@@ -1,15 +1,15 @@
 # Format detection
 
-File extensions do not identify a format. For example, a `.sub` file can be MicroDVD, MPSub or SubViewer. So `Format::detect()` and `Subtitle::fromStringAutoDetectFormat()` read the start of the content.
+File extensions do not identify a format. For example, a `.sub` file can be MicroDVD, MPSub or SubViewer. So `Format::detect()`, and `Subtitle::fromString()` without a format, read the start of the content.
 
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 Format::detect(file_get_contents('upload.sub'));                                    // Format::MicroDvd, or null for an unknown format
-$subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('upload.sub'));  // throws UnknownFormatException for an unknown format
-$subtitle = Subtitle::loadAutoDetectFormat('upload.sub');                           // also uses the extension, see formats.md#load-and-save
-Format::fromPath('upload.sub');                                                     // Format::MicroDvd, from the extension only
+$subtitle = Subtitle::fromString(file_get_contents('upload.sub'));                  // throws UnknownFormatException for an unknown format
+$subtitle = Subtitle::load('upload.sub');                                           // also uses the extension, see formats.md#load-and-save
+Format::tryFromPath('upload.sub');                                                  // Format::MicroDvd, from the extension only
 ```
 
 Detection ignores a UTF-8 BOM and leading blank lines. It tries only formats whose `isAutoDetected()` is true.
@@ -50,8 +50,8 @@ Other content goes to the signatures of the text and binary formats. Detection c
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line but with cue numbers looks like SubRip, so it detects as SubRip.
 - **SubRip without cue numbers**: read such a file in lenient mode. Strict mode throws `ParsingException` for a missing cue number and for text before the first cue. A timing line with a dot, such as `00:00:01.000 -->`, needs a cue number in the first line.
 - **`.sub` files**: SBV has three digits after the dot, SubViewer 2 has two.
-- **MicroDVD**: detection does not find the frame rate. `fromStringAutoDetectFormat()` throws `ParsingException` for a MicroDVD file without a `{1}{1}<fps>` first line. Then read it in lenient mode for 23.976 fps, or pass the frame rate: `Subtitle::fromString($content, Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 23.976)]))`.
+- **MicroDVD**: detection does not find the frame rate. `fromString()` without a format throws `ParsingException` for a MicroDVD file without a `{1}{1}<fps>` first line. Then read it in lenient mode for 23.976 fps, or pass the frame rate: `Subtitle::fromString($content, Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 23.976)]))`.
 - **iTT**: an iTT file detects as `Format::Ttml`. Pass `Format::Itt` to keep the iTT format data.
 - **Frame timecodes**: Spruce STL and CSV files that start with an `hh:mm:ss:ff` timecode give null, not TMPlayer.
 - **No signature**: CSV and TSV. Pass `Format::Csv` or `Format::Tsv`, see [formats.md](formats.md#csv-and-tsv). VobSub needs its `.idx` file, see [ocr.md](ocr.md#vobsub).
-- **Not detected**: chapters and cloud speech-to-text JSON look like other formats. `Format::detect()` returns null for them, and `isAutoDetected()` is false. Pass the format, for example `Subtitle::fromString($json, Format::Deepgram)`. `Format::fromPath()` finds only FFmpeg metadata, by its `.ffmeta` extension. The other formats share `.json` or `.txt` with formats that come first.
+- **Not detected**: chapters and cloud speech-to-text JSON look like other formats. `Format::detect()` returns null for them, and `isAutoDetected()` is false. Pass the format, for example `Subtitle::fromString($json, Format::Deepgram)`. `Format::tryFromPath()` finds only FFmpeg metadata, by its `.ffmeta` extension. The other formats share `.json` or `.txt` with formats that come first.

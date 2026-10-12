@@ -50,7 +50,7 @@ class LenientWebVttTest extends TestCase
     {
         $subtitle = (new WebVttParser())->parse(file_get_contents(self::DIR . "missing_signature.vtt"), new ReadOptions(lenient: true));
 
-        $this->assertSame(["1", "2"], array_map(fn (SubtitleCue $cue): ?string => $cue->getIdentifier(), $subtitle->getCues()));
+        $this->assertSame(["1", "2"], array_map(fn (SubtitleCue $cue): ?string => $cue->findIdentifier(), $subtitle->getCues()));
     }
 
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\HearingImpaired;
 
+use SubtitleToolbox\CueList;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -26,7 +27,7 @@ final class HearingImpairedRemover
     {
         $options ??= new HearingImpairedOptions();
         $lineCounts  = new \SplObjectStorage();
-        $removedCues = $subtitle->setLinesAndRemoveEmptied(function (SubtitleCue $cue) use ($options, $lineCounts): array {
+        $removedCues = CueList::setLinesAndRemoveEmptied($subtitle, function (SubtitleCue $cue) use ($options, $lineCounts): array {
             $before = array_values($cue->getLines());
             $lines  = self::removeFromLines($before, $options);
             $lineCounts[$cue] = count($before);

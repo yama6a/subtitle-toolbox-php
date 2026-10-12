@@ -1,16 +1,16 @@
 # Command line tool
 
-`subtitle-toolbox` converts, retimes, checks and fixes subtitle files. Composer installs it as `vendor/bin/subtitle-toolbox`. It needs no package beyond the library.
+`stbox` converts, checks and fixes subtitle files. Composer installs it as `vendor/bin/stbox`. It needs no package beyond the library.
 
 ```sh
-vendor/bin/subtitle-toolbox convert movie.srt --to vtt -o movie.vtt
-vendor/bin/subtitle-toolbox convert season1/ --to vtt --output-dir out/ --keep-going
-vendor/bin/subtitle-toolbox convert movie.sub --to srt -o movie.srt --fps 23.976
-vendor/bin/subtitle-toolbox retime movie.srt --shift -2.5 --output movie.fixed.srt
-vendor/bin/subtitle-toolbox retime *.srt --from-fps 25 --to-fps 23.976 --output-dir fixed/
-vendor/bin/subtitle-toolbox convert movie.srt -o movie.fixed.srt --timing-fix-overlaps --timing-min-gap 0.083 --structure-wrap
-vendor/bin/subtitle-toolbox validate movie.srt --preset netflix-en --json
-curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --to vtt > movie.vtt
+vendor/bin/stbox convert movie.srt --to vtt -o movie.vtt
+vendor/bin/stbox convert season1/ --to vtt --output-dir out/ --keep-going
+vendor/bin/stbox convert movie.sub --to srt -o movie.srt --fps 23.976
+vendor/bin/stbox convert movie.srt --shift -2.5 --output movie.fixed.srt
+vendor/bin/stbox convert *.srt --from-fps 25 --to-fps 23.976 --output-dir fixed/
+vendor/bin/stbox convert movie.srt -o movie.fixed.srt --timing-fix-overlaps --timing-min-gap 0.083 --structure-wrap
+vendor/bin/stbox validate movie.srt --preset netflix-en --json
+curl -s https://example.com/movie.srt | vendor/bin/stbox convert - --to vtt > movie.vtt
 ```
 
 ## Install without Composer
@@ -18,39 +18,38 @@ Every release also ships the tool as a PHAR file and as a container image.
 
 | Form | Needs | Example |
 |:--- |:--- |:--- |
-| PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox-php/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv`, `ext-mbstring` and `ext-zlib`, plus `ext-curl` for `translate` | `php subtitle-toolbox.phar convert in.srt --to vtt -o out.vtt` |
-| Image `ghcr.io/yama6a/subtitle-toolbox-php` | Docker or another container runtime | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox-php:3.0.0 convert in.srt --to vtt -o out.vtt` |
-| Image `ghcr.io/yama6a/subtitle-toolbox-php:tesseract` | the same, for OCR with Tesseract in every language | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox-php:3.0.0-tesseract convert in.sup --to srt -o out.srt --ocr --ocr-language deu` |
+| PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox-php/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv`, `ext-mbstring` and `ext-zlib`, plus `ext-curl` for `translate` | `php stbox.phar convert in.srt --to vtt -o out.vtt` |
+| Image `ghcr.io/yama6a/subtitle-toolbox-php` | Docker or another container runtime | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox-php:5.0.0 convert in.srt --to vtt -o out.vtt` |
+| Image `ghcr.io/yama6a/subtitle-toolbox-php:tesseract` | the same, for OCR with Tesseract in every language | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox-php:5.0.0-tesseract convert in.sup --to srt -o out.srt --ocr --ocr-language deu` |
 
 ```sh
-curl -fsSLO https://github.com/yama6a/subtitle-toolbox-php/releases/latest/download/subtitle-toolbox.phar
-php subtitle-toolbox.phar --version
+curl -fsSLO https://github.com/yama6a/subtitle-toolbox-php/releases/latest/download/stbox.phar
+php stbox.phar --version
 ```
 
 - **Version**: the PHAR file, the image tag, the Git tag and the Packagist version are the same string, for example `3.0.0`. The image also has the tags `3.0`, `3` and `latest`. The Tesseract image has the tags `3.0.0-tesseract`, `3.0-tesseract`, `3-tesseract` and `tesseract`.
 - **Image**: the tool runs in `/work`, so mount your files there. `--user` makes the tool write files that you own. Without it, the tool runs as `www-data` and cannot write to most mounted folders.
 - **Platforms**: the image is for `linux/amd64` and `linux/arm64`.
 - **OCR**: `convert --ocr` works in every form with no extra steps, because all include php-glyph-ocr. The Tesseract image adds Tesseract with the `tessdata_fast` models of all its languages, see [ocr.md](ocr.md#tesseract). It is about 340 MB larger.
-- **Memory**: the tool raises a `memory_limit` of 128 MB, the PHP default, to 512 MB. The image sets 512 MB too. The tool keeps any other value, so raise it for larger files, for example `php -d memory_limit=1G vendor/bin/subtitle-toolbox convert big.json --to srt -o big.srt`. A word-level JSON transcript of 50,000 cues needs about 520 MB.
+- **Memory**: the tool raises a `memory_limit` of 128 MB, the PHP default, to 512 MB. The image sets 512 MB too. The tool keeps any other value, so raise it for larger files, for example `php -d memory_limit=1G vendor/bin/stbox convert big.json --to srt -o big.srt`. A word-level JSON transcript of 50,000 cues needs about 520 MB.
 
 ## Commands
 | Command | Does |
 |:--- |:--- |
 | `convert` | writes each input in the format of `--to` or in its own format, and runs OCR, text, structure and timing edits on the way, see [Convert](#convert) |
-| `retime` | shifts and scales all cue times, or fits them to a video with another frame rate, see [Retime](#retime) |
 | `info` | prints the format, the cue count and statistics, as text or with `--json`. Lists the tracks of an MKV, WebM or MP4 file |
 | `validate` | prints each broken rule, as text or with `--json`, see [Validate](#validate) |
-| `sync` | retimes a subtitle to a reference subtitle or to the speech, see [Sync](#sync) |
+| `sync` | shifts and scales a subtitle to a reference subtitle or to the speech, see [Sync](#sync) |
 | `diff` | lists the added, removed and changed cues of two files, see [Diff](#diff) |
 | `translate` | translates the cue text with DeepL, Google Cloud Translation or an OpenAI-compatible service, see [Translate](#translate) |
 | `dual` | merges two languages into one file, see [Dual](#dual) |
 | `hls` | cuts a subtitle into WebVTT segments and writes an HLS playlist, see [HLS](#hls) |
 | `formats` | lists the format names and extensions for `--from` and `--to` |
 
-- **Help**: `subtitle-toolbox help CMD` and `subtitle-toolbox CMD --help` list the options of a command. For `convert`, they list the common options and the option groups, see [Order](#order).
-- **Command list**: `subtitle-toolbox`, `subtitle-toolbox help` and `subtitle-toolbox help help` list the commands and exit with 0.
+- **Help**: `stbox help CMD` and `stbox CMD --help` list the options of a command. For `convert`, they list the common options and the option groups, see [Order](#order).
+- **Command list**: `stbox`, `stbox help` and `stbox help help` list the commands and exit with 0.
 - **Help width**: every help line fits in 80 columns.
-- **Version**: `subtitle-toolbox --version` prints the installed release, for example `3.0.0`, or `dev` in a Git checkout.
+- **Version**: `stbox --version` prints the installed release, for example `3.0.0`, or `dev` in a Git checkout.
 - **Exit code**: see the table. A batch with a failed file exits with 3, also when another file broke a rule.
 
 | Code | Meaning | Example |
@@ -68,8 +67,8 @@ php subtitle-toolbox.phar --version
 ## Input and output
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension. The tool counts the inputs after it expands directories and globs.
 - **Positional files**: only inputs with the same role, so their order does not matter. A file with another role takes an option, for example `sync --reference FILE` and `dual --primary FILE --secondary FILE`. `diff OLD NEW` keeps 2 positional files, as `diff` and `git diff` do.
-- **Input format**: `--from`. Without it, the tool detects the format from the content. When that fails, it uses the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta-chapters`. `--from` and `--to` also take the aliases `ytchapter`, `podcast`, `ogm` and `ffmeta`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
-- **Output**: never positional. `convert`, `retime`, `sync`, `translate` and `dual` write one input to standard output, or to the file of `-o FILE` (`--output FILE`). Several inputs need `--output-dir DIR`. `hls` always needs `--output-dir`.
+- **Input format**: `--from`. Without it, the tool detects the format from the content. When that fails, it uses the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta-chapters`. The tool reads like `Subtitle::load()` without a format, see [formats.md](formats.md#load-and-save).
+- **Output**: never positional. `convert`, `sync`, `translate` and `dual` write one input to standard output, or to the file of `-o FILE` (`--output FILE`). Several inputs need `--output-dir DIR`. `hls` always needs `--output-dir`.
 
 | Call | Writes |
 |:--- |:--- |
@@ -77,11 +76,11 @@ php subtitle-toolbox.phar --version
 | `convert movie.srt --to vtt -o movie.vtt` | `movie.vtt` |
 | `convert a.srt b.srt --to vtt --output-dir out` | `out/a.vtt` and `out/b.vtt` |
 | `convert a.srt b.srt --to vtt` | nothing. Exit code 2, because 2 inputs need `--output-dir` |
-| `retime a.srt b.srt --shift 1 -o fixed.srt` | nothing. Exit code 2, because `-o` takes one input |
+| `convert a.srt b.srt --shift 1 -o fixed.srt` | nothing. Exit code 2, because `-o` takes one input |
 
 - **Output names**: in `--output-dir`, each output takes the base name of its input and the extension of the output format. An input keeps its extension when the output format uses it, so `movie.ssa` with `--to ass` writes `out/movie.ssa`.
-- **Output format**: `--to FORMAT`. Without `--to`, `convert`, `retime`, `sync` and `translate` keep the input format, for example `convert movie.srt --timing-fix-overlaps -o fixed.srt`. `dual` keeps the format of the primary file. A format that the tool can read but not write, such as VobSub, needs `--to`. Without it, the file fails with exit code 3.
-- **Output extension**: the extension of `-o` never picks the format. An extension of another format than `--to` fails with exit code 2, for example `convert movie.srt --to srt -o movie.vtt`. Without `--to`, `retime`, `sync` and `dual` keep the input format whatever the extension, so `retime movie.srt --shift 1 -o movie.vtt` writes SubRip. `convert` without `--to` fails with exit code 2 when the extension belongs to another format that the tool writes, for example `convert movie.srt -o movie.vtt`. Pass `--to vtt` to convert. For standard input, the format is known only after the read, so the file fails with exit code 3. An extension of no format, such as `.bak`, works.
+- **Output format**: `--to FORMAT`. Without `--to`, `convert`, `sync` and `translate` keep the input format, for example `convert movie.srt --timing-fix-overlaps -o fixed.srt`. `dual` keeps the format of the primary file. A format that the tool can read but not write, such as VobSub, needs `--to`. Without it, the file fails with exit code 3.
+- **Output extension**: the extension of `-o` never picks the format. This holds for `convert`, `sync`, `dual` and `translate`. An extension of another format than `--to` fails with exit code 2, for example `convert movie.srt --to srt -o movie.vtt`. Without `--to`, an extension of another writable format than the input format fails with exit code 2, for example `sync movie.srt --reference ref.srt -o movie.vtt`. The message names `--to`, so pass `--to vtt`. The check runs before any file is read. For standard input, the format is known only after the read, so the file fails with exit code 3. An extension of no format, such as `.bak`, works.
 - **Never overwrite**: no command overwrites a file. This covers subtitle outputs, the files of `--mute-edl` and `--mute-filter`, and the `hls` playlist and segments.
 - **Check before the work**: before it reads the first input, the tool collects every output path. It fails with exit code 2 and writes nothing in these cases:
 
@@ -101,7 +100,7 @@ php subtitle-toolbox.phar --version
 - **Standard input**: `-` takes `-o FILE`, not `--output-dir`. With `--output-dir`, the tool fails with exit code 2.
 - **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`.
 - **Option names**: `--no-X` always turns X off, for example `--no-bom`. A time option is in seconds, unless its name ends in `-frames`.
-- **Defaults**: `subtitle-toolbox help COMMAND` prints the default of each option after `Default:`. This page does not repeat the values. Without the option, the tool passes no value, so the library default applies.
+- **Defaults**: `stbox help COMMAND` prints the default of each option after `Default:`. This page does not repeat the values. Without the option, the tool passes no value, so the library default applies.
 - **Choice values**: a value from a fixed list ignores case. `--line-ending CRLF`, `--mode Top-Bottom`, `--preset BBC` and `--errors-enable MusicNotes` work.
 - **Encoding**: `--encoding` names the encoding of input that is not UTF-8, for example `Windows-1252`. It replaces code page detection. Files with a BOM, valid UTF-8 files and UTF-16 files stay as they are. See [encodings.md](encodings.md#order-of-the-checks).
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
@@ -124,7 +123,7 @@ php subtitle-toolbox.phar --version
 
 - **Override**: a specific option wins over `--fps`. `convert movie.sub --to microdvd -o new.sub --fps 25 --output-fps 23.976` reads at 25 fps and writes at 23.976 fps.
 - **Output default**: without `--output-fps`, the frame rate of the output comes from the input, see [Load and save](formats.md#load-and-save).
-- **Formats**: `--from` and `--to` always name formats. `retime` changes the frame rate with `--from-fps` and `--to-fps`.
+- **Formats**: `--from` and `--to` always name formats. `convert` changes the frame rate with `--from-fps` and `--to-fps`.
 
 ## Times
 Every option with the value `SECONDS` takes a time, in every command. `--sync` takes times too. A time has one of these shapes:
@@ -140,7 +139,7 @@ Every option with the value `SECONDS` takes a time, in every command. `--sync` t
 - **Limit**: a time must be below 100000 hours, as in the parsers. `--shift 1e300` and `--shift 100000:00:00` are usage errors, exit code 2.
 
 ## Formats and file extensions
-Run `subtitle-toolbox formats` for the list. For an extension that two formats share, see [Shared extensions](formats.md#the-format-enum).
+Run `stbox formats` for the list. For an extension that two formats share, see [Shared extensions](formats.md#the-format-enum).
 
 - **Output extension**: `--to` sets the output format, never the extension of `-o`. So `--to mpl2 -o film.txt` writes MPL2, and `--to txt -o film.txt` writes plain text. Without `--to`, the output has the format of the input. So pass `--to json` to convert Whisper JSON to the library JSON.
 - **`.sub`**: MicroDVD. Pass `--from subviewer` for SubViewer. A directory skips a `.sub` file that has an `.idx` file next to it.
@@ -153,9 +152,9 @@ Run `subtitle-toolbox formats` for the list. For an extension that two formats s
 Every command reads a subtitle track of an MKV, WebM or MP4 file with [`Subtitle::loadTrack()`](mkv.md). `--track` takes the track number that `info` lists.
 
 ```sh
-vendor/bin/subtitle-toolbox info movie.mkv
-vendor/bin/subtitle-toolbox convert movie.mkv --to srt -o movie.srt --track 3
-vendor/bin/subtitle-toolbox convert movie.mkv --to srt -o movie.srt --track 5 --ocr
+vendor/bin/stbox info movie.mkv
+vendor/bin/stbox convert movie.mkv --to srt -o movie.srt --track 3
+vendor/bin/stbox convert movie.mkv --to srt -o movie.srt --track 5 --ocr
 ```
 
 ```
@@ -169,44 +168,20 @@ movie.mkv
 - **Detection**: the tool knows an MKV, WebM or MP4 file by its first 8 bytes, not by its extension. Standard input works too.
 - **Memory**: the tool reads an MKV, WebM or MP4 file the same way as `MatroskaReader` and `Mp4Reader`, see [mkv.md](mkv.md). Standard input is different. The tool reads the whole input into memory first.
 - **Track**: a file with one subtitle track needs no `--track`. For a file with more, the tool fails and lists the tracks.
-- **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT, `S_HDMV/PGS` is PGS and `S_VOBSUB` is VobSub. An MP4 `tx3g` track is SubRip. Without `--to`, `convert`, `retime` and `sync` keep this format. `convert movie.mkv --to srt --track 3 --output-dir out` writes `out/movie.srt`.
+- **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT, `S_HDMV/PGS` is PGS and `S_VOBSUB` is VobSub. An MP4 `tx3g` track is SubRip. Without `--to`, `convert` and `sync` keep this format. `convert movie.mkv --to srt --track 3 --output-dir out` writes `out/movie.srt`.
 - **Second file**: `diff` applies `--track` to both files. `--new-track` sets the track of the new file, for example `diff old.mkv new.mkv --track 3 --new-track 8`. `dual` takes `--primary-track` and `--secondary-track`.
 - **Info**: without `--track`, `info` lists the tracks of a file whose extension names no subtitle format, such as `.mkv`, `.webm` and `.mp4`. The JSON object has `file`, `container` and `tracks`. Each track has `number`, `codecId`, `language`, `name`, `default` and `forced`. With `--track`, `info` prints the statistics of the track.
 - **Directories**: a directory argument skips MKV, WebM and MP4 files. Pass them by name or with a glob.
 - **Errors**: `S_DVBSUB` and `c608` tracks, encrypted tracks and tracks with bzlib or LZO compression fail, see [mkv.md](mkv.md).
 
-## Retime
-`retime` changes the cue times with one or more edits. It applies them in this order: `--sync`, `--shift`, `--scale`, then `--from-fps` and `--to-fps`. The word timestamps in the cue text move with the cues.
-
-```sh
-vendor/bin/subtitle-toolbox retime trip.srt --shift -1.5 --scale 1.001 -o trip.fixed.srt
-vendor/bin/subtitle-toolbox retime movie.sub --from-fps 25 --to-fps 23.976 --input-fps 25 --to srt -o movie.srt
-vendor/bin/subtitle-toolbox retime movie.srt --sync first=00:00:12.5 --sync '#120=00:42:10,300' --sync last=01:41:05 -o fixed.srt
-```
-
-| Option | Calls |
-|:--- |:--- |
-| `--shift SECONDS` | [`shift()`](editing.md#retiming) with the [time](#times) to add to every time. A negative value shows the cues earlier |
-| `--shift-after SECONDS` | `shift()` with the [time](#times) `$fromTime`, so only the cues that start at this time or later move. Needs `--shift` |
-| `--shift-before SECONDS` | `shift()` with the [time](#times) `$toTime`, so only the cues that start before this time move. It must be after `--shift-after`. Needs `--shift` |
-| `--scale FACTOR` | `scale()`. `--scale 1.001` fixes a subtitle that drifts 3.6 s per hour |
-| `--sync OLD=NEW` | `syncByPoints()` with a point that moves `OLD` to the [time](#times) `NEW`. Repeatable |
-| `--from-fps RATE`, `--to-fps RATE` | `convertFrameRate()`. `--from-fps 25 --to-fps 23.976` fits a subtitle for a 25 fps release to a 23.976 fps video |
-
-- **Negative times**: a time that becomes negative becomes 0.
-- **Time limit**: an edit that moves a cue end to 100000 hours or more, such as `--scale 1e300`, fails that file with exit code 3.
-- **Shift range**: the start time of a cue decides if it moves. `--shift 2 --shift-after 10:00 --shift-before 15:00` moves a cue from 14:59 to 15:03 as a whole.
-- **Sync points**: `OLD` is a [time](#times), `first` or `last` for the start of the first or last cue, or `#N` for the start of cue N, counted from 1. 1 point shifts all cues.
-- **Sync errors**: `--sync` with `--shift` or `--scale` is a usage error, exit code 2. So are points whose old or new times do not increase in the order of the options. A point that does not fit a file, such as `#120` in a file with 80 cues, fails that file with exit code 3.
-
 ## Convert
-`convert` reads each input, runs the edits of its options, and writes the result in the format of `--to`, or else in the format of the input. One call can run OCR, fix text, remove hearing-impaired annotations (`--sdh`), retime and convert:
+`convert` reads each input, runs the edits of its options, and writes the result in the format of `--to`, or else in the format of the input. One call can run OCR, fix text, remove hearing-impaired annotations (`--sdh`), shift times and convert:
 
 ```sh
-vendor/bin/subtitle-toolbox convert movie.sup --to srt -o movie.srt --ocr --errors-fix --sdh --shift -1.5
-vendor/bin/subtitle-toolbox convert lecture.json --to srt -o lecture.srt --structure-resegment --timing-min-duration 1
-vendor/bin/subtitle-toolbox convert song.json --to ass -o song.ass --ass-karaoke-tag kf
-vendor/bin/subtitle-toolbox convert season1/*.srt --output-dir fixed/ --errors-fix
+vendor/bin/stbox convert movie.sup --to srt -o movie.srt --ocr --errors-fix --sdh --shift -1.5
+vendor/bin/stbox convert lecture.json --to srt -o lecture.srt --structure-resegment --timing-min-duration 1
+vendor/bin/stbox convert song.json --to ass -o song.ass --ass-karaoke-tag kf
+vendor/bin/stbox convert season1/*.srt --output-dir fixed/ --errors-fix
 ```
 
 ### Order
@@ -248,7 +223,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --output-dir fixed/ --errors-f
 | `--replace FROM=TO` | [`replaceText()`](text.md#transforms) on the text between tags. Repeatable. The first `=` ends FROM |
 | `--replace-regex` | reads each FROM as a regular expression with delimiters, for example `--replace '/\.{4,}/=...'` |
 | `--replace-ignore-case` | matches FROM in any case |
-| `--speakers MODE` | `prefix`, `dashes`, `colors` or `from-prefix`. Calls `SpeakerLabels::apply()` with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors`, or with `readPrefixes: true`, and the other options at their defaults, see [Speakers](text.md#speakers) |
+| `--speakers MODE` | `prefix`, `dashes`, `colors` or `from-prefix`. Calls `SpeakerLabels::apply()` with `style: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors`, or with `speakerLabels: true`, and the other options at their defaults, see [Speakers](text.md#speakers) |
 | `--case MODE` | `upper`, `lower` or `sentence`, with `changeCase()` |
 | `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
 | `--rtl MODE` | `fix` calls [`fixRightToLeft()`](text.md#transforms), which wraps right-to-left lines in Unicode embedding marks. `clean` calls `removeBidiControls()`, which removes them and all other bidi controls |
@@ -264,7 +239,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --output-dir fixed/ --errors-f
 | `--mute-padding SECONDS` | widens each time range on both sides. The value is a [time](#times) |
 
 ```sh
-vendor/bin/subtitle-toolbox convert movie.srt --to srt -o clean.srt --mask-words words.txt --mute-filter mute.txt --mute-padding 0.1
+vendor/bin/stbox convert movie.srt --to srt -o clean.srt --mask-words words.txt --mute-filter mute.txt --mute-padding 0.1
 ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 ```
 
@@ -279,7 +254,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 |:--- |:--- |
 | `--structure-resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--structure-max-word-gap` sets `maxWordGap` as a [time](#times). It turns on `--word-timestamps` |
 | `--structure-unwrap` | `unwrapLines()`. Each dialogue dash line starts a line of its own |
-| `--structure-merge-same-time` | `mergeSameTimeCues()` with the default `tolerance` of 0. It runs after `--structure-unwrap`, so the lines of each joined cue stay apart |
+| `--structure-merge-same-time` | `mergeSameTimeCues()` with the default `timeTolerance` of 0. It runs after `--structure-unwrap`, so the lines of each joined cue stay apart |
 | `--structure-merge-short` | `mergeShortCues()` with the default options |
 | `--structure-split-long` | `Resegmenter::apply()` with `ResegmentMode::SplitLong` and the default options |
 | `--structure-wrap` | `wrapLines()` with `--structure-max-cpl` and `--structure-max-lines` |
@@ -290,7 +265,28 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 - **Limits without their fix**: `--structure-max-cpl`, `--structure-max-lines` and `--timing-min-gap` alone are a usage error, exit code 2. The message names the fix options that use them.
 
 ### Timing
-`--shift`, `--shift-after`, `--shift-before`, `--scale`, `--sync`, `--from-fps` and `--to-fps` work as in [Retime](#retime).
+`convert` without `--to` changes the cue times with one or more of these edits. It applies them in this order: `--sync`, `--shift`, `--scale`, then `--from-fps` and `--to-fps`. The word timestamps in the cue text move with the cues.
+
+```sh
+vendor/bin/stbox convert trip.srt --shift -1.5 --scale 1.001 -o trip.fixed.srt
+vendor/bin/stbox convert movie.sub --from-fps 25 --to-fps 23.976 --input-fps 25 --to srt -o movie.srt
+vendor/bin/stbox convert movie.srt --sync first=00:00:12.5 --sync '#120=00:42:10,300' --sync last=01:41:05 -o fixed.srt
+```
+
+| Option | Calls |
+|:--- |:--- |
+| `--shift SECONDS` | [`shift()`](editing.md#retiming) with the [time](#times) to add to every time. A negative value shows the cues earlier |
+| `--shift-after SECONDS` | `shift()` with the [time](#times) `$from`, so only the cues that start at this time or later move. Needs `--shift` |
+| `--shift-before SECONDS` | `shift()` with the [time](#times) `$to`, so only the cues that start before this time move. It must be after `--shift-after`. Needs `--shift` |
+| `--scale FACTOR` | `scale()`. `--scale 1.001` fixes a subtitle that drifts 3.6 s per hour |
+| `--sync OLD=NEW` | `syncByPoints()` with a point that moves `OLD` to the [time](#times) `NEW`. Repeatable |
+| `--from-fps RATE`, `--to-fps RATE` | `convertFrameRate()`. `--from-fps 25 --to-fps 23.976` fits a subtitle for a 25 fps release to a 23.976 fps video |
+
+- **Negative times**: a time that becomes negative becomes 0.
+- **Time limit**: an edit that moves a cue end to 100000 hours or more, such as `--scale 1e300`, fails that file with exit code 3.
+- **Shift range**: the start time of a cue decides if it moves. `--shift 2 --shift-after 10:00 --shift-before 15:00` moves a cue from 14:59 to 15:03 as a whole.
+- **Sync points**: `OLD` is a [time](#times), `first` or `last` for the start of the first or last cue, or `#N` for the start of cue N, counted from 1. 1 point shifts all cues.
+- **Sync errors**: `--sync` with `--shift` or `--scale` is a usage error, exit code 2. So are points whose old or new times do not increase in the order of the options. A point that does not fit a file, such as `#120` in a file with 80 cues, fails that file with exit code 3.
 
 | Option | Calls |
 |:--- |:--- |
@@ -309,7 +305,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 
 ```sh
 ffmpeg -i movie.mp4 -vf "select='gt(scene,0.3)',showinfo" -f null - 2> scenes.log
-vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.timed.srt --video-fps 24 --snap-shot-changes scenes.log
+vendor/bin/stbox convert movie.srt --to srt -o movie.timed.srt --video-fps 24 --snap-shot-changes scenes.log
 ```
 
 - **Gaps only**: without `--snap-shot-changes`, a `--snap-` option such as `--snap-min-gap-frames 2` only [closes gaps](editing.md#closing-gaps).
@@ -370,17 +366,17 @@ vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.timed.srt --vide
 | `--check-all-caps-lines` | `noAllCapsLines` | `--case sentence` or `--case lower` |
 
 ```sh
-vendor/bin/subtitle-toolbox validate movie.srt --preset bbc --check-unbalanced-tags --dialogue-dash '- '
+vendor/bin/stbox validate movie.srt --preset bbc --check-unbalanced-tags --dialogue-dash '- '
 ```
 
 ## Sync
 `sync` finds the scale and the offset with [`ReferenceSync`](sync.md), applies them and prints them to standard error.
 
 ```sh
-vendor/bin/subtitle-toolbox sync movie.de.srt --reference movie.en.srt -o movie.de.synced.srt
+vendor/bin/stbox sync movie.de.srt --reference movie.en.srt -o movie.de.synced.srt
 
 ffmpeg -i movie.mkv -af silencedetect=noise=-30dB:d=0.4 -f null - 2> silence.log
-vendor/bin/subtitle-toolbox sync movie.de.srt --silence-log silence.log --media-duration 5400 -o movie.de.synced.srt
+vendor/bin/stbox sync movie.de.srt --silence-log silence.log --media-duration 5400 -o movie.de.synced.srt
 ```
 
 ```
@@ -403,7 +399,7 @@ movie.de.srt: scale 1.04271, offset -2.3 s, score 0.89
 `diff` compares an old and a new file with [`SubtitleDiff`](compare.md) and prints `toText()`. The files can have different formats. The exit code is 1 when they differ, as with the Unix `diff` command. Equal files give no output. The first argument must name one file. A directory or a glob that matches more than one file fails with exit code 2.
 
 ```sh
-vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-formatting
+vendor/bin/stbox diff episode1_v1.srt episode1_v2.srt --ignore-formatting
 ```
 
 | Option | Sets |
@@ -420,10 +416,10 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 `translate` translates the cue text with [`TranslationRunner`](translation.md) and the built-in engine `DeepLEngine`, `GoogleTranslateEngine` or `OpenAiCompatibleEngine`. It needs the PHP extension curl.
 
 ```sh
-vendor/bin/subtitle-toolbox translate movie.de.srt --engine deepl --source-language de --target-language en-US -o movie.en.srt
-DEEPL_API_KEY=... vendor/bin/subtitle-toolbox translate movie.de.srt --engine deepl --target-language en-US
-GOOGLE_TRANSLATE_API_KEY=... vendor/bin/subtitle-toolbox translate season1/ --engine google --target-language fr --to vtt --output-dir fr/
-OPENAI_BASE_URL=http://localhost:11434/v1 OPENAI_MODEL=llama3 vendor/bin/subtitle-toolbox translate movie.de.srt --engine openai --target-language en
+vendor/bin/stbox translate movie.de.srt --engine deepl --source-language de --target-language en-US -o movie.en.srt
+DEEPL_API_KEY=... vendor/bin/stbox translate movie.de.srt --engine deepl --target-language en-US
+GOOGLE_TRANSLATE_API_KEY=... vendor/bin/stbox translate season1/ --engine google --target-language fr --to vtt --output-dir fr/
+OPENAI_BASE_URL=http://localhost:11434/v1 OPENAI_MODEL=llama3 vendor/bin/stbox translate movie.de.srt --engine openai --target-language en
 ```
 
 | Option | Sets |
@@ -451,8 +447,8 @@ OPENAI_BASE_URL=http://localhost:11434/v1 OPENAI_MODEL=llama3 vendor/bin/subtitl
 `dual` merges a primary and a secondary subtitle with [`DualSubtitle::fromPair()`](editing.md#dual-subtitles). The output has the format of the primary file, unless `--to` sets another one.
 
 ```sh
-vendor/bin/subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt --secondary-style i -o movie.en-de.srt
-vendor/bin/subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt --mode top-bottom --to ass -o movie.en-de.ass
+vendor/bin/stbox dual --primary movie.en.srt --secondary movie.de.srt --secondary-style i -o movie.en-de.srt
+vendor/bin/stbox dual --primary movie.en.srt --secondary movie.de.srt --mode top-bottom --to ass -o movie.en-de.ass
 ```
 
 | Option | Sets |
@@ -462,7 +458,7 @@ vendor/bin/subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt
 | `--mode MODE` | `stack` or `top-bottom` |
 | `--secondary-style TAG` | `secondaryStyle`, for example `i` or `'font color="#ffff00"'` |
 | `--secondary-alignment 1-9` | `secondaryAlignment` for `top-bottom`, as the value of the `Alignment` case, for example 8 for `Alignment::TopCenter` |
-| `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom`. The value is a [time](#times) |
+| `--snap-tolerance SECONDS` | `timeTolerance` for `top-bottom`. The value is a [time](#times) |
 | `--primary-from FORMAT`, `--primary-track NUMBER` | the format and the MKV or WebM track of the primary file. `dual` has no `--from` and `--track` |
 | `--secondary-from FORMAT`, `--secondary-track NUMBER` | the format and the MKV or WebM track of the secondary file. Without `--secondary-from`, the tool detects the format of the secondary file. `--primary-from` does not apply to it |
 
@@ -473,7 +469,7 @@ vendor/bin/subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt
 `hls` cuts one subtitle into WebVTT segments with [`HlsWebVttSegmenter`](hls.md) and writes them with the playlist into `--output-dir`.
 
 ```sh
-vendor/bin/subtitle-toolbox hls movie.srt --output-dir hls/ --segment 6 --media-duration 5400
+vendor/bin/stbox hls movie.srt --output-dir hls/ --segment 6 --media-duration 5400
 ```
 
 This writes `hls/sub0.vtt` to `hls/sub899.vtt` and `hls/subs.m3u8`.
@@ -495,10 +491,10 @@ This writes `hls/sub0.vtt` to `hls/sub899.vtt` and `hls/subs.m3u8`.
 `convert --ocr` reads the image cues of PGS and VobSub files before it writes the output. It uses [Tesseract](ocr.md#tesseract) when the `tesseract` program is on the `PATH`. Otherwise it uses [php-glyph-ocr](ocr.md#php-glyph-ocr).
 
 ```sh
-vendor/bin/subtitle-toolbox convert movie.sup --to srt -o movie.srt --ocr
-vendor/bin/subtitle-toolbox convert movie.sup --to srt -o movie.srt --ocr --ocr-language deu
-vendor/bin/subtitle-toolbox convert movie.sup --to srt -o movie.srt --ocr --ocr-engine glyph
-vendor/bin/subtitle-toolbox convert movie.idx --to srt -o movie.srt --ocr --ocr-database my-font.nocr
+vendor/bin/stbox convert movie.sup --to srt -o movie.srt --ocr
+vendor/bin/stbox convert movie.sup --to srt -o movie.srt --ocr --ocr-language deu
+vendor/bin/stbox convert movie.sup --to srt -o movie.srt --ocr --ocr-engine glyph
+vendor/bin/stbox convert movie.idx --to srt -o movie.srt --ocr --ocr-database my-font.nocr
 ```
 
 - **Engine**: `--ocr-engine` picks one engine. When that engine is not installed, the tool stops with exit code 2 and an install hint.

@@ -146,7 +146,9 @@ final class VobSubParser extends SubtitleParser
 
             $end = $unit["stop"] ?? min($unit["start"] + $this->options->lastCueDuration,
                                         $units[$index + 1]["start"] ?? INF);
-            $parsedCues[] = $unit["image"]->toCue(new SubtitleCue($unit["start"], $end));
+            $cue = new SubtitleCue($unit["start"], $end);
+            $unit["image"]->applyTo($cue);
+            $parsedCues[] = $cue;
         }
 
         return $subtitle->addCues($parsedCues);

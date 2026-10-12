@@ -20,6 +20,7 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Tests\Support\RealFiles;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 require_once __DIR__ . "/../files/pgs/generator/PgsFixtures.php";
 require_once __DIR__ . "/../Ocr/FakeOcrEngine.php";
@@ -76,7 +77,7 @@ class PgsParserTest extends TestCase
         $content = file_get_contents(self::DIR . array_search($method, PgsFixtures::FILES, true));
 
         $this->assertSame(Format::Pgs, Format::detect($content));
-        $this->assertEquals((new PgsParser())->parse($content, new ReadOptions())->getCues(), Subtitle::fromStringAutoDetectFormat($content)->getCues());
+        $this->assertEquals((new PgsParser())->parse($content, new ReadOptions())->getCues(), Subtitle::fromString($content)->getCues());
     }
 
 
@@ -146,10 +147,10 @@ class PgsParserTest extends TestCase
 
     public function testDrawsALaterObjectOverAnEarlierObjectThatItOverlaps(): void
     {
-        $black    = (new CueImage(PngEncoder::encode(3, 1, [0x000000FF, 0x000000FF, 0x000000FF]), 10, 20, 3, 1, 720, 576))
-            ->toCue(new SubtitleCue(1, 3));
-        $white    = (new CueImage(PngEncoder::encode(3, 1, [0x00000000, 0xFFFFFF80, 0xFFFFFFFF]), 11, 20, 3, 1, 720, 576))
-            ->toCue(new SubtitleCue(1, 3));
+        $black    = TestSubtitles::imageCue(new CueImage(PngEncoder::encode(3, 1, [0x000000FF, 0x000000FF, 0x000000FF]), 10, 20, 3, 1, 720, 576),
+                                             new SubtitleCue(1, 3));
+        $white    = TestSubtitles::imageCue(new CueImage(PngEncoder::encode(3, 1, [0x00000000, 0xFFFFFF80, 0xFFFFFFFF]), 11, 20, 3, 1, 720, 576),
+                                             new SubtitleCue(1, 3));
         $subtitle = Subtitle::fromString((new Subtitle())->addCues([$black, $white])->toString(Format::Pgs), Format::Pgs);
 
         $image = CueImage::fromCue($subtitle->getCues()[0]);
@@ -287,7 +288,7 @@ class PgsParserTest extends TestCase
 
     public function testRecognizesTextWithAnOcrEngine(): void
     {
-        $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::DIR . "shapes_1080p.sup"));
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "shapes_1080p.sup"));
         $engine   = new FakeOcrEngine(["Next stop: Main Station"]);
 
         $subtitle->recognizeText($engine, "eng");

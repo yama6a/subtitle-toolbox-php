@@ -18,6 +18,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 require_once __DIR__ . "/../files/fixing/generate.php";
 
@@ -32,7 +33,7 @@ class CommonErrorFixerTest extends TestCase
         "unbalancedTags"               => false,
         "emptyTags"                    => false,
         "dialogueDashes"               => false,
-        "ellipsis"                     => false,
+        "ellipsis"                     => null,
         "ocrLowercaseL"                => false,
         "ocrPipe"                      => false,
         "ocrZeroInWords"               => false,
@@ -161,7 +162,7 @@ class CommonErrorFixerTest extends TestCase
     #[DataProvider("ruleCases")]
     public function testRuleFixesTheTextBetweenTags(string $rule, ?string $language, array $before, array $after): void
     {
-        $only = array_merge(self::ALL_OFF, [$rule => true]);
+        $only = array_merge(self::ALL_OFF, [$rule => $rule === "ellipsis" ? EllipsisStyle::ThreeDots : true]);
 
         [$lines, $fixes] = self::fixLines($before, new CommonErrorOptions($language, ...$only));
 
@@ -195,7 +196,7 @@ class CommonErrorFixerTest extends TestCase
     public function testFixesTheFileAsTheGoldenFile(string $input, string $language, ?string $list, string $golden): void
     {
         $content  = file_get_contents(self::FILES . $input);
-        $subtitle = Subtitle::fromStringAutoDetectFormat($content);
+        $subtitle = Subtitle::fromString($content);
         $options  = new CommonErrorOptions(language: $language,
                                            replaceList: $list === null ? null : OcrReplaceList::fromSubtitleEditXml(file_get_contents($list)));
         $lineEnd  = str_contains($content, "\r\n") ? "\r\n" : "\n";
@@ -205,13 +206,13 @@ class CommonErrorFixerTest extends TestCase
         $this->assertStringEqualsFile(self::FILES . $golden,
                                       $subtitle->toString(Format::SubRip, new WriteOptions(lineEnding: LineEnding::from($lineEnd))));
         $this->assertNotEmpty($fixes);
-        $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . $golden)), $options)->fixes);
+        $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromString(file_get_contents(self::FILES . $golden)), $options)->fixes);
     }
 
 
     public function testOptionalRulesFixTheFileAsTheGoldenFile(): void
     {
-        $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/optional-rules.srt"));
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "fixing/optional-rules.srt"));
         $defaults = new CommonErrorOptions();
         $optional = array_filter(array_map(fn (CommonErrorRule $rule): string => $rule->value, CommonErrorRule::cases()),
                                  fn (string $name): bool => ($defaults->$name ?? null) === false);
@@ -221,14 +222,14 @@ class CommonErrorFixerTest extends TestCase
 
         $this->assertSame(["doubleApostrophes", "loneLowercaseI", "unneededPeriods", "dialogueOnOneLine", "musicNotes", "sentenceStartCase"], array_values($optional));
         $this->assertStringEqualsFile(self::FILES . "fixing/optional-rules.fixed.srt", $subtitle->toString(Format::SubRip));
-        $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt")),
+        $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromString(file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt")),
                                                       $options)->fixes);
     }
 
 
     public function testListsEachFixOfTheWebFileWithTheTextBeforeAndAfter(): void
     {
-        $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/web-errors.srt"));
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "fixing/web-errors.srt"));
 
         $fixes = CommonErrorFixer::apply($subtitle, new CommonErrorOptions(language: "en"))->fixes;
 
@@ -276,20 +277,20 @@ class CommonErrorFixerTest extends TestCase
     public function testPreviewListsTheFixesAndChangesNothing(): void
     {
         $content  = file_get_contents(self::FILES . "fixing/web-errors.srt");
-        $subtitle = Subtitle::fromStringAutoDetectFormat($content);
+        $subtitle = Subtitle::fromString($content);
         $before   = $subtitle->toString(Format::SubRip);
 
         $preview = CommonErrorFixer::preview($subtitle, new CommonErrorOptions(language: "en"))->fixes;
 
         $this->assertSame($before, $subtitle->toString(Format::SubRip));
-        $this->assertEquals(CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat($content), new CommonErrorOptions(language: "en"))->fixes, $preview);
+        $this->assertEquals(CommonErrorFixer::apply(Subtitle::fromString($content), new CommonErrorOptions(language: "en"))->fixes, $preview);
     }
 
 
     public function testAllFixesOffChangesNothing(): void
     {
         $content  = file_get_contents(self::FILES . "fixing/ocr-en.ocr.srt");
-        $subtitle = Subtitle::fromStringAutoDetectFormat($content);
+        $subtitle = Subtitle::fromString($content);
 
         $this->assertSame([], CommonErrorFixer::apply($subtitle, new CommonErrorOptions("en", ...self::ALL_OFF))->fixes);
         $this->assertSame($content, $subtitle->toString(Format::SubRip));
@@ -377,7 +378,7 @@ class CommonErrorFixerTest extends TestCase
 
     public function testUnicodeEllipsisReplacesAllEllipses(): void
     {
-        [$lines] = self::fixLines(["Well... no. . . yes....", "Wait\u{2026}"], new CommonErrorOptions(language: "en", unicodeEllipsis: true));
+        [$lines] = self::fixLines(["Well... no. . . yes....", "Wait\u{2026}"], new CommonErrorOptions(language: "en", ellipsis: EllipsisStyle::Unicode));
 
         $this->assertSame(["Well\u{2026} no\u{2026} yes\u{2026}", "Wait\u{2026}"], $lines);
     }
@@ -460,7 +461,7 @@ class CommonErrorFixerTest extends TestCase
 
     public function testSkipsImageCuesWithoutText(): void
     {
-        $subtitle = (new Subtitle())->addCue((new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2)));
+        $subtitle = (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage("png", 0, 0, 1, 1, 1, 1), new SubtitleCue(1, 2)));
 
         $this->assertSame([], CommonErrorFixer::apply($subtitle, new CommonErrorOptions())->fixes);
         $this->assertCount(1, $subtitle->getCues());

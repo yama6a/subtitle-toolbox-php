@@ -21,8 +21,11 @@ use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
  */
 final class SubtitleReader
 {
-    public static function load(string $path, Format $format, ReadOptions $options): Subtitle
+    public static function load(string $path, ?Format $format, ReadOptions $options): Subtitle
     {
+        if ($format === null) {
+            return self::loadDetected($path, $options);
+        }
         if (($container = self::containerOf($path)) !== null) {
             throw new UnsupportedFormatException("$path is an " . Containers::label($container) . " file. Call loadTrack() with a track number.");
         }
@@ -44,7 +47,7 @@ final class SubtitleReader
     }
 
 
-    public static function loadAutoDetect(string $path, ReadOptions $options): Subtitle
+    private static function loadDetected(string $path, ReadOptions $options): Subtitle
     {
         if (($container = self::containerOf($path)) !== null) {
             return self::readOnlyTrack(Containers::open($path), $container, $options);
@@ -76,8 +79,11 @@ final class SubtitleReader
     }
 
 
-    public static function fromString(string $content, Format $format, ReadOptions $options): Subtitle
+    public static function fromString(string $content, ?Format $format, ReadOptions $options): Subtitle
     {
+        if ($format === null) {
+            return self::fromStringDetected($content, $options);
+        }
         if (($container = Containers::detect($content)) !== null) {
             throw new UnsupportedFormatException("The content is an " . Containers::label($container) . " file. Call loadTrack() with a track number.");
         }
@@ -86,7 +92,7 @@ final class SubtitleReader
     }
 
 
-    public static function fromStringAutoDetect(string $content, ReadOptions $options): Subtitle
+    private static function fromStringDetected(string $content, ReadOptions $options): Subtitle
     {
         if (($container = Containers::detect($content)) !== null) {
             $stream = fopen("php://temp", "w+b");
@@ -104,13 +110,13 @@ final class SubtitleReader
 
 
     /**
-     * Returns the format of the UTF-8 $content as loadAutoDetect() and fromStringAutoDetect() pick it, or null.
+     * Returns the format of the UTF-8 $content as load() and fromString() pick it without a format, or null.
      * Without detection, it falls back to the extension of $path.
      */
     public static function detectFormat(string $content, ?string $path = null): ?Format
     {
         $format      = Format::detect($content);
-        $byExtension = $path === null ? null : Format::fromPath($path);
+        $byExtension = $path === null ? null : Format::tryFromPath($path);
         // Detection returns TTML for an iTT file. IttParser reads the same cues and keeps the iTT timing.
         if ($format === Format::Ttml && $byExtension === Format::Itt) {
             return Format::Itt;
@@ -166,7 +172,7 @@ final class SubtitleReader
 
     private static function formatOfExtension(string $path): ?Format
     {
-        $byExtension = Format::fromPath($path);
+        $byExtension = Format::tryFromPath($path);
 
         // An extension that a format without detection also uses, such as .json for Deepgram, says nothing.
         return $byExtension !== null && self::extensionOnlyOfAutoDetectedFormats($path) && $byExtension->canRead() ? $byExtension : null;

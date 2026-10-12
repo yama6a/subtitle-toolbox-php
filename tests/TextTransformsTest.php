@@ -536,11 +536,4 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         ], $subtitle->getComments());
         $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
-
-
-    public function testToUpperOrLowerChangesPlainText(): void
-    {
-        $this->assertSame("O'NEIL & CO", Subtitle::toUpperOrLower("O'Neil & Co", true));
-        $this->assertSame("o'neil & co", Subtitle::toUpperOrLower("O'Neil & Co", false));
-    }
 }

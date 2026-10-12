@@ -38,7 +38,7 @@
     }
   },
   "bin": [
-    "bin/subtitle-toolbox"
+    "bin/stbox"
   ],
   "require": {
     "php": "^8.2",

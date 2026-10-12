@@ -42,7 +42,7 @@ class OptionUsageTest extends CliTestCase
     {
         ["options" => $options, "aliases" => $aliases] = $this->help();
 
-        $this->assertSame(["convert", "retime", "info", "validate", "sync", "diff", "translate", "dual", "hls", "formats"], array_keys($options));
+        $this->assertSame(["convert", "info", "validate", "sync", "diff", "translate", "dual", "hls", "formats"], array_keys($options));
         $this->assertContains("--sdh-keep-music-lines", $options["convert"]);
         $this->assertContains("--output", $options["convert"]);
         $this->assertNotContains("--help", $options["convert"]);
@@ -66,7 +66,7 @@ class OptionUsageTest extends CliTestCase
 
                 public static function cases(): array
                 {
-                    return ["one" => ["retime"], "two" => ["sync"]];
+                    return ["one" => ["hls"], "two" => ["sync"]];
                 }
 
                 public function testTwo(): void
@@ -81,9 +81,9 @@ class OptionUsageTest extends CliTestCase
             PHP;
 
         $this->assertEquals(
-            ["retime" => ["--bom" => true], "sync" => ["--bom" => true], "convert" => ["--output" => true, "--to" => true],
+            ["hls" => ["--bom" => true], "sync" => ["--bom" => true], "convert" => ["--output" => true, "--to" => true],
              "info" => ["--json" => true, "--lenient" => true]],
-            self::usages($code, ["convert", "retime", "info", "sync"], ["-o" => "--output"])
+            self::usages($code, ["convert", "hls", "info", "sync"], ["-o" => "--output"])
         );
     }
 

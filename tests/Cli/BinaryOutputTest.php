@@ -43,11 +43,11 @@ class BinaryOutputTest extends CliTestCase
 
     public function testConvertWithoutToKeepsTheInputFormat(): void
     {
-        $trip = Subtitle::fromStringAutoDetectFormat($this->file("trip.srt"));
+        $trip = Subtitle::fromString($this->file("trip.srt"));
 
         $this->assertSame([0, (clone $trip)->shift(2)->toString(Format::SubRip), ""], $this->runCli(["convert", "trip.srt", "--shift", "2"]));
         $this->assertSame([0, "shop.vtt -> out/shop.vtt\n", ""], $this->runCli(["convert", "shop.vtt", "--output-dir", "out"]));
-        $this->assertSame(Subtitle::fromStringAutoDetectFormat($this->file("shop.vtt"))->toString(Format::WebVtt), $this->file("out/shop.vtt"));
+        $this->assertSame(Subtitle::fromString($this->file("shop.vtt"))->toString(Format::WebVtt), $this->file("out/shop.vtt"));
         copy(__DIR__ . "/../files/vobsub/text-pal.idx", "$this->dir/text.idx");
         copy(__DIR__ . "/../files/vobsub/text-pal.sub", "$this->dir/text.sub");
         $this->assertSame([3, "", "text.idx: The format vobsub can be read but not written. Pass --to with another format.\n"],
@@ -64,43 +64,74 @@ class BinaryOutputTest extends CliTestCase
             self::usageError("convert", "The extension of --output trip.vtt names the format vtt, not the --to format srt."),
             $this->runCli(["convert", "trip.srt", "--to", "srt", "-o", "trip.vtt"])
         );
-        $this->assertSame(self::usageError("retime", "The extension of --output trip.ass names the format ass, not the --to format vtt."),
-                          $this->runCli(["retime", "trip.srt", "--shift", "1", "--to", "vtt", "-o", "trip.ass"]));
+        $this->assertSame(self::usageError("convert", "The extension of --output trip.ass names the format ass, not the --to format vtt."),
+                          $this->runCli(["convert", "trip.srt", "--shift", "1", "--to", "vtt", "-o", "trip.ass"]));
         $this->assertSame(self::usageError("dual", "The extension of --output both.srt names the format srt, not the --to format ass."),
                           $this->runCli(["dual", "--primary", "trip.srt", "--secondary", "shop.vtt", "--to", "ass", "-o", "both.srt"]));
         $this->assertSame([], array_diff(scandir($this->dir), [".", "..", ...array_map("basename", glob(self::FIXTURES . "*")), "lecture.json"]));
 
         $this->assertSame([0, "lecture.json -> out.json\n", ""], $this->runCli(["convert", "lecture.json", "--to", "json", "-o", "out.json"]));
-        $this->assertSame(Subtitle::fromStringAutoDetectFormat($this->file("lecture.json"))->toString(Format::Json), $this->file("out.json"));
+        $this->assertSame(Subtitle::fromString($this->file("lecture.json"))->toString(Format::Json), $this->file("out.json"));
         $this->assertSame(0, $this->runCli(["convert", "trip.srt", "--to", "mpl2", "-o", "trip.txt"])[0]);
         $this->assertSame($this->tripAs(Format::Mpl2), $this->file("trip.txt"));
         $this->assertSame(0, $this->runCli(["convert", "trip.srt", "--to", "vtt", "-o", "trip.bak"])[0]);
         $this->assertSame($this->tripAs(Format::WebVtt), $this->file("trip.bak"));
-
-        // Without --to, retime keeps the input format, whatever the extension of -o.
-        $this->assertSame(0, $this->runCli(["retime", "trip.srt", "--shift", "0", "-o", "kept.vtt"])[0]);
-        $this->assertSame($this->tripAs(Format::SubRip), $this->file("kept.vtt"));
     }
 
 
-    public function testConvertWithoutToRejectsTheExtensionOfAnotherWritableFormat(): void
+    /**
+     * @param list<string> $input   the input arguments of the command, with a trip.srt input
+     * @param list<string> $options the options that the command needs
+     * @param list<string> $stdin   the same input arguments, with standard input in place of trip.srt
+     */
+    #[DataProvider("writeCommandsWithInput")]
+    public function testWithoutToTheExtensionOfAnotherWritableFormatFailsBeforeAnyFileIsRead(string $command, array $input, array $options, array $stdin): void
     {
         copy(__DIR__ . "/../files/whisper/real/openai_whisper_german.json", "$this->dir/lecture.json");
         $before = $this->snapshot();
-        $hint   = "Pass --to vtt to convert, or use the extension of the input format.";
+        $hint   = "Pass --to vtt to write that format, or use the extension of the input format.";
 
-        $this->assertSame(self::usageError("convert", "The output trip.vtt has the extension of the format vtt, not of the input format srt. $hint"),
-                          $this->runCli(["convert", "trip.srt", "-o", "trip.vtt"]));
-        $this->assertSame(self::usageError("convert", "The output lecture.vtt has the extension of the format vtt, not of the input format whisper. $hint"),
-                          $this->runCli(["convert", "lecture.json", "-o", "lecture.vtt"]));
-        $this->assertSame([3, "", "stdin: The output trip.vtt has the extension of the format vtt, not of the input format srt. $hint\n"],
-                          $this->runCli(["convert", "-", "-o", "trip.vtt"], $this->file("trip.srt")));
+        $this->assertSame(self::usageError($command, "The output out.vtt has the extension of the format vtt, not of the input format srt. $hint"),
+                          $this->runCli([$command, ...$input, ...$options, "-o", "out.vtt"]));
         $this->assertSame($before, $this->snapshot());
 
-        $this->assertSame(0, $this->runCli(["convert", "trip.srt", "-o", "kept.srt"])[0]);
-        $this->assertSame($this->tripAs(Format::SubRip), $this->file("kept.srt"));
-        $this->assertSame(0, $this->runCli(["convert", "trip.srt", "-o", "kept.bak"])[0]);
-        $this->assertSame($this->tripAs(Format::SubRip), $this->file("kept.bak"));
+        [$code, $stdout, $stderr] = $this->runCli([$command, ...$stdin, ...$options, "-o", "out.vtt"], $this->file("trip.srt"));
+        $this->assertSame([3, ""], [$code, $stdout]);
+        $this->assertStringEndsWith("stdin: The output out.vtt has the extension of the format vtt, not of the input format srt. $hint\n", $stderr);
+        $this->assertSame($before, $this->snapshot());
+    }
+
+
+    /**
+     * @return array<string, array{string, list<string>, list<string>, list<string>}>
+     */
+    public static function writeCommandsWithInput(): array
+    {
+        return [
+            "convert"   => ["convert", ["trip.srt"], [], ["-"]],
+            "sync"      => ["sync", ["trip.srt"], ["--reference", "shop.vtt"], ["-"]],
+            "dual"      => ["dual", ["--primary", "trip.srt"], ["--secondary", "shop.vtt"], ["--primary", "-"]],
+            "translate" => ["translate", ["trip.srt"], ["--engine", "deepl", "--api-key", "key", "--target-language", "de"], ["-"]],
+        ];
+    }
+
+
+    public function testWithoutToTheExtensionOfTheInputFormatOrOfNoFormatWorks(): void
+    {
+        copy(__DIR__ . "/../files/whisper/real/openai_whisper_german.json", "$this->dir/lecture.json");
+        $this->assertSame(self::usageError("convert", "The output lecture.vtt has the extension of the format vtt, not of the input format whisper. " .
+                                                      "Pass --to vtt to write that format, or use the extension of the input format."),
+                          $this->runCli(["convert", "lecture.json", "-o", "lecture.vtt"]));
+
+        foreach ([["convert", "trip.srt"], ["sync", "trip.srt", "--reference", "shop.vtt"], ["dual", "--primary", "trip.srt", "--secondary", "shop.vtt"]] as $call) {
+            foreach (["kept.srt", "kept.bak"] as $name) {
+                $this->assertSame(0, $this->runCli([...$call, "-o", $name])[0], "$call[0] $name");
+                $this->assertFileExists("$this->dir/$name");
+                unlink("$this->dir/$name");
+            }
+        }
+        $this->assertSame(0, $this->runCli(["sync", "trip.srt", "--reference", "shop.vtt", "--to", "vtt", "-o", "out.vtt"])[0]);
+        $this->assertStringContainsString("WEBVTT\n", $this->file("out.vtt"));
     }
 
 
@@ -186,7 +217,7 @@ class BinaryOutputTest extends CliTestCase
 
     public function testConvertWritesOneInputToStandardOutput(): void
     {
-        $shop = Subtitle::fromStringAutoDetectFormat($this->file("shop.vtt"));
+        $shop = Subtitle::fromString($this->file("shop.vtt"));
 
         $this->assertSame([0, $shop->toString(Format::SubRip), ""], $this->runCli(["convert", "shop.vtt", "--to", "srt"]));
         $this->assertSame([0, $shop->toString(Format::SubRip), ""], $this->runCli(["convert", "shop.vtt", "--to", "srt", "-o", "-"]));
@@ -223,7 +254,7 @@ class BinaryOutputTest extends CliTestCase
             [0, "season1/shop.vtt -> out/shop.ass\nseason1/trip.srt -> out/trip.ass\n2 files: 2 succeeded, 0 failed.\n", ""],
             $this->runCli(["convert", "season1/shop.vtt", "season1/trip.srt", "--to", "ass", "--output-dir", "out"])
         );
-        $this->assertSame(Subtitle::fromStringAutoDetectFormat($shop)->toString(Format::Ass), $this->file("out/shop.ass"));
+        $this->assertSame(Subtitle::fromString($shop)->toString(Format::Ass), $this->file("out/shop.ass"));
         $this->assertSame($this->tripAs(Format::Ass), $this->file("out/trip.ass"));
     }
 
@@ -233,7 +264,7 @@ class BinaryOutputTest extends CliTestCase
         copy(self::FILES . "dual/station_de.srt", "$this->dir/de.srt");
         foreach ([
             ["convert", "trip.srt", "--to", "srt"],
-            ["retime", "trip.srt", "--shift", "1"],
+            ["convert", "trip.srt", "--shift", "1"],
             ["sync", "trip.srt", "--reference", "de.srt"],
             ["dual", "--primary", "trip.srt", "--secondary", "de.srt"],
             ["hls", "trip.srt", "--output-dir", "out"],
@@ -279,8 +310,8 @@ class BinaryOutputTest extends CliTestCase
             self::usageError("convert", "Standard input has no file name for --output-dir. Pass -o FILE."),
             $this->runCli(["convert", "-", "--to", "vtt", "--output-dir", "out"], $this->file("trip.srt"))
         );
-        $this->assertSame(self::usageError("retime", "Standard input has no file name for --output-dir. Pass -o FILE."),
-                          $this->runCli(["retime", "trip.srt", "-", "--shift", "1", "--output-dir", "out"], $this->file("trip.srt")));
+        $this->assertSame(self::usageError("convert", "Standard input has no file name for --output-dir. Pass -o FILE."),
+                          $this->runCli(["convert", "trip.srt", "-", "--shift", "1", "--output-dir", "out"], $this->file("trip.srt")));
         $this->assertDirectoryDoesNotExist("$this->dir/out");
     }
 
@@ -319,7 +350,7 @@ class BinaryOutputTest extends CliTestCase
         }
 
         $this->assertSame([3, "", "trip.srt: Cannot read the file trip.srt.\n"],
-                          $this->runCli(["retime", "trip.srt", "--shift", "1", "--output-dir", "out"]));
+                          $this->runCli(["convert", "trip.srt", "--shift", "1", "--output-dir", "out"]));
         $this->assertFileDoesNotExist("$this->dir/out");
     }
 
@@ -404,7 +435,7 @@ class BinaryOutputTest extends CliTestCase
     {
         return [
             "convert" => [["convert", "--to", "vtt"], "vtt"],
-            "retime"  => [["retime", "--shift", "1"], "srt"],
+            "convert without --to" => [["convert", "--shift", "1"], "srt"],
             "sync"    => [["sync", "--reference", "ref.srt"], "srt"],
         ];
     }

@@ -19,7 +19,7 @@ trait ShortCueMerging
         $options ??= new MergeShortCuesOptions();
         $this->sortStartChanges();
         $anchors = CommentAnchors::of($this->cues, $this->comments);
-        $cues       = CueList::inStartOrder($this->cues);
+        $cues       = $this->cues;
         $joinedInto = new \SplObjectStorage();
         $index      = 0;
         while ($index < count($cues)) {

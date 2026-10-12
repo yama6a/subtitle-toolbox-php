@@ -102,9 +102,9 @@ class WordTimestampRetimingTest extends TestCase
     }
 
 
-    public function testMergeMovesTheWordTimestampsOfTheOtherSubtitle(): void
+    public function testAppendMovesTheWordTimestampsOfTheOtherSubtitle(): void
     {
-        $subtitle = (new Subtitle())->merge(self::load("profanity/radio.vtt", Format::WebVtt), 30);
+        $subtitle = (new Subtitle())->append(self::load("profanity/radio.vtt", Format::WebVtt), 30);
 
         $this->assertSame(["<00:00:37.500>Fine, <00:00:38.000>damnit."], $subtitle->getCues()[3]->getLines());
     }
@@ -132,7 +132,7 @@ class WordTimestampRetimingTest extends TestCase
 
         $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference, -180, 180, maxSplits: 2));
 
-        $this->assertCount(2, $result->getSegments());
+        $this->assertCount(2, $result->segments);
         foreach ([$target->getCues()[0], $target->getCues()[count($cues) - 1]] as $cue) {
             preg_match(Markup::WORD_TIMESTAMP_REGEX, $cue->getText(), $match);
             $this->assertEqualsWithDelta($cue->getStart() + 0.5 * $result->scale, Markup::wordTimestampSeconds($match[1]), 0.0015);
@@ -140,10 +140,10 @@ class WordTimestampRetimingTest extends TestCase
     }
 
 
-    public function testCliRetimeMovesWordTimestamps(): void
+    public function testCliConvertMovesWordTimestamps(): void
     {
         $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
-        $code    = (new Application(...$streams))->run(["subtitle-toolbox", "retime", self::FILES . "profanity/radio.vtt", "--shift", "2"]);
+        $code    = (new Application(...$streams))->run(["stbox", "convert", self::FILES . "profanity/radio.vtt", "--shift", "2"]);
         rewind($streams[1]);
 
         $this->assertSame(0, $code);

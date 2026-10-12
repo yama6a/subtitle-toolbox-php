@@ -68,7 +68,7 @@ class OutputRaceTest extends CliTestCase
         $cwd = getcwd();
         chdir($this->dir);
         try {
-            $code = (new Application(...$streams, beforeCreate: $race))->run(["subtitle-toolbox", ...$arguments]);
+            $code = (new Application(...$streams, beforeCreate: $race))->run(["stbox", ...$arguments]);
         } finally {
             chdir($cwd);
         }

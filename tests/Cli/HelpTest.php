@@ -36,7 +36,7 @@ class HelpTest extends TestCase
         "mode"                     => [DualSubtitleOptions::class, "__construct", "mode"],
         "secondary-style"          => [DualSubtitleOptions::class, "__construct", "secondaryStyle"],
         "secondary-alignment"      => [DualSubtitleOptions::class, "__construct", "secondaryAlignment"],
-        "snap-tolerance"           => [DualSubtitleOptions::class, "__construct", "snapTolerance"],
+        "snap-tolerance"           => [DualSubtitleOptions::class, "__construct", "timeTolerance"],
         "segment"                  => [HlsSegmentOptions::class, "__construct", "segmentDuration"],
         "pattern"                  => [HlsSegmentOptions::class, "__construct", "fileNamePattern"],
         "mpegts"                   => [HlsSegmentOptions::class, "__construct", "mpegts"],
@@ -91,7 +91,7 @@ class HelpTest extends TestCase
 
     public function testTheHelpListsEveryCommand(): void
     {
-        $this->assertSame(["convert", "retime", "info", "validate", "sync", "diff", "translate", "dual", "hls", "formats"], self::commandNames());
+        $this->assertSame(["convert", "info", "validate", "sync", "diff", "translate", "dual", "hls", "formats"], self::commandNames());
     }
 
 
@@ -153,7 +153,7 @@ class HelpTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication([]);
 
         $this->assertSame(0, $code);
-        $this->assertStringContainsString("Usage: subtitle-toolbox <command>", $stdout);
+        $this->assertStringContainsString("Usage: stbox <command>", $stdout);
         foreach ([...self::commandNames(), "help"] as $command) {
             $this->assertMatchesRegularExpression("/^  $command +\S/m", $stdout);
         }
@@ -179,7 +179,7 @@ class HelpTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication([$command, "--help"]);
 
         $this->assertSame(0, $code);
-        $this->assertStringStartsWith("Usage: subtitle-toolbox ", $stdout);
+        $this->assertStringStartsWith("Usage: stbox ", $stdout);
         $this->assertStringContainsString("  -h, --help ", $stdout);
         $this->assertSame("", $stderr);
         $this->assertSame([0, $stdout, ""], self::runApplication(["help", $command]));
@@ -234,9 +234,8 @@ class HelpTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication(["convert", "--help"]);
 
         $this->assertSame([0, ""], [$code, $stderr]);
-        $this->assertStringStartsWith("Usage: subtitle-toolbox convert <input> [--to FORMAT] [-o FILE] [options]\n" .
-                                      "       subtitle-toolbox convert <input>... [--to FORMAT] --output-dir DIR\n" .
-                                      "                                [options]\n", $stdout);
+        $this->assertStringStartsWith("Usage: stbox convert <input> [--to FORMAT] [-o FILE] [options]\n" .
+                                      "       stbox convert <input>... [--to FORMAT] --output-dir DIR [options]\n", $stdout);
         $this->assertMatchesRegularExpression('/^  --encoding NAME +/m', $stdout);
         $this->assertMatchesRegularExpression('/^  --language CODE +/m', $stdout);
         $this->assertDoesNotMatchRegularExpression('/^  --(ocr|sdh|structure-wrap|shift|karaoke)\b/m', $stdout);
@@ -302,33 +301,6 @@ class HelpTest extends TestCase
 
         $this->assertSame($expected, self::runApplication(["convert", "--help", "timings"]));
         $this->assertSame($expected, self::runApplication(["help", "convert", "timings"]));
-    }
-
-
-    public function testRetimeHelpMatchesItsOptions(): void
-    {
-        [$code, $stdout, $stderr] = self::runApplication(["retime", "--help"]);
-
-        $this->assertSame([0, ""], [$code, $stderr]);
-        $this->assertStringStartsWith(
-            "Usage: subtitle-toolbox retime <input>... [--shift SECONDS] [--scale FACTOR]\n" .
-            "                               [--sync OLD=NEW] [--from-fps RATE --to-fps RATE]\n" .
-            "                               [options]\n\n" .
-            "Shift and scale all cue times, or fit them to a video with another frame rate.\n\n" .
-            "Pass one or more edits. retime applies them in this order: --sync, --shift,\n--scale, --from-fps and --to-fps.",
-            $stdout
-        );
-        $stdout = CliTestCase::unwrapHelp($stdout);
-        preg_match_all('/^  (?:-\w, )?--([\w-]+)/m', $stdout, $matches);
-        $this->assertSame([
-            "shift", "shift-after", "shift-before", "scale", "sync", "from-fps", "to-fps", "to", "output", "output-dir", "output-fps",
-            "line-ending", "bom", "no-bom", "skip-image-cues", "scc-fit", "from", "encoding", "lenient", "input-fps", "fps", "word-timestamps", "scc-roll-up",
-            "track", "keep-going", "help",
-        ], $matches[1]);
-        $this->assertMatchesRegularExpression('/^  --shift-after SECONDS +Shift only the cues that start at this time or later\.$/m', $stdout);
-        $this->assertMatchesRegularExpression('/^  --from-fps RATE +Frame rate of the video that the subtitle fits now\. Needs --to-fps\.$/m', $stdout);
-        $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps and --output-fps\. A specific option wins over --fps\.$/m', $stdout);
-        $this->assertSame(array_map(fn (Option $option): string => $option->name, (new RetimeCommand())->options()), array_slice($matches[1], 0, -1));
     }
 
 

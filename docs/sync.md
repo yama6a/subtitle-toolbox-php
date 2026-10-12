@@ -1,6 +1,6 @@
 # Sync
 
-[editing.md](editing.md#retiming) covers fixed shifts, scales, frame rate changes and the sync by known points. On the command line, `retime --sync` does the sync by known points, see [cli.md](cli.md#retime). This page covers the sync that finds the offset and scale for you.
+[editing.md](editing.md#retiming) covers fixed shifts, scales, frame rate changes and the sync by known points. On the command line, `convert --sync` does the sync by known points, see [cli.md](cli.md#timing). This page covers the sync that finds the offset and scale for you.
 
 ## Sync to a reference subtitle
 A German SRT for the 25 fps release is late and drifts against a 23.976 fps video. An English SRT for that video is in sync. `ReferenceSync` finds the scale and the offset from the cue times alone, so the languages can differ.
@@ -41,12 +41,13 @@ $result = ReferenceSync::apply($german, new ReferenceSyncOptions(
     maxSplits: 2,          // default 0, no split search
     splitPenalty: 0.1,     // score units, default 0.1
 ));
-$result->getSegments();    // [['from' => 0.0, 'to' => 414.32, 'scale' => 1.04271, 'offset' => -2.31],
-                           //  ['from' => 414.32, 'to' => INF, 'scale' => 1.04271, 'offset' => 147.7]]
+$result->segments;         // 2 SyncSegment objects
+$result->segments[0];      // from 0.0, to 414.32, scale 1.04271, offset -2.31
+$result->segments[1];      // from 414.32, to INF, scale 1.04271, offset 147.7
 $result->offset;           // -2.31, the offset of the first part. apply() shifted each part with its own offset.
 ```
 
-- **Segments**: `from` and `to` are cue start times of the subtitle before the sync. A cue goes to the part that holds its start. Without a split, `getSegments()` returns one part from 0 to `INF`.
+- **Segments**: each `SyncSegment` has `from`, `to`, `scale` and `offset`. `from` and `to` are cue start times of the subtitle before the sync. A cue goes to the part that holds its start. Without a split, `segments` holds one part from 0 to `INF`.
 - **Penalty**: a split stays only when it raises the score by more than `splitPenalty`. A part with 5% of the cue time raises the score by about 0.1. In unrelated files, a chance split raises the score by up to 0.04 with 300 cues. With 60 cues, it raises the score by up to 0.12. So a file with 60 cues or fewer needs a penalty above 0.12.
 - **Split points**: splits fall between cues.
 - **Overlaps**: `apply()` can move a part onto the next part. Then each cue of the earlier part that overlaps the later part ends 1 ms before the later part starts.

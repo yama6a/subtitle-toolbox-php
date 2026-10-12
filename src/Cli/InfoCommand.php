@@ -53,7 +53,7 @@ final class InfoCommand extends ReportCommand
     protected function listTracks(string $path, string $input, Console $console): bool
     {
         $container = Containers::detectFile($path);
-        if (Format::fromPath($input) !== null || $container === null) {
+        if (Format::tryFromPath($input) !== null || $container === null) {
             return false;
         }
         try {

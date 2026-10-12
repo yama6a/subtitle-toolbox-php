@@ -30,7 +30,7 @@ final class DualSubtitle
 
         $cues = CueList::inStartOrder(array_merge(array_values($primaryCues), $unpairedCues));
 
-        $result = $primary->emptyCopy();
+        $result = self::emptyCopy($primary);
         $result->addCues($cues);
         $anchors = CommentAnchors::of($primaryCues, $primary->getComments());
         foreach (CommentAnchors::comments($cues, $primary->getComments(), $anchors) as $comment) {
@@ -113,8 +113,8 @@ final class DualSubtitle
         sort($primaryTimes);
 
         foreach ($secondaryCues as $cue) {
-            $start = self::snap($cue->getStart(), $primaryTimes, $options->snapTolerance);
-            $end   = self::snap($cue->getEnd(), $primaryTimes, $options->snapTolerance);
+            $start = self::snap($cue->getStart(), $primaryTimes, $options->timeTolerance);
+            $end   = self::snap($cue->getEnd(), $primaryTimes, $options->timeTolerance);
             // Snapping both times of a short cue to the same primary time would hide the cue.
             if ($end > $start) {
                 $cue->setStart($start)->setEnd($end);
@@ -129,19 +129,39 @@ final class DualSubtitle
     /**
      * @param list<float> $times sorted, so the earlier of two equally close times wins
      */
-    private static function snap(float $time, array $times, float $tolerance): float
+    private static function snap(float $time, array $times, float $timeTolerance): float
     {
         $snapped  = $time;
         $distance = INF;
         foreach ($times as $candidate) {
             $candidateDistance = Timecode::roundToMilliseconds(abs($candidate - $time));
-            if ($candidateDistance <= $tolerance && $candidateDistance < $distance) {
+            if ($candidateDistance <= $timeTolerance && $candidateDistance < $distance) {
                 $snapped  = $candidate;
                 $distance = $candidateDistance;
             }
         }
 
         return $snapped;
+    }
+
+
+    /**
+     * Returns a copy of $subtitle with its metadata, format data and format, but without cues and comments.
+     */
+    private static function emptyCopy(Subtitle $subtitle): Subtitle
+    {
+        $copy = (new Subtitle())
+            ->setFormat($subtitle->findFormat())
+            ->setSourceEncoding($subtitle->findSourceEncoding())
+            ->setParseWarnings($subtitle->getParseWarnings());
+        foreach ($subtitle->getAllMetadata() as $key => $value) {
+            $copy->setMetadata((string)$key, $value);
+        }
+        foreach ($subtitle->toArray()["formatData"] as $key => $data) {
+            $copy->setFormatData((string)$key, $data);
+        }
+
+        return $copy;
     }
 
 

@@ -19,8 +19,7 @@ final class CommonErrorOptions
      * @param bool              $emptyTags                    remove tag pairs without text, as in "<i></i>"
      * @param bool              $dialogueDashes               write the dialogue dashes in $dialogueDashStyle
      * @param DialogueDashStyle $dialogueDashStyle            the dash that $dialogueDashes writes
-     * @param bool              $ellipsis                     write ". . ." and "...." as "...", or as U+2026 with $unicodeEllipsis
-     * @param bool              $unicodeEllipsis              make $ellipsis write U+2026 for every ellipsis
+     * @param ?EllipsisStyle    $ellipsis                     write ". . ." and "...." in this style, or null to keep them. EllipsisStyle::Unicode also replaces "..."
      * @param bool              $ocrLowercaseL                read an OCR "l" as "I" where the language needs it, as in "lt's"
      * @param bool              $ocrPipe                      read an OCR "|" as "I" or "l", as in "|t was"
      * @param bool              $ocrZeroInWords               read an OCR "0" in a word as "O" or "o", as in "D0N'T"
@@ -41,8 +40,7 @@ final class CommonErrorOptions
         public readonly bool $emptyTags = true,
         public readonly bool $dialogueDashes = true,
         public readonly DialogueDashStyle $dialogueDashStyle = DialogueDashStyle::HyphenSpace,
-        public readonly bool $ellipsis = true,
-        public readonly bool $unicodeEllipsis = false,
+        public readonly ?EllipsisStyle $ellipsis = EllipsisStyle::ThreeDots,
         public readonly bool $ocrLowercaseL = true,
         public readonly bool $ocrPipe = true,
         public readonly bool $ocrZeroInWords = true,
@@ -73,7 +71,7 @@ final class CommonErrorOptions
             CommonErrorRule::OcrZeroInWords               => $this->ocrZeroInWords,
             CommonErrorRule::OcrLowercaseL                => $this->ocrLowercaseL,
             CommonErrorRule::LoneLowercaseI               => $this->loneLowercaseI && $language === "en",
-            CommonErrorRule::Ellipsis                     => $this->ellipsis,
+            CommonErrorRule::Ellipsis                     => $this->ellipsis !== null,
             CommonErrorRule::UnneededPeriods              => $this->unneededPeriods,
             CommonErrorRule::DoubleSpaces                 => $this->doubleSpaces,
             CommonErrorRule::SpaceBeforePunctuation       => $this->spaceBeforePunctuation,

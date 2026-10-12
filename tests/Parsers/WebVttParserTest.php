@@ -174,7 +174,7 @@ class WebVttParserTest extends TestCase
             ]],
         ], $subtitle->findFormatData("vtt"));
         $this->assertEquals([new Comment("Translated by Jane Doe", 0)], $subtitle->getComments());
-        $this->assertSame("intro", $cue->getIdentifier());
+        $this->assertSame("intro", $cue->findIdentifier());
         $this->assertSame(["region" => "fred", "align" => "left", "line" => "85%"], $cue->findFormatData("vtt"));
         $this->assertSame(Alignment::BottomCenter, $cue->getAlignment());
         $this->assertSame("<v Fred>Hi, I am Fred &amp; this is <c.yellow>Bob</c></v>", $cue->getText());
@@ -216,8 +216,8 @@ class WebVttParserTest extends TestCase
         $subtitle = Subtitle::fromString($raw, Format::WebVtt);
 
         $this->assertSame([], $subtitle->getComments());
-        $this->assertSame("NOTE-1", $subtitle->getCues()[0]->getIdentifier());
-        $this->assertSame("Notes1", $subtitle->getCues()[1]->getIdentifier());
+        $this->assertSame("NOTE-1", $subtitle->getCues()[0]->findIdentifier());
+        $this->assertSame("Notes1", $subtitle->getCues()[1]->findIdentifier());
     }
 
 
@@ -225,7 +225,7 @@ class WebVttParserTest extends TestCase
     {
         $subtitle = Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:02.000\nOne\n", Format::WebVtt);
 
-        $this->assertNull($subtitle->getCues()[0]->getIdentifier());
+        $this->assertNull($subtitle->getCues()[0]->findIdentifier());
         $this->assertSame([], $subtitle->findFormatData("vtt"));
     }
 

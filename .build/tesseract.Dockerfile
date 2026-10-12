@@ -12,7 +12,7 @@ RUN wget -qO /usr/local/bin/box https://github.com/box-project/box/releases/down
 WORKDIR /src
 COPY . .
 ENV COMPOSER_ALLOW_SUPERUSER=1
-RUN .build/build-phar.sh "$VERSION" /subtitle-toolbox.phar
+RUN .build/build-phar.sh "$VERSION" /stbox.phar
 
 # Alpine packages the standard models of 67 languages only. The fast models of all languages take 338 MB, the
 # standard models 1,014 MB, and both read the test files without errors. The commit pins the content.
@@ -30,9 +30,9 @@ RUN git init -q . \
 FROM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:93684051146ec037620855feb77f278090bde45ddc030801cd3f2a7685bc4deb
 RUN apk add --no-cache tesseract-ocr
 COPY --from=tessdata /tessdata/ /usr/share/tessdata/
-COPY --from=build /subtitle-toolbox.phar /usr/local/bin/subtitle-toolbox.phar
+COPY --from=build /stbox.phar /usr/local/bin/stbox.phar
 # OCR of a 1,500-cue PGS file peaks at about 139 MB, above the 128 MB default.
-RUN echo "memory_limit=512M" > "$PHP_INI_DIR/conf.d/subtitle-toolbox.ini"
+RUN echo "memory_limit=512M" > "$PHP_INI_DIR/conf.d/stbox.ini"
 WORKDIR /work
 USER www-data
-ENTRYPOINT ["php", "/usr/local/bin/subtitle-toolbox.phar"]
+ENTRYPOINT ["php", "/usr/local/bin/stbox.phar"]

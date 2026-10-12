@@ -21,9 +21,8 @@ trait Validation
      */
     public function validate(ValidationRules $rules): array
     {
-        $violations    = [];
-        $previousEnd   = null;
-        $previousStart = null;
+        $violations  = [];
+        $previousEnd = null;
 
         if ($rules->requireCues && $this->getCues() === []) {
             $violations[] = new ValidationViolation(null, ValidationRule::RequireCues, 0, null);
@@ -33,12 +32,6 @@ trait Validation
             $lineLengths = LineWrapper::visibleLineLengths($cue->getLines());
             $characters  = array_sum($lineLengths);
             $duration    = Timecode::roundToMilliseconds($cue->getEnd() - $cue->getStart());
-
-            if ($rules->noUnsortedCues && $previousStart !== null && $cue->getStart() < $previousStart) {
-                $violations[] = new ValidationViolation($cueIndex, ValidationRule::NoUnsortedCues,
-                                                  Timecode::roundToMilliseconds($previousStart - $cue->getStart()), null);
-            }
-            $previousStart = $cue->getStart();
 
             if ($rules->noNegativeDuration && $duration < 0) {
                 $violations[] = new ValidationViolation($cueIndex, ValidationRule::NoNegativeDuration, $duration, null);

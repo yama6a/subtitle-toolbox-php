@@ -135,21 +135,7 @@ final class SubtitleCue
     }
 
 
-    /**
-     * Moves the start, the end and each word timestamp to $map(seconds). A time below 0 becomes 0.
-     *
-     * @internal
-     * @param callable(float): float $map
-     */
-    public function mapTimes(callable $map): self
-    {
-        return $this->setStart(max(0.0, $map($this->getStart())))
-                    ->setEnd(max(0.0, $map($this->getEnd())))
-                    ->mapWordTimestamps($map);
-    }
-
-
-    public function getIdentifier(): ?string
+    public function findIdentifier(): ?string
     {
         return $this->identifier;
     }

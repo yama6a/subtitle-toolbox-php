@@ -50,7 +50,7 @@ enum Format: string
      * The rows follow the order of the cases, so `.sub` is MicroDVD, `.json` is the library JSON and `.txt` is plain text.
      * The first extension of a format is the one for new files.
      */
-    public static function fromPath(string $path): ?self
+    public static function tryFromPath(string $path): ?self
     {
         return FormatRegistry::forPath($path);
     }

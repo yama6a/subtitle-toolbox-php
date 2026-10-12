@@ -12,24 +12,22 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 trait Retiming
 {
     /**
-     * Shifts the cues that start at or after $fromTime and before $toTime by $seconds. A null bound has no limit.
-     * The start time of a cue decides, so a cue across $toTime moves as a whole.
+     * Shifts the cues that start at or after $from and before $to by $seconds. A null bound has no limit.
+     * The start time of a cue decides, so a cue across $to moves as a whole.
      * The cues are then sorted by start time again, and each comment stays before its cue.
      * The word timestamps in the cue text move with the cue. A time that becomes negative becomes 0, and the cue stays.
      *
-     * @throws InvalidArgumentException when $seconds is not finite, $toTime is not after $fromTime,
+     * @throws InvalidArgumentException when $seconds is not finite, $to is not after $from,
      *         or a cue would end at Timecode::MAX_HOURS or later.
      */
-    public function shift(float $seconds, ?float $fromTime = null, ?float $toTime = null): self
+    public function shift(float $seconds, ?float $from = null, ?float $to = null): self
     {
         OptionChecks::finite($seconds, "The shift must be a finite number of seconds, got %s.");
-        if ($fromTime !== null && $toTime !== null && !($toTime > $fromTime)) {
-            throw new InvalidArgumentException("The end time of the shift must be after its start time, got $fromTime to $toTime.");
+        if ($from !== null && $to !== null && !($to > $from)) {
+            throw new InvalidArgumentException("The end time of the shift must be after its start time, got $from to $to.");
         }
 
-        $this->retimingApplyLinearCorrection(1, $seconds, $fromTime, $toTime);
-
-        return $fromTime === null && $toTime === null ? $this : $this->reIndexCues();
+        return $this->retimingApplyLinearCorrection(1, $seconds, $from, $to);
     }
 
 
@@ -140,11 +138,11 @@ trait Retiming
     }
 
 
-    private function retimingApplyLinearCorrection(float $factor, float $offset, ?float $fromTime = null, ?float $toTime = null): self
+    private function retimingApplyLinearCorrection(float $factor, float $offset, ?float $from = null, ?float $to = null): self
     {
         $cues = array_filter(
             $this->getCues(),
-            fn (SubtitleCue $cue): bool => ($fromTime === null || $cue->getStart() >= $fromTime) && ($toTime === null || $cue->getStart() < $toTime)
+            fn (SubtitleCue $cue): bool => ($from === null || $cue->getStart() >= $from) && ($to === null || $cue->getStart() < $to)
         );
 
         return $this->retimingMapTimes($cues, fn (float $time): float => $time * $factor + $offset);
@@ -161,7 +159,7 @@ trait Retiming
     {
         CueList::checkTimeLimit($cues, $map);
         foreach ($cues as $cue) {
-            $cue->mapTimes($map);
+            CueList::mapTimes($cue, $map);
         }
 
         return $this;

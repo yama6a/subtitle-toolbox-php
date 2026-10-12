@@ -151,7 +151,7 @@ class Mpl2ParserTest extends TestCase
 
     public function testSubtitleParseDetectsMpl2(): void
     {
-        $subtitle = Subtitle::fromStringAutoDetectFormat("[12][45]Where are you?|/Home.\r\n");
+        $subtitle = Subtitle::fromString("[12][45]Where are you?|/Home.\r\n");
 
         $this->assertSame("[12][45]Where are you?|/Home.\n", $subtitle->toString(Format::Mpl2));
     }

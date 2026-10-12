@@ -75,7 +75,7 @@ class EncodingTest extends TestCase
     #[DataProvider("legacyFiles")]
     public function testFormatDetectionWorksOnTheConvertedContent(string $file, string $encoding, Format $format): void
     {
-        $detected = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::DIR . $file), new ReadOptions(encoding: $encoding));
+        $detected = Subtitle::fromString(file_get_contents(self::DIR . $file), options: new ReadOptions(encoding: $encoding));
 
         $this->assertEquals(Subtitle::fromString(file_get_contents(self::DIR . $file), $format, new ReadOptions(encoding: $encoding)), $detected);
     }
@@ -113,7 +113,7 @@ class EncodingTest extends TestCase
     {
         $raw     = file_get_contents(self::DIR . $file);
         $strict  = Subtitle::fromString($raw, Format::SubRip);
-        $lenient = Subtitle::loadAutoDetectFormat(self::DIR . $file, new ReadOptions(lenient: true));
+        $lenient = Subtitle::load(self::DIR . $file, options: new ReadOptions(lenient: true));
 
         $this->assertSame($lastText, $strict->getCues()[2]->getText());
         $this->assertSame($encoding, $strict->findSourceEncoding());
@@ -274,7 +274,7 @@ class EncodingTest extends TestCase
     public function testUtf16LeFileWithBomParsesWithoutSourceEncoding(): void
     {
         $raw      = file_get_contents(self::DIR . "notepad-utf-16le.vtt");
-        $subtitle = Subtitle::fromStringAutoDetectFormat($raw);
+        $subtitle = Subtitle::fromString($raw);
         $cues     = $subtitle->getCues();
 
         $this->assertCount(3, $cues);
@@ -317,13 +317,13 @@ class EncodingTest extends TestCase
         $path    = self::DIR . "utf-16-no-bom/$file";
         $options = new ReadOptions(lenient: $lenient);
         $loaded  = [Subtitle::load($path, $format, $options), Subtitle::fromString(file_get_contents($path), $format, $options)];
-        $loaded[] = Subtitle::loadAutoDetectFormat($path, $options);
+        $loaded[] = Subtitle::load($path, options: $options);
         if ($format !== Format::Csv) {
-            $loaded[] = Subtitle::fromStringAutoDetectFormat(file_get_contents($path), $options);
+            $loaded[] = Subtitle::fromString(file_get_contents($path), options: $options);
         }
 
         foreach ($loaded as $subtitle) {
-            $this->assertSame($format, $subtitle->getFormat());
+            $this->assertSame($format, $subtitle->findFormat());
             $this->assertSame(
                 [[1.0, 3.0, "The café opens at nine."], [4.0, 6.5, "Grüße from the harbor."]],
                 array_map(fn (SubtitleCue $cue) => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues())

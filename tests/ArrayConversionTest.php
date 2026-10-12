@@ -78,15 +78,12 @@ class ArrayConversionTest extends TestCase
     }
 
 
-    public function testFromArrayKeepsBinaryFormatDataAndTheCueOrder(): void
+    public function testFromArrayKeepsBinaryFormatData(): void
     {
-        $subtitle = TestSubtitles::inGivenOrder([[5, 6, "Late"], [1, 2, "Early"]]);
+        $subtitle = TestSubtitles::fromTimes([[1, 2], [5, 6]]);
         $subtitle->getCues()[0]->setFormatData("image", ["png" => "\x89PNG\r\n\x1a\n"]);
 
-        $copy = Subtitle::fromArray($subtitle->toArray());
-
-        $this->assertEquals($subtitle, $copy);
-        $this->assertSame(["Late", "Early"], array_map(fn (SubtitleCue $cue): string => $cue->getText(), $copy->getCues()));
+        $this->assertEquals($subtitle, Subtitle::fromArray($subtitle->toArray()));
     }
 
 
@@ -94,7 +91,7 @@ class ArrayConversionTest extends TestCase
     {
         $subtitle = (new Subtitle())->setMetadata("0", "zero");
 
-        $this->assertEquals($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat($subtitle->toString(Format::Json))->toArray());
+        $this->assertEquals($subtitle->toArray(), Subtitle::fromString($subtitle->toString(Format::Json))->toArray());
     }
 
 
@@ -175,10 +172,10 @@ class ArrayConversionTest extends TestCase
             $file === "sami/real/own_korean_cp949.smi"     => Subtitle::fromString($content, Format::Sami, new ReadOptions(TextEncoding::Cp949)),
             str_starts_with($file, "csv/")                 => (new CsvParser())->parse($content, new ReadOptions()),
             in_array($directory, self::CLOUD_SPEECH, true) => Subtitle::fromString($content, Format::from($directory)),
-            default                                        => Subtitle::fromStringAutoDetectFormat($content),
+            default                                        => Subtitle::fromString($content),
         };
 
         $this->assertEquals($subtitle->toArray(), Subtitle::fromArray($subtitle->toArray())->toArray());
-        $this->assertEquals($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat($subtitle->toString(Format::Json))->toArray());
+        $this->assertEquals($subtitle->toArray(), Subtitle::fromString($subtitle->toString(Format::Json))->toArray());
     }
 }

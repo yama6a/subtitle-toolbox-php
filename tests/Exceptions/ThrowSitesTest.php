@@ -125,7 +125,6 @@ class ThrowSitesTest extends TestCase
     private const CODES = [
         ParsingException::class             => 100,
         UnsupportedFormatException::class   => 102,
-        ImageCueWithoutTextException::class => 103,
         InvalidArgumentException::class     => 104,
         CueNotFoundException::class         => 105,
         UnknownFormatException::class       => 106,
@@ -134,8 +133,8 @@ class ThrowSitesTest extends TestCase
         TranslationException::class         => 109,
     ];
 
-    // 101 belonged to InvalidFormatterException in 3.x. Do not give it to a new class.
-    private const RETIRED_CODES = [101];
+    // 101 belonged to InvalidFormatterException in 3.x and 103 to ImageCueWithoutTextException. Do not give them to a new class.
+    private const RETIRED_CODES = [101, 103];
 
     // The CLI catches its own exceptions, so they need no error code.
     private const CLI_CODES = [FileFailure::class => 0];
@@ -279,29 +278,29 @@ class ThrowSitesTest extends TestCase
         $unwritable  = [\RuntimeException::class, UnwritableContentException::class];
         $unsupported = [\RuntimeException::class, UnsupportedFormatException::class];
         $unknown     = [UnsupportedFormatException::class, UnknownFormatException::class];
-        $imageCue   = (new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2));
+        $imageCue   = TestSubtitles::imageCue(new CueImage("png", 0, 0, 1, 1, 1, 1), new SubtitleCue(1, 2));
 
         $cue = ["start" => 1, "end" => 2, "lines" => ["text"]];
 
         return [
-            "ArrayConversion.php: no version"               => [fn () => Subtitle::fromArray([]), ...$parsing],
-            "ArrayConversion.php: unknown version"          => [fn () => Subtitle::fromArray(["version" => 9]), ...$parsing],
-            "ArrayConversion.php: metadata no string"       => [fn () => self::fromArray(["metadata" => ["title" => 5]]), ...$parsing],
-            "ArrayConversion.php: cues no list"             => [fn () => Subtitle::fromArray(["version" => Subtitle::ARRAY_VERSION]), ...$parsing],
-            "ArrayConversion.php: comment no object"        => [fn () => self::fromArray(["comments" => ["note"]]), ...$parsing],
-            "ArrayConversion.php: comment text"             => [fn () => self::fromArray(["comments" => [["beforeCueIndex" => 0]]]), ...$parsing],
-            "ArrayConversion.php: comment index"            => [fn () => self::fromArray(["comments" => [["text" => "note"]]]), ...$parsing],
-            "ArrayConversion.php: cue no object"            => [fn () => self::fromArray(["cues" => [5]]), ...$parsing],
-            "ArrayConversion.php: cue start"                => [fn () => self::fromArray(["cues" => [["start" => "1"] + $cue]]), ...$parsing],
-            "ArrayConversion.php: cue lines"                => [fn () => self::fromArray(["cues" => [["lines" => "text"] + $cue]]), ...$parsing],
-            "ArrayConversion.php: cue line"                 => [fn () => self::fromArray(["cues" => [["lines" => [5]] + $cue]]), ...$parsing],
-            "ArrayConversion.php: cue identifier"           => [fn () => self::fromArray(["cues" => [["identifier" => 5] + $cue]]), ...$parsing],
-            "ArrayConversion.php: cue alignment"            => [fn () => self::fromArray(["cues" => [["alignment" => 10] + $cue]]), ...$parsing],
-            "ArrayConversion.php: cue forced"               => [fn () => self::fromArray(["cues" => [["forced" => 1] + $cue]]), ...$parsing],
-            "ArrayConversion.php: format data no object"    => [fn () => self::fromArray(["formatData" => ["srt" => 5]]), ...$parsing],
-            "ArrayConversion.php: format data field type"   => [fn () => self::fromArray(["formatData" => ["scc" => ["dropFrame" => "x"]]]), ...$parsing],
-            "ArrayConversion.php: map no object"            => [fn () => self::fromArray(["metadata" => 5]), ...$parsing],
-            "ArrayConversion.php: comments no list"         => [fn () => self::fromArray(["comments" => 5]), ...$parsing],
+            "ArrayReader.php: no version"                   => [fn () => Subtitle::fromArray([]), ...$parsing],
+            "ArrayReader.php: unknown version"              => [fn () => Subtitle::fromArray(["version" => 9]), ...$parsing],
+            "ArrayReader.php: metadata no string"           => [fn () => self::fromArray(["metadata" => ["title" => 5]]), ...$parsing],
+            "ArrayReader.php: cues no list"                 => [fn () => Subtitle::fromArray(["version" => Subtitle::ARRAY_VERSION]), ...$parsing],
+            "ArrayReader.php: comment no object"            => [fn () => self::fromArray(["comments" => ["note"]]), ...$parsing],
+            "ArrayReader.php: comment text"                 => [fn () => self::fromArray(["comments" => [["beforeCueIndex" => 0]]]), ...$parsing],
+            "ArrayReader.php: comment index"                => [fn () => self::fromArray(["comments" => [["text" => "note"]]]), ...$parsing],
+            "ArrayReader.php: cue no object"                => [fn () => self::fromArray(["cues" => [5]]), ...$parsing],
+            "ArrayReader.php: cue start"                    => [fn () => self::fromArray(["cues" => [["start" => "1"] + $cue]]), ...$parsing],
+            "ArrayReader.php: cue lines"                    => [fn () => self::fromArray(["cues" => [["lines" => "text"] + $cue]]), ...$parsing],
+            "ArrayReader.php: cue line"                     => [fn () => self::fromArray(["cues" => [["lines" => [5]] + $cue]]), ...$parsing],
+            "ArrayReader.php: cue identifier"               => [fn () => self::fromArray(["cues" => [["identifier" => 5] + $cue]]), ...$parsing],
+            "ArrayReader.php: cue alignment"                => [fn () => self::fromArray(["cues" => [["alignment" => 10] + $cue]]), ...$parsing],
+            "ArrayReader.php: cue forced"                   => [fn () => self::fromArray(["cues" => [["forced" => 1] + $cue]]), ...$parsing],
+            "ArrayReader.php: format data no object"        => [fn () => self::fromArray(["formatData" => ["srt" => 5]]), ...$parsing],
+            "ArrayReader.php: format data field type"       => [fn () => self::fromArray(["formatData" => ["scc" => ["dropFrame" => "x"]]]), ...$parsing],
+            "ArrayReader.php: map no object"                => [fn () => self::fromArray(["metadata" => 5]), ...$parsing],
+            "ArrayReader.php: comments no list"             => [fn () => self::fromArray(["comments" => 5]), ...$parsing],
             "Cli/Command.php: unknown option"               => [fn () => Arguments::parse(["--nope"], []), ...$invalid],
             "Cli/Command.php: file failure"                 => [fn () => Command::failFile("Cannot read x."), \RuntimeException::class, FileFailure::class],
             "Container/Matroska/EbmlReader.php: invalid element header" => [fn () => MatroskaReader::open(self::stream("\0\0\0\0")), ...$parsing],
@@ -407,12 +406,12 @@ class ThrowSitesTest extends TestCase
                 return $subtitle->toString(Format::GoogleSpeech);
             }, ...$unwritable],
             "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->toString(Format::Pgs), ...$unwritable],
-            "Formatters/PgsFormatter.php: negative x"       => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), -1, 0, 1, 1, 9, 9))
-                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
-            "Formatters/PgsFormatter.php: PNG size"         => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 2, 1, 9, 9))
-                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
-            "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 1, 1, 9, 9))
-                ->toCue(new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$unwritable],
+            "Formatters/PgsFormatter.php: negative x"       => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage(self::png(), -1, 0, 1, 1, 9, 9),
+                new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
+            "Formatters/PgsFormatter.php: PNG size"         => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage(self::png(), 0, 0, 2, 1, 9, 9),
+                new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
+            "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage(self::png(), 0, 0, 1, 1, 9, 9),
+                new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/SccFormatter.php: 5 lines"          => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, ["1", "2", "3", "4", "5"]))
                 ->toString(Format::Scc), ...$unwritable],
             "Formatters/SccFormatter.php: 33 characters"    => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 33)))
@@ -679,16 +678,16 @@ class ThrowSitesTest extends TestCase
             "Subtitle.php: save() into a missing directory" => [fn () => self::subtitle()->save(self::FILES . "missing/out.srt"), ...$invalid],
             "Subtitle.php: format without a formatter"      => [fn () => self::subtitle()->toString(Format::VobSub), ...$unsupported],
             "Subtitle.php: image cue without text"          => [fn () => (new Subtitle())->addCue($imageCue)->toString(Format::SubRip),
-                                                                ImageCueWithoutTextException::class, ImageCueWithoutTextException::class],
+                                                                \RuntimeException::class, UnwritableContentException::class],
             "Subtitle.php: remove a missing cue"            => [fn () => self::subtitle()->removeCue(9),
                                                                 \RuntimeException::class, CueNotFoundException::class],
             "Subtitle.php: negative comment index"          => [fn () => self::subtitle()->addComment("note", -1), ...$invalid],
-            "SubtitleReader.php: unknown format"            => [fn () => Subtitle::fromStringAutoDetectFormat("text"), ...$unknown],
-            "SubtitleReader.php: unknown format of a file"  => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "chapters/ffmetadata/real/m4b_audiobook.ffmeta"),
+            "SubtitleReader.php: unknown format"            => [fn () => Subtitle::fromString("text"), ...$unknown],
+            "SubtitleReader.php: unknown format of a file"  => [fn () => Subtitle::load(self::FILES . "chapters/ffmetadata/real/m4b_audiobook.ffmeta"),
                                                                 ...$unknown],
             "SubtitleReader.php: load() of an MKV file"     => [fn () => Subtitle::load(self::FILES . "mkv/pgs.mkv", Format::Pgs), ...$unsupported],
             "SubtitleReader.php: fromString() of MKV content" => [fn () => Subtitle::fromString(MatroskaReader::EBML_MAGIC, Format::SubRip), ...$unsupported],
-            "SubtitleReader.php: MKV with 2 subtitle tracks" => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "mkv/pgs.mkv"), ...$unsupported],
+            "SubtitleReader.php: MKV with 2 subtitle tracks" => [fn () => Subtitle::load(self::FILES . "mkv/pgs.mkv"), ...$unsupported],
             "SubtitleReader.php: VobSub without its .sub file" => [fn () => Subtitle::load(self::FILES . "vobsub/SOURCES.md", Format::VobSub), ...$invalid],
             "SubtitleReader.php: missing file"              => [fn () => Subtitle::load(self::FILES . "missing.srt", Format::SubRip), ...$invalid],
             "SubtitleReader.php: unreadable file"           => [fn () => Subtitle::load(self::unreadableFile(), Format::SubRip), ...$invalid],
@@ -854,7 +853,7 @@ class ThrowSitesTest extends TestCase
         asort($codes);
 
         $this->assertSame(self::CODES, $codes);
-        $this->assertSame(array_values(array_diff(range(100, 100 + count($codes)), self::RETIRED_CODES)), array_values($codes));
+        $this->assertSame(array_values(array_diff(range(100, 99 + count($codes) + count(self::RETIRED_CODES)), self::RETIRED_CODES)), array_values($codes));
     }
 
 

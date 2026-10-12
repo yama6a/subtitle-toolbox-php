@@ -55,19 +55,4 @@ class SubtitleCloneTest extends TestCase
         $this->assertSame($original->toArray(), $copy->toArray());
     }
 
-
-    public function testEmptyCopyKeepsMetadataAndFormatWithoutCuesAndComments(): void
-    {
-        $original = Subtitle::fromString(file_get_contents(self::FILE), Format::SubRip)
-            ->setMetadata(Subtitle::METADATA_LANGUAGE, "en")
-            ->addComment("Before the first cue", 0);
-
-        $copy = $original->emptyCopy();
-
-        $this->assertSame([], $copy->getCues());
-        $this->assertSame([], $copy->getComments());
-        $this->assertSame("en", $copy->findMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame(Format::SubRip, $copy->getFormat());
-        $this->assertNotSame([], $original->getCues());
-    }
 }

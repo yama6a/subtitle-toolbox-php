@@ -50,6 +50,8 @@ final class TesseractOcrEngine implements OcrEngine
 
     /**
      * Returns true when $program runs and prints a Tesseract version.
+     *
+     * @internal
      */
     public static function isInstalled(string $program = "tesseract"): bool
     {
@@ -65,7 +67,7 @@ final class TesseractOcrEngine implements OcrEngine
         $language ??= $this->options->language;
         $this->requireLanguages($language);
 
-        $file = tempnam(sys_get_temp_dir(), "subtitle-toolbox-ocr-");
+        $file = tempnam(sys_get_temp_dir(), "stbox-ocr-");
         try {
             file_put_contents($file, $this->toPgm($image));
             [$code, $output, $error] = self::run([$this->options->program, $file, "stdout", "-l", $language,

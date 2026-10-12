@@ -172,7 +172,7 @@ class BinaryInputTest extends CliTestCase
         $this->assertStringContainsString("00:00:01,000 --> 00:00:03,000\nHello from the frames.\n", $stdout);
 
         $this->assertSame([0, "{25}{75}Hello from the frames.\n{100}{150}{y:i}Second line.\n", ""],
-                          $this->runCli(["retime", "frames.sub", "--shift", "0", "--fps", "25"]));
+                          $this->runCli(["convert", "frames.sub", "--shift", "0", "--fps", "25"]));
 
         $this->assertSame([3, "", "trip.srt: MicroDVD output needs the frame rate of the video. Pass --fps or --output-fps.\n"],
                           $this->runCli(["convert", "trip.srt", "--to", "microdvd", "-o", "-"]));
@@ -184,10 +184,10 @@ class BinaryInputTest extends CliTestCase
     public function testFromAndToAlwaysNameFormats(): void
     {
         $this->assertSame(
-            self::usageError("retime", "Unknown format \"25\". Run \"subtitle-toolbox formats\" for the list."),
-            $this->runCli(["retime", "trip.srt", "--from", "25", "--to", "23.976"])
+            self::usageError("convert", "Unknown format \"25\". Run \"stbox formats\" for the list."),
+            $this->runCli(["convert", "trip.srt", "--from", "25", "--to", "23.976"])
         );
-        $this->assertSame([0, $this->tripAs(Format::WebVtt), ""], $this->runCli(["retime", "trip.srt", "--shift", "0", "--from", "srt", "--to", "vtt"]));
+        $this->assertSame([0, $this->tripAs(Format::WebVtt), ""], $this->runCli(["convert", "trip.srt", "--shift", "0", "--from", "srt", "--to", "vtt"]));
     }
 
 

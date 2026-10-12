@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Tests\Support;
 
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Subtitle;
@@ -15,6 +16,14 @@ use SubtitleToolbox\SubtitleCue;
  */
 final class TestSubtitles
 {
+    public static function imageCue(CueImage $image, SubtitleCue $cue): SubtitleCue
+    {
+        $image->applyTo($cue);
+
+        return $cue;
+    }
+
+
     /**
      * Builds a subtitle from cues or from [start, end, text] tuples, for example [[1.0, 2.5, "Hello"]].
      * The text can also be a list of lines.
@@ -59,20 +68,6 @@ final class TestSubtitles
         }
 
         return (new Subtitle())->addCues($cues);
-    }
-
-
-    /**
-     * Builds a subtitle from [start, end, text] tuples through fromArray(), which keeps cues out of start order.
-     *
-     * @param list<array{float|int, float|int, string}> $cues
-     */
-    public static function inGivenOrder(array $cues): Subtitle
-    {
-        return Subtitle::fromArray([
-            "version" => Subtitle::ARRAY_VERSION,
-            "cues"    => array_map(fn (array $cue): array => ["start" => $cue[0], "end" => $cue[1], "lines" => [$cue[2]]], $cues),
-        ]);
     }
 
 

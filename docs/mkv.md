@@ -9,7 +9,7 @@ foreach (Subtitle::tracks('/media/movie.mkv') as $track) {
     echo "$track->number $track->codecId $track->language $track->name", PHP_EOL;   // 3 S_TEXT/UTF8 de Deutsch (Forced)
 }
 Subtitle::loadTrack('/media/movie.mkv', 3)->save('movie.de.srt');
-Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only subtitle track
+Subtitle::load('/media/one-track.webm');                       // reads the only subtitle track
 ```
 
 `MatroskaReader` is in the namespace `SubtitleToolbox\Container\Matroska`. Its `open()` takes a seekable stream resource too: `MatroskaReader::open($stream)->extract(3)`.
@@ -36,8 +36,8 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
 | `default` | `bool` | `FlagDefault` |
 | `forced` | `bool` | `FlagForced` |
 
-- **Format**: `getFormat()` of the subtitle is the format of the codec in the table.
-- **Detection**: `loadAutoDetectFormat()` and `fromStringAutoDetectFormat()` know an MKV or WebM file by its first 4 bytes, not by its extension.
+- **Format**: `findFormat()` of the subtitle is the format of the codec in the table.
+- **Detection**: `load()` and `fromString()` without a format know an MKV or WebM file by its first 4 bytes, not by its extension.
 - **Language**: the reader takes `LanguageBCP47`. Without it, the reader takes `Language`. Without either, the language is `eng`, as the spec defines. `loadTrack()` puts it into the `language` metadata.
 - **Forced**: on a track with the forced flag, `loadTrack()` sets the forced flag of every cue. PGS cues also keep the forced flag of their objects.
 - **End times**: a text block without a duration ends at the start of the next block of the track. The last such block lasts [`ReadOptions::$lastCueDuration`](read-options.md). A VobSub unit ends at its stop command. Without one, it ends at the end of its block, by the same rules.
@@ -58,7 +58,7 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
 
 ## MP4
 
-`ffmpeg -c:s mov_text`, HandBrake and phones store text subtitles in MP4 and MOV files as 3GPP timed text (`tx3g`). The same calls read them: `Subtitle::tracks()`, `loadTrack()` and `loadAutoDetectFormat()`. `Mp4Reader` in the namespace `SubtitleToolbox\Container\Mp4` has the methods of `MatroskaReader`.
+`ffmpeg -c:s mov_text`, HandBrake and phones store text subtitles in MP4 and MOV files as 3GPP timed text (`tx3g`). The same calls read them: `Subtitle::tracks()`, `loadTrack()` and `load()` without a format. `Mp4Reader` in the namespace `SubtitleToolbox\Container\Mp4` has the methods of `MatroskaReader`.
 
 ```php
 Subtitle::loadTrack('/media/phone-video.mp4', 2)->save('phone-video.srt');
@@ -77,8 +77,8 @@ Subtitle::loadTrack('/media/phone-video.mp4', 2)->save('phone-video.srt');
 
 - **Tracks**: `tracks()` lists tracks with the handler `text`, `sbtl`, `subt` or `clcp` (closed captions).
 - **Cues**: each `tx3g` sample with text becomes a cue with the sample times. An empty sample is a gap. The text is UTF-8, or UTF-16 after a byte order mark. The reader turns the bold, italic and underline runs of a `styl` box into `<b>`, `<i>` and `<u>` tags, so `ffmpeg -c:s mov_text` output keeps the tags of the SubRip input. It ignores the font, the size and the color of a run, and other modifier boxes such as `hlit`.
-- **Format**: `getFormat()` is `Format::SubRip`. The cues hold text with SubRip tags, as from an `S_TEXT/UTF8` track of an MKV file.
-- **Detection**: `loadAutoDetectFormat()` and `fromStringAutoDetectFormat()` know an MP4 file by the `ftyp` box at byte 4.
+- **Format**: `findFormat()` is `Format::SubRip`. The cues hold text with SubRip tags, as from an `S_TEXT/UTF8` track of an MKV file.
+- **Detection**: `load()` and `fromString()` without a format know an MP4 file by the `ftyp` box at byte 4.
 - **Memory**: the reader reads the sample tables of the wanted track and its samples only. It skips the media data with `fseek()`.
 - **Errors**: `extract()` throws `ParsingException` for a `c608` track, another codec and an encrypted track (`enct` or a `sinf` box). It also throws `ParsingException` for a sample outside the file. The same applies when the `stsz` box lists more sample bytes than the file has.
 - **Spec**: ISO/IEC 14496-12 for the boxes, 3GPP TS 26.245 for timed text.

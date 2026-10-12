@@ -129,7 +129,7 @@ class TtmlRealFileTest extends TestCase
 
         $this->assertSame("Harbour weather", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
         $this->assertSame("en-GB", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame("sub3", $cues[2]->getIdentifier());
+        $this->assertSame("sub3", $cues[2]->findIdentifier());
         $this->assertSame("<v Ben>The first ferry left\nat seven o'clock.", $cues[2]->getText());
         $this->assertSame("<v Ben>Tide tables are <b>on the <u>board</u></b>", $cues[10]->getText());
         $this->assertStringNotContainsString("ttm:title", $subtitle->findFormatData("ttml")["head"]);
@@ -221,7 +221,7 @@ class TtmlRealFileTest extends TestCase
         $subtitle = $this->parseFile("astisub_breaklines.ttml");
         $output   = $subtitle->toString(Format::Ttml);
 
-        $this->assertSame("1", $subtitle->getCues()[0]->getIdentifier());
+        $this->assertSame("1", $subtitle->getCues()[0]->findIdentifier());
         $this->assertStringContainsString("<p begin=\"00:00:00.000\" end=\"00:00:01.000\">First line<br/>Second line</p>", $output);
     }
 }

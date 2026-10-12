@@ -19,7 +19,7 @@ class StrictTypesTest extends TestCase
             }
             foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator("$root/$directory", \FilesystemIterator::SKIP_DOTS)) as $file) {
                 $content = file_get_contents($file->getPathname());
-                // bin/subtitle-toolbox has no .php extension, so a PHP shebang or opening tag also marks a PHP file.
+                // bin/stbox has no .php extension, so a PHP shebang or opening tag also marks a PHP file.
                 if ($file->getExtension() !== "php" && preg_match('/\A(?:#!.*php.*\n)?<\?php\b/', $content) !== 1) {
                     continue;
                 }

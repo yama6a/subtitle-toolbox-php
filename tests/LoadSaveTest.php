@@ -58,11 +58,11 @@ class LoadSaveTest extends TestCase
 
 
     #[DataProvider("autoDetectedFiles")]
-    public function testLoadAutoDetectFormatReadsTheFormatOfTheContentOrTheExtension(string $file, Format $format): void
+    public function testLoadWithoutFormatReadsTheFormatOfTheContentOrTheExtension(string $file, Format $format): void
     {
-        $subtitle = Subtitle::loadAutoDetectFormat(self::FILES . $file);
+        $subtitle = Subtitle::load(self::FILES . $file);
 
-        $this->assertSame($format, $subtitle->getFormat());
+        $this->assertSame($format, $subtitle->findFormat());
         $this->assertSame(Subtitle::fromString(file_get_contents(self::FILES . $file), $format)->toArray(), $subtitle->toArray());
     }
 
@@ -97,7 +97,7 @@ class LoadSaveTest extends TestCase
     {
         $subtitle = Subtitle::load(self::FILES . $file, $format);
 
-        $this->assertSame($format, $subtitle->getFormat());
+        $this->assertSame($format, $subtitle->findFormat());
         $this->assertNotSame([], $subtitle->getCues());
         $this->assertSame(Subtitle::fromString(file_get_contents(self::FILES . $file), $format)->toArray(), $subtitle->toArray());
     }
@@ -118,11 +118,11 @@ class LoadSaveTest extends TestCase
 
 
     #[DataProvider("filesThatNeedAFormat")]
-    public function testLoadAutoDetectFormatThrowsForAFormatThatNeedsAFormatArgument(string $file): void
+    public function testLoadWithoutFormatThrowsForAFormatThatNeedsAFormatArgument(string $file): void
     {
         $this->expectException(UnknownFormatException::class);
         $this->expectExceptionMessage("Call load() with a format.");
-        Subtitle::loadAutoDetectFormat(self::FILES . $file);
+        Subtitle::load(self::FILES . $file);
     }
 
 
@@ -133,12 +133,12 @@ class LoadSaveTest extends TestCase
         $this->assertSame([3, 4, 5, 6, 7, 8], array_map(fn (SubtitleTrack $track): int => $track->number, Subtitle::tracks($mkv)));
 
         $german = Subtitle::loadTrack($mkv, 3);
-        $this->assertSame(Format::SubRip, $german->getFormat());
+        $this->assertSame(Format::SubRip, $german->findFormat());
         $this->assertSame("de", $german->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame(MatroskaReader::open($mkv)->extract(3)->toArray(), $german->toArray());
 
         try {
-            Subtitle::loadAutoDetectFormat($mkv);
+            Subtitle::load($mkv);
             $this->fail("6 tracks must throw.");
         } catch (UnsupportedFormatException $exception) {
             $this->assertStringContainsString("has 6 subtitle tracks. Call loadTrack() with one of them:\n  3: S_TEXT/UTF8, de", $exception->getMessage());
@@ -151,13 +151,13 @@ class LoadSaveTest extends TestCase
     }
 
 
-    public function testLoadAutoDetectFormatReadsTheOnlyTrackOfAnMkvFile(): void
+    public function testLoadWithoutFormatReadsTheOnlyTrackOfAnMkvFile(): void
     {
-        $subtitle = Subtitle::loadAutoDetectFormat(self::FILES . "mkv/seek_head.mkv");
+        $subtitle = Subtitle::load(self::FILES . "mkv/seek_head.mkv");
 
-        $this->assertSame(Format::WebVtt, $subtitle->getFormat());
+        $this->assertSame(Format::WebVtt, $subtitle->findFormat());
         $this->assertSame(MatroskaReader::open(self::FILES . "mkv/seek_head.mkv")->extract(2)->toArray(), $subtitle->toArray());
-        $this->assertSame($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "mkv/seek_head.mkv"))->toArray());
+        $this->assertSame($subtitle->toArray(), Subtitle::fromString(file_get_contents(self::FILES . "mkv/seek_head.mkv"))->toArray());
     }
 
 
@@ -178,16 +178,16 @@ class LoadSaveTest extends TestCase
 
 
     #[DataProvider("emptyFiles")]
-    public function testLoadAutoDetectFormatReadsAnEmptyFileInTheFormatOfItsExtension(string $name, string $content, ?Format $format): void
+    public function testLoadWithoutFormatReadsAnEmptyFileInTheFormatOfItsExtension(string $name, string $content, ?Format $format): void
     {
         file_put_contents("$this->dir/$name", $content);
         if ($format === null) {
             $this->expectException(UnknownFormatException::class);
         }
 
-        $subtitle = Subtitle::loadAutoDetectFormat("$this->dir/$name");
+        $subtitle = Subtitle::load("$this->dir/$name");
 
-        $this->assertSame([$format, []], [$subtitle->getFormat(), $subtitle->getCues()]);
+        $this->assertSame([$format, []], [$subtitle->findFormat(), $subtitle->getCues()]);
     }
 
 
@@ -200,7 +200,7 @@ class LoadSaveTest extends TestCase
         $this->assertSame([], Subtitle::load("$this->dir/empty.sub", Format::MicroDvd)->getCues());
 
         $this->expectException(UnknownFormatException::class);
-        Subtitle::fromStringAutoDetectFormat("");
+        Subtitle::fromString("");
     }
 
 
@@ -212,7 +212,7 @@ class LoadSaveTest extends TestCase
         $this->assertSame(Mp4Reader::open($mp4)->extract(3)->toArray(), Subtitle::loadTrack($mp4, 3)->toArray());
 
         try {
-            Subtitle::loadAutoDetectFormat($mp4);
+            Subtitle::load($mp4);
             $this->fail("4 tracks must throw.");
         } catch (UnsupportedFormatException $exception) {
             $this->assertStringStartsWith("UnsupportedFormatException (Error #102): The MP4 file has 4 subtitle tracks. Call loadTrack() with one of them:\n" .
@@ -231,26 +231,26 @@ class LoadSaveTest extends TestCase
     }
 
 
-    public function testLoadAutoDetectFormatReadsTheOnlyTrackOfAnMp4File(): void
+    public function testLoadWithoutFormatReadsTheOnlyTrackOfAnMp4File(): void
     {
-        $subtitle = Subtitle::loadAutoDetectFormat(self::FILES . "mp4/one_track.mp4");
+        $subtitle = Subtitle::load(self::FILES . "mp4/one_track.mp4");
 
-        $this->assertSame(Format::SubRip, $subtitle->getFormat());
+        $this->assertSame(Format::SubRip, $subtitle->findFormat());
         $this->assertSame(["The museum opens at ten.", "Entry is free on Sundays."], array_map(fn ($cue): string => $cue->getText(), $subtitle->getCues()));
-        $this->assertSame($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "mp4/one_track.mp4"))->toArray());
+        $this->assertSame($subtitle->toArray(), Subtitle::fromString(file_get_contents(self::FILES . "mp4/one_track.mp4"))->toArray());
     }
 
 
     public function testPgsTracksOfAnMkvFile(): void
     {
         $subtitle = Subtitle::loadTrack(self::FILES . "mkv/pgs.mkv", 3);
-        $this->assertSame(Format::Pgs, $subtitle->getFormat());
+        $this->assertSame(Format::Pgs, $subtitle->findFormat());
         $this->assertNotSame([], $subtitle->getCues());
         $this->assertTrue(Image\CueImage::isImageCue($subtitle->getCues()[0]));
 
         $this->expectException(UnsupportedFormatException::class);
         $this->expectExceptionMessage("has 2 subtitle tracks. Call loadTrack() with one of them:\n  3: S_HDMV/PGS, ger, default\n  4: S_HDMV/PGS, eng");
-        Subtitle::loadAutoDetectFormat(self::FILES . "mkv/pgs.mkv");
+        Subtitle::load(self::FILES . "mkv/pgs.mkv");
     }
 
 
@@ -266,7 +266,7 @@ class LoadSaveTest extends TestCase
     {
         $subtitle = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
 
-        $this->assertSame(Format::MicroDvd, $subtitle->getFormat());
+        $this->assertSame(Format::MicroDvd, $subtitle->findFormat());
         $this->assertSame(1.0, $subtitle->getCues()[0]->getStart());
         $this->assertSame(3.0, $subtitle->getCues()[0]->getEnd());
     }
@@ -281,7 +281,7 @@ class LoadSaveTest extends TestCase
 
         $this->assertSame($expected, Subtitle::load(self::FILES . "vobsub/text-pal.idx", Format::VobSub)->toArray());
         $this->assertSame($expected, Subtitle::load(self::FILES . "vobsub/text-pal.sub", Format::VobSub)->toArray());
-        $this->assertSame($expected, Subtitle::loadAutoDetectFormat(self::FILES . "vobsub/text-pal.idx")->toArray());
+        $this->assertSame($expected, Subtitle::load(self::FILES . "vobsub/text-pal.idx")->toArray());
     }
 
 
@@ -321,9 +321,9 @@ class LoadSaveTest extends TestCase
     }
 
 
-    public function testSaveSetsTheCsvDelimiterFromTheTargetFormat(): void
+    public function testSaveSetsTheCsvDelimiterFromTheTarfindFormat(): void
     {
-        $subtitle = Subtitle::loadAutoDetectFormat(self::FILES . "csv/real/sheets_export.tsv");
+        $subtitle = Subtitle::load(self::FILES . "csv/real/sheets_export.tsv");
 
         $subtitle->save("$this->dir/x.csv");
         $subtitle->save("$this->dir/x.tsv");
@@ -336,7 +336,7 @@ class LoadSaveTest extends TestCase
             $subtitle->toString(Format::Csv, new WriteOptions(formats: [new CsvWriteOptions(delimiter: ",")]))
         );
 
-        $semicolons = Subtitle::loadAutoDetectFormat(self::FILES . "csv/real/excel_de_semicolon.csv");
+        $semicolons = Subtitle::load(self::FILES . "csv/real/excel_de_semicolon.csv");
         $this->assertStringContainsString(";", strtok($semicolons->toString(Format::Csv), "\n"));
         $this->assertStringContainsString("\t", strtok($semicolons->toString(Format::Tsv), "\n"));
     }
@@ -373,7 +373,7 @@ class LoadSaveTest extends TestCase
 
     public function testSaveItt(): void
     {
-        $itt = Subtitle::loadAutoDetectFormat(self::FILES . "itt/real/fcp_23976_styles.itt");
+        $itt = Subtitle::load(self::FILES . "itt/real/fcp_23976_styles.itt");
         $itt->save("$this->dir/x.itt");
         $this->assertSame($itt->toString(Format::Itt), file_get_contents("$this->dir/x.itt"));
 
@@ -385,7 +385,7 @@ class LoadSaveTest extends TestCase
 
     public function testGetFormatIsNullForASubtitleThatNoParserRead(): void
     {
-        $this->assertNull((new Subtitle())->getFormat());
-        $this->assertSame(Format::WebVtt, Subtitle::fromStringAutoDetectFormat("WEBVTT\n\n00:01.000 --> 00:02.000\nHi\n")->getFormat());
+        $this->assertNull((new Subtitle())->findFormat());
+        $this->assertSame(Format::WebVtt, Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:02.000\nHi\n")->findFormat());
     }
 }

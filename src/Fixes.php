@@ -22,7 +22,7 @@ trait Fixes
 
         $groupStart = null;
         $laterStart = null;
-        foreach (array_reverse(CueList::inStartOrder($this->cues)) as $cue) {
+        foreach (array_reverse($this->getCues()) as $cue) {
             if ($cue->getStart() !== $groupStart) {
                 $laterStart = $groupStart;
                 $groupStart = $cue->getStart();
@@ -50,7 +50,7 @@ trait Fixes
         OptionChecks::positiveFinite($minDuration, "The minimum duration must be greater than 0, got %s.");
         $this->fixesAssertGap($minGap);
 
-        $cues = CueList::inStartOrder($this->cues);
+        $cues = $this->getCues();
         foreach ($cues as $index => $cue) {
             $end = $cue->getStart() + $minDuration;
             if (isset($cues[$index + 1])) {
@@ -78,7 +78,7 @@ trait Fixes
         OptionChecks::nonNegativeFinite($leadOut, "The lead-out must not be negative, got %s.");
         $this->fixesAssertGap($minGap);
 
-        LeadInOut::apply($this->cues, $leadIn, $leadOut, $minGap);
+        LeadInOut::apply($this->getCues(), $leadIn, $leadOut, $minGap);
 
         return $this;
     }

@@ -158,29 +158,6 @@ final class ConvertCommand extends WriteCommand
         }
 
         parent::checkInputs($inputs, $arguments);
-        $format = $this->toFormat === null && $arguments->has("output") ? $this->inputReader->peekFormat($inputs[0]) : null;
-        if ($format !== null) {
-            $this->checkOutputExtension($format, $arguments);
-        }
-    }
-
-
-    /**
-     * Without --to, fails when the extension of --output names a writable format other than the input format.
-     * Writing SubRip into movie.vtt would look like a conversion that did not happen.
-     */
-    private function checkOutputExtension(Format $inputFormat, Arguments $arguments): void
-    {
-        $output = $arguments->value("output");
-        if ($this->toFormat !== null || $output === null || $output === self::DASH) {
-            return;
-        }
-        $named     = Format::fromPath($output);
-        $extension = strtolower(pathinfo($output, PATHINFO_EXTENSION));
-        if ($named !== null && $named->canWrite() && !in_array($extension, $inputFormat->extensions(), true)) {
-            self::fail("The output $output has the extension of the format $named->value, not of the input format $inputFormat->value. " .
-                       "Pass --to $named->value to convert, or use the extension of the input format.");
-        }
     }
 
 
@@ -199,7 +176,6 @@ final class ConvertCommand extends WriteCommand
 
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
-        $this->checkOutputExtension($format, $arguments);
         parent::process($input, $subtitle, $format, $arguments, $console);
 
         foreach ($this->edits->find(MaskingEdit::class)?->writeMuteFiles($this->outputFiles) ?? [] as $path) {

@@ -255,7 +255,7 @@ class TesseractOcrEngineTest extends TestCase
             rmdir($directory);
         }
 
-        $this->assertStringContainsString("subtitle-toolbox-ocr-", $image);
+        $this->assertStringContainsString("stbox-ocr-", $image);
         $this->assertFileDoesNotExist($image);
     }
 

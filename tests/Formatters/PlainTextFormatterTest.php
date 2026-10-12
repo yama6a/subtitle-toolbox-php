@@ -14,6 +14,7 @@ use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class PlainTextFormatterTest extends TestCase
 {
@@ -71,7 +72,7 @@ class PlainTextFormatterTest extends TestCase
     {
         $subtitle = new Subtitle();
         $subtitle->addCue(new SubtitleCue(1, 2, "<i></i>"));
-        $subtitle->addCue((new CueImage("png", 0, 0, 1, 1, 720, 576))->toCue(new SubtitleCue(3, 4)));
+        $subtitle->addCue(TestSubtitles::imageCue(new CueImage("png", 0, 0, 1, 1, 720, 576), new SubtitleCue(3, 4)));
 
         $this->assertSame("", (new Subtitle())->toString(Format::PlainText));
         $this->assertSame("", $subtitle->toString(Format::PlainText, new WriteOptions(skipImageCues: true)));

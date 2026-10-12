@@ -93,21 +93,21 @@ $subtitle = Subtitle::fromString($whisperXJson, Format::Whisper, new ReadOptions
 SpeakerLabels::list($subtitle);                    // ['SPEAKER_00' => 14, 'SPEAKER_01' => 9], cues per speaker
 $report = SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(
     rename: ['SPEAKER_00' => 'Anna', 'SPEAKER_01' => 'Ben'],
-    to: SpeakerStyle::Prefix,                      // '<v Anna>Where were you?' becomes 'ANNA: Where were you?'
+    style: SpeakerStyle::Prefix,                   // '<v Anna>Where were you?' becomes 'ANNA: Where were you?'
 ));
 $report->changedCues;                              // the cues whose lines changed
 $subtitle->toString(Format::SubRip);
 ```
 
-`apply()` runs the steps that the options ask for, in this order: `readPrefixes`, `rename`, `to`. The options are required, because `new SpeakerLabelOptions()` selects no step.
+`apply()` runs the steps that the options ask for, in this order: `speakerLabels`, `rename`, `style`. The options are required, because `new SpeakerLabelOptions()` selects no step.
 
 | Option | Input | Output |
 |:--- |:--- |:--- |
-| `readPrefixes: true`, with `readUpperCaseOnly`, default `true` | `JOHN: Hi.` | `<v John>Hi.` |
+| `speakerLabels: true`, with `speakerLabelsUpperCaseOnly`, default `true` | `JOHN: Hi.` | `<v John>Hi.` |
 | `rename: ['SPEAKER_00' => 'Anna']` | `<v SPEAKER_00>` | `<v Anna>` |
-| `to: SpeakerStyle::Prefix`, with `writeUpperCase`, default `true`, and `separator`, default `': '` | `<v Anna>Where were you?` | `ANNA: Where were you?` |
-| `to: SpeakerStyle::DialogueDashes`, with `dialogueDashStyle`, default `DialogueDashStyle::HyphenSpace` | `<v Anna>Where?` and `<v Ben>Home.` in one cue | `- Where?` and `- Home.` |
-| `to: SpeakerStyle::Colors`, with `colors`, default `SpeakerLabels::BBC_COLORS` | `<v Anna>Where?` and `<v Ben>Home.` | `<font color="#ffffff">Where?</font>` and `<font color="#ffff00">Home.</font>` |
+| `style: SpeakerStyle::Prefix`, with `writeUpperCase`, default `true`, and `separator`, default `': '` | `<v Anna>Where were you?` | `ANNA: Where were you?` |
+| `style: SpeakerStyle::DialogueDashes`, with `dialogueDashStyle`, default `DialogueDashStyle::HyphenSpace` | `<v Anna>Where?` and `<v Ben>Home.` in one cue | `- Where?` and `- Home.` |
+| `style: SpeakerStyle::Colors`, with `colors`, default `SpeakerLabels::BBC_COLORS` | `<v Anna>Where?` and `<v Ben>Home.` | `<font color="#ffffff">Where?</font>` and `<font color="#ffff00">Home.</font>` |
 
 | Format | Reads `<v>` from | Writes `<v>` as |
 |:--- |:--- |:--- |
@@ -120,7 +120,7 @@ $subtitle->toString(Format::SubRip);
 | Whisper JSON | the segment `speaker`, with `TranscriptReadOptions::$speakerVoices` | no formatter |
 | Cloud speech-to-text JSON | the speaker labels of the service, with `TranscriptReadOptions::$speakerVoices` | no formatter |
 | JSON | the cue lines | the cue lines |
-| all other formats, iTT too | no speaker | nothing. Convert with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors` first |
+| all other formats, iTT too | no speaker | nothing. Convert with `style: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors` first |
 
 - **Style values**: `SpeakerStyle::from('dialogueDashes')` returns `SpeakerStyle::DialogueDashes`. The values are `prefix`, `dialogueDashes` and `colors`.
 - **Speaker**: a `<v>` tag sets the speaker until `</v>`, the next `<v>` tag or the end of the cue.
@@ -128,7 +128,7 @@ $subtitle->toString(Format::SubRip);
 - **Prefix**: every cue repeats the name of its speaker. `writeUpperCase: false` keeps the name as it is.
 - **Dashes**: only cues with two or more speakers get dashes. Text without a speaker counts as one speaker. A line that already starts with `-` gets no second dash.
 - **Colors**: the BBC order is white, yellow, cyan and green, from the [BBC Subtitle Guidelines](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/). Each speaker gets the next color in the order of its first cue. The fifth speaker gets the first color again. A color that is not `#rrggbb` throws `InvalidArgumentException`.
-- **Labels**: `readPrefixes: true` uses the `speakerLabels` rule of `HearingImpairedOptions`. With `readUpperCaseOnly: false`, it also reads `Baker:` and `Note:`.
+- **Labels**: `speakerLabels` and `speakerLabelsUpperCaseOnly` have the same names and label rule as in `HearingImpairedOptions`. `SpeakerLabels` reads the label into `<v>`, and `HearingImpairedRemover` removes it. With `speakerLabelsUpperCaseOnly: false`, `SpeakerLabels` also reads `Baker:` and `Note:`.
 - **Label names**: an upper case label becomes title case, so `DR. O'NEIL:` becomes `<v Dr. O'Neil>`. The converter removes the dash before a label. A label on a line of its own names the speaker of the next line.
 - **Whisper**: the `speaker` field also stays in the cue format data. whisper.cpp `-di` writes the speakers `0` and `1`. It writes `?` when it cannot tell. The parser ignores the speaker of each WhisperX word.
 - **Names**: the `list()` key of a speaker such as `0` is an int. A quote in a name stays a raw character, see [markup.md](markup.md).
@@ -222,6 +222,7 @@ use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Fixing\CommonErrorFixer;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\CommonErrorRule;
+use SubtitleToolbox\Fixing\EllipsisStyle;
 use SubtitleToolbox\Fixing\OcrReplaceList;
 
 $fixes = CommonErrorFixer::apply($subtitle, new CommonErrorOptions(language: 'en'))->fixes;
@@ -233,7 +234,7 @@ $fixes[0]->after;      // "It's late."
 CommonErrorFixer::apply($subtitle, new CommonErrorOptions(
     language: 'fr',
     dialogueDashStyle: DialogueDashStyle::Hyphen,            // default HyphenSpace, see DialogueDashStyle for the en and em dash
-    unicodeEllipsis: true,                                   // writes U+2026 for every ellipsis
+    ellipsis: EllipsisStyle::Unicode,                        // default ThreeDots, null turns the fix off
     replaceList: OcrReplaceList::fromSubtitleEditXml(file_get_contents('fra_OCRFixReplaceList_User.xml')),
 ));
 CommonErrorFixer::preview($subtitle, new CommonErrorOptions(language: 'en'));   // lists the fixes and changes nothing
@@ -248,7 +249,7 @@ CommonErrorFixer::apply($subtitle);                                            /
 | `unbalancedTags` | `<i>Hello` | `<i>Hello</i>` |
 | `emptyTags` | `Hi <i></i>there` | `Hi there` |
 | `dialogueDashes` | `-Hi.` and `-Hello.` | `- Hi.` and `- Hello.`, or the style of `dialogueDashStyle` |
-| `ellipsis` | `. . .` or `....` | `...`, or U+2026 with `unicodeEllipsis` |
+| `ellipsis` | `. . .` or `....` | `...` with `EllipsisStyle::ThreeDots`. U+2026 with `EllipsisStyle::Unicode`, which also replaces `...` |
 | `ocrLowercaseL` | `lt's`, `l'm`, `l'll`, `lT lS` | `It's`, `I'm`, `I'll`, `IT IS` |
 | `ocrPipe` | `\|t was`, `wi\|\|` | `It was`, `will` |
 | `ocrZeroInWords` | `D0N'T`, `n0rth` | `DON'T`, `north`. Not in `007` or `2.0` |
@@ -260,7 +261,7 @@ CommonErrorFixer::apply($subtitle);                                            /
 | `musicNotes` | `# Happy birthday #`, `* la la *` | `♪ Happy birthday ♪`, `♪ la la ♪`. Off by default |
 | `sentenceStartCase` | `I'm home.` and then `where are you?` | `Where are you?`. Off by default |
 
-- **Defaults**: every fix is on, except `replaceList`, `unicodeEllipsis` and the fixes marked "Off by default". The CLI turns these on with `--errors-enable`. The fixes run in the order of `CommonErrorRule::cases()`. The value of a case is the name of its option. The report holds one `AppliedFix` in `fixes` for each rule that changed a cue.
+- **Defaults**: every fix is on, except `replaceList` and the fixes marked "Off by default". The CLI turns these on with `--errors-enable`. The fixes run in the order of `CommonErrorRule::cases()`. The value of a case is the name of its option. The report holds one `AppliedFix` in `fixes` for each rule that changed a cue.
 - **Text runs**: the fixes see text runs, as `replaceText()` does. Only `unbalancedTags`, `emptyTags` and `dialogueOnOneLine` change tags. `unbalancedTags` closes a tag at the end of the last line of its cue. It removes a closing tag without an opening tag.
 - **Language**: `language` takes a code such as `en`, `de-AT` or `fra`. Null takes the `language` metadata of the subtitle. English, German, French and Spanish have their own rules for I and l. Other languages get only the rules that apply to all languages, for example `lT` to `IT`.
 - **I and l**: OCR reads a capital I as l when the font draws both the same. `ocrLowercaseL` changes an `l` at the start of a word before a consonant: `lch` to `Ich`, `lsabel` to `Isabel`. French also changes `ll` to `Il`, and keeps `l'hôtel`. Spanish keeps `llega`. English also changes `l`, `l'm`, `l'll`, `l've` and `l'd`. `5 lbs` and `2 l` stay.

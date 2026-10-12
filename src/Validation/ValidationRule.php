@@ -28,7 +28,6 @@ enum ValidationRule: string
     case AllowedCharacters         = "allowedCharacters";
     case NoAllCapsLines            = "noAllCapsLines";
     case RequireCues               = "requireCues";
-    case NoUnsortedCues            = "noUnsortedCues";
     case NoNegativeDuration        = "noNegativeDuration";
     case MinChapters               = "minChapters";
     case FirstChapterAtZero        = "firstChapterAtZero";

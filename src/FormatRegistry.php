@@ -76,7 +76,7 @@ final class FormatRegistry
 {
     /**
      * Format value => parser class, formatter class and file extensions, in the order of the Format cases.
-     * Null means that the library cannot read or write the format. Format::fromPath() explains the extension order.
+     * Null means that the library cannot read or write the format. Format::tryFromPath() explains the extension order.
      */
     private const FORMATS = [
         Format::Ass->value                => [AssParser::class, AssFormatter::class, ["ass", "ssa"]],

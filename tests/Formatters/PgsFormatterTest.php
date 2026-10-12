@@ -19,6 +19,7 @@ use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class PgsFormatterTest extends TestCase
 {
@@ -46,7 +47,7 @@ class PgsFormatterTest extends TestCase
     {
         $image = new CueImage(PngEncoder::encode($width, $height, $pixels), 100, 900, $width, $height, 1920, 1080, $forced);
 
-        return $image->toCue(new SubtitleCue($start, $end));
+        return TestSubtitles::imageCue($image, new SubtitleCue($start, $end));
     }
 
 
@@ -260,8 +261,10 @@ class PgsFormatterTest extends TestCase
     public function testOverlappingImagesOnTheScreenShareOneWindow(): void
     {
         $subtitle = (new Subtitle())
-            ->addCue((new CueImage(PngEncoder::encode(2, 1, [0xFFFFFFFF, 0x00000000]), 10, 20, 2, 1, 720, 576))->toCue(new SubtitleCue(1, 3)))
-            ->addCue((new CueImage(PngEncoder::encode(1, 2, [0x000000FF, 0x000000FF]), 11, 20, 1, 2, 720, 576))->toCue(new SubtitleCue(1, 3)));
+            ->addCue(TestSubtitles::imageCue(new CueImage(PngEncoder::encode(2, 1, [0xFFFFFFFF, 0x00000000]), 10, 20, 2, 1, 720, 576),
+                                             new SubtitleCue(1, 3)))
+            ->addCue(TestSubtitles::imageCue(new CueImage(PngEncoder::encode(1, 2, [0x000000FF, 0x000000FF]), 11, 20, 1, 2, 720, 576),
+                                             new SubtitleCue(1, 3)));
 
         $segments = self::segments($subtitle->toString(Format::Pgs));
 
@@ -342,8 +345,8 @@ class PgsFormatterTest extends TestCase
         $height = intdiv(strlen($indexes), $width);
         $pixels = array_map(fn (string $entry): int => $palette[ord($entry)], str_split($indexes));
 
-        return [(new CueImage(PngEncoder::encodeIndexed($width, $height, $indexes, $palette), 100, 900, $width, $height, 1920, 1080))
-                    ->toCue(new SubtitleCue($start, $end)),
+        return [TestSubtitles::imageCue(new CueImage(PngEncoder::encodeIndexed($width, $height, $indexes, $palette), 100, 900, $width, $height, 1920, 1080),
+                                        new SubtitleCue($start, $end)),
                 self::imageCue($start, $end, $width, $height, $pixels)];
     }
 
@@ -377,7 +380,7 @@ class PgsFormatterTest extends TestCase
     {
         $indexes  = str_repeat("\1", 3840 * 1080) . str_repeat("\2", 3840 * 1080);
         $image    = new CueImage(PngEncoder::encodeIndexed(3840, 2160, $indexes, [0, 0xFFFFFFFF, 0x000000FF]), 0, 0, 3840, 2160, 3840, 2160);
-        $subtitle = (new Subtitle())->addCue($image->toCue(new SubtitleCue(1.0, 2.0)));
+        $subtitle = (new Subtitle())->addCue(TestSubtitles::imageCue($image, new SubtitleCue(1.0, 2.0)));
         unset($indexes);
 
         memory_reset_peak_usage();
@@ -422,7 +425,7 @@ class PgsFormatterTest extends TestCase
         $this->assertSame(PgsFormatter::class, FormatRegistry::formatterClass(Format::Pgs));
 
         $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
-        $code    = (new Application(...$streams))->run(["subtitle-toolbox", "retime", self::FILES . "pgs/shapes_576p.sup", "--shift", "1"]);
+        $code    = (new Application(...$streams))->run(["stbox", "convert", self::FILES . "pgs/shapes_576p.sup", "--shift", "1"]);
         rewind($streams[1]);
 
         $this->assertSame(0, $code);
@@ -440,9 +443,9 @@ class PgsFormatterTest extends TestCase
 
         return [
             "text cue"     => [new SubtitleCue(1, 2, "text"), "the cue holds no image, and PGS output cannot hold text"],
-            "size"         => [(new CueImage($image->png, 0, 0, 3, 2, 720, 576))->toCue(new SubtitleCue(1, 2)), "the PNG has 2x2 pixels"],
-            "negative x"   => [(new CueImage($image->png, -1, 0, 2, 2, 720, 576))->toCue(new SubtitleCue(1, 2)), "from 0 to 65535"],
-            "negative time" => [$image->toCue(new SubtitleCue(-0.5, 2)), "ticks of 90 kHz"],
+            "size"         => [TestSubtitles::imageCue(new CueImage($image->png, 0, 0, 3, 2, 720, 576), new SubtitleCue(1, 2)), "the PNG has 2x2 pixels"],
+            "negative x"   => [TestSubtitles::imageCue(new CueImage($image->png, -1, 0, 2, 2, 720, 576), new SubtitleCue(1, 2)), "from 0 to 65535"],
+            "negative time" => [TestSubtitles::imageCue($image, new SubtitleCue(-0.5, 2)), "ticks of 90 kHz"],
         ];
     }
 

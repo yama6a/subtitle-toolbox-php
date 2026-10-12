@@ -88,6 +88,8 @@ final class TimestampMap
 
     /**
      * Returns whether the WebVTT header line is an X-TIMESTAMP-MAP line.
+     *
+     * @internal
      */
     public static function isHeader(string $line): bool
     {
@@ -111,6 +113,8 @@ final class TimestampMap
 
     /**
      * Returns the header line, for example X-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:900000.
+     *
+     * @internal
      */
     public function toHeader(): string
     {

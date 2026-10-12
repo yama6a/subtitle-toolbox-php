@@ -1,15 +1,15 @@
 # Backward compatibility
 
-The library follows semantic versioning. A 4.x minor or patch release does not break code that uses the parts below as this page describes. A break waits for 5.0.
+The library follows semantic versioning. A 5.x minor or patch release does not break code that uses the parts below as this page describes. A break waits for 6.0.
 
 ## Covered
-| Part | What stays stable in 4.x |
+| Part | What stays stable in 5.x |
 |:--- |:--- |
 | PHP API | public classes, methods, properties, constants and enums that are not `@internal` |
 | Method behaviour | the behaviour that the docs describe for a method, and the default value of each method parameter, such as `maxGap` of `removeDuplicateCues()`. Only a major release changes them |
 | Parameter names | every parameter name. Call options constructors with named arguments, for example `new WriteOptions(bom: true)` |
 | Exceptions | the exception classes, their codes and the parents that [errors.md](errors.md) lists, including the SPL parents |
-| CLI | the commands, the options, the meaning of each exit code and the `--json` shapes of the binary `subtitle-toolbox`. The CLI never overwrites a file |
+| CLI | the commands, the options, the meaning of each exit code and the `--json` shapes of the binary `stbox`. The CLI never overwrites a file |
 | Library JSON | version 1 of the JSON that `toString(Format::Json)` and `toArray()` write, and that `Format::Json` and `fromArray()` read. See [json.md](json.md) |
 | Format data | the keys and the value types of the format data that `findFormatData()` returns. See [formats.md](formats.md) |
 
@@ -32,7 +32,7 @@ The library follows semantic versioning. A 4.x minor or patch release does not b
 ## Text fixes and presets
 - **Existing rules**: a patch release can change a rule so that it stops changing text that it should keep. This applies to `CommonErrorFixer`, `HearingImpairedRemover`, `ProfanityFilter` and `SpeakerLabels`.
 - **New rules**: a new rule is off by default. Turn it on with its option.
-- **Presets**: `ValidationRules::netflixEnglish()`, `ValidationRules::bbc()` and the CLI `validate --preset` never get a new rule in 4.x.
+- **Presets**: `ValidationRules::netflixEnglish()`, `ValidationRules::bbc()` and the CLI `validate --preset` never get a new rule in 5.x.
 
 ## Major releases
 A major release can remove or change anything above. Its upgrade guide lists each change.
@@ -41,7 +41,7 @@ A major release can remove or change anything above. Its upgrade guide lists eac
 - **`@internal`**: a class, method or constant marked `@internal` can change in any release. An example is `ImageFormatter`.
 - **Constructors of reports and results**: only the library creates reports and results. Read their fields, but do not create them. `RecognizedText` and `Comment` are the 2 exceptions with a public constructor, because an `OcrEngine` returns `RecognizedText`. These constructors are `@internal`:
   - Reports: `CommonErrorReport`, `HearingImpairedReport`, `OcrReport`, `ProfanityReport`, `ReferenceSyncReport`, `ResegmentReport`, `SccWriteReport`, `ShotChangeReport`, `SpeakerLabelReport`, `TranslationReport`, `WebVttWriteReport` and `WordHighlightReport`.
-  - Results: `AppliedFix`, `CueDifference`, `ValidationViolation`, `TranslationWarning`, `MuteRange`, `SccFitChange`, `SubtitleTrack`, `WebVttDroppedColor` and `HlsWebVttRendition`.
+  - Results: `AppliedFix`, `CueDifference`, `ValidationViolation`, `TranslationWarning`, `MuteRange`, `SccFitChange`, `SubtitleTrack`, `SyncSegment`, `WebVttDroppedColor` and `HlsWebVttRendition`.
   - `ParseWarning`, also `ParseWarning::skipped()`.
 - **Parsers and formatters as base classes**: do not extend `SubtitleParser` or `SubtitleFormatter`. Their protected members can change in any release. Call a parser or formatter from your own class.
 - **Exceptions as base classes**: do not extend an exception class. `UnsupportedFormatException` is not `final`, because `UnknownFormatException` extends it. The protected `CODE` constant of an exception class is not API. `GenericException` is not API, also as a parent.

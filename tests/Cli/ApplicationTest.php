@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
@@ -58,7 +59,7 @@ class ApplicationTest extends TestCase
     {
         $srt = file_get_contents(__DIR__ . "/../files/cli/trip.srt");
 
-        $this->assertSame([0, Subtitle::fromStringAutoDetectFormat($srt)->toString(Format::WebVtt), ""], self::runApplication(["convert", "-", "--to", "vtt"], $srt));
+        $this->assertSame([0, Subtitle::fromString($srt)->toString(Format::WebVtt), ""], self::runApplication(["convert", "-", "--to", "vtt"], $srt));
     }
 
 
@@ -115,25 +116,21 @@ class ApplicationTest extends TestCase
     public function testUsageErrorsExitWith2(): void
     {
         $this->assertSame(
-            self::usageError("retime", "Pass --shift SECONDS, --scale FACTOR, --sync OLD=NEW, or --from-fps RATE and --to-fps RATE."),
-            self::runApplication(["retime", "-"])
+            self::usageError("convert", "Pass --from-fps and --to-fps together."),
+            self::runApplication(["convert", "-", "--from-fps", "25"])
         );
         $this->assertSame(
-            self::usageError("retime", "Pass --from-fps and --to-fps together."),
-            self::runApplication(["retime", "-", "--from-fps", "25"])
-        );
-        $this->assertSame(
-            self::usageError("retime", "Pass --shift with --shift-after."),
-            self::runApplication(["retime", "-", "--scale", "2", "--shift-after", "1"])
+            self::usageError("convert", "Pass --shift with --shift-after."),
+            self::runApplication(["convert", "-", "--scale", "2", "--shift-after", "1"])
         );
     }
 
 
     public function testRemovedCommandsAreUnknownAndNotInTheHelp(): void
     {
-        foreach (["shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "snap"] as $command) {
+        foreach (["retime", "shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "snap"] as $command) {
             $this->assertSame(
-                [2, "", "Error: Unknown command \"$command\".\nRun \"subtitle-toolbox help\" for the usage.\n"],
+                [2, "", "Error: Unknown command \"$command\".\nRun \"stbox help\" for the usage.\n"],
                 self::runApplication([$command, "-", "--by", "1"])
             );
             $this->assertDoesNotMatchRegularExpression("/^  $command +\\S/m", self::runApplication(["--help"])[1]);
@@ -172,19 +169,24 @@ class ApplicationTest extends TestCase
     }
 
 
-    public function testOneXChapterFormatNamesStillWorkAsFromAndTo(): void
+    #[DataProvider("removedChapterAliases")]
+    public function testTheOneXChapterAliasesAreUnknownFormats(string $alias): void
     {
-        $files = __DIR__ . "/../files/chapters/";
-        foreach ([
-            "ytchapter" => ["youtube/real/video_description.txt", Format::YouTubeChapters],
-            "podcast"   => ["podcast/real/spec_basic_example.json", Format::PodcastChapters],
-            "ogm"       => ["ogm/real/mkvextract_simple.txt", Format::OgmChapters],
-            "ffmeta"    => ["ffmetadata/real/m4b_audiobook.ffmeta", Format::FfMetadataChapters],
-        ] as $alias => [$file, $format]) {
-            $expected = Subtitle::load($files . $file, $format)->toString($format);
-            $this->assertSame([0, $expected, ""], self::runApplication(["convert", $files . $file, "--from", $alias, "--to", $alias]), $alias);
-        }
+        $input = __DIR__ . "/../files/chapters/ogm/real/mkvextract_simple.txt";
+        foreach ([["--from", $alias], ["--from", "ogm-chapters", "--to", $alias]] as $options) {
+            [$code, $stdout, $stderr] = self::runApplication(["convert", $input, ...$options]);
 
-        $this->assertNull(Format::tryFrom("ytchapter"));
+            $this->assertSame([2, ""], [$code, $stdout]);
+            $this->assertStringContainsString("Unknown format \"$alias\". Run \"stbox formats\" for the list.", $stderr);
+        }
+    }
+
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function removedChapterAliases(): array
+    {
+        return ["ytchapter" => ["ytchapter"], "podcast" => ["podcast"], "ogm" => ["ogm"]];
     }
 }

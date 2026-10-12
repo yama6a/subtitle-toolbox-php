@@ -29,7 +29,7 @@ class RobustnessLimitsTest extends TestCase
     private static function runApplication(array $arguments): array
     {
         $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
-        $code    = (new Application(...$streams))->run(["subtitle-toolbox", ...$arguments]);
+        $code    = (new Application(...$streams))->run(["stbox", ...$arguments]);
         rewind($streams[1]);
         rewind($streams[2]);
 
@@ -72,7 +72,7 @@ class RobustnessLimitsTest extends TestCase
         $sync = ["sync", self::FILES . "cli/trip.srt", "--reference", self::FILES . "cli/shop.vtt", "-o", "-"];
 
         $this->assertSame([2, "", "Error: The option --max-splits needs a whole number from 0 to 10, got \"99999999999999999999\".\n" .
-                                  "Run \"subtitle-toolbox help sync\" for the usage.\n"],
+                                  "Run \"stbox help sync\" for the usage.\n"],
                           self::runApplication([...$sync, "--max-splits", "99999999999999999999"]));
         [$code, , $error] = self::runApplication([...$sync, "--max-offset", "100000"]);
         $this->assertSame(2, $code);

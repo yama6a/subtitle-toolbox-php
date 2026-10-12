@@ -100,7 +100,7 @@ class ApplicationConvertTest extends TestCase
         CommonErrorFixer::apply($expected, new CommonErrorOptions(language: "en"));
         HearingImpairedRemover::apply($expected, new HearingImpairedOptions(parentheses: false));
         $expected->replaceText("Too late", "[late] too late")->stripFormatting()->changeCase(CaseMode::Upper, "en");
-        SpeakerLabels::apply($expected, new SpeakerLabelOptions(to: SpeakerStyle::Prefix));
+        SpeakerLabels::apply($expected, new SpeakerLabelOptions(style: SpeakerStyle::Prefix));
         ProfanityFilter::apply($expected, new ProfanityOptions(["tickets"], ProfanityMask::FirstLetter));
         $expected->wrapLines(20)->removeDuplicateCues()->shift(-0.5)->scale(1.001);
         ShotChangeTiming::apply($expected, new ShotChangeOptions(24));

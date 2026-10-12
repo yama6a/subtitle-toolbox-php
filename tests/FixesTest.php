@@ -70,16 +70,6 @@ class FixesTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testFixOverlapsUsesTheNextCueInTimeOrder(): void
-    {
-        $subtitle = TestSubtitles::inGivenOrder([[10, 14, "late"], [1, 12, "early"]]);
-
-        $subtitle->fixOverlaps();
-
-        $this->assertSame([[10.0, 14.0], [1.0, 10.0]], TestSubtitles::times($subtitle));
-    }
-
-
     public function testFixOverlapsNeverMovesAStartTime(): void
     {
         $subtitle = TestSubtitles::fromTimes([[5, 6], [5, 7], [5.05, 8]]);
@@ -209,16 +199,6 @@ class FixesTest extends \PHPUnit\Framework\TestCase
         $subtitle->addLeadInOut(...$arguments);
 
         $this->assertSame($expected, TestSubtitles::times($subtitle));
-    }
-
-
-    public function testAddLeadInOutUsesTheTimeOrderOfTheCues(): void
-    {
-        $subtitle = TestSubtitles::inGivenOrder([[5, 6, "late"], [1, 4.9, "early"]]);
-
-        $subtitle->addLeadInOut(0.2, 0.3);
-
-        $this->assertSame([[0.8, 5.0], [5.0, 6.3]], TestSubtitles::times($subtitle));
     }
 
 
@@ -434,12 +414,33 @@ class FixesTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testWrapLinesDoesNotBreakTextWithoutSpaces(): void
+    public function testWrapLinesBreaksTextWithoutSpacesBetweenCharacters(): void
     {
-        $text = "これは字幕の長い行で、画面に収まりません。これは字幕の長い行です。";
-
-        $this->assertSame([$text], $this->wrap($text, 16));
+        $this->assertSame(["これは字幕の長い行で、", "画面に収まりません。"], $this->wrap("これは字幕の長い行で、画面に収まりません。", 16));
         $this->assertSame(["これは字幕の長い行で、", "画面に収まりません。"], $this->wrap("これは字幕の長い行で、\n画面に収まりません。", 16));
+    }
+
+
+    #[DataProvider('cjkFiles')]
+    public function testWrapLinesBreaksChineseAndJapaneseLinesOfARealFile(string $name, int $maxCharactersPerLine): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/files/fixes/$name.srt"), Format::SubRip);
+
+        $subtitle->wrapLines($maxCharactersPerLine);
+
+        $this->assertSame(file_get_contents(__DIR__ . "/files/fixes/{$name}_wrapped.srt"), $subtitle->toString(Format::SubRip));
+
+        $unwrapped = Subtitle::fromString(file_get_contents(__DIR__ . "/files/fixes/$name.srt"), Format::SubRip)->unwrapLines();
+        $this->assertSame($unwrapped->toString(Format::SubRip), $subtitle->unwrapLines()->toString(Format::SubRip));
+    }
+
+
+    public static function cjkFiles(): array
+    {
+        return [
+            "Simplified Chinese at the Netflix limit" => ["own_zh_long_lines", 16],
+            "Japanese at the Netflix limit"           => ["own_ja_long_lines", 13],
+        ];
     }
 
 

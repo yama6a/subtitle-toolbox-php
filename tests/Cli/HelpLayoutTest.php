@@ -36,9 +36,9 @@ class HelpLayoutTest extends TestCase
     public function testAnOptionGroupAtTheWrapPointMovesToTheNextLineWhole(): void
     {
         $this->assertSame(
-            "Usage: subtitle-toolbox convert <input>... --to FORMAT --from FMT\n" .
-            "                                [--output-dir DIR] [options]\n",
-            HelpLayout::usage("Usage: subtitle-toolbox convert", "<input>... --to FORMAT --from FMT [--output-dir DIR] [options]")
+            "Usage: stbox convert <input>... --to FORMAT --from FMT --errors-fix\n" .
+            "                     [--output-dir DIR] [options]\n",
+            HelpLayout::usage("Usage: stbox convert", "<input>... --to FORMAT --from FMT --errors-fix [--output-dir DIR] [options]")
         );
     }
 
@@ -46,16 +46,16 @@ class HelpLayoutTest extends TestCase
     public function testAnOptionAndItsValueAtTheWrapPointMoveToTheNextLineTogether(): void
     {
         $this->assertSame(
-            "Usage: subtitle-toolbox convert <input>... --to FORMAT [-o FILE.srt]\n" .
-            "                                --encoding NAME [options]\n",
-            HelpLayout::usage("Usage: subtitle-toolbox convert", "<input>... --to FORMAT [-o FILE.srt] --encoding NAME [options]")
+            "Usage: stbox convert <input>... --to FORMAT [-o FILE.srt] --errors-fix\n" .
+            "                     --encoding NAME [options]\n",
+            HelpLayout::usage("Usage: stbox convert", "<input>... --to FORMAT [-o FILE.srt] --errors-fix --encoding NAME [options]")
         );
     }
 
 
     public function testWrapKeepsALineThatStartsWithASpace(): void
     {
-        $command = "  subtitle-toolbox convert " . str_repeat("film.srt ", 10) . "--to vtt";
+        $command = "  stbox convert " . str_repeat("film.srt ", 10) . "--to vtt";
 
         $this->assertSame("$command\n", HelpLayout::wrap($command));
     }

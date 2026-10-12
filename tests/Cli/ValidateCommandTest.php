@@ -27,7 +27,7 @@ class ValidateCommandTest extends TestCase
 
     public function testRulesKeepTheFieldsWithoutAnOption(): void
     {
-        $base = new ValidationRules(maxCharactersPerLine: 42, requireCues: true, noUnsortedCues: true, noNegativeDuration: true);
+        $base = new ValidationRules(maxCharactersPerLine: 42, requireCues: true, noNegativeDuration: true);
 
         $rules = ValidateCommand::rules(self::arguments([]), $base);
 

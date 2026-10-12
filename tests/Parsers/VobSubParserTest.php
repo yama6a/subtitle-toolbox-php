@@ -6,7 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
@@ -253,7 +253,7 @@ class VobSubParserTest extends TestCase
 
     public function testTextFormatterThrowsWithoutOcr(): void
     {
-        $this->expectException(ImageCueWithoutTextException::class);
+        $this->expectException(UnwritableContentException::class);
 
         $this->parseFixture("two-tracks-pal")->toString(Format::SubRip);
     }

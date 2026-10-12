@@ -12,6 +12,53 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 final class CueList
 {
     /**
+     * Sets the lines that $linesOf returns for each cue, or keeps the cue as is when it returns null.
+     * Then it removes, in one pass, each cue that had text before and has none after.
+     * $hasText decides, Markup::hasVisibleText() by default.
+     *
+     * @param callable(SubtitleCue, int): ?list<string> $linesOf
+     * @param ?callable(array<string>): bool            $hasText
+     *
+     * @return \SplObjectStorage<SubtitleCue, true> the removed cues
+     */
+    public static function setLinesAndRemoveEmptied(Subtitle $subtitle, callable $linesOf, ?callable $hasText = null): \SplObjectStorage
+    {
+        $hasText ??= Markup::hasVisibleText(...);
+        $emptied   = new \SplObjectStorage();
+        foreach ($subtitle->getCues() as $index => $cue) {
+            $before = $cue->getLines();
+            $lines  = $linesOf($cue, $index);
+            if ($lines === null) {
+                continue;
+            }
+
+            $cue->setLines($lines);
+            if ($hasText($before) && !$hasText($cue->getLines())) {
+                $emptied[$cue] = true;
+            }
+        }
+        if ($emptied->count() > 0) {
+            $subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($emptied[$cue]));
+        }
+
+        return $emptied;
+    }
+
+
+    /**
+     * Moves the start, the end and each word timestamp of $cue to $map(seconds). A time below 0 becomes 0.
+     *
+     * @param callable(float): float $map
+     */
+    public static function mapTimes(SubtitleCue $cue, callable $map): SubtitleCue
+    {
+        return $cue->setStart(max(0.0, $map($cue->getStart())))
+                   ->setEnd(max(0.0, $map($cue->getEnd())))
+                   ->mapWordTimestamps($map);
+    }
+
+
+    /**
      * @param SubtitleCue[] $cues
      *
      * @return list<SubtitleCue>

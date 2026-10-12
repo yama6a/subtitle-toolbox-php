@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Profanity;
 
+use SubtitleToolbox\CueList;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -23,7 +24,7 @@ final class ProfanityFilter
         $pattern = self::pattern($options->words);
         $ranges  = [];
 
-        $subtitle->setLinesAndRemoveEmptied(function (SubtitleCue $cue) use ($pattern, $options, &$ranges): ?array {
+        CueList::setLinesAndRemoveEmptied($subtitle, function (SubtitleCue $cue) use ($pattern, $options, &$ranges): ?array {
             $lines = array_values($cue->getLines());
 
             return $lines === [] ? null : self::filterCue($cue, $lines, $pattern, $options, $ranges);

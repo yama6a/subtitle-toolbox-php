@@ -60,7 +60,7 @@ final class HelpLayout
 
 
     /**
-     * Wraps the usage line $line after $prefix, such as "Usage: subtitle-toolbox convert".
+     * Wraps the usage line $line after $prefix, such as "Usage: stbox convert".
      * The next lines start below the first word after $prefix.
      */
     public static function usage(string $prefix, string $line): string

@@ -10,14 +10,14 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\TextEncoding;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.srt'), Format::SubRip, new ReadOptions(encoding: TextEncoding::Windows1252));
-$subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.smi'), new ReadOptions(encoding: TextEncoding::Cp949));
+$subtitle = Subtitle::fromString(file_get_contents('movie.smi'), options: new ReadOptions(encoding: TextEncoding::Cp949));
 $subtitle = Subtitle::fromString(file_get_contents('ukrainian.srt'), Format::SubRip, new ReadOptions(encoding: 'CP1125'));
 StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Windows-1252 file with letters such as é
 ```
 
 ## Order of the checks
 
-`load()`, `loadAutoDetectFormat()` and the `fromString` functions take the first rule that applies:
+`load()` and `fromString()` take the first rule that applies:
 
 | Step | Content | Read as |
 |:--- |:--- |:--- |
@@ -29,7 +29,7 @@ StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Win
 | 6 | Anything else | UTF-8. The parsers keep the invalid bytes |
 
 - **Repeated BOMs**: joined files can start with 2 or more UTF-8 BOMs. Detection and the parsers drop all of them. The SubRip, WebVTT and SBV parsers and the stream readers also drop a UTF-8 BOM at the start of a line, where a joined file starts.
-- **Mixed folders**: valid UTF-8 wins over `ReadOptions::$encoding`. So `subtitle-toolbox convert season1/ --encoding Windows-1256` reads both the UTF-8 and the Windows-1256 files of the folder correctly.
+- **Mixed folders**: valid UTF-8 wins over `ReadOptions::$encoding`. So `stbox convert season1/ --encoding Windows-1256` reads both the UTF-8 and the Windows-1256 files of the folder correctly.
 - **UTF-16 without a BOM**: in ASCII text, every second byte is zero. The check reads the first 1024 bytes. At least 40 % of the byte pairs must have a zero byte on one side, and at most 5 % on the other side. A UTF-8 or Windows-1252 file with a stray zero byte does not pass.
 - **UTF-32 without a BOM**: such content holds zero bytes on both sides of each byte pair. It is converted only from `ReadOptions::$encoding`, for example `UTF-32LE`.
 - **Code page detection**: the detector tries Windows-1250 to Windows-1258, ISO-8859-1, -2, -5, -7 and -9, KOI8-R and KOI8-U. It decodes the lines with bytes from 0x80 in each code page. Letters of the languages that use the code page score. Other letters, symbols inside words, mixed scripts and odd letter case cost. On a tie, the Windows code page wins, so ISO-8859-1 text reads as Windows-1252, which decodes it the same.

@@ -6,10 +6,10 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\CueNotFoundException;
-use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
 use SubtitleToolbox\Exceptions\UnsupportedFormatException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Formatters\ImageFormatter;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\OcrEngine;
@@ -53,9 +53,6 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     private ?Format $format = null;
 
-    /** True while the cues keep the order that fromArray() read, out of start order. */
-    private bool $keepsArrayCueOrder = false;
-
     /** Above this count of start changes, the next read checks the order of all cues instead of moving each changed cue. */
     private const MAX_MOVED_CUES = 100;
 
@@ -85,23 +82,16 @@ final class Subtitle implements \IteratorAggregate, \Countable
      * Reads the file at $path in $format. An MKV, WebM or MP4 file throws, see loadTrack().
      * For Format::VobSub, $path is the .idx or the .sub file, and the other file must lie next to it.
      * The content of the .idx file replaces VobSubReadOptions::$idx.
-     */
-    public static function load(string $path, Format $format, ?ReadOptions $options = null): self
-    {
-        return SubtitleReader::load($path, $format, $options ?? new ReadOptions());
-    }
-
-
-    /**
-     * Reads the file at $path in the format that its content shows, else in the format of its extension.
+     *
+     * Without $format, it reads the file in the format that its content shows, else in the format of its extension.
      * It tries only formats whose isAutoDetected() is true. An MKV, WebM or MP4 file must hold exactly 1 subtitle track.
      * An empty or whitespace-only file gives an empty subtitle in the format of its extension.
      *
-     * @throws UnknownFormatException when no such format matches.
+     * @throws UnknownFormatException when $format is null and no such format matches.
      */
-    public static function loadAutoDetectFormat(string $path, ?ReadOptions $options = null): self
+    public static function load(string $path, ?Format $format = null, ?ReadOptions $options = null): self
     {
-        return SubtitleReader::loadAutoDetect($path, $options ?? new ReadOptions());
+        return SubtitleReader::load($path, $format, $options ?? new ReadOptions());
     }
 
 
@@ -130,37 +120,30 @@ final class Subtitle implements \IteratorAggregate, \Countable
      * Reads $content in $format. MKV, WebM and MP4 content throws, see loadTrack().
      * A UTF-16 or UTF-32 BOM, or else ReadOptions::$encoding such as "Windows-1252", sets the encoding to convert from.
      * Valid UTF-8 content without zero bytes stays as is. See docs/encodings.md for UTF-16 without a BOM.
+     *
+     * Without $format, it reads $content in the format that Format::detect() finds. It tries only formats whose
+     * isAutoDetected() is true. MKV, WebM and MP4 content must hold exactly 1 subtitle track.
+     *
+     * @throws UnknownFormatException when $format is null and no such format matches.
      */
-    public static function fromString(string $content, Format $format, ?ReadOptions $options = null): self
+    public static function fromString(string $content, ?Format $format = null, ?ReadOptions $options = null): self
     {
         return SubtitleReader::fromString($content, $format, $options ?? new ReadOptions());
     }
 
 
     /**
-     * Reads $content in the format that Format::detect() finds. It tries only formats whose isAutoDetected() is true.
-     * MKV, WebM and MP4 content must hold exactly 1 subtitle track.
-     *
-     * @throws UnknownFormatException when no such format matches.
-     */
-    public static function fromStringAutoDetectFormat(string $content, ?ReadOptions $options = null): self
-    {
-        return SubtitleReader::fromStringAutoDetect($content, $options ?? new ReadOptions());
-    }
-
-
-    /**
-     * Returns the format that load(), loadAutoDetectFormat(), loadTrack(), a container reader or a fromString call read.
+     * Returns the format that load(), loadTrack(), a container reader or fromString() read.
      * Returns null for a subtitle from new Subtitle() or fromArray(). For an MKV track, it is the format of the track codec.
      */
-    public function getFormat(): ?Format
+    public function findFormat(): ?Format
     {
         return $this->format;
     }
 
 
     /**
-     * Returns the encoding that load(), loadAutoDetectFormat() or a fromString call read the text from, for example
+     * Returns the encoding that load() or fromString() read the text from, for example
      * "UTF-8", "UTF-16LE" or "Windows-1252". Returns null for a binary format, an MKV, WebM or MP4 track, and a subtitle
      * that no parser read. See docs/encodings.md for the order of the checks.
      */
@@ -171,7 +154,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Sets the format that getFormat() returns.
+     * Sets the format that findFormat() returns.
      *
      * @internal
      */
@@ -225,7 +208,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
      */
     public function save(string $path, ?Format $format = null, ?WriteOptions $options = null): void
     {
-        $format ??= Format::fromPath($path)
+        $format ??= Format::tryFromPath($path)
             ?? throw new UnsupportedFormatException("The extension of $path names no format. Pass a format to save().");
         $content  = $this->toString($format, $options ?? new WriteOptions());
 
@@ -254,8 +237,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
                 CueImage::isImageCue($cue) && $cue->getLines() === []));
 
             if ($imageCueIndexes !== [] && !$options->skipImageCues) {
-                throw new ImageCueWithoutTextException("Cue #{$imageCueIndexes[0]} holds an image but no text. " .
-                                                       "Run recognizeText() first, or pass WriteOptions(skipImageCues: true).");
+                throw new UnwritableContentException("Cue #{$imageCueIndexes[0]} holds an image but no text, and {$format->value} needs text. " .
+                                                     "Run OCR with recognizeText() first, write a bitmap format such as PGS, or pass WriteOptions(skipImageCues: true).");
             }
             if ($imageCueIndexes !== []) {
                 $subtitle = $this->withoutCues($imageCueIndexes);
@@ -304,7 +287,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         $this->sortStartChanges();
         CueHolders::hold($this, $added);
         $count = count($this->cues);
-        if (!$this->keepsArrayCueOrder && CueList::startsInOrder(array_merge(array_slice($this->cues, -1), $added))) {
+        if (CueList::startsInOrder(array_merge(array_slice($this->cues, -1), $added))) {
             array_push($this->cues, ...$added);
             // A comment after the last cue stays after the last cue.
             for ($index = count($this->comments) - 1; $index >= 0 && $this->comments[$index]->beforeCueIndex >= $count; $index--) {
@@ -340,10 +323,6 @@ final class Subtitle implements \IteratorAggregate, \Countable
         if (!in_array($removed, $this->cues, true)) {
             CueHolders::release($this, [$removed]);
         }
-        if ($this->keepsArrayCueOrder) {
-            return $this->reIndexCues();
-        }
-
         $this->cues = array_values($this->cues);
         foreach ($this->comments as $index => $comment) {
             if ($comment->beforeCueIndex > $cueIndex) {
@@ -358,65 +337,13 @@ final class Subtitle implements \IteratorAggregate, \Countable
     /**
      * Sorts the cues by start time and numbers them from 0. Each comment stays before its cue.
      */
-    public function reIndexCues(): self
+    private function reIndexCues(): self
     {
         $anchors = CommentAnchors::of($this->cues, $this->comments);
         $this->sortCues();
         $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
-    }
-
-
-    /**
-     * Returns a copy with the metadata, the format data and the format of this subtitle, but without cues and comments.
-     *
-     * @internal
-     */
-    public function emptyCopy(): self
-    {
-        $copy           = clone $this;
-        $copy->cues     = [];
-        $copy->comments = [];
-
-        return $copy;
-    }
-
-
-    /**
-     * Sets the lines that $linesOf returns for each cue, or keeps the cue as is when it returns null.
-     * Then it removes, in one pass, each cue that had text before and has none after.
-     * $hasText decides, Markup::hasVisibleText() by default.
-     *
-     * @param callable(SubtitleCue, int): ?list<string> $linesOf
-     * @param ?callable(array<string>): bool            $hasText
-     *
-     * @return \SplObjectStorage<SubtitleCue, true> the removed cues
-     *
-     * @internal
-     */
-    public function setLinesAndRemoveEmptied(callable $linesOf, ?callable $hasText = null): \SplObjectStorage
-    {
-        $this->sortStartChanges();
-        $hasText ??= Markup::hasVisibleText(...);
-        $emptied   = new \SplObjectStorage();
-        foreach ($this->cues as $index => $cue) {
-            $before = $cue->getLines();
-            $lines  = $linesOf($cue, $index);
-            if ($lines === null) {
-                continue;
-            }
-
-            $cue->setLines($lines);
-            if ($hasText($before) && !$hasText($cue->getLines())) {
-                $emptied[$cue] = true;
-            }
-        }
-        if ($emptied->count() > 0) {
-            $this->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($emptied[$cue]));
-        }
-
-        return $emptied;
     }
 
 
@@ -505,8 +432,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     private function sortCues(): void
     {
-        $this->cues               = CueList::inStartOrder($this->cues);
-        $this->keepsArrayCueOrder = false;
+        $this->cues = CueList::inStartOrder($this->cues);
         CueHolders::takeStartChanges($this);
     }
 
@@ -519,11 +445,6 @@ final class Subtitle implements \IteratorAggregate, \Countable
     {
         $changed = CueHolders::takeStartChanges($this);
         if ($changed === null) {
-            return;
-        }
-        if ($this->keepsArrayCueOrder) {
-            $this->reIndexCues();
-
             return;
         }
 
@@ -541,12 +462,12 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Holds the cues after a copy or an unserialize, and sorts them unless they keep the order of fromArray().
+     * Holds the cues after a copy, an unserialize or fromArray(), and sorts them.
      */
     private function holdCuesInStartOrder(): void
     {
         CueHolders::hold($this, $this->cues);
-        if (!$this->keepsArrayCueOrder && !CueList::startsInOrder($this->cues)) {
+        if (!CueList::startsInOrder($this->cues)) {
             $this->reIndexCues();
         }
     }

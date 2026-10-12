@@ -14,6 +14,7 @@ use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class JsonFormatterTest extends TestCase
 {
@@ -55,7 +56,7 @@ class JsonFormatterTest extends TestCase
     {
         $png      = PngEncoder::encode(1, 1, [0xFF0000FF]);
         $subtitle = new Subtitle();
-        $subtitle->addCue((new CueImage($png, 1, 2, 1, 1, 720, 576))->toCue(new SubtitleCue(1, 2)));
+        $subtitle->addCue(TestSubtitles::imageCue(new CueImage($png, 1, 2, 1, 1, 720, 576), new SubtitleCue(1, 2)));
 
         $json = json_decode($subtitle->toString(Format::Json), true);
 

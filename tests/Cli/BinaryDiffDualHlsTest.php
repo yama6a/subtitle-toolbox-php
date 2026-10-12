@@ -30,7 +30,7 @@ class BinaryDiffDualHlsTest extends CliTestCase
             "diff with - as the new file"     => [["diff", "v1.srt", "-"], "diff", "Standard input works only for the old file. Pass the new file by name."],
             "diff --time-tolerance -1"        => [["diff", "v1.srt", "v2.srt", "--time-tolerance", "-1"], "diff", "The option --time-tolerance must not be negative."],
             "diff --new-from docx"            => [["diff", "trip.srt", "frames.sub", "--new-from", "docx"], "diff",
-                                                  "Unknown format \"docx\". Run \"subtitle-toolbox formats\" for the list."],
+                                                  "Unknown format \"docx\". Run \"stbox formats\" for the list."],
             "diff --new-track x"              => [["diff", "movie.mkv", "movie.mkv", "--track", "3", "--new-track", "x"], "diff",
                                                   "The option --new-track needs a whole number of 1 or more, got \"x\"."],
             "dual without --secondary"        => [["dual", "--primary", "en.srt"], "dual", "Pass --primary FILE and --secondary FILE."],
@@ -124,7 +124,7 @@ class BinaryDiffDualHlsTest extends CliTestCase
     {
         copy(self::FILES . "diff/own_original.srt", "$this->dir/v1.srt");
         copy(self::FILES . "diff/own_edited.srt", "$this->dir/v2.srt");
-        file_put_contents("$this->dir/v1.vtt", Subtitle::fromStringAutoDetectFormat($this->file("v1.srt"))->toString(Format::WebVtt));
+        file_put_contents("$this->dir/v1.vtt", Subtitle::fromString($this->file("v1.srt"))->toString(Format::WebVtt));
     }
 
 
@@ -201,7 +201,7 @@ class BinaryDiffDualHlsTest extends CliTestCase
     {
         copy(self::FILES . "dual/station_en.srt", "$this->dir/en.srt");
         copy(self::FILES . "mkv/text_tracks.mkv", "$this->dir/movie.mkv");
-        $english = Subtitle::fromStringAutoDetectFormat($this->file("en.srt"));
+        $english = Subtitle::fromString($this->file("en.srt"));
         $german  = MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv")->extract(3);
         $frames  = Subtitle::load(self::FIXTURES . "frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
 

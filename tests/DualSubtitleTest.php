@@ -152,7 +152,7 @@ class DualSubtitleTest extends TestCase
         ));
         $noSnap = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions(
             mode: DualSubtitleMode::TopBottom,
-            snapTolerance: 0,
+            timeTolerance: 0,
         ));
 
         $this->assertSame([1.0, 3.7], [$dual->getCues()[1]->getStart(), $dual->getCues()[1]->getEnd()]);
@@ -199,6 +199,18 @@ class DualSubtitleTest extends TestCase
     }
 
 
+    public function testFormatComesFromThePrimary(): void
+    {
+        $primary   = Subtitle::fromString("1\n00:00:00,000 --> 00:00:02,000\nfirst\n", Format::SubRip);
+        $secondary = Subtitle::fromString("WEBVTT\n\n00:00.000 --> 00:02.000\nerste\n", Format::WebVtt);
+
+        $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
+
+        $this->assertSame(Format::SubRip, $dual->findFormat());
+        $this->assertSame("UTF-8", $dual->findSourceEncoding());
+    }
+
+
     public function testLanguageStaysWhenOnlyThePrimaryHasOne(): void
     {
         $primary   = TestSubtitles::fromCues([[0, 2, "first"]])->setMetadata(Subtitle::METADATA_LANGUAGE, "en");
@@ -218,7 +230,7 @@ class DualSubtitleTest extends TestCase
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
-        $this->assertNull($dual->getCues()[1]->getIdentifier());
+        $this->assertNull($dual->getCues()[1]->findIdentifier());
         $this->assertSame([], $dual->getCues()[1]->findFormatData("ass"));
     }
 
@@ -239,7 +251,7 @@ class DualSubtitleTest extends TestCase
     public static function provideInvalidOptions(): array
     {
         return [
-            "negative tolerance" => [["snapTolerance" => -0.1]],
+            "negative tolerance" => [["timeTolerance" => -0.1]],
             "unknown tag"        => [["secondaryStyle" => "c.yellow"]],
         ];
     }
