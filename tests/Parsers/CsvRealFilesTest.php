@@ -113,8 +113,8 @@ class CsvRealFilesTest extends TestCase
 
         $this->assertSame(array_map($this->describeCue(...), $subtitle->getCues()), array_map($this->describeCue(...), $fresh->getCues()));
         $this->assertSame(
-            array_map(fn (SubtitleCue $cue): ?string => $cue->getIdentifier(), $subtitle->getCues()),
-            array_map(fn (SubtitleCue $cue): ?string => $cue->getIdentifier(), $fresh->getCues())
+            array_map(fn (SubtitleCue $cue): ?string => $cue->findIdentifier(), $subtitle->getCues()),
+            array_map(fn (SubtitleCue $cue): ?string => $cue->findIdentifier(), $fresh->getCues())
         );
     }
 
@@ -167,6 +167,6 @@ class CsvRealFilesTest extends TestCase
     {
         $cues = $this->parseFile("sheets_export.tsv", new ReadOptions(formats: [new CsvReadOptions()]))->getCues();
 
-        $this->assertSame(["intro", "platform", null, "end"], array_map(fn (SubtitleCue $cue): ?string => $cue->getIdentifier(), $cues));
+        $this->assertSame(["intro", "platform", null, "end"], array_map(fn (SubtitleCue $cue): ?string => $cue->findIdentifier(), $cues));
     }
 }

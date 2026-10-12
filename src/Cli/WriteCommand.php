@@ -139,7 +139,7 @@ abstract class WriteCommand extends FileCommand
         if ($this->toFormat !== null || $output === null || $output === self::DASH) {
             return;
         }
-        $named     = Format::fromPath($output);
+        $named     = Format::tryFromPath($output);
         $extension = strtolower(pathinfo($output, PATHINFO_EXTENSION));
         if ($named !== null && $named->canWrite() && !in_array($extension, $inputFormat->extensions(), true)) {
             self::fail("The output $output has the extension of the format $named->value, not of the input format $inputFormat->value. " .

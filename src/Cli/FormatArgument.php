@@ -20,7 +20,7 @@ final class FormatArgument
     {
         $key = strtolower(ltrim($nameOrExtension, "."));
 
-        return Format::tryFrom($key) ?? Format::fromPath("file.$key")
+        return Format::tryFrom($key) ?? Format::tryFromPath("file.$key")
             ?? Command::fail("Unknown format \"$nameOrExtension\". Run \"" . Application::NAME . " formats\" for the list.");
     }
 

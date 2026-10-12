@@ -121,7 +121,7 @@ use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::load('movie.srt', Format::SubRip);
 $subtitle = Subtitle::loadAutoDetectFormat('movie.srt');
-$subtitle->getFormat();                           // Format::SubRip
+$subtitle->findFormat();                           // Format::SubRip
 $subtitle->save('movie.vtt');                     // the format comes from the extension
 $vtt = $subtitle->toString(Format::WebVtt, new WriteOptions(lineEnding: LineEnding::Crlf, stripTags: true));
 ```

@@ -58,7 +58,7 @@ class MatroskaReaderTest extends TestCase
         $subtitle = MatroskaReader::open(self::DIR . $file)->extract($track);
 
         $this->assertStringEqualsFile(self::DIR . "expected/$file.$track.$extension",
-                                      $subtitle->toString($subtitle->getFormat(), new WriteOptions(bom: false)));
+                                      $subtitle->toString($subtitle->findFormat(), new WriteOptions(bom: false)));
     }
 
 
@@ -273,7 +273,7 @@ class MatroskaReaderTest extends TestCase
 
         $this->assertCount(5, $expected);
         $this->assertSame(array_map($toArray, $expected->getCues()), array_map($toArray, $subtitle->getCues()));
-        $this->assertSame([Format::VobSub, "eng"], [$subtitle->getFormat(), $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE)]);
+        $this->assertSame([Format::VobSub, "eng"], [$subtitle->findFormat(), $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE)]);
     }
 
 
@@ -662,7 +662,7 @@ class MatroskaReaderTest extends TestCase
         $text = MatroskaReader::open(self::DIR . "text_tracks.mkv");
 
         $this->assertSame([Format::SubRip, Format::Ass, Format::WebVtt, Format::Ass],
-                          array_map(fn (int $track): ?Format => $text->extract($track)->getFormat(), [3, 4, 5, 6]));
-        $this->assertSame(Format::Pgs, MatroskaReader::open(self::DIR . "pgs.mkv")->extract(3)->getFormat());
+                          array_map(fn (int $track): ?Format => $text->extract($track)->findFormat(), [3, 4, 5, 6]));
+        $this->assertSame(Format::Pgs, MatroskaReader::open(self::DIR . "pgs.mkv")->extract(3)->findFormat());
     }
 }

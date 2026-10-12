@@ -68,7 +68,7 @@ final class WordHighlight
                 ->setStart($wordStart)
                 ->setEnd($wordEnd)
                 ->setLines(self::highlight($lines, $word, count($times), $options))
-                ->setIdentifier($cues === [] ? $cue->getIdentifier() : null);
+                ->setIdentifier($cues === [] ? $cue->findIdentifier() : null);
         }
 
         if ($cues === []) {

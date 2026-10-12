@@ -225,7 +225,7 @@ class WordHighlightTest extends TestCase
 
         $cues = array_values(self::expand(TestSubtitles::fromCues([$cue]), new WordHighlightOptions())->getCues());
 
-        $this->assertSame(["intro", null, null, null], array_map(fn (SubtitleCue $cue): ?string => $cue->getIdentifier(), $cues));
+        $this->assertSame(["intro", null, null, null], array_map(fn (SubtitleCue $cue): ?string => $cue->findIdentifier(), $cues));
         foreach ($cues as $wordCue) {
             $this->assertSame(Alignment::TopCenter, $wordCue->getAlignment());
             $this->assertTrue($wordCue->isForced());

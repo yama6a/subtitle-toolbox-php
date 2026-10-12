@@ -87,7 +87,7 @@ final class CsvFormatter extends SubtitleFormatter
     private function record(SubtitleCue $cue, array $columns, array $speakerAndText, string $secondText, CsvTimeFormat $timeFormat, ?FrameRate $frameRate): array
     {
         return array_map(fn (array $column): string => match ($column[0]) {
-            CsvColumnRole::Identifier => $cue->getIdentifier() ?? "",
+            CsvColumnRole::Identifier => $cue->findIdentifier() ?? "",
             CsvColumnRole::Start      => $this->timeCell($cue->getStart(), $timeFormat, $frameRate),
             CsvColumnRole::End        => $this->timeCell($cue->getEnd(), $timeFormat, $frameRate),
             CsvColumnRole::Duration   => $this->timeCell($cue->getEnd() - $cue->getStart(), $timeFormat, $frameRate),
@@ -139,7 +139,7 @@ final class CsvFormatter extends SubtitleFormatter
                 }
             }
         } else {
-            $hasIdentifier = array_filter($cues, fn (SubtitleCue $cue): bool => $cue->getIdentifier() !== null) !== [];
+            $hasIdentifier = array_filter($cues, fn (SubtitleCue $cue): bool => $cue->findIdentifier() !== null) !== [];
             foreach ([CsvColumnRole::Identifier, CsvColumnRole::Start, CsvColumnRole::End, CsvColumnRole::Text] as $role) {
                 if ($role !== CsvColumnRole::Identifier || $hasIdentifier) {
                     $columns[] = [$role, null];

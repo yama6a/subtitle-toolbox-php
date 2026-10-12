@@ -151,7 +151,7 @@ final class DualSubtitle
     private static function emptyCopy(Subtitle $subtitle): Subtitle
     {
         $copy = (new Subtitle())
-            ->setFormat($subtitle->getFormat())
+            ->setFormat($subtitle->findFormat())
             ->setSourceEncoding($subtitle->findSourceEncoding())
             ->setParseWarnings($subtitle->getParseWarnings());
         foreach ($subtitle->getAllMetadata() as $key => $value) {

@@ -26,7 +26,7 @@ trait ArrayConversion
                 "start"      => $cue->getStart(),
                 "end"        => $cue->getEnd(),
                 "lines"      => array_values($cue->getLines()),
-                "identifier" => $cue->getIdentifier(),
+                "identifier" => $cue->findIdentifier(),
                 "alignment"  => $cue->getAlignment() === Alignment::BottomCenter ? null : $cue->getAlignment()->value,
             ];
             if ($cue->isForced()) {

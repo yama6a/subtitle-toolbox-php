@@ -43,7 +43,7 @@ final class OutputPlan
             Command::fail("The output $output is a directory. Pass --output-dir $output.");
         }
         if ($output !== null && $toFormat !== null && $output !== FileCommand::DASH) {
-            $named = Format::fromPath($output);
+            $named = Format::tryFromPath($output);
             if ($named !== null && !in_array(strtolower(pathinfo($output, PATHINFO_EXTENSION)), $toFormat->extensions(), true)) {
                 Command::fail("The extension of --output $output names the format $named->value, not the --to format $toFormat->value.");
             }

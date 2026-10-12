@@ -77,7 +77,7 @@ class SubtitleReaderTest extends TestCase
 
         $subtitle = SubtitleReader::loadAutoDetect("$this->dir/empty.srt", new ReadOptions());
 
-        $this->assertSame(Format::SubRip, $subtitle->getFormat());
+        $this->assertSame(Format::SubRip, $subtitle->findFormat());
         $this->assertCount(0, $subtitle);
     }
 

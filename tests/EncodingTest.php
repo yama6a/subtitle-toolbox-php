@@ -323,7 +323,7 @@ class EncodingTest extends TestCase
         }
 
         foreach ($loaded as $subtitle) {
-            $this->assertSame($format, $subtitle->getFormat());
+            $this->assertSame($format, $subtitle->findFormat());
             $this->assertSame(
                 [[1.0, 3.0, "The café opens at nine."], [4.0, 6.5, "Grüße from the harbor."]],
                 array_map(fn (SubtitleCue $cue) => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues())

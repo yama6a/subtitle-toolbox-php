@@ -300,7 +300,7 @@ abstract class FileCommand extends Command
         $this->parseWarnings = $subtitle->getParseWarnings();
         CliMessages::printWarnings($console, self::label($input), $this->parseWarnings);
 
-        return [$subtitle, $subtitle->getFormat()];
+        return [$subtitle, $subtitle->findFormat()];
     }
 
 

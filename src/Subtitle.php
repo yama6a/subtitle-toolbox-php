@@ -150,7 +150,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
      * Returns the format that load(), loadAutoDetectFormat(), loadTrack(), a container reader or a fromString call read.
      * Returns null for a subtitle from new Subtitle() or fromArray(). For an MKV track, it is the format of the track codec.
      */
-    public function getFormat(): ?Format
+    public function findFormat(): ?Format
     {
         return $this->format;
     }
@@ -168,7 +168,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Sets the format that getFormat() returns.
+     * Sets the format that findFormat() returns.
      *
      * @internal
      */
@@ -222,7 +222,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
      */
     public function save(string $path, ?Format $format = null, ?WriteOptions $options = null): void
     {
-        $format ??= Format::fromPath($path)
+        $format ??= Format::tryFromPath($path)
             ?? throw new UnsupportedFormatException("The extension of $path names no format. Pass a format to save().");
         $content  = $this->toString($format, $options ?? new WriteOptions());
 

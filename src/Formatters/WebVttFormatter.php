@@ -113,7 +113,7 @@ final class WebVttFormatter extends SubtitleFormatter
 
     private function formatIdentifiedCue(SubtitleCue $cue, int $cueIndex, WriteOptions $options): string
     {
-        return $this->formatIdentifier($cue->getIdentifier(), $cueIndex) . LineEnding::Lf->value
+        return $this->formatIdentifier($cue->findIdentifier(), $cueIndex) . LineEnding::Lf->value
                . $this->formatCue($cue, $cueIndex, $options);
     }
 

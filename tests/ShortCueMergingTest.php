@@ -244,7 +244,7 @@ class ShortCueMergingTest extends TestCase
         $subtitle->mergeShortCues(new MergeShortCuesOptions());
 
         $this->assertSame([[0.0, 1.0, "One two"], [3.0, 5.0, "Three."]], TestSubtitles::describe($subtitle));
-        $this->assertSame("a", $subtitle->getCues()[0]->getIdentifier());
+        $this->assertSame("a", $subtitle->getCues()[0]->findIdentifier());
         $this->assertSame(["settings" => "line:0"], $subtitle->getCues()[0]->findFormatData("vtt"));
         $this->assertEquals([new Comment("before one", 0),
                            new Comment("before two", 0),

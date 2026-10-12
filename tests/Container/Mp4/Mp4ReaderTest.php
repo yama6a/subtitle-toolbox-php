@@ -75,7 +75,7 @@ class Mp4ReaderTest extends TestCase
             ],
             array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $subtitle->getCues()),
         );
-        $this->assertSame([Format::SubRip, "eng"], [$subtitle->getFormat(), $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE)]);
+        $this->assertSame([Format::SubRip, "eng"], [$subtitle->findFormat(), $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE)]);
     }
 
 
