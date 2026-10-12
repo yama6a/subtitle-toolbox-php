@@ -22,10 +22,10 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-26.04-arm
     steps:
-      - uses: yama6a/gha/.github/actions/release-label@80a61b4e75a912c97344cc45c4526d5be2c6f72c
+      - uses: yama6a/gha/.github/actions/release-label@ee892fc67f6d1dc34c9017eb6a4e7c715c403a0f
 
   php:
-    uses: yama6a/gha/.github/workflows/php-ci.yaml@80a61b4e75a912c97344cc45c4526d5be2c6f72c
+    uses: yama6a/gha/.github/workflows/php-ci.yaml@ee892fc67f6d1dc34c9017eb6a4e7c715c403a0f
     with:
       extensions: curl # the translate engines need it, so CurlHttpClientTest and the translate tests run
 
@@ -43,7 +43,7 @@ jobs:
       - run: .build/smoke-test.sh 0.0.0-ci tests/files subtitle-toolbox.phar php
 
   docker:
-    uses: yama6a/gha/.github/workflows/docker-build-check.yaml@80a61b4e75a912c97344cc45c4526d5be2c6f72c
+    uses: yama6a/gha/.github/workflows/docker-build-check.yaml@ee892fc67f6d1dc34c9017eb6a4e7c715c403a0f
     with:
       dockerfile: .build/Dockerfile
       build-args: |
@@ -51,7 +51,7 @@ jobs:
       smoke-test: .build/smoke-test.sh 0.0.0-ci files /usr/local/bin/subtitle-toolbox.phar docker run --rm -v "$PWD/tests/files:/work/files:ro" --entrypoint php "$IMAGE"
 
   docker-tesseract:
-    uses: yama6a/gha/.github/workflows/docker-build-check.yaml@80a61b4e75a912c97344cc45c4526d5be2c6f72c
+    uses: yama6a/gha/.github/workflows/docker-build-check.yaml@ee892fc67f6d1dc34c9017eb6a4e7c715c403a0f
     with:
       dockerfile: .build/tesseract.Dockerfile
       build-args: |
@@ -76,13 +76,13 @@ jobs:
     runs-on: ubuntu-26.04-arm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: yama6a/gha/.github/actions/yaml-checks@80a61b4e75a912c97344cc45c4526d5be2c6f72c
+      - uses: yama6a/gha/.github/actions/yaml-checks@ee892fc67f6d1dc34c9017eb6a4e7c715c403a0f
 
   renovate-config:
     runs-on: ubuntu-26.04-arm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # a broken config silently stops every dependency update
-      - uses: yama6a/gha/.github/actions/validate-renovate-config@80a61b4e75a912c97344cc45c4526d5be2c6f72c
+      - uses: yama6a/gha/.github/actions/validate-renovate-config@ee892fc67f6d1dc34c9017eb6a4e7c715c403a0f
         with:
           config-file: renovate.json5
