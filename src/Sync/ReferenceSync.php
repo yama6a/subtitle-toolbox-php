@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Sync;
 
+use SubtitleToolbox\CueList;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\TimeRanges;
@@ -63,7 +64,7 @@ final class ReferenceSync
 
         foreach ($segmentCues as $index => $cues) {
             foreach ($cues as $cue) {
-                $cue->mapTimes(fn (float $time): float => $time * $segments[$index]->scale + $segments[$index]->offset);
+                CueList::mapTimes($cue, fn (float $time): float => $time * $segments[$index]->scale + $segments[$index]->offset);
             }
         }
 

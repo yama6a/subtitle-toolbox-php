@@ -74,6 +74,8 @@ final class CueImage
 
     /**
      * Returns true when the cue holds an image in the format data key "image", with or without text lines.
+     *
+     * @internal
      */
     public static function isImageCue(SubtitleCue $cue): bool
     {

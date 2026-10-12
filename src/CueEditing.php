@@ -29,7 +29,7 @@ trait CueEditing
         $ownAnchors = CommentAnchors::of($this->cues, $this->comments);
         $otherCues  = [];
         foreach ($other->getCues() as $index => $cue) {
-            $otherCues[$index] = (clone $cue)->mapTimes($move);
+            $otherCues[$index] = CueList::mapTimes(clone $cue, $move);
         }
         $otherAnchors = CommentAnchors::of($otherCues, $other->comments);
 

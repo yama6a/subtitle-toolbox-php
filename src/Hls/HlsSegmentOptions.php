@@ -75,6 +75,8 @@ final class HlsSegmentOptions
 
     /**
      * Returns the file name of the segment with the 0-based number $index.
+     *
+     * @internal
      */
     public function fileName(int $index): string
     {

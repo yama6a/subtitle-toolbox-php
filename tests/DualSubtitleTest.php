@@ -199,6 +199,18 @@ class DualSubtitleTest extends TestCase
     }
 
 
+    public function testFormatComesFromThePrimary(): void
+    {
+        $primary   = Subtitle::fromString("1\n00:00:00,000 --> 00:00:02,000\nfirst\n", Format::SubRip);
+        $secondary = Subtitle::fromString("WEBVTT\n\n00:00.000 --> 00:02.000\nerste\n", Format::WebVtt);
+
+        $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
+
+        $this->assertSame(Format::SubRip, $dual->getFormat());
+        $this->assertSame("UTF-8", $dual->findSourceEncoding());
+    }
+
+
     public function testLanguageStaysWhenOnlyThePrimaryHasOne(): void
     {
         $primary   = TestSubtitles::fromCues([[0, 2, "first"]])->setMetadata(Subtitle::METADATA_LANGUAGE, "en");

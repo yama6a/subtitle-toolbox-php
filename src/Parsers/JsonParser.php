@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
+use SubtitleToolbox\ArrayReader;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Subtitle;
@@ -26,7 +27,7 @@ final class JsonParser extends SubtitleParser
             $block = $field === "cues" || $field === "comments" ? $entry : [$key => $entry];
             $this->fail($exception, null, $field === "cues" ? $key : null, [RawJson::encode($block)]);
         };
-        $subtitle = Subtitle::fromArrayLeavingOut($data, $skipped, $reject);
+        $subtitle = ArrayReader::read($data, $skipped, $reject);
         usort($this->warnings, fn (ParseWarning $warning1, ParseWarning $warning2): int => $warning1->blockIndex <=> $warning2->blockIndex);
 
         return $subtitle;

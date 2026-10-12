@@ -30,7 +30,7 @@ final class DualSubtitle
 
         $cues = CueList::inStartOrder(array_merge(array_values($primaryCues), $unpairedCues));
 
-        $result = $primary->emptyCopy();
+        $result = self::emptyCopy($primary);
         $result->addCues($cues);
         $anchors = CommentAnchors::of($primaryCues, $primary->getComments());
         foreach (CommentAnchors::comments($cues, $primary->getComments(), $anchors) as $comment) {
@@ -142,6 +142,26 @@ final class DualSubtitle
         }
 
         return $snapped;
+    }
+
+
+    /**
+     * Returns a copy of $subtitle with its metadata, format data and format, but without cues and comments.
+     */
+    private static function emptyCopy(Subtitle $subtitle): Subtitle
+    {
+        $copy = (new Subtitle())
+            ->setFormat($subtitle->getFormat())
+            ->setSourceEncoding($subtitle->findSourceEncoding())
+            ->setParseWarnings($subtitle->getParseWarnings());
+        foreach ($subtitle->getAllMetadata() as $key => $value) {
+            $copy->setMetadata((string)$key, $value);
+        }
+        foreach ($subtitle->toArray()["formatData"] as $key => $data) {
+            $copy->setFormatData((string)$key, $data);
+        }
+
+        return $copy;
     }
 
 

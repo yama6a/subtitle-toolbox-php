@@ -115,17 +115,6 @@ trait TextTransforms
 
 
     /**
-     * Returns plain $text in upper or lower case as changeCase() with CaseMode::Upper or CaseMode::Lower writes it.
-     *
-     * @internal
-     */
-    public static function toUpperOrLower(string $text, bool $upper): string
-    {
-        return $upper ? TextCase::upper($text, false) : TextCase::lower($text, false);
-    }
-
-
-    /**
      * Wraps each line with right-to-left letters in the embedding marks U+202B and U+202C, inside its leading and trailing tags.
      * Players with a left-to-right base direction then show the punctuation of Arabic or Hebrew at the right end.
      */
@@ -216,7 +205,7 @@ trait TextTransforms
      */
     private function textTransformsMapCues(callable $fn): self
     {
-        $this->setLinesAndRemoveEmptied(fn (SubtitleCue $cue): array => $fn($cue));
+        CueList::setLinesAndRemoveEmptied($this, fn (SubtitleCue $cue): array => $fn($cue));
 
         return $this;
     }

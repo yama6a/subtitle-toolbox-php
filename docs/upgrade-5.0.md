@@ -87,7 +87,17 @@ Image cues without text now throw `UnwritableContentException`, like all other c
 
 ## Public API cleanup
 
-TODO #968
+These methods were public and marked `@internal`. 5.0 removes the ones in this table. Code that follows the docs does not call them.
+
+| 4.x | 5.0 |
+|:--- |:--- |
+| `Subtitle::emptyCopy()` | removed, no replacement |
+| `Subtitle::setLinesAndRemoveEmptied()` | removed, use `mapLines()`, which also removes cues that lose all text |
+| `Subtitle::toUpperOrLower()` | removed, use `changeCase()` |
+| `Subtitle::fromArrayLeavingOut()` | removed, use `fromArray()`, or read the JSON with `ReadOptions(lenient: true)` |
+| `SubtitleCue::mapTimes()` | removed, use `setStart()`, `setEnd()` and `mapWordTimestamps()` |
+
+- `Comment::withBeforeCueIndex()`, `SubtitleTrack::describe()`, `TesseractOcrEngine::isInstalled()`, `TimestampMap::isHeader()`, `TimestampMap::toHeader()`, `HlsSegmentOptions::fileName()` and `CueImage::isImageCue()` stay public and are marked `@internal`. `Subtitle::setFormat()`, `setSourceEncoding()`, `setParseWarnings()` and `replaceCues()` stay public and `@internal` too. All of them can change in any release.
 
 ## Renamed methods
 
