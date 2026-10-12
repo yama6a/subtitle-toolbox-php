@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\LineEnding;
-use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
@@ -31,6 +30,11 @@ final class MpSubFormatter extends SubtitleFormatter
         $output      = $this->header($subtitle, $frameRate);
         $previousEnd = 0;
         foreach ($subtitle->getCues() as $cue) {
+            $lines = $this->plainLines($cue);
+            if ($lines === []) {
+                continue;
+            }
+
             $output .= LineEnding::Lf->value;
             $start   = max(0.0, $cue->getStart());
             $end     = max(0.0, $cue->getEnd());
@@ -42,8 +46,7 @@ final class MpSubFormatter extends SubtitleFormatter
                 $duration = $frameRate->secondsToFrames($end) - $frameRate->secondsToFrames($start);
             }
             $output .= "$wait $duration" . LineEnding::Lf->value;
-            $output .= Markup::plainText(Markup::rubyAsText(implode(LineEnding::Lf->value, $cue->getLines())));
-            $output .= LineEnding::Lf->value;
+            $output .= implode(LineEnding::Lf->value, $lines) . LineEnding::Lf->value;
 
             $previousEnd = $end;
         }

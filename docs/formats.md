@@ -362,7 +362,7 @@ $subtitle->toString(Format::MpSub, new WriteOptions(formats: [new MpSubWriteOpti
 - **Header lines**: the parser reads `TITLE` and `AUTHOR` into the metadata. It keeps all other header lines, such as `TYPE` and `NOTE`, in the `mpsub` format data. `FORMAT` only sets the time unit. The formatter writes these lines back, and writes empty `TITLE` and `AUTHOR` lines when the values are not set.
 - **Frame rate**: MPlayer and FFmpeg read only the integer part of `FORMAT=29.97`. So the parser uses 29 fps, and the formatter accepts only whole frame rates.
 - **Overlapping cues**: a cue that starts before the previous cue ends gets a negative wait, for example `-1.5 2`. The parser reads it back. FFmpeg accepts a negative wait.
-- **Output**: the formatter strips all tags. Text with `<`, `>` and `&` round-trips.
+- **Output**: the formatter strips all tags and trims each line. Text with `<`, `>` and `&` round-trips. An empty line ends a cue in MPSub, so the formatter drops lines that are empty after the tags go, and skips a cue without text. The wait time of the next cue counts from the end of the last written cue.
 
 ## SAMI
 ```php
