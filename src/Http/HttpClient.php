@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Http;
 
 /**
- * Sends the requests of DeepLEngine and GoogleTranslateEngine. Implement it to use another HTTP library or a proxy.
+ * Sends the requests of DeepLEngine, GoogleTranslateEngine and OpenAiCompatibleEngine.
+ * Implement it to use another HTTP library or a proxy.
  */
 interface HttpClient
 {
