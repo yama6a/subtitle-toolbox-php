@@ -9,7 +9,7 @@ use Iterator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 /**
- * @phpstan-type CueLookupIndex array{cues: array<int, SubtitleCue>, timeEdits: int, starts: list<float>, keys: list<int>, maxEnds: ?list<float>, leafCount: int}
+ * @phpstan-type CueLookupIndex array{cues: array<int, SubtitleCue>, starts: list<float>, keys: list<int>, positions: ?array<int, int>, maxEnds: ?list<float>, leafCount: int}
  *
  * @internal
  */
@@ -133,26 +133,30 @@ trait CueLookup
      * Returns the start and end times of the cues.
      * For cues in start order, it adds a tree in which each node holds the latest end of its cues.
      * It does not sort. For unsorted cues, maxEnds is null and the caller scans every cue.
-     * A time setter of a cue in the list or a change of the cue list makes the next call rebuild the tree.
+     * A change of the cue list makes the next call rebuild the index. A time change of a few cues updates their entries.
      *
      * @return CueLookupIndex
      */
     private function cueLookupCurrentIndex(): array
     {
         $this->sortStartChanges();
-        $timeEdits = SubtitleCue::timeEditCount();
-        $index     = $this->cueLookupIndex;
         // The cached list shares its storage with $this->cues until either changes, so this check costs O(1).
-        if ($index !== null && $index["timeEdits"] === $timeEdits && $index["cues"] === $this->cues) {
-            return $index;
+        if ($this->cueLookupIndex !== null && $this->cueLookupIndex["cues"] === $this->cues) {
+            $changed = CueHolders::takeTimeChanges($this);
+            if ($changed === [] || (count($changed) <= intdiv(count($this->cues), 8) && $this->cueLookupUpdate($changed))) {
+                return $this->cueLookupIndex;
+            }
         }
 
         CueHolders::hold($this, $this->cues);
-        $starts = [];
-        $ends   = [];
+        CueHolders::watchTimes($this);
+        $starts    = [];
+        $ends      = [];
+        $positions = [];
         foreach ($this->cues as $cue) {
-            $starts[] = $cue->getStart();
-            $ends[]   = $cue->getEnd();
+            $positions[spl_object_id($cue)] = count($starts);
+            $starts[]                       = $cue->getStart();
+            $ends[]                         = $cue->getEnd();
         }
 
         $count  = count($starts);
@@ -168,12 +172,48 @@ trait CueLookup
 
         return $this->cueLookupIndex = [
             "cues"      => $this->cues,
-            "timeEdits" => $timeEdits,
             "starts"    => $starts,
             "keys"      => array_keys($this->cues),
+            // A cue that the list holds twice has one id, so its entries cannot update alone.
+            "positions" => count($positions) === $count ? $positions : null,
             "maxEnds"   => $maxEnds,
             "leafCount" => $leafCount,
         ];
+    }
+
+
+    /**
+     * Writes the new times of $changed into the index and the tree path above each of them.
+     * Returns false when the index cannot take them, so the caller rebuilds it.
+     *
+     * @param list<SubtitleCue> $changed
+     */
+    private function cueLookupUpdate(array $changed): bool
+    {
+        $index = &$this->cueLookupIndex;
+        if ($index["maxEnds"] === null || $index["positions"] === null) {
+            return false;
+        }
+
+        foreach ($changed as $cue) {
+            $position = $index["positions"][spl_object_id($cue)] ?? null;
+            if ($position === null || $index["cues"][$index["keys"][$position]] !== $cue) {
+                continue;
+            }
+            $start = $cue->getStart();
+            if (($position > 0 && $index["starts"][$position - 1] > $start) || $start > ($index["starts"][$position + 1] ?? INF)) {
+                return false;
+            }
+
+            $index["starts"][$position] = $start;
+            $node                       = $index["leafCount"] + $position;
+            $index["maxEnds"][$node]    = $cue->getEnd();
+            for ($node >>= 1; $node >= 1; $node >>= 1) {
+                $index["maxEnds"][$node] = max($index["maxEnds"][2 * $node], $index["maxEnds"][2 * $node + 1]);
+            }
+        }
+
+        return true;
     }
 
 

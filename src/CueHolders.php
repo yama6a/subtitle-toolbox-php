@@ -23,6 +23,9 @@ final class CueHolders
     /** @var ?\WeakMap<Subtitle, \SplObjectStorage<SubtitleCue, float>> each changed cue and its start at the last read */
     private static ?\WeakMap $startChanges = null;
 
+    /** @var ?\WeakMap<Subtitle, \SplObjectStorage<SubtitleCue, null>> the cues whose start or end changed since the cue lookup took them */
+    private static ?\WeakMap $timeChanges = null;
+
 
     /**
      * @param iterable<SubtitleCue> $cues
@@ -99,6 +102,48 @@ final class CueHolders
 
         $changes = self::$startChanges[$subtitle];
         unset(self::$startChanges[$subtitle]);
+
+        return $changes;
+    }
+
+
+    /**
+     * Starts to collect the time changes of the cues of $subtitle, or forgets the ones collected so far.
+     */
+    public static function watchTimes(Subtitle $subtitle): void
+    {
+        self::$timeChanges ??= new \WeakMap();
+        self::$timeChanges[$subtitle] = new \SplObjectStorage();
+    }
+
+
+    /**
+     * Adds $cue to the time changes of each subtitle that holds it and watches its times.
+     */
+    public static function timeChanged(SubtitleCue $cue): void
+    {
+        foreach (self::holders($cue) as $subtitle) {
+            if (isset(self::$timeChanges[$subtitle])) {
+                self::$timeChanges[$subtitle][$cue] = null;
+            }
+        }
+    }
+
+
+    /**
+     * Returns the cues of $subtitle whose start or end changed since the last call or watchTimes(), and forgets them.
+     * A cue that $subtitle no longer holds can be among them.
+     *
+     * @return list<SubtitleCue>
+     */
+    public static function takeTimeChanges(Subtitle $subtitle): array
+    {
+        if (!isset(self::$timeChanges[$subtitle]) || count(self::$timeChanges[$subtitle]) === 0) {
+            return [];
+        }
+
+        $changes                      = iterator_to_array(self::$timeChanges[$subtitle], false);
+        self::$timeChanges[$subtitle] = new \SplObjectStorage();
 
         return $changes;
     }

@@ -296,26 +296,40 @@ class CueLookupTest extends TestCase
         $fixture  = var_export(__DIR__ . "/files/profanity/keys.srt", true);
         $saved    = $this->runPhp("require $autoload;
             \$subtitle = SubtitleToolbox\\Subtitle::load($fixture, SubtitleToolbox\\Format::SubRip);
-            for (\$edit = 0; \$edit < 100; \$edit++) {
-                \$subtitle->getCues()[0]->setStart(\$subtitle->getCues()[0]->getStart());
-            }
             \$subtitle->findCuesAt(1.5);
-            echo SubtitleToolbox\\SubtitleCue::timeEditCount(), ' ', base64_encode(serialize(\$subtitle));");
-        [$edits, $serialized] = explode(" ", $saved);
+            echo base64_encode(serialize(\$subtitle));");
 
-        // The second process repeats the edit count of the first, so a cache that trusts the count looks fresh.
         $found = $this->runPhp("require $autoload;
-            \$subtitle = unserialize(base64_decode('$serialized'));
+            \$subtitle = unserialize(base64_decode('$saved'));
             foreach (\$subtitle->getCues() as \$cue) {
                 \$cue->setEnd(\$cue->getEnd() + 100)->setStart(\$cue->getStart() + 100);
             }
-            while (SubtitleToolbox\\SubtitleCue::timeEditCount() < $edits) {
-                \$subtitle->getCues()[0]->setStart(\$subtitle->getCues()[0]->getStart());
-            }
-            echo SubtitleToolbox\\SubtitleCue::timeEditCount() === $edits ? json_encode([array_keys(\$subtitle->findCuesAt(1.5)),
-                array_keys(\$subtitle->findCuesAt(101.5))]) : 'count';");
+            echo json_encode([array_keys(\$subtitle->findCuesAt(1.5)), array_keys(\$subtitle->findCuesAt(101.5))]);");
 
         $this->assertSame("[[],[0]]", $found);
+    }
+
+
+    public function testLookupsAfterEachTimeEditMatchAScanOfAllCues(): void
+    {
+        mt_srand(934);
+        $times = [];
+        for ($index = 0; $index < 200; $index++) {
+            $times[] = [mt_rand(0, 4000) / 10, mt_rand(0, 4000) / 10];
+        }
+        $subtitle = TestSubtitles::fromCues(array_map(fn (array $time): array => [min($time), max($time) + 0.5, "cue"], $times));
+
+        for ($edit = 0; $edit < 400; $edit++) {
+            $cue = $subtitle->getCues()[mt_rand(0, 199)];
+            if ($edit % 3 === 0) {
+                $cue->setStart(max(0, $cue->getStart() + mt_rand(-50, 50) / 10));
+            }
+            $cue->setEnd($cue->getStart() + mt_rand(1, 300) / 10);
+
+            $time     = mt_rand(0, 4000) / 10;
+            $expected = array_filter($subtitle->getCues(), fn (SubtitleCue $other): bool => $other->getStart() <= $time && $other->getEnd() > $time);
+            $this->assertSame(array_keys($expected), array_keys($subtitle->findCuesAt($time)), "Edit $edit at $time.");
+        }
     }
 
 
