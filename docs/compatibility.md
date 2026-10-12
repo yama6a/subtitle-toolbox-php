@@ -1,9 +1,9 @@
 # Backward compatibility
 
-The library follows semantic versioning. A 4.x minor or patch release does not break code that uses the parts below as this page describes. A break waits for 5.0.
+The library follows semantic versioning. A 5.x minor or patch release does not break code that uses the parts below as this page describes. A break waits for 6.0.
 
 ## Covered
-| Part | What stays stable in 4.x |
+| Part | What stays stable in 5.x |
 |:--- |:--- |
 | PHP API | public classes, methods, properties, constants and enums that are not `@internal` |
 | Method behaviour | the behaviour that the docs describe for a method, and the default value of each method parameter, such as `maxGap` of `removeDuplicateCues()`. Only a major release changes them |
@@ -32,7 +32,7 @@ The library follows semantic versioning. A 4.x minor or patch release does not b
 ## Text fixes and presets
 - **Existing rules**: a patch release can change a rule so that it stops changing text that it should keep. This applies to `CommonErrorFixer`, `HearingImpairedRemover`, `ProfanityFilter` and `SpeakerLabels`.
 - **New rules**: a new rule is off by default. Turn it on with its option.
-- **Presets**: `ValidationRules::netflixEnglish()`, `ValidationRules::bbc()` and the CLI `validate --preset` never get a new rule in 4.x.
+- **Presets**: `ValidationRules::netflixEnglish()`, `ValidationRules::bbc()` and the CLI `validate --preset` never get a new rule in 5.x.
 
 ## Major releases
 A major release can remove or change anything above. Its upgrade guide lists each change.
