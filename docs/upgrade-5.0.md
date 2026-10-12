@@ -12,7 +12,19 @@ TODO #960
 
 ## Cue order
 
-TODO #962
+| 4.x | 5.0 |
+|:--- |:--- |
+| `Subtitle::fromArray($array)` keeps the order of `$array["cues"]` | `Subtitle::fromArray($array)` sorts the cues by start time |
+| `Subtitle::load("cues.json", Format::Json)` keeps the order of the file | `Subtitle::load("cues.json", Format::Json)` sorts the cues by start time |
+| `$subtitle->reIndexCues();` | delete the call |
+| `new ValidationRules(noUnsortedCues: true)` | delete the argument |
+| `ValidationRule::NoUnsortedCues` | delete each use |
+
+- A `Subtitle` always holds its cues in start order. Cues with the same start keep their order from the array or the file. Each comment moves with its cue.
+- Library JSON with cues out of start order reads sorted in 5.0. 4.x wrote such files after an unsorted `fromArray()`.
+- Example: a file holds a cue at 5 s, then a cue at 1 s. `subtitle-toolbox convert cues.json --to srt` now writes the 1 s cue first.
+- A cue index from the array can point to another cue after the sort. Read the indexes from `getCues()`.
+- `ValidationRules::structure()` checks `requireCues`, `noNegativeDuration` and `noOverlap`.
 
 ## Removed commands and aliases
 

@@ -53,9 +53,6 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     private ?Format $format = null;
 
-    /** True while the cues keep the order that fromArray() read, out of start order. */
-    private bool $keepsArrayCueOrder = false;
-
     /** Above this count of start changes, the next read checks the order of all cues instead of moving each changed cue. */
     private const MAX_MOVED_CUES = 100;
 
@@ -304,7 +301,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         $this->sortStartChanges();
         CueHolders::hold($this, $added);
         $count = count($this->cues);
-        if (!$this->keepsArrayCueOrder && CueList::startsInOrder(array_merge(array_slice($this->cues, -1), $added))) {
+        if (CueList::startsInOrder(array_merge(array_slice($this->cues, -1), $added))) {
             array_push($this->cues, ...$added);
             // A comment after the last cue stays after the last cue.
             for ($index = count($this->comments) - 1; $index >= 0 && $this->comments[$index]->beforeCueIndex >= $count; $index--) {
@@ -340,10 +337,6 @@ final class Subtitle implements \IteratorAggregate, \Countable
         if (!in_array($removed, $this->cues, true)) {
             CueHolders::release($this, [$removed]);
         }
-        if ($this->keepsArrayCueOrder) {
-            return $this->reIndexCues();
-        }
-
         $this->cues = array_values($this->cues);
         foreach ($this->comments as $index => $comment) {
             if ($comment->beforeCueIndex > $cueIndex) {
@@ -358,7 +351,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     /**
      * Sorts the cues by start time and numbers them from 0. Each comment stays before its cue.
      */
-    public function reIndexCues(): self
+    private function reIndexCues(): self
     {
         $anchors = CommentAnchors::of($this->cues, $this->comments);
         $this->sortCues();
@@ -505,8 +498,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     private function sortCues(): void
     {
-        $this->cues               = CueList::inStartOrder($this->cues);
-        $this->keepsArrayCueOrder = false;
+        $this->cues = CueList::inStartOrder($this->cues);
         CueHolders::takeStartChanges($this);
     }
 
@@ -519,11 +511,6 @@ final class Subtitle implements \IteratorAggregate, \Countable
     {
         $changed = CueHolders::takeStartChanges($this);
         if ($changed === null) {
-            return;
-        }
-        if ($this->keepsArrayCueOrder) {
-            $this->reIndexCues();
-
             return;
         }
 
@@ -541,12 +528,12 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Holds the cues after a copy or an unserialize, and sorts them unless they keep the order of fromArray().
+     * Holds the cues after a copy, an unserialize or fromArray(), and sorts them.
      */
     private function holdCuesInStartOrder(): void
     {
         CueHolders::hold($this, $this->cues);
-        if (!$this->keepsArrayCueOrder && !CueList::startsInOrder($this->cues)) {
+        if (!CueList::startsInOrder($this->cues)) {
             $this->reIndexCues();
         }
     }

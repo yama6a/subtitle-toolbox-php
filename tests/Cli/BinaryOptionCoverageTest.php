@@ -547,7 +547,7 @@ class BinaryOptionCoverageTest extends CliTestCase
         $srt  = $this->runOnStation($command);
         $data = json_decode(Subtitle::fromString(file_get_contents(self::STATION), Format::SubRip)->toString(Format::Json), true);
         $image = json_decode(file_get_contents(self::FILES . "json/real/own_image_cues.json"), true);
-        $data["cues"] = [...$data["cues"], ...array_values(array_filter($image["cues"], fn (array $cue): bool => $cue["lines"] === []))];
+        $data["cues"] = [...array_values(array_filter($image["cues"], fn (array $cue): bool => $cue["lines"] === [])), ...$data["cues"]];
         file_put_contents("$this->dir/images.json", json_encode($data));
 
         $this->assertSame(3, $this->runCli(self::commandLine($command, "images.json", "srt"))[0]);

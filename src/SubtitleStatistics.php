@@ -45,7 +45,7 @@ final class SubtitleStatistics
      */
     public static function of(Subtitle $subtitle): self
     {
-        $cues = CueList::inStartOrder($subtitle->getCues());
+        $cues = $subtitle->getCues();
         $span = $cues === [] ? null
             : Timecode::roundToMilliseconds(max(array_map(fn (SubtitleCue $cue): float => $cue->getEnd(), $cues)) - $cues[0]->getStart());
 

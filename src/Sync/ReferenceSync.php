@@ -77,8 +77,6 @@ final class ReferenceSync
                 self::endBefore($segmentCues[$earlier], $laterStart);
             }
         }
-
-        $target->reIndexCues();
     }
 
 

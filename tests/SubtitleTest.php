@@ -173,13 +173,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $subtitle = new Subtitle();
         $this->assertSame([[null, ValidationRule::RequireCues, 0]], $problems($subtitle));
 
-        $subtitle = TestSubtitles::inGivenOrder([[1, 2, "text1"], [5, 6, "text2"], [3, 4, "text3"]]);
-        $this->assertSame([
-            [2, ValidationRule::NoUnsortedCues, 2.0],
-            [2, ValidationRule::NoOverlap, 3.0],
-        ], $problems($subtitle));
-
-        $subtitle->reIndexCues();
+        $subtitle = TestSubtitles::fromTimes([[1, 2], [3, 4], [5, 6]]);
         $this->assertSame([], $problems($subtitle));
 
         $subtitle->getCues()[1]->setEnd(5.5);
@@ -342,22 +336,25 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testReIndexKeepsEachCommentBeforeItsCue(): void
+    public function testFromArraySortsTheCuesStableAndKeepsEachCommentBeforeItsCue(): void
     {
-        $subtitle = TestSubtitles::inGivenOrder([[5, 6, "late"], [1, 2, "early"]]);
-        $subtitle->addComment("before late", 0);
-        $subtitle->addComment("before early", 1);
-        $subtitle->addComment("at the end", 2);
-
-        $subtitle->reIndexCues();
-
-        $this->assertSame("early", $subtitle->getCues()[0]->getText());
-        $this->assertEquals(
-            [
-                new Comment("before early", 0),
-                new Comment("before late", 1),
-                new Comment("at the end", 2),
+        $subtitle = Subtitle::fromArray([
+            "version"  => Subtitle::ARRAY_VERSION,
+            "cues"     => [
+                ["start" => 5, "end" => 6, "lines" => ["late"]],
+                ["start" => 1, "end" => 2, "lines" => ["early"]],
+                ["start" => 1, "end" => 3, "lines" => ["early too"]],
             ],
+            "comments" => [
+                ["text" => "before late", "beforeCueIndex" => 0],
+                ["text" => "before early too", "beforeCueIndex" => 2],
+                ["text" => "at the end", "beforeCueIndex" => 3],
+            ],
+        ]);
+
+        $this->assertSame(["early", "early too", "late"], TestSubtitles::texts($subtitle));
+        $this->assertEquals(
+            [new Comment("before early too", 1), new Comment("before late", 2), new Comment("at the end", 3)],
             $subtitle->getComments()
         );
     }
@@ -386,6 +383,17 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testASliceSortsItsCuesAfterAStartTimeEdit(): void
+    {
+        $slice = TestSubtitles::fromTimes([[1, 2], [3, 4], [5, 6]])->withSlice(0, 10);
+
+        $slice->getCues()[0]->setStart(4.5)->setEnd(5.5);
+
+        $this->assertSame(["text1", "text0", "text2"], TestSubtitles::texts($slice));
+        $this->assertSame(["text1", "text0"], TestSubtitles::texts($slice->findCuesBetween(3.5, 5)));
+    }
+
+
     public function testACopySortsTheCuesOfAStartTimeEditBeforeTheCopy(): void
     {
         $subtitle = TestSubtitles::fromTimes([[1, 2], [3, 4], [3, 5]]);
@@ -396,22 +404,6 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $cues[1]->setStart(4);
         $this->assertSame(["text0", "text2", "text1"], TestSubtitles::texts(clone $subtitle));
         $this->assertSame(["text0", "text2", "text1"], TestSubtitles::texts($subtitle));
-    }
-
-
-    public function testFromArrayKeepsItsCueOrderUntilTheFirstStartTimeEdit(): void
-    {
-        $subtitle = TestSubtitles::inGivenOrder([[5, 6, "late"], [1, 2, "early"], [3, 4, "middle"]]);
-
-        (new SubtitleCue(0, 1))->setStart(2);
-        $subtitle->getCues()[0]->setEnd(6.5);
-
-        $this->assertSame(["late", "early", "middle"], TestSubtitles::texts($subtitle));
-        $this->assertSame(["late", "early", "middle"], TestSubtitles::texts(clone $subtitle));
-        $subtitle->getCues()[1]->setStart(1.5);
-        $this->assertSame(["early", "middle", "late"], TestSubtitles::texts($subtitle));
-        $subtitle->getCues()[0]->setStart(7);
-        $this->assertSame(["middle", "late", "early"], TestSubtitles::texts($subtitle));
     }
 
 

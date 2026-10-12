@@ -10,7 +10,6 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
-use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class HlsWebVttSegmenterTest extends TestCase
 {
@@ -237,22 +236,6 @@ class HlsWebVttSegmenterTest extends TestCase
 
         $this->assertStringNotContainsString("Mark", $segments["sub0.vtt"]);
         $this->assertStringContainsString("00:00:06.000 --> 00:00:06.000\nMark", $segments["sub1.vtt"]);
-    }
-
-
-    public function testCuesOutOfStartOrderGoToTheSegmentTheyStartIn(): void
-    {
-        $subtitle = TestSubtitles::inGivenOrder([[55, 56, "A"], [30, 31, "B"]]);
-        $segments = iterator_to_array(HlsWebVttSegmenter::segment($subtitle, new HlsSegmentOptions(segmentDuration: 10))->getSegments());
-
-        $this->assertSame([
-            "sub0.vtt" => "WEBVTT\n" . self::MAP . "\n\n",
-            "sub1.vtt" => "WEBVTT\n" . self::MAP . "\n\n",
-            "sub2.vtt" => "WEBVTT\n" . self::MAP . "\n\n",
-            "sub3.vtt" => "WEBVTT\n" . self::MAP . "\n\n2\n00:00:30.000 --> 00:00:31.000\nB\n",
-            "sub4.vtt" => "WEBVTT\n" . self::MAP . "\n\n",
-            "sub5.vtt" => "WEBVTT\n" . self::MAP . "\n\n1\n00:00:55.000 --> 00:00:56.000\nA\n",
-        ], $segments);
     }
 
 

@@ -126,6 +126,7 @@ trait CueEditing
         }
 
         $copy->cues     = $cues;
+        CueHolders::hold($copy, $copy->cues);
         $copy->comments = CommentAnchors::comments($copy->cues, $comments, CommentAnchors::remap($keptAnchors, $copies));
 
         return $copy;

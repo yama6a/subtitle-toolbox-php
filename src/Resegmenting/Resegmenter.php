@@ -47,7 +47,7 @@ final class Resegmenter
         $newCues    = new \SplObjectStorage();
         $newCueList = [];
         $group      = [];
-        foreach (CueList::inStartOrder($subtitle->getCues()) as $cue) {
+        foreach ($subtitle->getCues() as $cue) {
             $words = CueImage::isImageCue($cue) ? [] : self::words($cue);
             if ($words === []) {
                 $newCueList[]  = self::cueOfGroup($group, $newCues, $options);

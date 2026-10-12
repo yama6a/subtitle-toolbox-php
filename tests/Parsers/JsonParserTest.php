@@ -39,6 +39,22 @@ class JsonParserTest extends TestCase
     }
 
 
+    public function testReadsTheCuesInStartOrderWithTheirComments(): void
+    {
+        $path  = __DIR__ . "/../files/json/real/own_aegisub.json";
+        $data  = json_decode(file_get_contents($path), true);
+        $count = count($data["cues"]);
+        $data["cues"] = array_reverse($data["cues"]);
+        foreach ($data["comments"] as $index => $comment) {
+            if ($comment["beforeCueIndex"] < $count) {
+                $data["comments"][$index]["beforeCueIndex"] = $count - 1 - $comment["beforeCueIndex"];
+            }
+        }
+
+        $this->assertEquals(Subtitle::load($path, Format::Json), Subtitle::fromString(json_encode($data), Format::Json));
+    }
+
+
     public function testDecodesBase64ObjectsInFormatData(): void
     {
         $subtitle = (new JsonParser())->parse("\xEF\xBB\xBF" . '{"version": 1, "formatData": {"x": {"list": [{"base64": "AAE="}]}}, ' .

@@ -284,16 +284,6 @@ class ShotChangeTimingTest extends TestCase
     }
 
 
-    public function testCuesOutOfOrderAreHandledInStartOrder(): void
-    {
-        $subtitle = TestSubtitles::inGivenOrder([[10.292, 12, ""], [8, 10, ""]]);
-
-        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24));
-
-        $this->assertSame([[8.0, 10.208], [10.292, 12.0]], TestSubtitles::times($subtitle));
-    }
-
-
     public static function invalidOptions(): array
     {
         return [

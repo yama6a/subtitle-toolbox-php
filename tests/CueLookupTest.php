@@ -23,15 +23,6 @@ class CueLookupTest extends TestCase
 
 
     /**
-     * Keeps the cues in the order of $times, so that the cue list is not sorted by start time.
-     */
-    private function makeUnsortedSubtitle(array $times): Subtitle
-    {
-        return TestSubtitles::inGivenOrder(array_map(fn (array $time, int $index): array => [$time[0], $time[1], "text$index"], $times, array_keys($times)));
-    }
-
-
-    /**
      * A cue every 2.5 s for 2 s, a 30 s sign every 100 cues and one cue from start to end, 10,101 cues in total.
      */
     private function makeLargeSubtitle(): Subtitle
@@ -130,16 +121,6 @@ class CueLookupTest extends TestCase
         $this->expectExceptionMessage("The range start 10 must not be after the range end 5.");
 
         (new Subtitle())->findCuesBetween(10, 5);
-    }
-
-
-    public function testCuesOutOfOrderUseLinearScan(): void
-    {
-        $subtitle = $this->makeUnsortedSubtitle([[5, 9], [1, 4], [3, 6]]);
-
-        $this->assertSame([0, 2], array_keys($subtitle->findCuesAt(5)));
-        $this->assertSame(1, $subtitle->findCueIndexAt(3.5));
-        $this->assertSame([1, 2], array_keys($subtitle->findCuesBetween(2, 5)));
     }
 
 

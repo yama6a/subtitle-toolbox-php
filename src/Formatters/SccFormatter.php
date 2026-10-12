@@ -58,13 +58,10 @@ final class SccFormatter extends SubtitleFormatter
         $fit           = $formatOptions->fit;
         $this->changes = [];
 
-        $cues = $subtitle->getCues();
-        uasort($cues, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
-
         $timeline    = [];
         $nextFree    = 0;
         $previousEnd = null;
-        foreach ($cues as $index => $cue) {
+        foreach ($subtitle->getCues() as $index => $cue) {
             $loadWords = $this->loadWords($cue, $index, $fit);
             if ($loadWords === []) {
                 continue;

@@ -36,8 +36,7 @@ $cue->setIdentifier('intro');
 
 - **Metadata keys**: `Subtitle` has constants for the shared keys `title`, `author`, `artist`, `album` and `language`.
 - **Comments**: `getComments()` returns `Comment` objects with the readonly fields `text` and `beforeCueIndex`. A comment comes before the cue at `beforeCueIndex`. An index equal to the cue count puts it after the last cue.
-- **Re-index**: `reIndexCues()` sorts the cues by start time and numbers them from 0. It moves each comment together with its cue. A comment before a removed cue moves to the next cue.
-- **Start time edits**: `$subtitle->getCues()[0]->setStart(10)` can put a cue out of start order. The subtitle puts it back before the next call that reads the cues, as `reIndexCues()` would. Each comment moves with its cue, and cues with the same start keep their order. So a cue index that you keep across a start time edit can point to another cue. A read after no start time edit costs nothing extra.
+- **Start time edits**: `$subtitle->getCues()[0]->setStart(10)` can put a cue out of start order. The subtitle puts it back before the next call that reads the cues. Each comment moves with its cue, and cues with the same start keep their order. So a cue index that you keep across a start time edit can point to another cue. A read after no start time edit costs nothing extra.
 
 ## Alignment and format data
 ```php
@@ -95,10 +94,10 @@ $subtitle->removeCuesWhere(fn (SubtitleCue $cue) => $cue->getEnd() - $cue->getSt
 - **On screen**: a cue is on screen at time `t` when `start <= t < end`. A cue from 4.0 s to 6.0 s is on screen at 4.0 s, but not at 6.0 s. A cue with the same start and end is never on screen.
 - **Overlaps**: cues can overlap, so `findCuesAt()` returns an array. `findCueIndexAt()` returns the lowest index of these cues.
 - **Keys**: `findCuesAt()`, `findCuesBetween()` and `findCues()` keep the cue index as the array key.
-- **Remove**: `removeCuesWhere()` moves a comment before a removed cue to the next kept cue, and then calls `reIndexCues()`.
+- **Remove**: `removeCuesWhere()` moves a comment before a removed cue to the next kept cue, and numbers the remaining cues from 0 again.
 - **Add and remove**: `addCue()` and `addCues()` sort the cues by start time after each call. A cue that starts at or after the last cue goes to the end without a sort, so `addCue()` in a loop over cues in start order is as fast as `addCues()`. A comment after the last cue stays after the last cue, also when the added cue sorts last. `removeCue()` numbers the remaining cues from 0 again.
 - **No array access**: `$subtitle[3]` does not work. Use `getCues()`, `addCue()` and `removeCue()`, so the cue indexes and comments stay correct.
-- **Structure check**: `validate(ValidationRules::structure())` returns one violation per problem. It reports a subtitle without cues. It also reports a cue that starts before the previous cue starts or ends, and a cue that ends before it starts. See [validation](validation.md).
+- **Structure check**: `validate(ValidationRules::structure())` returns one violation per problem. It reports a subtitle without cues. It also reports a cue that starts before an earlier cue ends, and a cue that ends before it starts. See [validation](validation.md).
 
 ## Forced cues
 A **forced cue** shows also when the viewer has turned subtitles off, for example the translation of a sign. Apple and Netflix take a full subtitle file and a separate file with only the forced cues.

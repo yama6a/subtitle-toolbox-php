@@ -26,9 +26,8 @@ function buildSubtitle(int $cueCount): Subtitle
             }
         }
     }
-    $subtitle->addCues($cues);
 
-    return $subtitle->reIndexCues();
+    return $subtitle->addCues($cues);
 }
 
 

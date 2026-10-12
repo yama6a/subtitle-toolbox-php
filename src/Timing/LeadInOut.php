@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Timing;
 
-use SubtitleToolbox\CueList;
 use SubtitleToolbox\SortedSearch;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -15,11 +14,10 @@ use SubtitleToolbox\Timecode;
 final class LeadInOut
 {
     /**
-     * @param SubtitleCue[] $cues
+     * @param list<SubtitleCue> $cues in start order
      */
     public static function apply(array $cues, float $leadIn, float $leadOut, float $minGap): void
     {
-        $cues   = CueList::inStartOrder($cues);
         $starts = array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $cues);
         $ends   = array_map(fn (SubtitleCue $cue): float => $cue->getEnd(), $cues);
         [$startInside, $endInside] = self::insideOtherCues($starts, $ends);
