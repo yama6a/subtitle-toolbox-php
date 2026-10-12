@@ -13,8 +13,6 @@ use SubtitleToolbox\Dual\DualSubtitle;
 use SubtitleToolbox\Dual\DualSubtitleMode;
 use SubtitleToolbox\Dual\DualSubtitleOptions;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Hls\HlsSegmentOptions;
-use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -294,23 +292,28 @@ class BinaryDiffDualHlsTest extends CliTestCase
     }
 
 
+    private function assertSameFilesAsGoldenFolder(string $folder, string $outputDir): void
+    {
+        $golden = self::FILES . "hls/expected/$folder";
+        $names  = array_map("basename", glob("$golden/*"));
+        $this->assertSame($names, array_map("basename", glob("$this->dir/$outputDir/*")));
+        foreach ($names as $name) {
+            $this->assertFileEquals("$golden/$name", "$this->dir/$outputDir/$name", $name);
+        }
+    }
+
+
     public function testHlsWritesTheSegmentsAndThePlaylist(): void
     {
         copy(self::FILES . "hls/node-webvtt-subs1.vtt", "$this->dir/talk.vtt");
-        $expected = HlsWebVttSegmenter::segment(
-            Subtitle::fromStringAutoDetectFormat($this->file("talk.vtt")),
-            new HlsSegmentOptions(segmentDuration: 10, mpegts: 126000, fileNamePattern: "part%03d.vtt", mediaDuration: 150)
-        );
+        $options = ["--segment", "00:10", "--mpegts", "126000", "--pattern", "part%03d.vtt", "--media-duration", "00:02:30", "--playlist", "index.m3u8"];
 
-        $this->assertSame([0, "talk.vtt -> out/index.m3u8, 15 segments\n", ""], $this->runCli([
-            "hls", "talk.vtt", "--output-dir", "out", "--segment", "00:10", "--mpegts", "126000", "--pattern", "part%03d.vtt",
-            "--media-duration", "00:02:30", "--playlist", "index.m3u8",
-        ]));
-        $this->assertSame($expected->getPlaylist(), $this->file("out/index.m3u8"));
-        foreach ($expected->getSegments() as $name => $content) {
-            $this->assertSame($content, $this->file("out/$name"));
-        }
-        $this->assertCount(16, glob("$this->dir/out/*"));
+        $this->assertSame([0, "talk.vtt -> out/index.m3u8, 15 segments\n", ""], $this->runCli(["hls", "talk.vtt", "--output-dir", "out", ...$options]));
+        $this->assertSameFilesAsGoldenFolder("node-webvtt-subs1", "out");
+
+        $this->assertSame([0, "talk.vtt -> local/index.m3u8, 15 segments\n", ""],
+                          $this->runCli(["hls", "talk.vtt", "--output-dir", "local", ...$options, "--local", "10"]));
+        $this->assertSameFilesAsGoldenFolder("node-webvtt-subs1-local", "local");
 
         $this->assertSame(self::usageError("hls", "The file name pattern must hold exactly one %d and no other placeholder, got \"part.vtt\"."),
                           $this->runCli(["hls", "talk.vtt", "--output-dir", "out", "--pattern", "part.vtt"]));

@@ -133,6 +133,7 @@ SOFTWARE.
 - Checked at: `af2dbb541ae29f9ccada05db9b9250111cb4848c`
 - Files copied from it:
   - `tests/files/hls/node-webvtt-subs1.vtt (cut to the first 30 cues)`
+  - `tests/files/hls/expected/node-webvtt-subs1/` and `node-webvtt-subs1-local/` (HLS segments written from that file)
 
 ```text
 The MIT License

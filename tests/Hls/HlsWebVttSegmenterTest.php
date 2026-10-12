@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Hls;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
@@ -154,6 +155,31 @@ class HlsWebVttSegmenterTest extends TestCase
         $this->assertSame(37399, $count);
         $this->assertCount(22, $once);
         $this->assertSame($once, $copy1000);
+    }
+
+
+    /** @return array<string, array{string, float}> */
+    public static function goldenFolders(): array
+    {
+        return ["local 0 s" => ["node-webvtt-subs1", 0.0], "local 10 s" => ["node-webvtt-subs1-local", 10.0]];
+    }
+
+
+    #[DataProvider("goldenFolders")]
+    public function testRealFileGivesTheGoldenSegmentsAndPlaylist(string $folder, float $local): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "node-webvtt-subs1.vtt"), Format::WebVtt);
+        $hls      = HlsWebVttSegmenter::segment($subtitle, new HlsSegmentOptions(
+            segmentDuration: 10, mpegts: 126000, local: $local, fileNamePattern: "part%03d.vtt", mediaDuration: 150
+        ));
+
+        $golden   = self::FILES . "expected/$folder/";
+        $segments = iterator_to_array($hls->getSegments());
+        $this->assertSame(array_map("basename", glob($golden . "part*.vtt")), array_keys($segments));
+        foreach ($segments as $name => $content) {
+            $this->assertStringEqualsFile($golden . $name, $content, $name);
+        }
+        $this->assertStringEqualsFile($golden . "index.m3u8", $hls->getPlaylist());
     }
 
 
