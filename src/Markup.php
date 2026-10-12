@@ -253,6 +253,42 @@ final class Markup
 
 
     /**
+     * Writes the English pronoun "i" and its contractions such as "i'm" in upper case in the text runs of one line. "i.e." stays lower case.
+     * Decides on the joined runs, so an "i" between tags inside a word stays lower case.
+     * Text that is not valid UTF-8 makes the Unicode regex fail. An ASCII regex then decides when $asciiFallback is true.
+     *
+     * @param array<int, string> $runs
+     * @return array<int, string>
+     *
+     * @internal
+     */
+    public static function upperCaseEnglishI(array $runs, bool $asciiFallback): array
+    {
+        $text  = implode("", $runs);
+        $count = preg_match_all('/(?<![\p{L}\p{N}\'\x{2019}]|\p{L}\.)i(?=(?:[\'\x{2019}](?:m|ll|ve|d))?(?![\p{L}\p{N}\'\x{2019}]|\.\p{L}))/u',
+                                $text, $matches, PREG_OFFSET_CAPTURE);
+        if ($count === false && $asciiFallback) {
+            $count = preg_match_all('/(?<![A-Za-z0-9\']|[A-Za-z]\.)i(?=(?:\'(?:m|ll|ve|d))?(?![A-Za-z0-9\']|\.[A-Za-z]))/', $text, $matches, PREG_OFFSET_CAPTURE);
+        }
+        if (!$count) {
+            return $runs;
+        }
+
+        $start = 0;
+        foreach ($runs as $index => $run) {
+            foreach (array_column($matches[0], 1) as $offset) {
+                if ($offset >= $start && $offset < $start + strlen($run)) {
+                    $runs[$index][$offset - $start] = "I";
+                }
+            }
+            $start += strlen($run);
+        }
+
+        return $runs;
+    }
+
+
+    /**
      * Tells if one of the lines holds text other than white space outside its tags. An entity counts as text.
      *
      * @param array<string> $lines

@@ -367,29 +367,14 @@ final class CommonErrorFixer
 
     /**
      * Writes the pronoun "i" and "i'm", "i'll", "i've" and "i'd" in upper case. The letters around it may be in other text runs.
+     * A line that is not valid UTF-8 stays as it is.
      */
     private static function loneLowercaseI(string $line): string
     {
         $tokens = Markup::splitTags($line);
         $runs   = array_filter($tokens, fn (int $index): bool => $index % 2 === 0, ARRAY_FILTER_USE_KEY);
-        $text   = implode("", $runs);
-        if (preg_match_all('/(?<![\p{L}\p{N}\'\x{2019}]|\p{L}\.)i(?=(?:[\'\x{2019}](?:m|ll|ve|d))?(?![\p{L}\p{N}\'\x{2019}]|\.\p{L}))/u',
-                           $text, $matches, PREG_OFFSET_CAPTURE) < 1) {
-            return $line;
-        }
 
-        $start = 0;
-        $found = array_column($matches[0], 1);
-        foreach ($runs as $index => $run) {
-            foreach ($found as $offset) {
-                if ($offset >= $start && $offset < $start + strlen($run)) {
-                    $tokens[$index][$offset - $start] = "I";
-                }
-            }
-            $start += strlen($run);
-        }
-
-        return implode("", $tokens);
+        return implode("", array_replace($tokens, Markup::upperCaseEnglishI($runs, false)));
     }
 
 

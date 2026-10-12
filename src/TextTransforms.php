@@ -303,37 +303,21 @@ trait TextTransforms
 
 
     /**
-     * Writes the English pronoun "i" and its contractions such as "i'm" in upper case. "i.e." stays lower case.
-     * Decides on the text of the whole line, so an "i" between tags inside a word stays lower case.
+     * Writes the English pronoun "i" in upper case as Markup::upperCaseEnglishI() does, in the runs with &lt;, &gt; and &amp; decoded.
      */
     private static function textTransformsEnglishI(string $line): string
     {
-        $visible = "";
-        Markup::mapTextRuns([$line], function (string $text) use (&$visible): string {
-            $visible .= $text;
+        $runs = [];
+        Markup::mapTextRuns([$line], function (string $text) use (&$runs): string {
+            $runs[] = $text;
 
             return $text;
         });
-        $count = preg_match_all('/(?<![\p{L}\p{N}\'\x{2019}]|\p{L}\.)i(?=(?:[\'\x{2019}](?:m|ll|ve|d))?(?![\p{L}\p{N}\'\x{2019}]|\.\p{L}))/u', $visible, $matches, PREG_OFFSET_CAPTURE);
-        if ($count === false) {
-            $count = preg_match_all('/(?<![A-Za-z0-9\']|[A-Za-z]\.)i(?=(?:\'(?:m|ll|ve|d))?(?![A-Za-z0-9\']|\.[A-Za-z]))/', $visible, $matches, PREG_OFFSET_CAPTURE);
-        }
-        if ($count === 0) {
-            return $line;
-        }
+        $upper = Markup::upperCaseEnglishI($runs, true);
+        $index = 0;
 
-        $offsets = array_column($matches[0], 1);
-        $start   = 0;
-
-        return Markup::mapTextRuns([$line], function (string $text) use ($offsets, &$start): string {
-            foreach ($offsets as $offset) {
-                if ($offset >= $start && $offset < $start + strlen($text)) {
-                    $text[$offset - $start] = "I";
-                }
-            }
-            $start += strlen($text);
-
-            return $text;
+        return Markup::mapTextRuns([$line], function () use ($upper, &$index): string {
+            return $upper[$index++];
         })[0];
     }
 

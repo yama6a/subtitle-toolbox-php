@@ -121,6 +121,7 @@ class CommonErrorFixerTest extends TestCase
                                                      ["see i.e. here, www.i.com, iPhone, w<b>i</b>th"]],
             "lone i in German"                   => ["loneLowercaseI", "de", ["i think"], ["i think"]],
             "lone i without a language"          => ["loneLowercaseI", null, ["i think"], ["i think"]],
+            "lone i in invalid UTF-8 stays"      => ["loneLowercaseI", "en", ["caf\xE9 i think"], ["caf\xE9 i think"]],
             "first cue starts a sentence"        => ["sentenceStartCase", "en", ["hello."], ["Hello."]],
             "line after a sentence end"          => ["sentenceStartCase", "en", ["- Hello.", "- <i>\"where</i> are you?"],
                                                      ["- Hello.", "- <i>\"Where</i> are you?"]],
