@@ -9,13 +9,8 @@ use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\TimeRanges;
 use SubtitleToolbox\Timecode;
 
-/**
- * @phpstan-type SplitSearch array{values: list<list<float>>, starts: list<list<int>>, parents: list<list<int>>, floors: list<array{float, int}>, nodes: list<array{n: int, start: int, parent: int}>}
- */
 final class ReferenceSync
 {
-    private const COARSE_STEP  = 0.1;
-    private const FINE_STEP    = 0.01;
     private const SPLIT_BLOCKS = 200;
 
     // An earlier cue ends at least 1 ms before the first cue of a later segment.
@@ -110,18 +105,18 @@ final class ReferenceSync
             return new ReferenceSyncReport(0, 1, 0);
         }
 
-        $targetTime    = self::totalTime($targetSpans);
-        $referenceTime = self::totalTime($referenceSpans);
+        $targetTime    = SpanOverlap::totalTime($targetSpans);
+        $referenceTime = SpanOverlap::totalTime($referenceSpans);
         $best          = new ReferenceSyncReport(0, 1, 0);
         $bestSplit     = null;
 
         foreach (self::scaleFactors($options->searchScale) as $scale) {
             $scaled = array_map(fn (array $span): array => [$span[0] * $scale, $span[1] * $scale], $targetSpans);
 
-            $coarse     = self::overlapPerOffset($scaled, $referenceSpans, $options->minOffset, $options->maxOffset);
-            $coarseBest = $options->minOffset + array_search(max($coarse), $coarse, true) * self::COARSE_STEP;
+            $coarse     = SpanOverlap::overlapPerOffset($scaled, $referenceSpans, $options->minOffset, $options->maxOffset);
+            $coarseBest = $options->minOffset + array_search(max($coarse), $coarse, true) * SpanOverlap::COARSE_STEP;
 
-            [$offset, $overlap] = self::refine($scaled, $referenceSpans, $coarseBest, $options);
+            [$offset, $overlap] = SpanOverlap::refine($scaled, $referenceSpans, $coarseBest, $options);
 
             $score = $overlap / ($targetTime * $scale + $referenceTime - $overlap);
             if ($score > $best->score + Timecode::EPSILON) {
@@ -151,21 +146,21 @@ final class ReferenceSync
      * A search over single spans takes too long in PHP. So the splits first fall on block boundaries.
      * Then each split moves to the best span near its boundary.
      *
-     * @param list<array{float, float}> $original
-     * @param list<array{float, float}> $target
+     * @param list<array{float, float}> $unscaledTarget
+     * @param list<array{float, float}> $scaledTarget
      * @param list<array{float, float}> $reference
      * @return list<array{list<array{from: float, offset: float}>, float}>
      */
-    private static function segmentCandidates(array $original, array $target, array $reference, ReferenceSyncOptions $options): array
+    private static function segmentCandidates(array $unscaledTarget, array $scaledTarget, array $reference, ReferenceSyncOptions $options): array
     {
-        $blockSize = (int)ceil(count($target) / self::SPLIT_BLOCKS);
-        $search    = self::forwardPass(array_chunk($target, $blockSize), $reference, $options);
+        $blockSize = (int)ceil(count($scaledTarget) / self::SPLIT_BLOCKS);
+        $search    = new SplitSearch(array_chunk($scaledTarget, $blockSize), $reference, $options);
 
         $candidates = [];
         for ($layer = 1; $layer <= $options->maxSplits; $layer++) {
-            $chain = self::backtrack($search, $layer, $blockSize);
+            $chain = $search->backtrack($layer, $blockSize);
             if (count($chain) >= 2) {
-                $candidates[] = self::refineChain($chain, $original, $target, $reference, $blockSize, $options);
+                $candidates[] = self::refineChain($chain, $unscaledTarget, $scaledTarget, $reference, $blockSize, $options);
             }
         }
 
@@ -174,121 +169,21 @@ final class ReferenceSync
 
 
     /**
-     * Finds the highest overlap up to each block, for each layer and each coarse offset.
-     * A layer is the number of splits so far.
-     * A segment that starts at a block takes the best value of the layer below as its floor.
-     *
-     * @param list<list<array{float, float}>> $blocks
-     * @param list<array{float, float}>       $reference
-     * @return SplitSearch
-     */
-    private static function forwardPass(array $blocks, array $reference, ReferenceSyncOptions $options): array
-    {
-        $layers  = $options->maxSplits + 1;
-        $offsets = (int)floor(($options->maxOffset - $options->minOffset) / self::COARSE_STEP + Timecode::EPSILON) + 1;
-        $search  = [
-            "values"  => array_fill(0, $layers, array_fill(0, $offsets, 0.0)),
-            "starts"  => array_fill(0, $layers, array_fill(0, $offsets, 0)),
-            "parents" => array_fill(0, $layers, array_fill(0, $offsets, -1)),
-            "floors"  => array_fill(0, $layers, [-INF, -1]),
-            "nodes"   => [],
-        ];
-
-        foreach ($blocks as $blockIndex => $block) {
-            for ($layer = $layers - 1; $layer >= 1 && $blockIndex > 0; $layer--) {
-                $search["floors"][$layer] = self::bestNode($search, $layer - 1);
-            }
-
-            $overlaps = self::overlapPerOffset($block, $reference, $options->minOffset, $options->maxOffset);
-            for ($layer = 0; $layer < $layers; $layer++) {
-                self::addBlock($search, $layer, $blockIndex, $overlaps);
-            }
-        }
-
-        return $search;
-    }
-
-
-    /**
-     * Adds the overlaps of one block to a layer. An offset whose value is below the floor starts a new segment here.
-     *
-     * @param SplitSearch $search
-     * @param list<float> $overlaps
-     */
-    private static function addBlock(array &$search, int $layer, int $blockIndex, array $overlaps): void
-    {
-        [$floor, $floorNode] = $search["floors"][$layer];
-        $row                 = &$search["values"][$layer];
-        foreach ($overlaps as $n => $overlap) {
-            if ($floor > $row[$n] + Timecode::EPSILON) {
-                $row[$n]                       = $floor;
-                $search["starts"][$layer][$n]  = $blockIndex;
-                $search["parents"][$layer][$n] = $floorNode;
-            }
-            $row[$n] += $overlap;
-        }
-        unset($row);
-    }
-
-
-    /**
-     * Returns the best value of a layer and the node that records it, or the floor of the layer when that is higher.
-     *
-     * @param SplitSearch $search
-     * @return array{float, int}
-     */
-    private static function bestNode(array &$search, int $layer): array
-    {
-        $value = max($search["values"][$layer]);
-        if ($value < $search["floors"][$layer][0]) {
-            return $search["floors"][$layer];
-        }
-
-        $n                 = array_search($value, $search["values"][$layer], true);
-        $search["nodes"][] = ["n" => $n, "start" => $search["starts"][$layer][$n], "parent" => $search["parents"][$layer][$n]];
-
-        return [$value, count($search["nodes"]) - 1];
-    }
-
-
-    /**
-     * Returns the segments of the best path of a layer, each with its coarse offset index and its first span.
-     *
-     * @param SplitSearch $search
-     * @return list<array{n: int, start: int}>
-     */
-    private static function backtrack(array &$search, int $layer, int $blockSize): array
-    {
-        $chain = [];
-        for ($node = self::bestNode($search, $layer)[1]; $node >= 0; $node = $search["nodes"][$node]["parent"]) {
-            ["n" => $n, "start" => $startBlock] = $search["nodes"][$node];
-            if ($chain !== [] && $chain[0]["n"] === $n) {
-                $chain[0]["start"] = $startBlock * $blockSize;
-            } else {
-                array_unshift($chain, ["n" => $n, "start" => $startBlock * $blockSize]);
-            }
-        }
-
-        return $chain;
-    }
-
-
-    /**
      * Moves each split to its best span and refines the offset of each segment.
      *
-     * @param list<array{n: int, start: int}> $chain
-     * @param list<array{float, float}>       $original
-     * @param list<array{float, float}>       $target
-     * @param list<array{float, float}>       $reference
+     * @param list<array{offsetIndex: int, start: int}> $chain
+     * @param list<array{float, float}>                 $unscaledTarget
+     * @param list<array{float, float}>                 $scaledTarget
+     * @param list<array{float, float}>                 $reference
      * @return array{list<array{from: float, offset: float}>, float}
      */
-    private static function refineChain(array $chain, array $original, array $target, array $reference, int $blockSize, ReferenceSyncOptions $options): array
+    private static function refineChain(array $chain, array $unscaledTarget, array $scaledTarget, array $reference, int $blockSize, ReferenceSyncOptions $options): array
     {
         foreach ($chain as $index => &$segment) {
-            $segment["offset"] = $options->minOffset + $segment["n"] * self::COARSE_STEP;
+            $segment["offset"] = $options->minOffset + $segment["offsetIndex"] * SpanOverlap::COARSE_STEP;
             if ($index > 0) {
-                $limit            = ($chain[$index + 1]["start"] ?? count($target)) - 1;
-                $segment["start"] = self::bestSplit($target, $reference, $chain[$index - 1], $segment, $blockSize, $limit);
+                $limit            = ($chain[$index + 1]["start"] ?? count($scaledTarget)) - 1;
+                $segment["start"] = self::bestSplit($scaledTarget, $reference, $chain[$index - 1], $segment, $blockSize, $limit);
             }
         }
         unset($segment);
@@ -296,10 +191,10 @@ final class ReferenceSync
         $segments = [];
         $overlap  = 0.0;
         foreach ($chain as $index => $segment) {
-            $end                       = $chain[$index + 1]["start"] ?? count($target);
-            [$offset, $segmentOverlap] = self::refine(array_slice($target, $segment["start"], $end - $segment["start"]),
-                                                      $reference, $segment["offset"], $options);
-            $segments[]                = ["from" => $index === 0 ? 0.0 : $original[$segment["start"]][0], "offset" => Timecode::roundToMilliseconds($offset)];
+            $end                       = $chain[$index + 1]["start"] ?? count($scaledTarget);
+            [$offset, $segmentOverlap] = SpanOverlap::refine(array_slice($scaledTarget, $segment["start"], $end - $segment["start"]),
+                                                             $reference, $segment["offset"], $options);
+            $segments[]                = ["from" => $index === 0 ? 0.0 : $unscaledTarget[$segment["start"]][0], "offset" => Timecode::roundToMilliseconds($offset)];
             $overlap                  += $segmentOverlap;
         }
 
@@ -311,18 +206,18 @@ final class ReferenceSync
      * Returns the span index within one block of the split between $before and $after where the overlap is highest.
      * The split stays after the first span of $before and at or before $limit, the last span before the next split.
      *
-     * @param list<array{float, float}> $target
-     * @param list<array{float, float}> $reference
+     * @param list<array{float, float}>        $scaledTarget
+     * @param list<array{float, float}>        $reference
      * @param array{start: int, offset: float} $before
      * @param array{start: int, offset: float} $after
      */
-    private static function bestSplit(array $target, array $reference, array $before, array $after, int $blockSize, int $limit): int
+    private static function bestSplit(array $scaledTarget, array $reference, array $before, array $after, int $blockSize, int $limit): int
     {
         $from   = max($before["start"] + 1, $after["start"] - $blockSize);
         $to     = min($limit, $after["start"] + $blockSize);
-        $window = array_slice($target, $from, $to - $from);
-        $early  = self::overlapPerSpan($window, $reference, $before["offset"]);
-        $late   = self::overlapPerSpan($window, $reference, $after["offset"]);
+        $window = array_slice($scaledTarget, $from, $to - $from);
+        $early  = SpanOverlap::overlapPerSpan($window, $reference, $before["offset"]);
+        $late   = SpanOverlap::overlapPerSpan($window, $reference, $after["offset"]);
 
         $total     = array_sum($late);
         $bestTotal = $total;
@@ -336,31 +231,6 @@ final class ReferenceSync
         }
 
         return $split;
-    }
-
-
-    /**
-     * @param list<array{float, float}> $target
-     * @param list<array{float, float}> $reference
-     * @return array{float, float} the offset and its overlap
-     */
-    private static function refine(array $target, array $reference, float $coarseBest, ReferenceSyncOptions $options): array
-    {
-        $offset  = $coarseBest;
-        $overlap = self::overlap($target, $reference, $offset);
-        $from    = max($options->minOffset, $coarseBest - self::COARSE_STEP);
-        $to      = min($options->maxOffset, $coarseBest + self::COARSE_STEP);
-        $steps   = (int)floor(($to - $from) / self::FINE_STEP + Timecode::EPSILON);
-        for ($n = 0; $n <= $steps; $n++) {
-            $candidate        = $from + $n * self::FINE_STEP;
-            $candidateOverlap = self::overlap($target, $reference, $candidate);
-            if ($candidateOverlap > $overlap + Timecode::EPSILON) {
-                $offset  = $candidate;
-                $overlap = $candidateOverlap;
-            }
-        }
-
-        return [$offset, $overlap];
     }
 
 
@@ -396,157 +266,5 @@ final class ReferenceSync
         }
 
         return TimeRanges::merged($spans);
-    }
-
-
-    /** @param list<array{float, float}> $spans */
-    private static function totalTime(array $spans): float
-    {
-        return array_sum(array_map(fn (array $span): float => $span[1] - $span[0], $spans));
-    }
-
-
-    /**
-     * @param list<array{float, float}> $target
-     * @param list<array{float, float}> $reference
-     */
-    private static function overlap(array $target, array $reference, float $offset): float
-    {
-        $overlap        = 0.0;
-        $targetCount    = count($target);
-        $referenceCount = count($reference);
-        $i              = 0;
-        $j              = 0;
-
-        while ($i < $targetCount && $j < $referenceCount) {
-            $targetEnd = $target[$i][1] + $offset;
-            $from      = max($target[$i][0] + $offset, $reference[$j][0]);
-            $to        = min($targetEnd, $reference[$j][1]);
-            if ($to > $from) {
-                $overlap += $to - $from;
-            }
-
-            if ($targetEnd < $reference[$j][1]) {
-                $i++;
-            } else {
-                $j++;
-            }
-        }
-
-        return $overlap;
-    }
-
-
-    /**
-     * @param list<array{float, float}> $target
-     * @param list<array{float, float}> $reference
-     * @return list<float>
-     */
-    private static function overlapPerSpan(array $target, array $reference, float $offset): array
-    {
-        $overlaps       = array_fill(0, count($target), 0.0);
-        $targetCount    = count($target);
-        $referenceCount = count($reference);
-        $i              = 0;
-        $j              = 0;
-
-        while ($i < $targetCount && $j < $referenceCount) {
-            $targetEnd = $target[$i][1] + $offset;
-            $from      = max($target[$i][0] + $offset, $reference[$j][0]);
-            $to        = min($targetEnd, $reference[$j][1]);
-            if ($to > $from) {
-                $overlaps[$i] += $to - $from;
-            }
-
-            if ($targetEnd < $reference[$j][1]) {
-                $i++;
-            } else {
-                $j++;
-            }
-        }
-
-        return $overlaps;
-    }
-
-
-    /**
-     * Returns the overlap for each offset from $minOffset to $maxOffset in steps of COARSE_STEP.
-     * One sweep per offset is too slow in PHP.
-     * So the overlap of target span [a, b] and reference span [c, d] becomes four ramps max(0, o - k).
-     * The corners k are c - b, c - a, d - b and d - a. The ramps add up in second differences on the grid.
-     *
-     * @param list<array{float, float}> $target
-     * @param list<array{float, float}> $reference
-     * @return list<float>
-     */
-    private static function overlapPerOffset(array $target, array $reference, float $minOffset, float $maxOffset): array
-    {
-        $step           = self::COARSE_STEP;
-        $last           = (int)floor(($maxOffset - $minOffset) / $step + Timecode::EPSILON);
-        $maxGridOffset  = $minOffset + $last * $step;
-        $secondDiffs    = array_fill(0, $last + 2, 0.0);
-        $firstValue     = 0.0;
-        $firstSlope     = 0.0;
-        $referenceCount = count($reference);
-        $firstCandidate = 0;
-
-        $addRamp = function (float $weight, float $corner) use (&$secondDiffs, &$firstValue, &$firstSlope, $minOffset, $step, $last): void {
-            $position = ($corner - $minOffset) / $step;
-            if ($position < 0) {
-                $firstValue += $weight * ($minOffset - $corner);
-                $firstSlope += $weight * $step;
-
-                return;
-            }
-
-            $index = (int)floor($position);
-            if ($index >= $last) {
-                return;
-            }
-
-            $fraction = $position - $index;
-            if ($index === 0) {
-                $firstSlope += $weight * (1 - $fraction) * $step;
-            } else {
-                $secondDiffs[$index] += $weight * (1 - $fraction) * $step;
-            }
-            $secondDiffs[$index + 1] += $weight * $fraction * $step;
-        };
-
-        foreach ($target as [$a, $b]) {
-            while ($firstCandidate < $referenceCount && $reference[$firstCandidate][1] - $a <= $minOffset) {
-                $firstCandidate++;
-            }
-
-            for ($j = $firstCandidate; $j < $referenceCount && $reference[$j][0] - $b < $maxGridOffset; $j++) {
-                [$c, $d] = $reference[$j];
-                $addRamp(1, $c - $b);
-                $addRamp(-1, $c - $a);
-                $addRamp(-1, $d - $b);
-                $addRamp(1, $d - $a);
-            }
-        }
-
-        return self::integrate($firstValue, $firstSlope, $secondDiffs, $last);
-    }
-
-
-    /**
-     * Returns the values on the grid from the first value, the first slope and the second differences.
-     *
-     * @param list<float> $secondDiffs
-     * @return list<float>
-     */
-    private static function integrate(float $firstValue, float $firstSlope, array $secondDiffs, int $last): array
-    {
-        $values = [$firstValue];
-        if ($last >= 1) {
-            $values[] = $firstValue + $firstSlope;
-        }
-        for ($n = 1; $n < $last; $n++) {
-            $values[] = 2 * $values[$n] - $values[$n - 1] + $secondDiffs[$n];
-        }
-
-        return $values;
     }
 }
