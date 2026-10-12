@@ -39,6 +39,46 @@ class MatroskaReaderTest extends TestCase
     }
 
 
+    public static function producerFiles(): array
+    {
+        return [
+            "mkvmerge S_TEXT/UTF8"      => ["mkvmerge.mkv", 2, "srt"],
+            "mkvmerge S_TEXT/ASS"       => ["mkvmerge.mkv", 3, "ass"],
+            "ffmpeg S_TEXT/UTF8"        => ["ffmpeg_srt.mkv", 2, "srt"],
+            "ffmpeg D_WEBVTT/SUBTITLES" => ["ffmpeg_webvtt.webm", 2, "vtt"],
+        ];
+    }
+
+
+    #[DataProvider("producerFiles")]
+    public function testExtractsTheTracksOfMkvmergeAndFfmpegFilesAsTheGoldenFiles(string $file, int $track, string $extension): void
+    {
+        $subtitle = MatroskaReader::open(self::DIR . $file)->extract($track);
+
+        $this->assertStringEqualsFile(self::DIR . "expected/$file.$track.$extension",
+                                      $subtitle->toString($subtitle->getFormat(), new WriteOptions(bom: false)));
+    }
+
+
+    public function testReadsTheWebmWebVttCodecsExceptMetadata(): void
+    {
+        $tracks = "";
+        foreach (["SUBTITLES", "CAPTIONS", "DESCRIPTIONS", "METADATA"] as $index => $kind) {
+            $tracks .= MkvFixtureWriter::trackEntry(["number" => $index + 1, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "D_WEBVTT/$kind"]);
+        }
+        $stream = fopen("php://memory", "w+b");
+        fwrite($stream, MkvFixtureWriter::ebmlHeader("webm") . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT,
+            MkvFixtureWriter::element(MkvFixtureWriter::TRACKS, $tracks) .
+            MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 1000, "\r\nline:90%\r\nThe gate closes in five minutes.", 2000)])));
+        rewind($stream);
+        $mkv = MatroskaReader::open($stream);
+
+        $this->assertSame([Format::WebVtt, Format::WebVtt, Format::WebVtt, null], array_map($mkv->trackFormat(...), [1, 2, 3, 4]));
+        $this->assertSame("WEBVTT\n\n1\n00:00:01.000 --> 00:00:03.000 line:90%\nThe gate closes in five minutes.\n",
+                          $mkv->extract(2)->toString(Format::WebVtt, new WriteOptions(bom: false)));
+    }
+
+
     public function testListsOnlyTheSubtitleTracks(): void
     {
         $tracks = MatroskaReader::open(self::DIR . "text_tracks.mkv")->getSubtitleTracks();
