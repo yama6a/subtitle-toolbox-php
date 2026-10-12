@@ -53,6 +53,24 @@ class EbuStlFormatterTest extends TestCase
     }
 
 
+    public function testMncIsTheLongestRowAndRowsStayAsWritten(): void
+    {
+        $subtitle = Subtitle::load(__DIR__ . "/../files/scc/fit/own_ferry.srt", Format::SubRip);
+        $stl      = $subtitle->toString(Format::EbuStl);
+
+        $this->assertSame("46", EbuStl::readGsi(substr($stl, 0, 1024))["MNC"]);
+        $this->assertSame("The ferry to Split leaves from the old harbour", Subtitle::fromString($stl, Format::EbuStl)->getCues()[0]->getLines()[0]);
+    }
+
+
+    public function testMncCountsALetterWithADiacriticOnce(): void
+    {
+        $stl = (new Subtitle())->addCue(new SubtitleCue(1, 2, "<i>" . str_repeat("é", 41) . "</i>"))->toString(Format::EbuStl);
+
+        $this->assertSame("41", EbuStl::readGsi(substr($stl, 0, 1024))["MNC"]);
+    }
+
+
     public function testWritesThirtyFramesPerSecond(): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.5, 2.967, "Hello"));
