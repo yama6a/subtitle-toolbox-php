@@ -88,7 +88,8 @@ final class FormatDataSchema
             "frameRateMultiplier" => "string",
         ],
         LyricsParser::FORMAT_DATA_KEY             => [
-            "idTags" => self::STRINGS,
+            "idTags"          => self::STRINGS,
+            "spacedWordTimes" => "bool",
         ],
         MicroDvdParser::FORMAT_DATA_KEY           => [
             "frameRate"     => "number",

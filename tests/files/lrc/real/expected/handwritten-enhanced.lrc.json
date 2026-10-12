@@ -12,7 +12,8 @@
                 "idTags": {
                     "lr": "John Roe",
                     "length": "1:05"
-                }
+                },
+                "spacedWordTimes": true
             }
         },
         "cues": [

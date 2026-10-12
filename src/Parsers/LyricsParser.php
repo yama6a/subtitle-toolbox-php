@@ -33,6 +33,8 @@ final class LyricsParser extends SubtitleParser
     private const ID_TAG_REGEX          = "/^\[([A-Za-z][A-Za-z0-9_]*|#):(.*)\]$/";
     private const OFFSET_REGEX          = "/^[+-]?\d+$/";
 
+    private bool $spacedWordTimes = false;
+
 
     protected function read(string $content): Subtitle
     {
@@ -52,6 +54,7 @@ final class LyricsParser extends SubtitleParser
         $comments   = [];
         $timeline   = [];
 
+        $this->spacedWordTimes = false;
         for ($index = 0; $index < count($lines); $index++) {
             $currentLine = $lines[$index];
             if (preg_match(self::TIMESTAMP_LINE_REGEX, $currentLine, $matches)) {
@@ -70,8 +73,9 @@ final class LyricsParser extends SubtitleParser
             $this->addIdTag($subtitle, $idTags, $comments, $currentLine, count($parsedCues));
         }
 
-        if ($idTags !== []) {
-            $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["idTags" => $idTags]);
+        $fileData = ($idTags === [] ? [] : ["idTags" => $idTags]) + ($this->spacedWordTimes ? ["spacedWordTimes" => true] : []);
+        if ($fileData !== []) {
+            $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData);
         }
 
         $this->assignEndTimes($timeline);
@@ -220,7 +224,9 @@ final class LyricsParser extends SubtitleParser
     private function convertWordTimestamps(string $text, float $offset): string
     {
         $wordTime = "(<" . self::TIMESTAMP_PATTERN . ">)";
-        $text     = preg_replace(["/{$wordTime}[ \\t]+/", "/[ \\t]+{$wordTime}$/"], '$1', $text) ?? $text;
+        $text     = preg_replace(["/{$wordTime}[ \\t]+/", "/[ \\t]+{$wordTime}$/"], '$1', $text, -1, $count) ?? $text;
+
+        $this->spacedWordTimes = $this->spacedWordTimes || $count > 0;
 
         return preg_replace_callback(
             "/<" . self::TIMESTAMP_PATTERN . ">|[^<]+|</",
