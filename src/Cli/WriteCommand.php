@@ -12,9 +12,11 @@ use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\Formatters\SccFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\OptionsCopy;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
 
 /**
@@ -25,6 +27,8 @@ use SubtitleToolbox\WriteOptions;
 abstract class WriteCommand extends FileCommand
 {
     protected const OUTPUT_DETAILS = "Without -o or --output-dir, the output goes to standard output.";
+
+    private const IMAGE_CUES_MESSAGE = "The file holds image cues without text. Run OCR on them first, or pass --skip-image-cues.";
 
     private const LINE_ENDINGS = ["lf" => LineEnding::Lf, "crlf" => LineEnding::Crlf];
 
@@ -169,23 +173,16 @@ abstract class WriteCommand extends FileCommand
 
         $subtitle = $this->transform($subtitle, $arguments, $console, $input);
 
+        $options = $this->formatterOptions($outputFormat, $arguments);
+        $label   = self::label($input);
         try {
-            $content = $subtitle->toString($outputFormat, $this->formatterOptions($outputFormat, $arguments));
+            $content = match (true) {
+                $outputFormat === Format::WebVtt               => $this->webVtt($subtitle, $options, $console, $label),
+                $outputFormat === Format::Scc && $this->sccFit => $this->fittedScc($subtitle, $options, $console, $label),
+                default                                        => $subtitle->toString($outputFormat, $options),
+            };
         } catch (ImageCueWithoutTextException) {
-            self::fail("The file holds image cues without text. Run OCR on them first, or pass --skip-image-cues.");
-        }
-        if ($outputFormat === Format::Scc && $this->sccFit) {
-            $report = (new SccFormatter())->formatWithReport($subtitle, $this->formatterOptions($outputFormat, $arguments));
-            $content = $report->content;
-            foreach ($report->changes as $change) {
-                $console->err(self::label($input) . ": $change->message ({$change->action->value})\n");
-            }
-        }
-        if ($outputFormat === Format::WebVtt) {
-            $report = (new WebVttFormatter())->formatWithReport($subtitle, $this->formatterOptions($outputFormat, $arguments));
-            foreach ($report->droppedColors as $dropped) {
-                $console->err(self::label($input) . ": $dropped->message\n");
-            }
+            self::fail(self::IMAGE_CUES_MESSAGE);
         }
 
         if ($target === self::DASH) {
@@ -195,7 +192,46 @@ abstract class WriteCommand extends FileCommand
         }
 
         $this->outputFiles->create($target, $content);
-        $this->report($console, self::label($input) . " -> $target\n");
+        $this->report($console, "$label -> $target\n");
+    }
+
+
+    private function webVtt(Subtitle $subtitle, WriteOptions $options, Console $console, string $label): string
+    {
+        $report = (new WebVttFormatter())->formatWithReport(self::textCues($subtitle, $options), $options);
+        foreach ($report->droppedColors as $dropped) {
+            $console->err("$label: $dropped->message\n");
+        }
+
+        return $report->content;
+    }
+
+
+    private function fittedScc(Subtitle $subtitle, WriteOptions $options, Console $console, string $label): string
+    {
+        $report = (new SccFormatter())->formatWithReport(self::textCues($subtitle, $options), $options);
+        foreach ($report->changes as $change) {
+            $console->err("$label: $change->message ({$change->action->value})\n");
+        }
+
+        return $report->content;
+    }
+
+
+    /**
+     * Applies the image cue rule of Subtitle::toString(), which a formatter called with formatWithReport() skips.
+     */
+    private static function textCues(Subtitle $subtitle, WriteOptions $options): Subtitle
+    {
+        $isImageCue = fn (SubtitleCue $cue): bool => CueImage::isImageCue($cue) && $cue->getLines() === [];
+        if ($subtitle->findCues($isImageCue) === []) {
+            return $subtitle;
+        }
+        if (!$options->skipImageCues) {
+            self::fail(self::IMAGE_CUES_MESSAGE);
+        }
+
+        return (clone $subtitle)->removeCuesWhere($isImageCue);
     }
 
 

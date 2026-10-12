@@ -41,6 +41,11 @@ class BinaryOcrTest extends CliTestCase
             $this->runCli(["convert", "disc/shapes.sup", "--to", "srt"])
         );
         $this->assertSame([0, "disc/shapes.sup -> out/shapes.srt\n", ""], $this->runCli(["convert", "disc/shapes.sup", "--to", "srt", "--output-dir", "out", "--skip-image-cues"]));
+        $error = "disc/shapes.sup: The file holds image cues without text. Run OCR on them first, or pass --skip-image-cues.\n";
+        foreach ([["--to", "vtt"], ["--to", "scc", "--scc-fit"]] as $output) {
+            $this->assertSame([3, "", $error], $this->runCli(["convert", "disc/shapes.sup", ...$output]));
+        }
+        $this->assertSame([0, "\u{FEFF}WEBVTT\n\n", ""], $this->runCli(["convert", "disc/shapes.sup", "--to", "vtt", "--skip-image-cues"]));
 
         [$code, $stdout] = $this->runCli(["info", "disc", "--json"]);
         $this->assertSame(0, $code);
