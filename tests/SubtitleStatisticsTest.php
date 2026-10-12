@@ -46,6 +46,27 @@ class SubtitleStatisticsTest extends TestCase
     }
 
 
+    // A copy of the line lengths after each cue takes about 20 s here.
+    public function testOwnFileRepeatedFifteenThousandTimesUnderFiveSeconds(): void
+    {
+        $bakery = Subtitle::fromString(file_get_contents(self::FILES . "/statistics/own_bakery.srt"), Format::SubRip);
+        $cues   = [];
+        for ($copy = 0; $copy < 15000; $copy++) {
+            foreach ($bakery->getCues() as $cue) {
+                $cues[] = new SubtitleCue($cue->getStart() + 12 * $copy, $cue->getEnd() + 12 * $copy, $cue->getLines());
+            }
+        }
+        $subtitle = TestSubtitles::fromCues($cues);
+
+        $start      = microtime(true);
+        $statistics = SubtitleStatistics::of($subtitle);
+
+        $this->assertLessThan(5, microtime(true) - $start);
+        $this->assertSame([60000, 26 * 15000, 123 * 15000], [$statistics->cueCount, $statistics->wordCount, $statistics->characterCount]);
+        $this->assertSame(["min" => 15.0, "average" => 20.5, "max" => 26.0], $statistics->charactersPerLine);
+    }
+
+
     public function testToArrayEncodesAsJson(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "/statistics/own_bakery.srt"), Format::SubRip);

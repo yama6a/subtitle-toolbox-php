@@ -43,12 +43,12 @@ final class Resegmenter
     private static function splitLong(Subtitle $subtitle, ResegmentOptions $options): void
     {
         $anchors = CommentAnchors::of($subtitle->getCues(), $subtitle->getComments());
-        $cues    = [];
+        $parts   = [];
         foreach ($subtitle->getCues() as $cue) {
-            $cues = [...$cues, ...self::splitCue($cue, self::findSplit($cue, $options), $options)];
+            $parts[] = self::splitCue($cue, self::findSplit($cue, $options), $options);
         }
 
-        $subtitle->replaceCues($cues, $anchors);
+        $subtitle->replaceCues(array_merge(...$parts), $anchors);
     }
 
 
