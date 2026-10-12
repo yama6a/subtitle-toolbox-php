@@ -84,6 +84,7 @@ final class CsvParser extends SubtitleParser
         $subtitle->addCues($parsedCues);
         $this->closeOpenEnds($subtitle, $openEnds);
 
+        $quotedColumns = $records === [] ? [] : array_values(array_intersect(...array_column($records, "quoted")));
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, [
             "delimiter"  => $delimiter,
             "header"     => $header,
@@ -91,7 +92,7 @@ final class CsvParser extends SubtitleParser
             "width"      => max([count($header ?? []), ...array_map("count", array_column($records, "cells"))]),
             "timeFormat" => $timeFormat ?? CsvTimeFormat::Dot->value,
             "frameRate"  => $frameRateValue,
-        ]);
+        ] + ($quotedColumns === [] ? [] : ["quotedColumns" => $quotedColumns]));
 
         return $subtitle;
     }

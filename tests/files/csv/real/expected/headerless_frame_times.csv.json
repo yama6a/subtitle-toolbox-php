@@ -15,7 +15,10 @@
                 },
                 "width": 3,
                 "timeFormat": "hh:mm:ss:ff",
-                "frameRate": 25.0
+                "frameRate": 25.0,
+                "quotedColumns": [
+                    2
+                ]
             }
         },
         "cues": [

@@ -289,6 +289,22 @@ class CsvParserTest extends TestCase
     }
 
 
+    public function testStoresTheColumnsThatEveryRowQuotes(): void
+    {
+        $subtitle = (new CsvParser())->parse("\"start\",end,text,notes\n1,2,\"a\",\"x\"\n\"3\",4,\"b\",y\n", new ReadOptions());
+
+        $this->assertSame([2], $subtitle->findFormatData("csv")["quotedColumns"]);
+    }
+
+
+    public function testStoresNoQuotedColumnsWhenNoColumnIsQuotedInEveryRow(): void
+    {
+        $subtitle = (new CsvParser())->parse("start,end,text\n1,2,\"a, b\"\n3,4,c\n", new ReadOptions());
+
+        $this->assertArrayNotHasKey("quotedColumns", $subtitle->findFormatData("csv"));
+    }
+
+
     public function testFindsColumnsByHeaderSynonyms(): void
     {
         $subtitle = (new CsvParser())->parse("Start Time,End Time,Subtitle\n1,2.5,a\n", new ReadOptions());

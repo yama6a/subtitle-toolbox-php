@@ -233,6 +233,30 @@ class CsvFormatterTest extends TestCase
     }
 
 
+    public function testQuotesTheStoredQuotedColumnsInEveryRow(): void
+    {
+        $subtitle = Subtitle::fromString("start,end,text,notes\n1,2,\"Hello\",x\n", Format::Csv);
+        $subtitle->getCues()[0]->setLines(["<v Ann>Bye"]);
+
+        $this->assertSame(
+            "start,end,speaker,text,Second,notes\n1,2,Ann,\"Bye\",Tschüss,x\n",
+            $subtitle->toString(Format::Csv, new WriteOptions(bom: false, formats: [new CsvWriteOptions(
+                secondText: (new Subtitle())->addCue(new SubtitleCue(1, 2, "Tschüss")),
+                secondTextHeader: "Second",
+            )]))
+        );
+    }
+
+
+    public function testIgnoresAStoredQuotedColumnOutsideTheTable(): void
+    {
+        $subtitle = Subtitle::fromString("start,end,text\n1,2,a\n", Format::Csv);
+        $subtitle->setFormatData("csv", ["quotedColumns" => [7]] + $subtitle->findFormatData("csv"));
+
+        $this->assertSame("start,end,text\n1,2,a\n", $subtitle->toString(Format::Csv, new WriteOptions(bom: false)));
+    }
+
+
     public function testRoundTripsThroughTheParser(): void
     {
         $csv = self::english()->toString(Format::Csv);

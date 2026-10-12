@@ -145,6 +145,15 @@ class CsvRealFilesTest extends TestCase
     }
 
 
+    public function testWhisperCppTableKeepsItsQuotedTextColumn(): void
+    {
+        $content = file_get_contents(__DIR__ . "/../files/csv/real/own_whisper_cpp.csv");
+
+        // whisper.cpp starts each text with a space, which the cue lines do not keep.
+        $this->assertSame(str_replace(",\" ", ",\"", $content), $this->parseFile("own_whisper_cpp.csv")->toString(Format::Csv, new WriteOptions(bom: false)));
+    }
+
+
     public function testDubbingScriptKeepsTheNotesColumn(): void
     {
         $cues = $this->parseFile("dubbing_script.csv", new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character"), frameRate: 25)]))->getCues();

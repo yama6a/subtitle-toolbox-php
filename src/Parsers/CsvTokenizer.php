@@ -42,17 +42,18 @@ final class CsvTokenizer
 
 
     /**
-     * Returns the records of the content, each with the 1-based line number of its start.
+     * Returns the records of the content, each with the 1-based line number of its start and the indexes of its quoted cells.
      * Line breaks inside quotes become LF. A quote inside an unquoted cell stays text.
      * In lenient mode, a quote without a closing quote ends at the end of its line, and unclosedQuotes() lists it.
      *
-     * @return list<array{line: int, cells: list<string>}>
+     * @return list<array{line: int, cells: list<string>, quoted: list<int>}>
      */
     public function records(string $content, string $delimiter, bool $lenient): array
     {
         $this->unclosedQuotes = [];
         $records              = [];
         $cells                = [];
+        $quotedCells          = [];
         $cell                 = "";
         $line                 = 1;
         $start                = 1;
@@ -65,6 +66,7 @@ final class CsvTokenizer
                 if ($quoted !== null) {
                     [$cell, $i, $lineBreaks] = $quoted;
                     $line                   += $lineBreaks;
+                    $quotedCells[]           = count($cells);
                     continue;
                 }
                 if (!$lenient) {
@@ -83,17 +85,18 @@ final class CsvTokenizer
             } elseif ($char === "\r" || $char === "\n") {
                 $i        += $char === "\r" && ($content[$i + 1] ?? "") === "\n" ? 1 : 0;
                 $cells[]   = $cell;
-                $records[] = ["line" => $start, "cells" => $cells];
-                $cells     = [];
-                $cell      = "";
-                $start     = ++$line;
+                $records[]   = ["line" => $start, "cells" => $cells, "quoted" => $quotedCells];
+                $cells       = [];
+                $quotedCells = [];
+                $cell        = "";
+                $start       = ++$line;
             } else {
                 $cell .= $char;
             }
             $i++;
         }
         if ($cell !== "" || $cells !== []) {
-            $records[] = ["line" => $start, "cells" => [...$cells, $cell]];
+            $records[] = ["line" => $start, "cells" => [...$cells, $cell], "quoted" => $quotedCells];
         }
 
         return $records;

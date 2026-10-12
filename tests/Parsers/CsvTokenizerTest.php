@@ -11,18 +11,19 @@ use SubtitleToolbox\Exceptions\ParsingException;
 class CsvTokenizerTest extends TestCase
 {
     /**
-     * @return array<string, array{string, list<array{line: int, cells: list<string>}>}>
+     * @return array<string, array{string, list<array{line: int, cells: list<string>, quoted: list<int>}>}>
      */
     public static function contents(): array
     {
         return [
-            "CR LF inside quotes"        => ["a,\"b\r\nc\"\r\nd,e\r\n", [["line" => 1, "cells" => ["a", "b\nc"]], ["line" => 3, "cells" => ["d", "e"]]]],
-            "doubled quote"              => ["\"say \"\"hi\"\"\",x\n", [["line" => 1, "cells" => ["say \"hi\"", "x"]]]],
-            "quote inside unquoted cell" => ["5\" disk,x\n", [["line" => 1, "cells" => ["5\" disk", "x"]]]],
-            "text after a closing quote" => ["\"ab\"cd,x\n", [["line" => 1, "cells" => ["abcd", "x"]]]],
-            "missing last line break"    => ["a,b\nc,d", [["line" => 1, "cells" => ["a", "b"]], ["line" => 2, "cells" => ["c", "d"]]]],
-            "empty last cell"            => ["a,\n", [["line" => 1, "cells" => ["a", ""]]]],
-            "lone CR ends a record"      => ["a\rb\r", [["line" => 1, "cells" => ["a"]], ["line" => 2, "cells" => ["b"]]]],
+            "quoted cells"               => ["\"a\",b,\"\"\n", [["line" => 1, "cells" => ["a", "b", ""], "quoted" => [0, 2]]]],
+            "CR LF inside quotes"        => ["a,\"b\r\nc\"\r\nd,e\r\n", [["line" => 1, "cells" => ["a", "b\nc"], "quoted" => [1]], ["line" => 3, "cells" => ["d", "e"], "quoted" => []]]],
+            "doubled quote"              => ["\"say \"\"hi\"\"\",x\n", [["line" => 1, "cells" => ["say \"hi\"", "x"], "quoted" => [0]]]],
+            "quote inside unquoted cell" => ["5\" disk,x\n", [["line" => 1, "cells" => ["5\" disk", "x"], "quoted" => []]]],
+            "text after a closing quote" => ["\"ab\"cd,x\n", [["line" => 1, "cells" => ["abcd", "x"], "quoted" => [0]]]],
+            "missing last line break"    => ["a,b\nc,d", [["line" => 1, "cells" => ["a", "b"], "quoted" => []], ["line" => 2, "cells" => ["c", "d"], "quoted" => []]]],
+            "empty last cell"            => ["a,\n", [["line" => 1, "cells" => ["a", ""], "quoted" => []]]],
+            "lone CR ends a record"      => ["a\rb\r", [["line" => 1, "cells" => ["a"], "quoted" => []], ["line" => 2, "cells" => ["b"], "quoted" => []]]],
         ];
     }
 
@@ -48,7 +49,7 @@ class CsvTokenizerTest extends TestCase
         $tokenizer = new CsvTokenizer();
 
         $this->assertSame(
-            [["line" => 1, "cells" => ["a", "b"]], ["line" => 2, "cells" => ["c", "d,e"]], ["line" => 3, "cells" => ["f", "g"]]],
+            [["line" => 1, "cells" => ["a", "b"], "quoted" => []], ["line" => 2, "cells" => ["c", "d,e"], "quoted" => []], ["line" => 3, "cells" => ["f", "g"], "quoted" => []]],
             $tokenizer->records("a,b\nc,\"d,e\nf,g\n", ",", true)
         );
         $this->assertSame([["line" => 2, "text" => "c,\"d,e"]], $tokenizer->unclosedQuotes());

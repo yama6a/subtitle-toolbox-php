@@ -29,7 +29,10 @@
                 },
                 "width": 3,
                 "timeFormat": "milliseconds",
-                "frameRate": null
+                "frameRate": null,
+                "quotedColumns": [
+                    2
+                ]
             }
         },
         "cues": [
