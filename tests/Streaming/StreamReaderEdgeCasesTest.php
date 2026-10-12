@@ -158,6 +158,25 @@ class StreamReaderEdgeCasesTest extends TestCase
     }
 
 
+    public function testReaderLeavesTheCallersStreamToTheCallerAfterAnError(): void
+    {
+        $stream = fopen(__DIR__ . "/../files/srt/real/own_styled.srt", "rb");
+        try {
+            foreach ((new WebVttStreamReader(new ReadOptions(lenient: true)))->read($stream) as $cue) {
+                $this->fail("The reader yields a cue.");
+            }
+        } catch (ParsingException $exception) {
+            $this->assertSame("The file does not start with WEBVTT.", $exception->getRawMessage());
+        }
+        fclose($stream);
+
+        // The exception keeps the stopped generators alive. Dropping it runs their finally blocks.
+        unset($exception);
+
+        $this->assertFalse(is_resource($stream));
+    }
+
+
     public function testReaderRejectsAMissingFile(): void
     {
         $this->expectException(InvalidArgumentException::class);

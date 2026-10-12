@@ -23,4 +23,4 @@ $writer->close();
 - **Dropped colors**: `WebVttStreamWriter` drops text colors that no WebVTT color class has, as `WebVttFormatter` does. `findDroppedColors()` returns a `WebVttDroppedColor` for each color it dropped so far. Call it after the last `write()`, see [formats.md](formats.md).
 - **Comments**: `WebVttStreamReader` skips `NOTE` blocks. `WebVttStreamWriter` writes no comments.
 - **Encoding**: the readers accept UTF-8, with or without a BOM, and keep the bytes of other 8-bit encodings. For UTF-16, add a filter: `stream_filter_append($in, 'convert.iconv.UTF-16/UTF-8')`.
-- **Closing**: `close()` flushes the stream. It closes the stream only when the writer opened it from a file path.
+- **Closing**: `close()` flushes the stream. It closes the stream only when the writer opened it from a file path. A reader also closes only a file that it opened from a path. It never closes a stream resource that you pass, also after an error.
