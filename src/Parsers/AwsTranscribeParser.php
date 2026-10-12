@@ -132,7 +132,7 @@ final class AwsTranscribeParser extends SubtitleParser
             $formatData          = array_diff_key($segment, array_flip(["start_time", "end_time", "transcript"]));
             $formatData["items"] = $segmentWords === [] ? [] : array_merge(...array_column($segmentWords, "data"));
             $cue                 = $this->cue($start, $end, $text, $segmentWords,
-                                              self::speaker($segment["speaker_label"] ?? null), $formatData);
+                                              self::speaker($segment["speaker_label"] ?? null), $formatData, $index, $segment);
             if ($cue !== null) {
                 $cues[] = $cue;
             }

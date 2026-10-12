@@ -58,6 +58,38 @@ class StartAfterEndTest extends TestCase
             "Podcast transcript"        => [Format::PodcastTranscript, '{"version": "1.0.0", "segments": [' .
                                             '{"startTime": 5, "endTime": 2, "body": "Hello."}, {"startTime": 10, "endTime": 12, "body": "World."}]}', null,
                                             [[2.0, 5.0], $good], $swap],
+            "Whisper JSON"              => [Format::Whisper, '{"segments": [{"start": 5.0, "end": 2.0, "text": " Hello."}, ' .
+                                            '{"start": 10.0, "end": 12.0, "text": " World."}]}', null,
+                                            [[2.0, 5.0], $good], $swap],
+            "whisper.cpp JSON over 30 s" => [Format::Whisper, '{"transcription": [{"offsets": {"from": 65000, "to": 2000}, "text": " Hello."}, ' .
+                                            '{"offsets": {"from": 10000, "to": 12000}, "text": " World."}]}', null,
+                                            [$good], $drop],
+            "AssemblyAI words"          => [Format::AssemblyAi, '{"words": [{"text": "Hello.", "start": 5000, "end": 2000}, ' .
+                                            '{"text": "World.", "start": 10000, "end": 12000}]}', null,
+                                            [[2.0, 5.0], $good], $swap],
+            "AssemblyAI utterances"     => [Format::AssemblyAi, '{"utterances": [{"text": "Hello.", "start": 5000, "end": 2000, "words": []}, ' .
+                                            '{"text": "World.", "start": 10000, "end": 12000, "words": []}]}', null,
+                                            [[2.0, 5.0], $good], $swap],
+            "Deepgram words"            => [Format::Deepgram, '{"results": {"channels": [{"alternatives": [{"transcript": "Hello. World.", "words": [' .
+                                            '{"word": "hello", "start": 5.0, "end": 2.0, "punctuated_word": "Hello."}, ' .
+                                            '{"word": "world", "start": 10.0, "end": 12.0, "punctuated_word": "World."}]}]}]}}', null,
+                                            [[2.0, 5.0], $good], $swap],
+            "Deepgram paragraphs"       => [Format::Deepgram, '{"results": {"channels": [{"alternatives": [{"transcript": "Hello. World.", "words": [], ' .
+                                            '"paragraphs": {"paragraphs": [{"sentences": [{"text": "Hello.", "start": 5.0, "end": 2.0}, ' .
+                                            '{"text": "World.", "start": 10.0, "end": 12.0}]}]}}]}]}}', null,
+                                            [[2.0, 5.0], $good], $swap],
+            "AWS Transcribe"            => [Format::AwsTranscribe, '{"results": {"items": [' .
+                                            '{"type": "pronunciation", "start_time": "5.0", "end_time": "2.0", "alternatives": [{"content": "Hello"}]}, ' .
+                                            '{"type": "pronunciation", "start_time": "10.0", "end_time": "12.0", "alternatives": [{"content": "World"}]}]}}', null,
+                                            [[2.0, 5.0], $good], $swap],
+            "AWS Transcribe segments"   => [Format::AwsTranscribe, '{"results": {"items": [], "audio_segments": [' .
+                                            '{"start_time": "5.0", "end_time": "2.0", "transcript": "Hello.", "items": []}, ' .
+                                            '{"start_time": "10.0", "end_time": "12.0", "transcript": "World.", "items": []}]}}', null,
+                                            [[2.0, 5.0], $good], $swap],
+            "Google Speech-to-Text"     => [Format::GoogleSpeech, '{"results": [' .
+                                            '{"alternatives": [{"transcript": "Hello", "words": [{"word": "Hello", "startTime": "5s", "endTime": "2s"}]}]}, ' .
+                                            '{"alternatives": [{"transcript": "World", "words": [{"word": "World", "startTime": "10s", "endTime": "12s"}]}]}]}', null,
+                                            [[2.0, 5.0], $good], $swap],
         ];
     }
 

@@ -86,10 +86,11 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 
 | Parser | Lenient mode |
 |:--- |:--- |
-| SubRip, WebVTT, SBV, ASS and SSA, SubViewer, MPL2, MicroDVD, Podcasting 2.0 transcript JSON | swaps the start and the end with a `repaired` warning when the cue then lasts 30 s or less. A longer cue is skipped |
+| SubRip, WebVTT, SBV, ASS and SSA, SubViewer, MPL2, MicroDVD, Podcasting 2.0 transcript JSON, Whisper JSON, Amazon Transcribe, Deepgram, AssemblyAI, Google | swaps the start and the end with a `repaired` warning when the cue then lasts 30 s or less. A longer cue is skipped |
 | CSV, TSV | skips the row. A row that a comma in a time split, or a cut-off last row, gives such an end, and a swap would give wrong times |
 
 - **Why 30 s**: a swapped typo gives a normal cue length. A cue of more than 30 s comes from a broken time, so a swap would invent a cue.
+- **Grouped words**: Amazon Transcribe, Deepgram, AssemblyAI and Google group words into cues when the file has no segments or utterances. The warning of such a cue has the 0-based index of the group as `blockIndex`, and the JSON of its words as `block`.
 
 ## ParseWarning fields
 | Field | Content |
