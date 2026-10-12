@@ -11,3 +11,8 @@
 | `openai_de.json` | Written for this repository in the shape of an OpenAI `/v1/chat/completions` response to the sentences of `own_station.srt`. | MIT |
 | `openai_error.json` | Written for this repository in the shape of an OpenAI chat completions error body. | MIT |
 | `fake-server.php` | Written for this repository. A `php -S` router script that plays DeepL, Google and an OpenAI-compatible service in the tests. | MIT |
+| `deepl_entities_de.json` | Written for this repository in the shape of a DeepL `/v2/translate` response to the sentences of `own_entities.srt`, with the entities as DeepL keeps them. | MIT |
+| `own_station_de_deepl.vtt` | Golden output: `own_station.srt` translated with `DeepLEngine` and the answer `deepl_de.json`, written as WebVTT. | MIT |
+| `own_station_fr_google.srt` | Golden output: `own_station.srt` translated with `GoogleTranslateEngine` and the answer `google_fr.json`. | MIT |
+| `own_station_de_openai.srt` | Golden output: `own_station.srt` translated with `OpenAiCompatibleEngine` and the answer `openai_de.json`. | MIT |
+| `own_entities_de_deepl.srt` | Golden output: `own_entities.srt` translated with `DeepLEngine` and the answer `deepl_entities_de.json`. | MIT |

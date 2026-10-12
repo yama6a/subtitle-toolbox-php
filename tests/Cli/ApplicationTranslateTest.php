@@ -6,22 +6,10 @@ namespace SubtitleToolbox\Cli;
 
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Format;
-use SubtitleToolbox\Http\FakeHttpClient;
 use SubtitleToolbox\Http\LocalServer;
 use SubtitleToolbox\Http\WithoutCurl;
-use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Tests\Support\RunsApplication;
-use SubtitleToolbox\Translation\DeepLEngine;
-use SubtitleToolbox\Translation\DeepLOptions;
-use SubtitleToolbox\Translation\GoogleTranslateEngine;
-use SubtitleToolbox\Translation\GoogleTranslateOptions;
-use SubtitleToolbox\Translation\OpenAiCompatibleEngine;
-use SubtitleToolbox\Translation\OpenAiCompatibleOptions;
-use SubtitleToolbox\Translation\TranslationEngine;
-use SubtitleToolbox\Translation\TranslationRunner;
 
-require_once __DIR__ . "/../Http/FakeHttpClient.php";
 require_once __DIR__ . "/../Http/LocalServer.php";
 require_once __DIR__ . "/../Http/WithoutCurl.php";
 
@@ -104,15 +92,6 @@ class ApplicationTranslateTest extends TestCase
     }
 
 
-    private static function recordedTranslation(TranslationEngine $engine, string $source, string $target, Format $format): string
-    {
-        $subtitle = Subtitle::load(self::TRANSLATION . "own_station.srt", Format::SubRip);
-        (new TranslationRunner($engine))->translate($subtitle, $source, $target);
-
-        return $subtitle->toString($format);
-    }
-
-
     #[RequiresPhpExtension("curl")]
     public function testTranslateWithDeepLReadsTheKeyOfTheEnvironment(): void
     {
@@ -121,10 +100,7 @@ class ApplicationTranslateTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication(["translate", self::TRANSLATION . "own_station.srt", "--engine", "deepl",
                                                           "--source-language", "en", "--target-language", "de", "--to", "vtt"]);
 
-        $client   = new FakeHttpClient([[200, file_get_contents(self::TRANSLATION . "deepl_de.json")]]);
-        $expected = self::recordedTranslation(new DeepLEngine(new DeepLOptions("key", httpClient: $client)), "en", "de", Format::WebVtt);
-        $this->assertSame([0, $expected, ""], [$code, $stdout, $stderr]);
-        $this->assertStringContainsString("\num <b>10:15</b> von Gleis 4 ab.\n", $stdout);
+        $this->assertSame([0, file_get_contents(self::TRANSLATION . "own_station_de_deepl.vtt"), ""], [$code, $stdout, $stderr]);
         $this->assertSame([["/v2/translate", "env-key", "DE", "EN"]],
                           array_map(fn (array $request): array => [$request["path"], $request["key"], $request["body"]["target_lang"],
                                                                    $request["body"]["source_lang"]], $this->serverRequests()));
@@ -143,10 +119,7 @@ class ApplicationTranslateTest extends TestCase
                                                               "--target-language", "fr", "-o", $output]);
 
             $this->assertSame([0, "$input -> $output\n", ""], [$code, $stdout, $stderr]);
-            $client   = new FakeHttpClient([[200, file_get_contents(self::TRANSLATION . "google_fr.json")]]);
-            $expected = self::recordedTranslation(new GoogleTranslateEngine(new GoogleTranslateOptions("key", httpClient: $client)), "", "fr",
-                                                  Format::SubRip);
-            $this->assertSame($expected, file_get_contents($output));
+            $this->assertFileEquals(self::TRANSLATION . "own_station_fr_google.srt", $output);
         } finally {
             @unlink($output);
         }
@@ -164,13 +137,13 @@ class ApplicationTranslateTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication(["translate", self::TRANSLATION . "own_station.srt", "--engine", "openai",
                                                           "--source-language", "en", "--target-language", "de"]);
 
-        $client   = new FakeHttpClient([[200, file_get_contents(self::TRANSLATION . "openai_de.json")]]);
-        $expected = self::recordedTranslation(new OpenAiCompatibleEngine(new OpenAiCompatibleOptions("http://localhost/v1", "llama3", httpClient: $client)),
-                                              "en", "de", Format::SubRip);
-        $this->assertSame([0, $expected, ""], [$code, $stdout, $stderr]);
-        $this->assertSame([["/v1/chat/completions", "", "llama3", $client->requests[0]["body"]["messages"]]],
+        $this->assertSame([0, file_get_contents(self::TRANSLATION . "own_station_de_openai.srt"), ""], [$code, $stdout, $stderr]);
+        $requests = $this->serverRequests();
+        $this->assertSame([["/v1/chat/completions", "", "llama3", ["system", "user"]]],
                           array_map(fn (array $request): array => [$request["path"], $request["key"], $request["body"]["model"],
-                                                                   $request["body"]["messages"]], $this->serverRequests()));
+                                                                   array_column($request["body"]["messages"], "role")], $requests));
+        $this->assertStringStartsWith("You translate subtitle text from en to de.", $requests[0]["body"]["messages"][0]["content"]);
+        $this->assertCount(4, json_decode($requests[0]["body"]["messages"][1]["content"], true));
     }
 
 

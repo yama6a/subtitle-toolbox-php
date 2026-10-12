@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Translation;
 
+use Closure;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Http\FakeHttpClient;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 require_once __DIR__ . "/FakeTranslationEngine.php";
+require_once __DIR__ . "/../Http/FakeHttpClient.php";
 
 class TranslationRunnerTest extends TestCase
 {
@@ -340,5 +344,42 @@ class TranslationRunnerTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         new TranslationOptions(maxCuesPerSentence: 0);
+    }
+
+
+    /**
+     * @return array<string, array{string, Closure(FakeHttpClient): TranslationEngine, string, string, string, Format, string}>
+     */
+    public static function recordedTranslations(): array
+    {
+        return [
+            "DeepL to WebVTT"      => ["own_station.srt", fn (FakeHttpClient $client) => new DeepLEngine(new DeepLOptions("key", httpClient: $client)),
+                                       "deepl_de.json", "en", "de", Format::WebVtt, "own_station_de_deepl.vtt"],
+            "Google"               => ["own_station.srt", fn (FakeHttpClient $client) => new GoogleTranslateEngine(new GoogleTranslateOptions("key", httpClient: $client)),
+                                       "google_fr.json", "", "fr", Format::SubRip, "own_station_fr_google.srt"],
+            "OpenAI-compatible"    => ["own_station.srt",
+                                       fn (FakeHttpClient $client) => new OpenAiCompatibleEngine(new OpenAiCompatibleOptions("http://localhost/v1", "llama3", httpClient: $client)),
+                                       "openai_de.json", "en", "de", Format::SubRip, "own_station_de_openai.srt"],
+            "DeepL with entities"  => ["own_entities.srt", fn (FakeHttpClient $client) => new DeepLEngine(new DeepLOptions("key", httpClient: $client)),
+                                       "deepl_entities_de.json", "en", "de", Format::SubRip, "own_entities_de_deepl.srt"],
+        ];
+    }
+
+
+    /**
+     * @param Closure(FakeHttpClient): TranslationEngine $engine
+     */
+    #[DataProvider("recordedTranslations")]
+    public function testRecordedAnswersGiveTheGoldenFile(string $input, Closure $engine, string $answer, string $source, string $target,
+                                                         Format $format, string $golden): void
+    {
+        $subtitle = Subtitle::load(self::FILES . "translation/$input", Format::SubRip);
+        $client   = new FakeHttpClient([[200, (string)file_get_contents(self::FILES . "translation/$answer")]]);
+
+        $report = (new TranslationRunner($engine($client)))->translate($subtitle, $source, $target);
+
+        $this->assertStringEqualsFile(self::FILES . "translation/$golden", $subtitle->toString($format));
+        $this->assertSame([], $report->warnings);
+        $this->assertCount(1, $client->requests);
     }
 }
