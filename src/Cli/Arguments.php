@@ -177,6 +177,9 @@ final class Arguments
             if (!is_finite((float)$value)) {
                 Command::fail("The option --$name needs a finite number, got \"$value\".");
             }
+            if (abs((float)$value) >= Timecode::MAX_HOURS * 3600) {
+                Command::fail("The option --$name needs a time below " . Timecode::MAX_HOURS . " hours, got \"$value\".");
+            }
 
             return (float)$value;
         }

@@ -71,6 +71,20 @@ class BinaryTimingTest extends CliTestCase
     }
 
 
+    public function testTimeOf100000HoursOrMoreIsAUsageError(): void
+    {
+        $this->assertSame(
+            [2, "", "Error: The option --shift needs a time below 100000 hours, got \"1e300\".\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            $this->runCli(["retime", "trip.srt", "--shift", "1e300"])
+        );
+        $this->assertSame(2, $this->runCli(["retime", "trip.srt", "--shift", "100000:00:00"])[0]);
+        $this->assertSame(2, $this->runCli(["retime", "trip.srt", "--shift", "-360000000"])[0]);
+        $this->assertSame(2, $this->runCli(["convert", "trip.srt", "--to", "srt", "--timing-min-duration", "1e300"])[0]);
+        $this->assertSame(2, $this->runCli(["hls", "trip.srt", "--output-dir", "out", "--local", "1e300"])[0]);
+        $this->assertFileDoesNotExist("$this->dir/out");
+    }
+
+
     public function testTimingLeadInAndLeadOut(): void
     {
         copy(self::FILES . "fixes/own_asr_tight_timing.srt", "$this->dir/asr.srt");

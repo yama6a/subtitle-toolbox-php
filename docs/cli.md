@@ -137,6 +137,7 @@ Every option with the value `SECONDS` takes a time, in every command. `--sync` t
 
 - **Timecodes**: the shapes are those of [`Timecode::parse()`](subtitle.md#cues-from-timecode-strings). A minus sign before a timecode makes it negative, for example `--shift=-00:00:02,500` or `--shift -00:00:02,500`.
 - **Errors**: another value, such as `1:2:3:4:5`, is a usage error, exit code 2. The message quotes the value.
+- **Limit**: a time must be below 100000 hours, as in the parsers. `--shift 1e300` and `--shift 100000:00:00` are usage errors, exit code 2.
 
 ## Formats and file extensions
 Run `subtitle-toolbox formats` for the list. For an extension that two formats share, see [Shared extensions](formats.md#the-format-enum).

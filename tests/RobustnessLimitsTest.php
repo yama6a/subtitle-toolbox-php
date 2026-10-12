@@ -74,7 +74,7 @@ class RobustnessLimitsTest extends TestCase
         $this->assertSame([2, "", "Error: The option --max-splits needs a whole number from 0 to 10, got \"99999999999999999999\".\n" .
                                   "Run \"subtitle-toolbox help sync\" for the usage.\n"],
                           self::runApplication([...$sync, "--max-splits", "99999999999999999999"]));
-        [$code, , $error] = self::runApplication([...$sync, "--max-offset", "99999999999999999999"]);
+        [$code, , $error] = self::runApplication([...$sync, "--max-offset", "100000"]);
         $this->assertSame(2, $code);
         $this->assertStringContainsString("The maximum offset must be from -86400 to 86400 seconds", $error);
     }
