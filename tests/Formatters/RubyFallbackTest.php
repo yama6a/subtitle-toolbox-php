@@ -71,6 +71,7 @@ class RubyFallbackTest extends TestCase
             "YouTube chapters"    => [Format::YouTubeChapters, new WriteOptions()],
             "Whisper JSON"        => [Format::Whisper, new WriteOptions()],
             "Amazon Transcribe"   => [Format::AwsTranscribe, new WriteOptions()],
+            "Deepgram"            => [Format::Deepgram, new WriteOptions()],
         ];
     }
 

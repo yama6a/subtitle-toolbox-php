@@ -41,8 +41,23 @@ final class DeepgramParser extends SubtitleParser
             ? $this->readChannels($results["channels"])
             : $this->readUtterances($utterances, "results.utterances", "transcript", $this->readWords(...));
 
+        $results["channels"] = array_map(self::channelData(...), $results["channels"]);
+
         return $this->transcript($cues, $results["channels"][0]["detected_language"] ?? null,
-                                 self::fileDataWithResults($data, $results, ["channels", "utterances"]));
+                                 self::fileDataWithResults($data, $results, ["utterances"]));
+    }
+
+
+    /**
+     * Returns the fields of a channel and of its first alternative, without the transcript, the words and the paragraphs.
+     */
+    private static function channelData(mixed $channel): mixed
+    {
+        if (!is_array($channel) || !is_array($channel["alternatives"][0] ?? null)) {
+            return $channel;
+        }
+
+        return ["alternatives" => [array_diff_key($channel["alternatives"][0], array_flip(["transcript", "words", "paragraphs"]))]] + $channel;
     }
 
 
@@ -93,7 +108,8 @@ final class DeepgramParser extends SubtitleParser
                 }
 
                 $sentenceWords = self::wordsBetween($words, $wordIndex, $start, $end);
-                $formatData    = ["channel" => $channelIndex] + ($speaker === null ? [] : ["speaker" => $paragraph["speaker"]]);
+                $formatData    = $sentence + ["channel" => $channelIndex] + ($speaker === null ? [] : ["speaker" => $paragraph["speaker"]])
+                    + ["paragraph" => array_diff_key($paragraph, ["sentences" => true])];
                 $cue           = $this->cue($start, $end, $text, $sentenceWords, $speaker,
                                             $formatData + ["words" => array_merge([], ...array_column($sentenceWords, "data"))],
                                             $sentenceIndex, $sentence);

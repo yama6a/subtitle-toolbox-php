@@ -130,7 +130,7 @@ class FormatTest extends TestCase
     {
         $readOnly = array_filter(Format::cases(), fn (Format $format): bool => !$format->canWrite());
         $this->assertSame(
-            ["assemblyai", "deepgram", "google-speech", "vobsub", "youtube"],
+            ["assemblyai", "google-speech", "vobsub", "youtube"],
             self::sortedNames($readOnly)
         );
 

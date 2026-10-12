@@ -23,6 +23,17 @@
                             "arch": "nova-3"
                         }
                     }
+                },
+                "results": {
+                    "channels": [
+                        {
+                            "alternatives": [
+                                {
+                                    "confidence": 0.9970703
+                                }
+                            ]
+                        }
+                    ]
                 }
             }
         },
@@ -37,8 +48,11 @@
                 "alignment": null,
                 "formatData": {
                     "deepgram": {
+                        "start": 0.23999998,
+                        "end": 3.18,
                         "confidence": 0.95162264,
                         "channel": 0,
+                        "transcript": "Good morning, is the pool open today?",
                         "words": [
                             {
                                 "word": "good",
@@ -119,8 +133,11 @@
                 "alignment": null,
                 "formatData": {
                     "deepgram": {
+                        "start": 3.59999998,
+                        "end": 5.84,
                         "confidence": 0.93543217,
                         "channel": 0,
+                        "transcript": "It opens at ten after cleaning.",
                         "words": [
                             {
                                 "word": "it",
@@ -192,8 +209,11 @@
                 "alignment": null,
                 "formatData": {
                     "deepgram": {
+                        "start": 6.5,
+                        "end": 7.26,
                         "confidence": 0.9637655,
                         "channel": 0,
+                        "transcript": "Thank you.",
                         "words": [
                             {
                                 "word": "thank",
