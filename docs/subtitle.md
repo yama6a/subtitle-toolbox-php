@@ -95,7 +95,7 @@ $subtitle->removeCuesWhere(fn (SubtitleCue $cue) => $cue->getEnd() - $cue->getSt
 - **Overlaps**: cues can overlap, so `findCuesAt()` returns an array. `findCueIndexAt()` returns the lowest index of these cues.
 - **Keys**: `findCuesAt()`, `findCuesBetween()` and `findCues()` keep the cue index as the array key.
 - **Remove**: `removeCuesWhere()` moves a comment before a removed cue to the next kept cue, and then calls `reIndexCues()`.
-- **Add and remove**: `addCue()` sorts the cues by start time after each call. `addCues()` adds a list and sorts once, so use it to add 2 or more cues. A comment after the last cue stays after the last cue, also when the added cue sorts last. `removeCue()` numbers the remaining cues from 0 again.
+- **Add and remove**: `addCue()` and `addCues()` keep the cues sorted by start time. A cue that starts at or after the last cue goes to the end without a sort, so `addCue()` in a loop over cues in start order is as fast as `addCues()`. A comment after the last cue stays after the last cue, also when the added cue sorts last. `removeCue()` numbers the remaining cues from 0 again.
 - **No array access**: `$subtitle[3]` does not work. Use `getCues()`, `addCue()` and `removeCue()`, so the cue indexes and comments stay correct.
 - **Structure check**: `validate(ValidationRules::structure())` returns one violation per problem. It reports a subtitle without cues. It also reports a cue that starts before the previous cue starts or ends, and a cue that ends before it starts. See [validation](validation.md).
 

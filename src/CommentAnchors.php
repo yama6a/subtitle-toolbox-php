@@ -21,22 +21,13 @@ final class CommentAnchors
      */
     public static function of(array $cues, array $comments): array
     {
-        return array_map(fn (Comment $comment): ?SubtitleCue => self::anchor($cues, $comment->beforeCueIndex), $comments);
-    }
-
-
-    /**
-     * @param SubtitleCue[] $cues
-     */
-    public static function anchor(array $cues, int $beforeCueIndex): ?SubtitleCue
-    {
-        foreach ($cues as $index => $cue) {
-            if ($index >= $beforeCueIndex) {
-                return $cue;
-            }
+        if ($comments === []) {
+            return [];
         }
 
-        return null;
+        $keys = array_keys($cues);
+
+        return array_map(fn (Comment $comment): ?SubtitleCue => self::anchor($cues, $keys, $comment->beforeCueIndex), $comments);
     }
 
 
@@ -49,10 +40,15 @@ final class CommentAnchors
     public static function addParsed(Subtitle $subtitle, array $cues, array $comments): Subtitle
     {
         $subtitle->addCues($cues);
+        if ($comments === []) {
+            return $subtitle;
+        }
+
+        $positions = self::positions($subtitle->getCues());
+        $keys      = array_keys($cues);
         foreach ($comments as [$text, $cueCount]) {
-            $anchor   = self::anchor($cues, $cueCount);
-            $cueIndex = $anchor === null ? false : array_search($anchor, $subtitle->getCues(), true);
-            $subtitle->addComment($text, $cueIndex === false ? count($subtitle) : $cueIndex);
+            $anchor = self::anchor($cues, $keys, $cueCount);
+            $subtitle->addComment($text, $anchor === null ? count($subtitle) : $positions[$anchor]);
         }
 
         return $subtitle;
@@ -95,15 +91,55 @@ final class CommentAnchors
      */
     public static function comments(array $cues, array $comments, array $anchors): array
     {
-        $comments = array_values($comments);
-        $anchors  = array_values($anchors);
+        $comments  = array_values($comments);
+        $anchors   = array_values($anchors);
+        $positions = $comments === [] ? new \SplObjectStorage() : self::positions($cues);
         foreach ($comments as $commentIndex => $comment) {
-            $cueIndex = $anchors[$commentIndex] === null ? false : array_search($anchors[$commentIndex], $cues, true);
+            $anchor = $anchors[$commentIndex];
 
-            $comments[$commentIndex] = $comment->withBeforeCueIndex($cueIndex === false ? count($cues) : $cueIndex);
+            $comments[$commentIndex] = $comment->withBeforeCueIndex($anchor !== null && isset($positions[$anchor]) ? $positions[$anchor] : count($cues));
         }
 
         return self::sorted($comments);
+    }
+
+
+    /**
+     * @param SubtitleCue[] $cues
+     * @param list<int>     $keys the keys of $cues
+     */
+    private static function anchor(array $cues, array $keys, int $beforeCueIndex): ?SubtitleCue
+    {
+        $low  = 0;
+        $high = count($keys);
+        while ($low < $high) {
+            $middle = ($low + $high) >> 1;
+            if ($keys[$middle] < $beforeCueIndex) {
+                $low = $middle + 1;
+            } else {
+                $high = $middle;
+            }
+        }
+
+        return $low < count($keys) ? $cues[$keys[$low]] : null;
+    }
+
+
+    /**
+     * @param SubtitleCue[] $cues
+     *
+     * @return \SplObjectStorage<SubtitleCue, int> each cue and its first key in $cues
+     */
+    private static function positions(array $cues): \SplObjectStorage
+    {
+        $positions = new \SplObjectStorage();
+        foreach ($cues as $index => $cue) {
+            if (!isset($positions[$cue])) {
+                $positions[$cue] = $index;
+            }
+        }
+
+        return $positions;
     }
 
 

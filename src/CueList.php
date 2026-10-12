@@ -24,6 +24,21 @@ final class CueList
 
 
     /**
+     * @param list<SubtitleCue> $cues
+     */
+    public static function startsInOrder(array $cues): bool
+    {
+        for ($index = 1; $index < count($cues); $index++) {
+            if ($cues[$index]->getStart() < $cues[$index - 1]->getStart()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
+    /**
      * Joins the cues of $group into the first cue of $group and removes the others from $cues.
      * The first cue ends at the latest end of the group. With $joinLines, it also gets the lines of the others.
      *

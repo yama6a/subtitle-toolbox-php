@@ -282,14 +282,27 @@ final class Subtitle implements \IteratorAggregate, \Countable
      */
     public function addCues(iterable $cues): self
     {
-        $anchors = CommentAnchors::of($this->cues, $this->comments);
+        $added = [];
         foreach ($cues as $cue) {
             if (!$cue instanceof SubtitleCue) {
                 throw new InvalidArgumentException("addCues() takes SubtitleCue objects only, got " . get_debug_type($cue) . ".");
             }
-            $this->cues[] = $cue;
+            $added[] = $cue;
         }
 
+        $count = count($this->cues);
+        if (CueList::startsInOrder(array_merge(array_slice($this->cues, -1), $added))) {
+            array_push($this->cues, ...$added);
+            // A comment after the last cue stays after the last cue.
+            for ($index = count($this->comments) - 1; $index >= 0 && $this->comments[$index]->beforeCueIndex >= $count; $index--) {
+                $this->comments[$index] = $this->comments[$index]->withBeforeCueIndex(count($this->cues));
+            }
+
+            return $this;
+        }
+
+        $anchors = CommentAnchors::of($this->cues, $this->comments);
+        array_push($this->cues, ...$added);
         $this->sortCues();
         $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
@@ -309,8 +322,14 @@ final class Subtitle implements \IteratorAggregate, \Countable
         }
 
         unset($this->cues[$cueIndex]);
+        $this->cues = array_values($this->cues);
+        foreach ($this->comments as $index => $comment) {
+            if ($comment->beforeCueIndex > $cueIndex) {
+                $this->comments[$index] = $comment->withBeforeCueIndex(min($comment->beforeCueIndex - 1, count($this->cues)));
+            }
+        }
 
-        return $this->reIndexCues();
+        return $this;
     }
 
 
@@ -426,7 +445,11 @@ final class Subtitle implements \IteratorAggregate, \Countable
             throw new InvalidArgumentException("The cue index of a comment must not be negative, got $beforeCueIndex.");
         }
 
-        $this->comments = CommentAnchors::sorted([...$this->comments, new Comment($text, $beforeCueIndex)]);
+        $last             = $this->comments === [] ? null : $this->comments[count($this->comments) - 1];
+        $this->comments[] = new Comment($text, $beforeCueIndex);
+        if ($last !== null && $last->beforeCueIndex > $beforeCueIndex) {
+            $this->comments = CommentAnchors::sorted($this->comments);
+        }
 
         return $this;
     }
