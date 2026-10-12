@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ParseWarningAction;
@@ -31,11 +32,25 @@ class LenientSubViewerTest extends TestCase
     }
 
 
-    public function testSubViewerStrictModeReadsABadTimeLineAsText(): void
+    public function testSubViewerStrictModeThrowsForATimingLineWithABadTime(): void
     {
-        $subtitle = (new SubViewerParser())->parse("00:00:01.00,00:00:03.00\nOne\n\n00:00:04.00,00:00:0x.00\nTwo\n", new ReadOptions());
+        $content = "[INFORMATION]\n[TITLE]Market day\n[END INFORMATION]\n[SUBTITLE]\n" .
+                   "00:00:01.00,00:00:03.00\nThe market opens at eight.\n\n" .
+                   "00:00:04.00,00:00:0x.00\nApples are cheap today.\n\n" .
+                   "00:00:07.00,00:00:09.00\nThe stalls close at noon.\n";
 
-        $this->assertSame(["One", "00:00:04.00,00:00:0x.00", "Two"], $subtitle->getCues()[0]->getLines());
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The timing line \"00:00:04.00,00:00:0x.00\" is not in the form hh:mm:ss.ff,hh:mm:ss.ff. (line 8)");
+
+        (new SubViewerParser())->parse($content, new ReadOptions());
+    }
+
+
+    public function testSubViewerStrictModeKeepsATextLineWithACommaAndATime(): void
+    {
+        $subtitle = (new SubViewerParser())->parse("00:00:01.00,00:00:03.00\nWe meet at 10:30, at the gate.\n", new ReadOptions());
+
+        $this->assertSame(["We meet at 10:30, at the gate."], $subtitle->getCues()[0]->getLines());
     }
 
 
@@ -59,8 +74,9 @@ class LenientSubViewerTest extends TestCase
         $this->assertSame([self::REPAIRED], array_map(fn (ParseWarning $warning) => $warning->action, $subtitle->getParseWarnings()));
         $this->assertStringContainsString("00:00:01.50,00:00:03.00\nHello", $subtitle->toString(Format::SubViewer));
 
-        $strict = (new SubViewerParser())->parse($content, new ReadOptions());
-        $this->assertSame(["First", $line, "Hello"], $strict->getCues()[0]->getLines());
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The timing line \"$line\" is not in the form hh:mm:ss.ff,hh:mm:ss.ff. (line 4)");
+        (new SubViewerParser())->parse($content, new ReadOptions());
     }
 
 

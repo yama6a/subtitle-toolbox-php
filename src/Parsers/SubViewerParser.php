@@ -241,7 +241,8 @@ final class SubViewerParser extends SubtitleParser
 
 
     /**
-     * Returns null for a line that is no timing line. In lenient mode, a timing line with a bad time gives a skipped cue instead of a cue.
+     * Returns null for a line that is no timing line. A line in the shape of a timing line with a bad or loose time
+     * throws in strict mode. In lenient mode, a loose time gives a cue with a warning, and a bad time a skipped cue.
      *
      * @return ?array{cue: ?SubtitleCue, skipped: ?array{lineNumber: int, cueIndex: int, lines: list<string>, message: string}}
      */
@@ -249,12 +250,14 @@ final class SubViewerParser extends SubtitleParser
     {
         if (preg_match(self::VERSION_2_TIME_REGEX, $line, $matches)) {
             $cue = self::version2Cue($matches);
-        } elseif (!$this->options->lenient) {
+        } elseif (!$this->looksLikeTimingLine($line)) {
             return null;
+        } elseif (!$this->options->lenient) {
+            throw new ParsingException("The timing line \"$line\" is not in the form hh:mm:ss.ff,hh:mm:ss.ff.", $lineNumber);
         } else {
             $cue = $this->looseVersion2Cue($line, $lineNumber, $cueIndex);
             if ($cue === null) {
-                return $this->hasOneBadTime($line) ? self::skippedCue($line, $lineNumber, $cueIndex, "The timing line \"$line\" has a time that is not valid.") : null;
+                return self::skippedCue($line, $lineNumber, $cueIndex, "The timing line \"$line\" has a time that is not valid.");
             }
         }
 
@@ -394,7 +397,11 @@ final class SubViewerParser extends SubtitleParser
     }
 
 
-    private function hasOneBadTime(string $line): bool
+    /**
+     * Returns true for a line of 2 fields split by a comma where at least one field has the shape h:m:s or h:m:s.f,
+     * but the line is no valid timing line. Loose times and bad times such as "00:75:06.00" have this shape.
+     */
+    private function looksLikeTimingLine(string $line): bool
     {
         $time  = '\d+:\d{1,2}:\d{1,2}(?:\.\d{1,4})?';
         $parts = explode(",", $line);

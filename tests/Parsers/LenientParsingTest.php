@@ -538,7 +538,7 @@ class LenientParsingTest extends TestCase
             "SubViewer 2 with 4 fraction digits, no fraction and 1-digit fields" => [
                 "loose_times.sub",
                 SubViewerParser::class,
-                1,
+                "The timing line \"00:00:03.5004,00:00:04.0000\" is not in the form hh:mm:ss.ff,hh:mm:ss.ff. (line 8)",
                 [
                     [1, 2, "The ovens warm up at four."],
                     [3.5, 4, "The first loaves come out at six."],
@@ -557,7 +557,7 @@ class LenientParsingTest extends TestCase
             "SubViewer 2 with minutes and seconds of 60 or more" => [
                 "sixty_minutes.sub",
                 SubViewerParser::class,
-                2,
+                "The timing line \"00:00:04.00,00:75:06.00\" is not in the form hh:mm:ss.ff,hh:mm:ss.ff. (line 16)",
                 [
                     [1, 3, "The night bus runs every hour."],
                     [10, 12, "Please have coins ready."],
@@ -584,7 +584,7 @@ class LenientParsingTest extends TestCase
             "SubViewer with 20 hour digits" => [
                 "absurd_hours.sub",
                 SubViewerParser::class,
-                2,
+                "The timing line \"99999999999999999999:00:04.00,99999999999999999999:00:06.00\" is not in the form hh:mm:ss.ff,hh:mm:ss.ff. (line 8)",
                 [
                     [1, 3, "The pool opens at seven."],
                     [7, 9, "No running, please."],

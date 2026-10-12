@@ -574,6 +574,7 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/SubViewerParser.php: version 1 header" => [fn () => (new SubViewerParser())->parse("text\n" . SubViewerParser::START_SCRIPT . "\n", new ReadOptions()), ...$parsing],
             "Parsers/SubViewerParser.php: version 1 time"   => [fn () => (new SubViewerParser())->parse(SubViewerParser::START_SCRIPT . "\n[00:75:00]\n", new ReadOptions()), ...$parsing],
+            "Parsers/SubViewerParser.php: version 2 time"   => [fn () => (new SubViewerParser())->parse("00:00:01.00,00:00:02.00\na\n00:00:03.00,00:75:04.00\nb\n", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: invalid UTF-8"    => [fn () => (new SamiParser())->parse("<SAMI>\xFF</SAMI>", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: no JSON"           => [fn () => (new JsonParser())->parse("{", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: JSON root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]", new ReadOptions()), ...$parsing],
