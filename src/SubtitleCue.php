@@ -26,6 +26,9 @@ final class SubtitleCue
 
     private static int $timeEdits = 0;
 
+    /** @var ?\WeakMap<SubtitleCue, true> the cues whose time edits timeEditCount() counts */
+    private static ?\WeakMap $countedCues = null;
+
 
     /**
      * @param string|list<string> $lines
@@ -39,13 +42,30 @@ final class SubtitleCue
 
 
     /**
-     * Returns how often setStart() and setEnd() ran on any cue, so a cache of cue times can tell when it is stale.
+     * Returns how often setStart() and setEnd() ran on a cue that a subtitle holds or held, so a cache of cue times can
+     * tell when it is stale. A cue that no subtitle holds is in no cache.
      *
      * @internal
      */
     public static function timeEditCount(): int
     {
         return self::$timeEdits;
+    }
+
+
+    /**
+     * Makes timeEditCount() count the time edits of $cues from now on. A subtitle calls it for its cues before it caches their times.
+     *
+     * @internal
+     *
+     * @param iterable<SubtitleCue> $cues
+     */
+    public static function countTimeEditsOf(iterable $cues): void
+    {
+        self::$countedCues ??= new \WeakMap();
+        foreach ($cues as $cue) {
+            self::$countedCues[$cue] = true;
+        }
     }
 
 
@@ -58,7 +78,9 @@ final class SubtitleCue
     public function setStart(float $start): self
     {
         $this->start = Timecode::roundToMilliseconds($start);
-        self::$timeEdits++;
+        if (isset(self::$countedCues[$this])) {
+            self::$timeEdits++;
+        }
 
         return $this;
     }
@@ -73,7 +95,9 @@ final class SubtitleCue
     public function setEnd(float $end): self
     {
         $this->end = Timecode::roundToMilliseconds($end);
-        self::$timeEdits++;
+        if (isset(self::$countedCues[$this])) {
+            self::$timeEdits++;
+        }
 
         return $this;
     }

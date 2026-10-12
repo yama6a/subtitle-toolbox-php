@@ -304,6 +304,9 @@ class CueLookupTest extends TestCase
         $fixture  = var_export(__DIR__ . "/files/profanity/keys.srt", true);
         $saved    = $this->runPhp("require $autoload;
             \$subtitle = SubtitleToolbox\\Subtitle::load($fixture, SubtitleToolbox\\Format::SubRip);
+            for (\$edit = 0; \$edit < 100; \$edit++) {
+                \$subtitle->getCues()[0]->setStart(\$subtitle->getCues()[0]->getStart());
+            }
             \$subtitle->findCuesAt(1.5);
             echo SubtitleToolbox\\SubtitleCue::timeEditCount(), ' ', base64_encode(serialize(\$subtitle));");
         [$edits, $serialized] = explode(" ", $saved);

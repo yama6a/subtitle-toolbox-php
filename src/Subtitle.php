@@ -53,6 +53,9 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     private ?Format $format = null;
 
+    /** @var ?\WeakMap<Subtitle, int> the cue time edit count at which each subtitle last had its cues in start order */
+    private static ?\WeakMap $cuesSortedAt = null;
+
 
     /**
      * Copies the cues too, so edits on the copy leave the original unchanged.
@@ -70,6 +73,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     public function __wakeup(): void
     {
         $this->cueLookupIndex = null;
+        SubtitleCue::countTimeEditsOf($this->cues);
     }
 
 
@@ -291,12 +295,14 @@ final class Subtitle implements \IteratorAggregate, \Countable
         }
 
         $count = count($this->cues);
-        if (CueList::startsInOrder(array_merge(array_slice($this->cues, -1), $added))) {
+        if ($this->cuesInStartOrder() && CueList::startsInOrder(array_merge(array_slice($this->cues, -1), $added))) {
             array_push($this->cues, ...$added);
             // A comment after the last cue stays after the last cue.
             for ($index = count($this->comments) - 1; $index >= 0 && $this->comments[$index]->beforeCueIndex >= $count; $index--) {
                 $this->comments[$index] = $this->comments[$index]->withBeforeCueIndex(count($this->cues));
             }
+            SubtitleCue::countTimeEditsOf($added);
+            $this->markCuesSorted();
 
             return $this;
         }
@@ -322,6 +328,10 @@ final class Subtitle implements \IteratorAggregate, \Countable
         }
 
         unset($this->cues[$cueIndex]);
+        if (!$this->cuesInStartOrder()) {
+            return $this->reIndexCues();
+        }
+
         $this->cues = array_values($this->cues);
         foreach ($this->comments as $index => $comment) {
             if ($comment->beforeCueIndex > $cueIndex) {
@@ -480,6 +490,38 @@ final class Subtitle implements \IteratorAggregate, \Countable
     private function sortCues(): void
     {
         $this->cues = CueList::inStartOrder($this->cues);
+        SubtitleCue::countTimeEditsOf($this->cues);
+        $this->markCuesSorted();
+    }
+
+
+    /**
+     * Returns true when the cues are in start order. It checks every cue only after a time edit since the last check.
+     */
+    private function cuesInStartOrder(): bool
+    {
+        self::$cuesSortedAt ??= new \WeakMap();
+        if ((self::$cuesSortedAt[$this] ?? null) === SubtitleCue::timeEditCount()) {
+            return true;
+        }
+        if (!CueList::startsInOrder($this->cues)) {
+            return false;
+        }
+
+        SubtitleCue::countTimeEditsOf($this->cues);
+        $this->markCuesSorted();
+
+        return true;
+    }
+
+
+    /**
+     * Records that the cues are in start order now. Their time edits must count, see SubtitleCue::countTimeEditsOf().
+     */
+    private function markCuesSorted(): void
+    {
+        self::$cuesSortedAt ??= new \WeakMap();
+        self::$cuesSortedAt[$this] = SubtitleCue::timeEditCount();
     }
 
 
