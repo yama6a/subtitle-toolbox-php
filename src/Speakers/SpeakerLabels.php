@@ -31,7 +31,7 @@ final class SpeakerLabels
         $counts = [];
         foreach ($subtitle->getCues() as $cue) {
             $speakers = array_unique(array_filter(
-                array_column(self::speakerLines($cue->getLines()), 0),
+                array_map(fn (SpeakerLine $line): ?string => $line->speaker, self::speakerLines($cue->getLines())),
                 fn (?string $speaker): bool => $speaker !== null
             ));
             foreach ($speakers as $speaker) {
@@ -97,9 +97,9 @@ final class SpeakerLabels
     {
         self::convert($subtitle, function (array $lines) use ($upperCase, $separator): array {
             $result = [];
-            foreach ($lines as [$speaker, $line, $startsSpeaker]) {
-                $name     = $speaker === null ? "" : Markup::escapeText($upperCase ? Subtitle::toUpperOrLower($speaker, true) : $speaker);
-                $result[] = $startsSpeaker && $speaker !== null ? $name . Markup::escapeText($separator) . $line : $line;
+            foreach ($lines as $line) {
+                $name     = $line->speaker === null ? "" : Markup::escapeText($upperCase ? Subtitle::toUpperOrLower($line->speaker, true) : $line->speaker);
+                $result[] = $line->startsSpeaker && $line->speaker !== null ? $name . Markup::escapeText($separator) . $line->text : $line->text;
             }
 
             return $result;
@@ -113,11 +113,11 @@ final class SpeakerLabels
     private static function toDialogueDashes(Subtitle $subtitle, string $dash): void
     {
         self::convert($subtitle, function (array $lines) use ($dash): array {
-            $speakers = count(array_filter(array_column($lines, 2)));
+            $speakers = count(array_filter($lines, fn (SpeakerLine $line): bool => $line->startsSpeaker));
             $result   = [];
-            foreach ($lines as [, $line, $startsSpeaker]) {
-                $hasDash  = preg_match('/^\h*-/', Markup::visibleText($line)) === 1;
-                $result[] = $speakers >= 2 && $startsSpeaker && !$hasDash ? Markup::escapeText($dash) . $line : $line;
+            foreach ($lines as $line) {
+                $hasDash  = preg_match('/^\h*-/', Markup::visibleText($line->text)) === 1;
+                $result[] = $speakers >= 2 && $line->startsSpeaker && !$hasDash ? Markup::escapeText($dash) . $line->text : $line->text;
             }
 
             return $result;
@@ -139,7 +139,7 @@ final class SpeakerLabels
         }
 
         self::convert($subtitle, fn (array $lines): array => array_map(
-            fn (array $line): string => $line[0] === null ? $line[1] : "<font color=\"{$assigned[$line[0]]}\">$line[1]</font>",
+            fn (SpeakerLine $line): string => $line->speaker === null ? $line->text : "<font color=\"{$assigned[$line->speaker]}\">$line->text</font>",
             $lines
         ));
     }
@@ -192,7 +192,7 @@ final class SpeakerLabels
     /**
      * Applies $fn to the result of speakerLines() of each cue that has a <v> tag.
      *
-     * @param callable(list<array{?string, string, bool}>): list<string> $fn
+     * @param callable(list<SpeakerLine>): list<string> $fn
      */
     private static function convert(Subtitle $subtitle, callable $fn): void
     {
@@ -209,24 +209,23 @@ final class SpeakerLabels
      * changes in the middle of a line starts a new line. The style tags that are open there close and open again.
      *
      * @param array<string> $lines
-     * @return list<array{?string, string, bool}>
+     * @return list<SpeakerLine>
      */
     private static function speakerLines(array $lines): array
     {
-        $result  = [];
-        $speaker = null;
-        $open    = [];
+        $state = new SpeakerSplitState();
         foreach ($lines as $line) {
-            self::splitLine($line, $speaker, $open, $result);
+            self::splitLine($line, $state);
         }
 
+        $result   = [];
         $previous = null;
         $seen     = false;
-        foreach ($result as $index => [$lineSpeaker, $line]) {
-            $hasText          = Markup::visibleText($line) !== "";
-            $result[$index][] = $hasText && (!$seen || $lineSpeaker !== $previous);
-            $previous         = $hasText ? $lineSpeaker : $previous;
-            $seen             = $seen || $hasText;
+        foreach ($state->parts as ["speaker" => $speaker, "text" => $text]) {
+            $hasText  = Markup::visibleText($text) !== "";
+            $result[] = new SpeakerLine($speaker, $text, $hasText && (!$seen || $speaker !== $previous));
+            $previous = $hasText ? $speaker : $previous;
+            $seen     = $seen || $hasText;
         }
 
         return $result;
@@ -234,12 +233,9 @@ final class SpeakerLabels
 
 
     /**
-     * Adds the parts of one line to $result, a new part at each change of the speaker.
-     *
-     * @param list<array{string, string}>  $open
-     * @param list<array{?string, string}> $result
+     * Adds the parts of one line to the parts of $state, a new part at each change of the speaker.
      */
-    private static function splitLine(string $line, ?string &$speaker, array &$open, array &$result): void
+    private static function splitLine(string $line, SpeakerSplitState $state): void
     {
         $current = "";
         $split   = false;
@@ -251,39 +247,39 @@ final class SpeakerLabels
 
             $isVoice = preg_match(self::VOICE, $token, $voice) === 1;
             if (!$isVoice && preg_match(self::VOICE_END, $token) !== 1) {
-                $open     = self::trackStyle($open, $token);
-                $current .= $token;
+                $state->open = self::trackStyle($state->open, $token);
+                $current    .= $token;
                 continue;
             }
 
             $name = $isVoice ? Markup::decodeEntities(trim($voice[2] ?? "")) : "";
             $name = $name === "" ? null : $name;
-            if ($name === $speaker) {
+            if ($name === $state->speaker) {
                 continue;
             }
             if (Markup::visibleText($current) !== "") {
-                $closing  = implode("", array_map(fn (array $tag): string => "</$tag[0]>", array_reverse($open)));
-                $result[] = [$speaker, rtrim($current) . $closing];
-                $current  = implode("", array_column($open, 1));
-                $split    = true;
+                $closing        = implode("", array_map(fn (OpenStyleTag $tag): string => "</$tag->name>", array_reverse($state->open)));
+                $state->parts[] = ["speaker" => $state->speaker, "text" => rtrim($current) . $closing];
+                $current        = implode("", array_map(fn (OpenStyleTag $tag): string => $tag->tag, $state->open));
+                $split          = true;
             }
-            $speaker = $name;
+            $state->speaker = $name;
         }
-        $result[] = [$speaker, $current];
+        $state->parts[] = ["speaker" => $state->speaker, "text" => $current];
     }
 
 
     /**
-     * @param list<array{string, string}> $open the name and the opening tag of each open style tag
-     * @return list<array{string, string}>
+     * @param list<OpenStyleTag> $open
+     * @return list<OpenStyleTag>
      */
     private static function trackStyle(array $open, string $token): array
     {
         if (preg_match(self::OPEN_STYLE, $token, $match) === 1) {
-            $open[] = [$match[1], $token];
+            $open[] = new OpenStyleTag($match[1], $token);
         } elseif (preg_match(self::CLOSE_STYLE, $token, $match) === 1) {
             for ($index = count($open) - 1; $index >= 0; $index--) {
-                if ($open[$index][0] === $match[1]) {
+                if ($open[$index]->name === $match[1]) {
                     array_splice($open, $index, 1);
                     break;
                 }
