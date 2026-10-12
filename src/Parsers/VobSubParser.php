@@ -60,7 +60,7 @@ final class VobSubParser extends SubtitleParser
     private int $trackIndex;
     private ?string $language = null;
 
-    /** @var list<array{time: float, filepos: int}> */
+    /** @var array<int, array{time: float, filepos: int}> in time order, by the index of the timestamp line in the track */
     private array $entries = [];
 
 
@@ -79,13 +79,18 @@ final class VobSubParser extends SubtitleParser
         $this->selectTrack($this->readIndex($formatOptions->idx), $formatOptions->track, $formatOptions->language);
 
         $units = [];
-        foreach ($this->entries as $entry) {
-            if ($entry["filepos"] >= strlen($content)) {
-                throw new ParsingException(sprintf("The filepos %09x of timestamp %.3f is outside the .sub content of %d bytes.",
-                                                   $entry["filepos"], $entry["time"], strlen($content)));
+        foreach ($this->entries as $index => $entry) {
+            try {
+                if ($entry["filepos"] >= strlen($content)) {
+                    throw new ParsingException(sprintf("The filepos %09x of timestamp %.3f is outside the .sub content of %d bytes.",
+                                                       $entry["filepos"], $entry["time"], strlen($content)));
+                }
+                $unit = $this->decodeUnit($this->readUnit($content, $entry["filepos"]));
+            } catch (ParsingException $exception) {
+                $this->fail($exception, null, $index, []);
+                continue;
             }
 
-            $unit          = $this->decodeUnit($this->readUnit($content, $entry["filepos"]));
             $unit["start"] = $entry["time"] + $unit["startDelay"];
             $unit["stop"]  = $unit["stopDelay"] === null ? null : $entry["time"] + $unit["stopDelay"];
             $units[]       = $unit;
@@ -174,7 +179,7 @@ final class VobSubParser extends SubtitleParser
         $this->trackIndex = $selected["index"];
         $this->language   = $selected["id"];
         $this->entries    = $selected["entries"];
-        usort($this->entries, fn (array $entry1, array $entry2): int => $entry1["time"] <=> $entry2["time"]);
+        uasort($this->entries, fn (array $entry1, array $entry2): int => $entry1["time"] <=> $entry2["time"]);
     }
 
 

@@ -34,6 +34,9 @@ final class SccParser extends SubtitleParser
     private const FRAME_RATE_NUMERATOR = 30000;
     private const FRAME_RATE_DIVISOR   = 1001;
 
+    // The null byte pair with odd parity that fills frames without data.
+    private const PADDING = 0x8080;
+
 
     protected function read(string $content): Subtitle
     {
@@ -122,37 +125,43 @@ final class SccParser extends SubtitleParser
      */
     private function readCodeLines(array $rawLines, ?bool &$dropFrame): array
     {
-        $dropFrame = null;
-        $header    = null;
-        $codeLines = [];
-        foreach ($rawLines as $lineNumber => $rawLine) {
+        $dropFrame  = null;
+        $header     = null;
+        $codeLines  = [];
+        $blockIndex = -1;
+        foreach ($rawLines as $lineIndex => $rawLine) {
             $rawLine = trim($rawLine);
             if ($rawLine === "") {
                 continue;
             }
+            $blockIndex++;
+            $lineNumber = $lineIndex + 1;
             if ($header === null) {
                 $header = $rawLine;
                 if ($header !== self::HEADER) {
-                    throw new ParsingException("An SCC file must start with the line \"" . self::HEADER . "\".", $lineNumber + 1);
+                    throw new ParsingException("An SCC file must start with the line \"" . self::HEADER . "\".", $lineNumber);
                 }
                 continue;
             }
 
-            if (!preg_match("/^(\d{2}):(\d{2}):(\d{2})([:;])(\d{2})(?:\s+(.*))?$/", $rawLine, $matches)) {
-                throw new ParsingException("The SCC line \"$rawLine\" does not start with a time code.", $lineNumber + 1);
+            try {
+                [$start, $lineDropFrame, $pairs] = self::readTimeCode($rawLine, $lineNumber);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $lineNumber, $blockIndex, [$rawLine]);
+                continue;
             }
 
-            $lineDropFrame = $matches[4] === ";";
-            $dropFrame   ??= $lineDropFrame;
-            $words         = [];
-            foreach (preg_split("/\s+/", $matches[6] ?? "", -1, PREG_SPLIT_NO_EMPTY) as $word) {
-                if (!preg_match("/^[0-9a-fA-F]{4}$/", $word)) {
-                    throw new ParsingException("The SCC line has the invalid byte pair \"$word\".", $lineNumber + 1);
+            $dropFrame ??= $lineDropFrame;
+            $words       = [];
+            foreach ($pairs as $pair) {
+                try {
+                    $words[] = self::readBytePair($pair, $lineNumber);
+                } catch (ParsingException $exception) {
+                    $this->fail($exception, $lineNumber, $blockIndex, [$rawLine]);
+                    // Padding keeps the frame of each later byte pair of the line.
+                    $words[] = self::PADDING;
                 }
-                $words[] = hexdec($word);
             }
-
-            $start       = self::timecodeToFrames((int) $matches[1], (int) $matches[2], (int) $matches[3], (int) $matches[5], $lineDropFrame);
             $codeLines[] = [$start, $words];
         }
 
@@ -161,6 +170,32 @@ final class SccParser extends SubtitleParser
         usort($codeLines, fn (array $a, array $b): int => $a[0] <=> $b[0]);
 
         return $codeLines;
+    }
+
+
+    /**
+     * @return array{int, bool, list<string>} the start frame, true for drop-frame time code, and the byte pairs
+     */
+    private static function readTimeCode(string $rawLine, int $lineNumber): array
+    {
+        if (!preg_match("/^(\d{2}):(\d{2}):(\d{2})([:;])(\d{2})(?:\s+(.*))?$/", $rawLine, $matches)) {
+            throw new ParsingException("The SCC line \"$rawLine\" does not start with a time code.", $lineNumber);
+        }
+
+        $dropFrame = $matches[4] === ";";
+
+        return [self::timecodeToFrames((int) $matches[1], (int) $matches[2], (int) $matches[3], (int) $matches[5], $dropFrame),
+                $dropFrame, preg_split("/\s+/", $matches[6] ?? "", -1, PREG_SPLIT_NO_EMPTY)];
+    }
+
+
+    private static function readBytePair(string $pair, int $lineNumber): int
+    {
+        if (!preg_match("/^[0-9a-fA-F]{4}$/", $pair)) {
+            throw new ParsingException("The SCC line has the invalid byte pair \"$pair\".", $lineNumber);
+        }
+
+        return hexdec($pair);
     }
 
 

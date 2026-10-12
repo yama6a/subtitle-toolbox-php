@@ -13,6 +13,8 @@ use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngDecoder;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Ocr\FakeOcrEngine;
+use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -228,6 +230,42 @@ class PgsParserTest extends TestCase
         $this->assertLessThan(64 * 1024 * 1024, memory_get_peak_usage() - $before);
         ["palette" => $palette, "indexes" => $indexes] = PngDecoder::decodeIndexed(CueImage::fromCue($cues[0])->png);
         $this->assertSame([self::WHITE, self::YELLOW_BT709], [$palette[ord($indexes[0])], $palette[ord($indexes[-1])]]);
+    }
+
+
+    public function testLenientModeKeepsTheCuesBeforeACutOffSegment(): void
+    {
+        $content = substr(file_get_contents(self::DIR . "shapes_576p.sup"), 0, 1400);
+
+        $subtitle = (new PgsParser())->parse($content, new ReadOptions(lenient: true));
+
+        $this->assertSame([[0.5, 3.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertEquals([new ParseWarning("The segment header at byte 1398 is cut off.", null, 8, [], ParseWarningAction::Skipped)],
+                            $subtitle->getParseWarnings());
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The segment header at byte 1398 is cut off.");
+        (new PgsParser())->parse($content, new ReadOptions());
+    }
+
+
+    public function testACutOffDisplaySetEndsTheShownCueAndShowsNothing(): void
+    {
+        $object  = ["id" => 0, "window" => 0, "x" => 0, "y" => 0];
+        $content = (new PgsFixtureWriter())
+            ->presentation(90000, 1920, 1080, 1, PgsFixtureWriter::STATE_EPOCH_START, 0, [$object])
+            ->palette(90000, 0, 0, PgsFixtures::PALETTE)
+            ->object(90000, 0, 0, 4, 2, "\1\1\2\2\3\3\3\3")
+            ->end(90000)
+            ->presentation(180000, 1920, 1080, 2, PgsFixtureWriter::STATE_EPOCH_START, 0, [$object])
+            ->palette(180000, 0, 0, PgsFixtures::PALETTE)
+            ->object(180000, 0, 0, 4, 2, "\3\3\3\3\1\1\2\2")
+            ->end(180000)
+            ->bytes();
+
+        $cues = (new PgsParser())->parse(substr($content, 0, -20), new ReadOptions(lenient: true))->getCues();
+
+        $this->assertSame([[1.0, 2.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $cues));
     }
 
 

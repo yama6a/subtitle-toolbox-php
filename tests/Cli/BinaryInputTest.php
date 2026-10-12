@@ -122,7 +122,10 @@ class BinaryInputTest extends CliTestCase
         $this->assertSame([3, "", "Error: $error$hint"], $this->runCli(["sync", "trip.srt", "--reference", "broken.srt", "-o", "-"]));
 
         file_put_contents("$this->dir/broken.scc", "Scenarist_SCC V1.0\n\n00:00:01:00\tzz\n");
-        [$code, , $stderr] = $this->runCli(["convert", "broken.scc", "--to", "srt", "-o", "-"]);
+        $this->assertSame([3, "", "broken.scc: ParsingException (Error #100): The SCC line has the invalid byte pair \"zz\". (line 3)\n$hint"],
+                          $this->runCli(["convert", "broken.scc", "--to", "srt", "-o", "-"]));
+        file_put_contents("$this->dir/broken.ogm", "CHAPTER01=00:00:xx.000\nCHAPTER01NAME=Intro\n");
+        [$code, , $stderr] = $this->runCli(["convert", "broken.ogm", "--from", "ogm-chapters", "--to", "youtube-chapters", "-o", "-"]);
         $this->assertSame(3, $code);
         $this->assertStringContainsString("ParsingException", $stderr);
         $this->assertStringNotContainsString("--lenient", $stderr);
