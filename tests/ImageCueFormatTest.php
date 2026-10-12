@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\FakeOcrEngine;
 
@@ -34,8 +34,8 @@ class ImageCueFormatTest extends TestCase
 
     public function testTextFormatterThrowsOnImageCueWithoutText(): void
     {
-        $this->expectException(ImageCueWithoutTextException::class);
-        $this->expectExceptionMessage("ImageCueWithoutTextException (Error #103): Cue #1 holds an image but no text.");
+        $this->expectException(UnwritableContentException::class);
+        $this->expectExceptionMessage("Cue #1 holds an image but no text, and srt needs text. Run OCR with recognizeText() first");
 
         $this->subtitleWithImageCue()->toString(Format::SubRip);
     }

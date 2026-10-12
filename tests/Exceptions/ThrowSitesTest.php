@@ -125,7 +125,6 @@ class ThrowSitesTest extends TestCase
     private const CODES = [
         ParsingException::class             => 100,
         UnsupportedFormatException::class   => 102,
-        ImageCueWithoutTextException::class => 103,
         InvalidArgumentException::class     => 104,
         CueNotFoundException::class         => 105,
         UnknownFormatException::class       => 106,
@@ -134,8 +133,8 @@ class ThrowSitesTest extends TestCase
         TranslationException::class         => 109,
     ];
 
-    // 101 belonged to InvalidFormatterException in 3.x. Do not give it to a new class.
-    private const RETIRED_CODES = [101];
+    // 101 belonged to InvalidFormatterException in 3.x and 103 to ImageCueWithoutTextException. Do not give them to a new class.
+    private const RETIRED_CODES = [101, 103];
 
     // The CLI catches its own exceptions, so they need no error code.
     private const CLI_CODES = [FileFailure::class => 0];
@@ -679,7 +678,7 @@ class ThrowSitesTest extends TestCase
             "Subtitle.php: save() into a missing directory" => [fn () => self::subtitle()->save(self::FILES . "missing/out.srt"), ...$invalid],
             "Subtitle.php: format without a formatter"      => [fn () => self::subtitle()->toString(Format::VobSub), ...$unsupported],
             "Subtitle.php: image cue without text"          => [fn () => (new Subtitle())->addCue($imageCue)->toString(Format::SubRip),
-                                                                ImageCueWithoutTextException::class, ImageCueWithoutTextException::class],
+                                                                \RuntimeException::class, UnwritableContentException::class],
             "Subtitle.php: remove a missing cue"            => [fn () => self::subtitle()->removeCue(9),
                                                                 \RuntimeException::class, CueNotFoundException::class],
             "Subtitle.php: negative comment index"          => [fn () => self::subtitle()->addComment("note", -1), ...$invalid],
@@ -854,7 +853,7 @@ class ThrowSitesTest extends TestCase
         asort($codes);
 
         $this->assertSame(self::CODES, $codes);
-        $this->assertSame(array_values(array_diff(range(100, 100 + count($codes)), self::RETIRED_CODES)), array_values($codes));
+        $this->assertSame(array_values(array_diff(range(100, 99 + count($codes) + count(self::RETIRED_CODES)), self::RETIRED_CODES)), array_values($codes));
     }
 
 

@@ -18,7 +18,6 @@ try {
 |:--- |:--- |:--- |:--- |
 | `ParsingException` | `\RuntimeException` | 100 | content that a parser or `fromArray()` cannot read, or a byte that is not valid in the source encoding |
 | `UnsupportedFormatException` | `\RuntimeException` | 102 | a format that the library cannot read or write, see [Unsupported formats](#unsupported-formats) |
-| `ImageCueWithoutTextException` | `\RuntimeException` | 103 | an image cue without text in `toString()` with a text format |
 | `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, see [Invalid arguments](#invalid-arguments) |
 | `CueNotFoundException` | `\RuntimeException` | 105 | `removeCue()`, `splitCue()` or `joinCues()` with an index that has no cue |
 | `UnknownFormatException` | `UnsupportedFormatException` | 106 | `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` when detection finds no format |
@@ -60,6 +59,7 @@ try {
 - More than 4 lines or 32 characters per line in SCC.
 - A character that CEA-608 cannot show in SCC, for example `日`.
 - A cue without an image in PGS.
+- An image cue without text in `toString()` or `save()` with a text format, unless `WriteOptions::$skipImageCues` is set. Run OCR first or write a bitmap format.
 - An image position or size above 65535 in PGS.
 - A PNG in PGS output whose size differs from the size in the image data of its cue, for example a 2x2 PNG for a 720x80 image.
 - A cue time after 13:15:21.858 in PGS, the limit of its 32-bit time stamps of 90 kHz.
