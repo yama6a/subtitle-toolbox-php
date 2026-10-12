@@ -69,7 +69,14 @@ final class SamiFormatter extends SubtitleFormatter
             array_map(Markup::rubyAsText(...), $cue->getLines())
         );
 
-        return $this->openParagraph($class, []) . ($lines === [] ? "&nbsp;" : implode("<br>", $lines));
+        if ($lines === []) {
+            return $this->openParagraph($class, []) . "&nbsp;";
+        }
+
+        // An HTML parser keeps a tag open into the next <P>, so a SubRip cue such as "<i>never closed" would style the next cue.
+        $html = implode("<br>", $lines);
+
+        return $this->openParagraph($class, []) . $html . Markup::closeCoreTags(Markup::openCoreTags($html));
     }
 
 

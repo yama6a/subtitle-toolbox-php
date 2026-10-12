@@ -87,6 +87,18 @@ class SamiFormatterTest extends TestCase
     }
 
 
+    public function testTagsThatTheCueLeavesOpenAreClosedAtItsEnd(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/real/own_styled.srt"), Format::SubRip);
+        $subtitle->addCue(new SubtitleCue(900, 901, ["<b><font color=\"#ff0000\">Red", "<u>and bold</b>"]));
+
+        $output = $subtitle->toString(Format::Sami);
+
+        $this->assertStringContainsString("<SYNC Start=540000><P Class=SUBTTL><i>Italics that never close</i>\n", $output);
+        $this->assertStringContainsString("<SYNC Start=900000><P Class=SUBTTL><b><font color=\"#ff0000\">Red<br><u>and bold</b></u></font>\n", $output);
+    }
+
+
     public function testLanguageAndTitleMetadata(): void
     {
         $subtitle = (new Subtitle())
