@@ -164,9 +164,9 @@ trait CueEditing
 
         $this->cues = $cues;
         $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
-        // The second cue can start after the next cue, so it counts as a start change.
+        // The second cue can start after the next cue, so it counts as a start change from the place after the first cue.
         CueHolders::hold($this, [$second]);
-        CueHolders::startChanged($second);
+        CueHolders::startChanged($second, $cue->getStart());
 
         return $this;
     }

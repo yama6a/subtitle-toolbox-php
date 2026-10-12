@@ -65,18 +65,19 @@ final class CueList
 
     /**
      * Returns $cues in start order, or null when they are in start order already.
-     * Only the cues in $moved can be out of order. The result equals a stable sort: equal starts keep their order in $cues.
+     * Only the cues in $moved can be out of order. $cues are in the order of the starts that $moved holds for its cues.
+     * The result equals a stable sort: equal starts keep their order in $cues.
      *
-     * @param list<SubtitleCue> $cues
-     * @param list<SubtitleCue> $moved
+     * @param list<SubtitleCue>                     $cues
+     * @param \SplObjectStorage<SubtitleCue, float> $moved each moved cue and the start that its place in $cues follows
      *
      * @return ?list<SubtitleCue>
      */
-    public static function withCuesMoved(array $cues, array $moved): ?array
+    public static function withCuesMoved(array $cues, \SplObjectStorage $moved): ?array
     {
         $movedAt = [];
         foreach ($moved as $cue) {
-            foreach (array_keys($cues, $cue, true) as $position) {
+            foreach (self::positionsOf($cues, $cue, $moved) as $position) {
                 $movedAt[$position] = $cue;
             }
         }
@@ -87,6 +88,9 @@ final class CueList
         }
         if ($inPlace) {
             return null;
+        }
+        if (count($movedAt) === 1) {
+            return self::withOneCueMoved($cues, array_key_first($movedAt));
         }
 
         ksort($movedAt);
@@ -110,6 +114,71 @@ final class CueList
         }
 
         return $rest;
+    }
+
+
+    /**
+     * Moves the cue at $from to its place in the other cues, which are in start order, with one slice rotation.
+     *
+     * @param list<SubtitleCue> $cues
+     *
+     * @return list<SubtitleCue>
+     */
+    private static function withOneCueMoved(array $cues, int $from): array
+    {
+        $cue   = $cues[$from];
+        $start = $cue->getStart();
+        // Earlier cues with the same start stay before the cue, and later cues with the same start stay after it.
+        [$low, $high] = $from > 0 && $cues[$from - 1]->getStart() > $start ? [0, $from] : [$from + 1, count($cues)];
+        while ($low < $high) {
+            $middle       = ($low + $high) >> 1;
+            $otherStart   = $cues[$middle]->getStart();
+            $cueGoesLater = $middle < $from ? $otherStart <= $start : $otherStart < $start;
+            if ($cueGoesLater) {
+                $low = $middle + 1;
+            } else {
+                $high = $middle;
+            }
+        }
+
+        return $low < $from
+            ? array_merge(array_slice($cues, 0, $low), [$cue], array_slice($cues, $low, $from - $low), array_slice($cues, $from + 1))
+            : array_merge(array_slice($cues, 0, $from), array_slice($cues, $from + 1, $low - $from - 1), [$cue], array_slice($cues, $low));
+    }
+
+
+    /**
+     * Finds $cue by a binary search on the start that its place follows, then in the run of cues with that start.
+     *
+     * @param list<SubtitleCue>                     $cues
+     * @param \SplObjectStorage<SubtitleCue, float> $moved
+     *
+     * @return list<int>
+     */
+    private static function positionsOf(array $cues, SubtitleCue $cue, \SplObjectStorage $moved): array
+    {
+        $placeStart = fn (SubtitleCue $other): float => isset($moved[$other]) ? $moved[$other] : $other->getStart();
+        $start      = $moved[$cue];
+        $low        = 0;
+        $high       = count($cues);
+        while ($low < $high) {
+            $middle = ($low + $high) >> 1;
+            if ($placeStart($cues[$middle]) < $start) {
+                $low = $middle + 1;
+            } else {
+                $high = $middle;
+            }
+        }
+
+        $positions = [];
+        for ($position = $low; isset($cues[$position]) && $placeStart($cues[$position]) === $start; $position++) {
+            if ($cues[$position] === $cue) {
+                $positions[] = $position;
+            }
+        }
+
+        // A cue that the subtitle no longer holds is not in its place, so only a full search can rule it out.
+        return $positions === [] ? array_keys($cues, $cue, true) : $positions;
     }
 
 

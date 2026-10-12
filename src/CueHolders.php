@@ -20,7 +20,7 @@ final class CueHolders
      */
     private static ?\WeakMap $holders = null;
 
-    /** @var ?\WeakMap<Subtitle, \SplObjectStorage<SubtitleCue, null>> */
+    /** @var ?\WeakMap<Subtitle, \SplObjectStorage<SubtitleCue, float>> each changed cue and its start at the last read */
     private static ?\WeakMap $startChanges = null;
 
 
@@ -70,34 +70,37 @@ final class CueHolders
 
 
     /**
-     * Adds $cue to the start changes of each subtitle that holds it.
+     * Adds $cue to the start changes of each subtitle that holds it. $startBefore is the start before the edit.
+     * A cue that changed before keeps its first start, which is the start that its place in the cues follows.
      */
-    public static function startChanged(SubtitleCue $cue): void
+    public static function startChanged(SubtitleCue $cue, float $startBefore): void
     {
         self::$startChanges ??= new \WeakMap();
         foreach (self::holders($cue) as $subtitle) {
             self::$startChanges[$subtitle] ??= new \SplObjectStorage();
-            self::$startChanges[$subtitle][$cue] = null;
+            if (!isset(self::$startChanges[$subtitle][$cue])) {
+                self::$startChanges[$subtitle][$cue] = $startBefore;
+            }
         }
     }
 
 
     /**
-     * Returns the cues of $subtitle whose start changed since the last call, in no order, and forgets them.
-     * A cue that $subtitle no longer holds can be among them.
+     * Returns the cues of $subtitle whose start changed since the last call, each with its start at that call, and
+     * forgets them. A cue that $subtitle no longer holds can be among them.
      *
-     * @return list<SubtitleCue>
+     * @return ?\SplObjectStorage<SubtitleCue, float> null when no start changed
      */
-    public static function takeStartChanges(Subtitle $subtitle): array
+    public static function takeStartChanges(Subtitle $subtitle): ?\SplObjectStorage
     {
         if (!isset(self::$startChanges[$subtitle])) {
-            return [];
+            return null;
         }
 
         $changes = self::$startChanges[$subtitle];
         unset(self::$startChanges[$subtitle]);
 
-        return iterator_to_array($changes, false);
+        return $changes;
     }
 
 

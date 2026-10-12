@@ -58,10 +58,11 @@ final class SubtitleCue
 
     public function setStart(float $start): self
     {
+        $before      = $this->start;
         $this->start = Timecode::roundToMilliseconds($start);
         if (CueHolders::isHeld($this)) {
             self::$timeEdits++;
-            CueHolders::startChanged($this);
+            CueHolders::startChanged($this, $before);
         }
 
         return $this;

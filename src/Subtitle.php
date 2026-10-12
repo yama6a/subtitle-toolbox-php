@@ -518,7 +518,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     private function sortStartChanges(): void
     {
         $changed = CueHolders::takeStartChanges($this);
-        if ($changed === []) {
+        if ($changed === null) {
             return;
         }
         if ($this->keepsArrayCueOrder) {

@@ -138,6 +138,19 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testARemovedCueAndASplitCueKeepTheOrder(): void
+    {
+        $subtitle = TestSubtitles::fromCues([[1, 2, "one"], [3, 9, ["three", "split"]], [4, 5, "four"]]);
+        $removed  = $subtitle->getCues()[0];
+        $subtitle->removeCue(0);
+
+        $removed->setStart(3.5);
+        $subtitle->splitCue(0, 6, 1);
+
+        $this->assertSame(["three", "four", "split"], TestSubtitles::texts($subtitle));
+    }
+
+
     public function testRemoveCueNumbersTheCuesFromZeroAgain(): void
     {
         $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "one"), new SubtitleCue(3, 4, "two"), new SubtitleCue(5, 6, "three")]);
