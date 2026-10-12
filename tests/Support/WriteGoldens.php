@@ -10,8 +10,10 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\WriteOptions;
 
 /**
- * Lists the write goldens of the transcript formatters, and writes the output that a golden file holds.
- * A round trip golden "<file>.out.<extension>" holds a real file read and written in its own format.
+ * Lists the write goldens, and writes the output that a golden file holds.
+ * A round trip golden "<file>.out.<extension>" holds a real file read and written in its own format. A round trip
+ * whose output equals the input after BOM and line-end normalisation has no golden file, and its test compares with
+ * the input.
  * A conversion golden "<file>.to.<format>.<extension>" holds a real file of another format written in the format.
  */
 final class WriteGoldens
@@ -20,6 +22,11 @@ final class WriteGoldens
      * The fixture folders under tests/files whose real files get a round trip golden, and their format.
      */
     private const ROUND_TRIPS = [
+        "srt"            => Format::SubRip,
+        "vtt"            => Format::WebVtt,
+        "lrc"            => Format::Lyrics,
+        "html"           => Format::HtmlTranscript,
+        "podcast"        => Format::PodcastTranscript,
         "whisper"        => Format::Whisper,
         "aws-transcribe" => Format::AwsTranscribe,
         "deepgram"       => Format::Deepgram,
@@ -28,7 +35,12 @@ final class WriteGoldens
     ];
 
     /**
-     * The real files under tests/files that get a conversion golden in each format of ROUND_TRIPS.
+     * The transcript formats that get a conversion golden of each file in CONVERSIONS.
+     */
+    private const CONVERSION_FORMATS = [Format::Whisper, Format::AwsTranscribe, Format::Deepgram, Format::AssemblyAi, Format::GoogleSpeech];
+
+    /**
+     * The real files under tests/files that get a conversion golden in each format of CONVERSION_FORMATS.
      */
     private const CONVERSIONS = [
         "srt/real/own_styled.srt"     => Format::SubRip,
@@ -50,6 +62,8 @@ final class WriteGoldens
                 $golden         = "$folder/real/expected/$file.out." . pathinfo($file, PATHINFO_EXTENSION);
                 $cases[$golden] = ["$folder/real/$file", $format, $format, $golden];
             }
+        }
+        foreach (self::CONVERSION_FORMATS as $format) {
             foreach (self::CONVERSIONS as $path => $inputFormat) {
                 $golden         = dirname($path) . "/expected/" . basename($path) . ".to.$format->value." . $format->extensions()[0];
                 $cases[$golden] = [$path, $inputFormat, $format, $golden];
@@ -68,6 +82,15 @@ final class WriteGoldens
         $options ??= new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true, speakerVoices: true)]);
 
         return TestFiles::parse($path, $inputFormat, $options)->toString($outputFormat, new WriteOptions());
+    }
+
+
+    /**
+     * Returns the text without a UTF-8 BOM and with LF line ends.
+     */
+    public static function normalize(string $text): string
+    {
+        return str_replace(["\r\n", "\r"], "\n", str_starts_with($text, "\u{FEFF}") ? substr($text, 3) : $text);
     }
 
 
