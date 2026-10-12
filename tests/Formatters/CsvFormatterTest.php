@@ -207,6 +207,32 @@ class CsvFormatterTest extends TestCase
     }
 
 
+    public function testWritesFileDataThatStoresTheRolesByTheirNames(): void
+    {
+        $first    = (new SubtitleCue(1, 4, "<v Anna>Where are you going?"))->setIdentifier("a1")->setFormatData("csv", ["columns" => ["Notes" => "calm"]]);
+        $second   = (new SubtitleCue(4.5, 6, ["Home.", "Now."]))->setFormatData("csv", ["columns" => ["Notes" => "=1+1"]]);
+        $subtitle = (new Subtitle())->addCue($first)->addCue($second)->setFormatData("csv", [
+            "delimiter"  => ";",
+            "header"     => ["ID", "In", "Length", "Who", "Line", "Notes"],
+            "roles"      => ["identifier" => 0, "start" => 1, "duration" => 2, "speaker" => 3, "text" => 4],
+            "width"      => 6,
+            "timeFormat" => "seconds",
+            "frameRate"  => null,
+        ]);
+
+        $this->assertSame(
+            "ID;In;Length;Who;Line;Second;Notes\n" .
+            "a1;1;3;Anna;Where are you going?;Wohin?;calm\n" .
+            ";4.5;1.5;;\"Home.\nNow.\";;'=1+1\n",
+            $subtitle->toString(Format::Csv, new WriteOptions(bom: false, formats: [new CsvWriteOptions(
+                secondText: (new Subtitle())->addCue(new SubtitleCue(1, 4, "Wohin?")),
+                secondTextHeader: "Second",
+                escapeFormulas: true,
+            )]))
+        );
+    }
+
+
     public function testRoundTripsThroughTheParser(): void
     {
         $csv = self::english()->toString(Format::Csv);

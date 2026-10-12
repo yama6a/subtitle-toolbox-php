@@ -27,11 +27,11 @@ final class CsvParser extends SubtitleParser
     private const MILLISECONDS_MEDIAN_DURATION = 100;
 
     private const SYNONYMS = [
-        "start"    => ["begin", "in", "starttime", "starttc", "timecode", "tcin"],
-        "end"      => ["out", "stop", "endtime", "endtc", "tcout"],
-        "duration" => ["length"],
-        "speaker"  => ["name", "character"],
-        "text"     => ["subtitle", "caption", "dialogue", "transcript"],
+        CsvColumnRole::Start->value    => ["begin", "in", "starttime", "starttc", "timecode", "tcin"],
+        CsvColumnRole::End->value      => ["out", "stop", "endtime", "endtc", "tcout"],
+        CsvColumnRole::Duration->value => ["length"],
+        CsvColumnRole::Speaker->value  => ["name", "character"],
+        CsvColumnRole::Text->value     => ["subtitle", "caption", "dialogue", "transcript"],
     ];
 
     private CsvColumns $columns;
@@ -63,7 +63,7 @@ final class CsvParser extends SubtitleParser
         $openEnds       = [];
         $milliseconds   = $this->hasMillisecondTimes($records, $roles, $delimiter);
         foreach (array_values($records) as $rowIndex => ["line" => $lineNumber, "cells" => $cells]) {
-            $roleCell = fn (string $role): string => isset($roles[$role]) ? trim($cells[$roles[$role]] ?? "") : "";
+            $roleCell = fn (CsvColumnRole $role): string => self::roleCell($cells, $roles, $role);
             try {
                 [$start, $end] = self::readTimes($roleCell, $frameRate, $milliseconds, $lineNumber);
                 // A cut-off row or a time with a comma that split the cells gives the wrong end, so lenient mode drops the row.
@@ -72,9 +72,9 @@ final class CsvParser extends SubtitleParser
                 $this->fail($exception, $lineNumber, $rowIndex, [implode($delimiter, $cells)]);
                 continue;
             }
-            $timeFormat ??= $milliseconds ? CsvTimeFormat::Milliseconds->value : self::timeFormatOf($roleCell("start"));
+            $timeFormat ??= $milliseconds ? CsvTimeFormat::Milliseconds->value : self::timeFormatOf($roleCell(CsvColumnRole::Start));
 
-            $cue = new SubtitleCue($start, $end ?? $start, $this->textLines($cells[$roles["text"]] ?? "", $roleCell("speaker")));
+            $cue = new SubtitleCue($start, $end ?? $start, $this->textLines($cells[$roles[CsvColumnRole::Text->value]] ?? "", $roleCell(CsvColumnRole::Speaker)));
             self::addCellData($cue, $roleCell, $cells, $roles, $header);
             if ($end === null) {
                 $openEnds[] = $cue;
@@ -100,15 +100,15 @@ final class CsvParser extends SubtitleParser
     /**
      * Returns the start and the end of a record. The end is null when the record has neither an end nor a duration.
      *
-     * @param \Closure(string): string $roleCell the trimmed cell of a role
+     * @param \Closure(CsvColumnRole): string $roleCell the trimmed cell of a role
      * @return array{float, ?float}
      */
     private static function readTimes(\Closure $roleCell, ?FrameRate $frameRate, bool $milliseconds, int $lineNumber): array
     {
-        $start = self::parseTime($roleCell("start"), $frameRate, $milliseconds, $lineNumber);
+        $start = self::parseTime($roleCell(CsvColumnRole::Start), $frameRate, $milliseconds, $lineNumber);
         $end   = match (true) {
-            $roleCell("end") !== ""      => self::parseTime($roleCell("end"), $frameRate, $milliseconds, $lineNumber),
-            $roleCell("duration") !== "" => $start + self::parseTime($roleCell("duration"), $frameRate, $milliseconds, $lineNumber),
+            $roleCell(CsvColumnRole::End) !== ""      => self::parseTime($roleCell(CsvColumnRole::End), $frameRate, $milliseconds, $lineNumber),
+            $roleCell(CsvColumnRole::Duration) !== "" => $start + self::parseTime($roleCell(CsvColumnRole::Duration), $frameRate, $milliseconds, $lineNumber),
             default                  => null,
         };
 
@@ -128,16 +128,18 @@ final class CsvParser extends SubtitleParser
     {
         $durations = [];
         foreach ($records as ["cells" => $cells]) {
-            $times = array_map(fn (string $role): string => isset($roles[$role]) ? trim($cells[$roles[$role]] ?? "") : "", ["start" => "start", "end" => "end", "duration" => "duration"]);
-            foreach ($times as $time) {
+            $start    = self::roleCell($cells, $roles, CsvColumnRole::Start);
+            $end      = self::roleCell($cells, $roles, CsvColumnRole::End);
+            $duration = self::roleCell($cells, $roles, CsvColumnRole::Duration);
+            foreach ([$start, $end, $duration] as $time) {
                 if ($time !== "" && preg_match('/^[0-9]+$/D', $time) !== 1) {
                     return false;
                 }
             }
-            if ($times["start"] !== "" && $times["end"] !== "") {
-                $durations[] = (int) $times["end"] - (int) $times["start"];
-            } elseif ($times["duration"] !== "") {
-                $durations[] = (int) $times["duration"];
+            if ($start !== "" && $end !== "") {
+                $durations[] = (int) $end - (int) $start;
+            } elseif ($duration !== "") {
+                $durations[] = (int) $duration;
             }
         }
         if ($durations === []) {
@@ -163,18 +165,30 @@ final class CsvParser extends SubtitleParser
 
 
     /**
+     * Returns the trimmed cell of $role, or "" when the table has no column for it.
+     *
+     * @param list<string>       $cells
+     * @param array<string, int> $roles
+     */
+    private static function roleCell(array $cells, array $roles, CsvColumnRole $role): string
+    {
+        return isset($roles[$role->value]) ? trim($cells[$roles[$role->value]] ?? "") : "";
+    }
+
+
+    /**
      * Sets the identifier of $cue, and keeps the cells without a role as format data.
      * The format data keys them by their header name, else by their column index.
      *
-     * @param \Closure(string): string $roleCell
-     * @param list<string>             $cells
-     * @param array<string, int>       $roles
-     * @param list<string>|null        $header
+     * @param \Closure(CsvColumnRole): string $roleCell
+     * @param list<string>                    $cells
+     * @param array<string, int>              $roles
+     * @param list<string>|null               $header
      */
     private static function addCellData(SubtitleCue $cue, \Closure $roleCell, array $cells, array $roles, ?array $header): void
     {
-        if ($roleCell("identifier") !== "") {
-            $cue->setIdentifier($roleCell("identifier"));
+        if ($roleCell(CsvColumnRole::Identifier) !== "") {
+            $cue->setIdentifier($roleCell(CsvColumnRole::Identifier));
         }
         $named = [];
         foreach (array_diff_key($cells + array_fill(0, count($header ?? $cells), ""), array_flip($roles)) as $index => $value) {
@@ -346,7 +360,7 @@ final class CsvParser extends SubtitleParser
     {
         $names    = array_map(fn (string $name): string => strtolower(trim($name)), $header ?? []);
         $roles    = [];
-        $synonyms = $this->formatOptions()->columns === null && (!in_array("start", $names, true) || !in_array("text", $names, true));
+        $synonyms = $this->formatOptions()->columns === null && (!in_array(CsvColumnRole::Start->value, $names, true) || !in_array(CsvColumnRole::Text->value, $names, true));
         foreach (CsvColumns::ROLES as $role) {
             $column = $this->columns->$role;
             $index  = match (true) {
@@ -359,7 +373,7 @@ final class CsvParser extends SubtitleParser
             }
             if ($index !== false && ($header === null || $index < count($header))) {
                 $roles[$role] = $index;
-            } elseif ($column !== null || $role === "start" || $role === "text") {
+            } elseif ($column !== null || $role === CsvColumnRole::Start->value || $role === CsvColumnRole::Text->value) {
                 throw new ParsingException("The table has no column \"" . ($column ?? $role) . "\" for $role.", 1);
             }
         }
