@@ -28,6 +28,8 @@ class ConvertGoldensTest extends CliTestCase
             "YouTube json3 to WebVTT" => ["youtube/real/auto.en.json3", ["--to", "vtt"], "youtube/real/expected/auto.en.json3.to.vtt"],
             "Deepgram to WebVTT"      => ["deepgram/real/pool_utterances_diarize.json", ["--from", "deepgram", "--to", "vtt"], "deepgram/real/expected/pool_utterances_diarize.json.to.vtt"],
             "MicroDVD to SubRip"      => ["microdvd/real/sub_microdvd_with_styles.sub", ["--input-fps", "23.976", "--to", "srt"], "microdvd/real/expected/sub_microdvd_with_styles.sub.to.srt"],
+            "TTML to SubRip"          => ["ttml/real/bbc_ebu_tt_d.ttml", ["--to", "srt"], "ttml/real/expected/bbc_ebu_tt_d.ttml.to.srt"],
+            "iTT to WebVTT"           => ["itt/real/fcp_23976_styles.itt", ["--to", "vtt"], "itt/real/expected/fcp_23976_styles.itt.to.vtt"],
             "LRC to SubRip"           => ["lrc/real/handwritten-enhanced.lrc", ["--to", "srt"], "lrc/real/expected/handwritten-enhanced.lrc.to.srt"],
         ];
     }

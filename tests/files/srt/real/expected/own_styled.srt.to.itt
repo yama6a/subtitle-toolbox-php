@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xmlns:ttp="http://www.w3.org/ns/ttml#parameter" xmlns:tts="http://www.w3.org/ns/ttml#styling" xml:lang="" ttp:timeBase="smpte" ttp:frameRate="24" ttp:frameRateMultiplier="999 1000" ttp:dropMode="nonDrop">
+  <head>
+    <styling>
+      <style xml:id="normal" tts:fontFamily="sansSerif" tts:fontWeight="normal" tts:fontStyle="normal" tts:color="white" tts:fontSize="100%"/>
+    </styling>
+    <layout>
+      <region xml:id="top" tts:origin="0% 0%" tts:extent="100% 15%" tts:textAlign="center" tts:displayAlign="before"/>
+      <region xml:id="bottom" tts:origin="0% 85%" tts:extent="100% 15%" tts:textAlign="center" tts:displayAlign="after"/>
+    </layout>
+  </head>
+  <body style="normal">
+    <div>
+      <p begin="00:00:17:23" end="00:00:20:12" region="bottom"><span tts:color="#00ff00"><span tts:fontWeight="bold">[train horn]</span></span></p>
+      <p begin="00:00:47:02" end="00:00:48:06" region="bottom"><span tts:color="#ff00ff">[rain]</span></p>
+      <p begin="00:00:58:03" end="00:00:59:16" region="bottom"><span tts:color="#00ff00">[train horn]</span></p>
+      <p begin="00:01:01:14" end="00:01:03:00" region="bottom"><span tts:fontWeight="bold"><span tts:textDecoration="underline">[oven door opens]</span></span></p>
+      <p begin="00:01:26:17" end="00:01:29:10" region="bottom">[whistle]</p>
+      <p begin="00:01:29:12" end="00:01:31:22" region="bottom">[station speaker]<br/><span tts:fontStyle="italic">Thebakeryopensat7:35.</span></p>
+      <p begin="00:07:59:12" end="00:08:59:11" region="bottom"><span tts:fontStyle="italic">Italics over two lines<br/>that close on the second line</span></p>
+      <p begin="00:08:59:11" end="00:09:59:10" region="bottom"><span tts:fontStyle="italic">Italics that never close</span></p>
+      <p begin="00:09:59:10" end="00:10:59:08" region="bottom">The next cue is not italic</p>
+      <p begin="00:11:59:07" end="00:12:59:05" region="bottom"><span tts:fontStyle="italic">x</span>^3 * <span tts:fontStyle="italic">x</span> = 100</p>
+    </div>
+  </body>
+</tt>

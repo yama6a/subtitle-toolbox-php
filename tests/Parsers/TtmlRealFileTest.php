@@ -60,6 +60,12 @@ class TtmlRealFileTest extends TestCase
             "style_inheritance"          => ["style_inheritance.ttml", 5, 1.0, 2.0, "<i>The ferry leaves at noon.</i>", Alignment::BottomCenter, 9.0, 10.0, "<font color=\"#00ffff\"><i>Next stop </i></font>harbour", Alignment::BottomCenter],
             "word_timed_spans"           => ["word_timed_spans.ttml", 3, 1.0, 4.5, "The <00:00:02.000>tide <00:00:03.000>turns", Alignment::BottomCenter, 10.0, 13.0, "Boats <00:00:11.000>return <00:00:12.000>home", Alignment::BottomCenter],
             "smpte_drop_ntsc"            => ["smpte_drop_ntsc.ttml", 5, 57.391, 60.027, "The morning train leaves platform two.", Alignment::BottomCenter, 3599.996, 3602.999, "The evening train runs on time.", Alignment::BottomCenter],
+            "own_netflix_dfxp"           => ["own_netflix_dfxp.dfxp", 5, 2.002, 4.505, "The winter timetable\nstarts on Monday.", Alignment::BottomCenter, 3600.0, 3602.503, "- Is the last train still at 11?\n- Yes, at 11:15.", Alignment::BottomCenter],
+            "own_youtube_ttml"           => ["own_youtube_ttml.ttml", 5, 0.24, 3.12, "welcome back to the station channel", Alignment::BottomCenter, 12.0, 15.36, "and the bus waits ten minutes &amp; then leaves", Alignment::BottomCenter],
+            "own_ttconv_imsc11"          => ["own_ttconv_imsc11.ttml", 10, 17.985, 20.521, "<font color=\"#00ff00\"><b>[train horn]</b></font>", Alignment::BottomCenter, 720.0, 780.0, "<i>x</i>^3 * <i>x</i> = 100", Alignment::BottomCenter],
+            "ttconv_referential_styling" => ["ttconv_referential_styling.ttml", 2, 0.0, 2.0, "<font color=\"#008000\">one</font>", Alignment::BottomCenter, 2.0, 4.0, "<font color=\"#000000\">two</font>", Alignment::BottomCenter],
+            "ttconv_lwsp_default"        => ["ttconv_lwsp_default.ttml", 2, 0.0, 2.0, "hello my name is Mathilda", Alignment::BottomCenter, 2.0, 4.0, "bonjour mon nom\nest", Alignment::BottomCenter],
+            "ttconv_lwsp_preserve"       => ["ttconv_lwsp_preserve.ttml", 1, 0.0, 2.0, "hello my\nname is Mathilda", Alignment::BottomCenter, 0.0, 2.0, "hello my\nname is Mathilda", Alignment::BottomCenter],
         ];
     }
 

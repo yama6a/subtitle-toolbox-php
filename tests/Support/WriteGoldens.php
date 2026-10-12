@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Tests\Support;
 
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
@@ -33,6 +34,16 @@ final class WriteGoldens
         "deepgram"       => Format::Deepgram,
         "assemblyai"     => Format::AssemblyAi,
         "google-speech"  => Format::GoogleSpeech,
+    ];
+
+    /**
+     * The real files under tests/files that get a round trip golden, in folders that ROUND_TRIPS does not cover.
+     */
+    private const ROUND_TRIP_FILES = [
+        "ttml/real/bbc_ebu_tt_d.ttml"         => Format::Ttml,
+        "ttml/real/mantas_netflix_ticks.dfxp" => Format::Ttml,
+        "ttml/real/w3c_imsc11_regions.ttml"   => Format::Ttml,
+        "itt/real/fcp_23976_styles.itt"       => Format::Itt,
     ];
 
     /**
@@ -66,6 +77,8 @@ final class WriteGoldens
         "mpsub/real/mplayer_doc_time.sub"                 => Format::MpSub,
         "tmplayer/real/tmplayer_multiline_bom.txt"        => Format::TmPlayer,
         "lrc/real/handwritten-enhanced.lrc"               => Format::Lyrics,
+        "ttml/real/bbc_ebu_tt_d.ttml"                     => Format::Ttml,
+        "itt/real/fcp_23976_styles.itt"                   => Format::Itt,
         "csv/real/mantas_done_shape.csv"                  => Format::Csv,
     ];
 
@@ -89,10 +102,10 @@ final class WriteGoldens
 
 
     /**
-     * Returns one case per golden file: the input file, its format, the output format, the golden file and the read
-     * options. The paths are relative to tests/files.
+     * Returns one case per golden file: the input file, its format, the output format, the golden file, the read
+     * options and the write options. The paths are relative to tests/files.
      *
-     * @return array<string, array{string, Format, Format, string, ReadOptions}>
+     * @return array<string, array{string, Format, Format, string, ReadOptions, WriteOptions}>
      */
     public static function cases(): array
     {
@@ -100,8 +113,15 @@ final class WriteGoldens
         foreach (self::ROUND_TRIPS as $folder => $format) {
             foreach (self::realFiles($folder) as $file) {
                 $golden         = "$folder/real/expected/$file.out." . pathinfo($file, PATHINFO_EXTENSION);
-                $cases[$golden] = ["$folder/real/$file", $format, $format, $golden, self::transcriptReadOptions()];
+                $cases[$golden] = ["$folder/real/$file", $format, $format, $golden, self::transcriptReadOptions(), new WriteOptions()];
             }
+        }
+        foreach (self::ROUND_TRIP_FILES as $path => $format) {
+            $golden         = dirname($path) . "/expected/" . basename($path) . ".out." . pathinfo($path, PATHINFO_EXTENSION);
+            $cases[$golden] = [$path, $format, $format, $golden, new ReadOptions(), new WriteOptions()];
+        }
+        foreach (self::styledConversions() as $suffix => [$target, $writeOptions]) {
+            $cases += self::conversion("srt/real/own_styled.srt", Format::SubRip, $target, new ReadOptions(), $writeOptions, $suffix);
         }
         foreach (self::TRANSCRIPT_TARGETS as $target) {
             foreach (self::TRANSCRIPT_CONVERSIONS as $path => $format) {
@@ -125,9 +145,9 @@ final class WriteGoldens
     }
 
 
-    public static function render(string $path, Format $inputFormat, Format $outputFormat, ReadOptions $options): string
+    public static function render(string $path, Format $inputFormat, Format $outputFormat, ReadOptions $options, WriteOptions $writeOptions = new WriteOptions()): string
     {
-        return TestFiles::parse($path, $inputFormat, $options)->toString($outputFormat, new WriteOptions());
+        return TestFiles::parse($path, $inputFormat, $options)->toString($outputFormat, $writeOptions);
     }
 
 
@@ -151,17 +171,34 @@ final class WriteGoldens
 
 
     /**
-     * Returns the case of a conversion golden "<file>.to.<format>", or "<file>.to.<format>.<extension>" when the
-     * format name is not its extension.
+     * Returns the case of a conversion golden "<file>.to.<suffix>". The suffix defaults to "<format>", or to
+     * "<format>.<extension>" when the format name is not its extension.
      *
-     * @return array<string, array{string, Format, Format, string, ReadOptions}>
+     * @return array<string, array{string, Format, Format, string, ReadOptions, WriteOptions}>
      */
-    private static function conversion(string $path, Format $format, Format $target, ReadOptions $options): array
+    private static function conversion(string $path, Format $format, Format $target, ReadOptions $options,
+                                       WriteOptions $writeOptions = new WriteOptions(), ?string $suffix = null): array
     {
         $extension = $target->extensions()[0];
-        $golden    = dirname($path) . "/expected/" . basename($path) . ".to.$target->value" . ($extension === $target->value ? "" : ".$extension");
+        $suffix  ??= $target->value . ($extension === $target->value ? "" : ".$extension");
+        $golden    = dirname($path) . "/expected/" . basename($path) . ".to.$suffix";
 
-        return [$golden => [$path, $format, $target, $golden, $options]];
+        return [$golden => [$path, $format, $target, $golden, $options, $writeOptions]];
+    }
+
+
+    /**
+     * Returns the conversion goldens of srt/real/own_styled.srt, which has italic, bold, color, 2 lines and
+     * alignment: the golden suffix, the format and the write options.
+     *
+     * @return array<string, array{Format, WriteOptions}>
+     */
+    private static function styledConversions(): array
+    {
+        return [
+            "ttml" => [Format::Ttml, new WriteOptions()],
+            "itt"  => [Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 23.976)])],
+        ];
     }
 
 

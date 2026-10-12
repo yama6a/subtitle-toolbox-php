@@ -13,8 +13,8 @@ use SubtitleToolbox\Tests\Support\WriteGoldens;
 require __DIR__ . "/../../vendor/autoload.php";
 
 $written = 0;
-foreach (WriteGoldens::cases() as [$path, $inputFormat, $outputFormat, $golden, $options]) {
-    $output = WriteGoldens::render($path, $inputFormat, $outputFormat, $options);
+foreach (WriteGoldens::cases() as [$path, $inputFormat, $outputFormat, $golden, $options, $writeOptions]) {
+    $output = WriteGoldens::render($path, $inputFormat, $outputFormat, $options, $writeOptions);
     if ($inputFormat === $outputFormat && WriteGoldens::normalize($output) === WriteGoldens::normalize(file_get_contents(TestFiles::DIR . $path))) {
         @unlink(TestFiles::DIR . $golden);
         continue;
