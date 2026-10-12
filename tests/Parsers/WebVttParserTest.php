@@ -355,6 +355,17 @@ class WebVttParserTest extends TestCase
     }
 
 
+    public function testAmpersandThatStartsNoCharacterReferenceIsText(): void
+    {
+        $raw      = "WEBVTT\n\n00:01.000 --> 00:02.000\n<b>Rye</b> & <b>spelt</b> &foo; &#233; &eacute; &amp;\n";
+        $subtitle = Subtitle::fromString($raw, Format::WebVtt);
+
+        $this->assertSame("<b>Rye</b> &amp; <b>spelt</b> &amp;foo; &#233; &eacute; &amp;", $subtitle->getCues()[0]->getText());
+        $this->assertStringContainsString("\n<b>Rye</b> &amp; <b>spelt</b> &amp;foo; &#233; &eacute; &amp;\n", $subtitle->toString(Format::WebVtt));
+        $this->assertSame("Rye & spelt &foo; é é &\n", $subtitle->toString(Format::PlainText));
+    }
+
+
     public function testInlineTimestampsAreKept(): void
     {
         $raw = "WEBVTT\n\n00:01.000 --> 00:04.000\nOne <00:00:02.500>two <00:03.000>three\n";

@@ -31,7 +31,7 @@
                 "start": 5.5,
                 "end": 8.0,
                 "lines": [
-                    "<b>Rye</b> & <b>spelt</b> <today>"
+                    "<b>Rye</b> &amp; <b>spelt</b> <today>"
                 ],
                 "identifier": null,
                 "alignment": null,
