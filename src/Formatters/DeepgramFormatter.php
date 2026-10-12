@@ -78,7 +78,7 @@ final class DeepgramFormatter extends SubtitleFormatter
         $sameEnd   = TranscriptWords::sameTime(self::seconds($sources["end"]), $end);
         $sameText  = TranscriptWords::sameText($cue, $sources["text"]);
         $voice     = TranscriptWords::speaker($cue);
-        $speaker   = $voice !== null && ctype_digit($voice) ? (int) $voice : $voice;
+        $speaker   = $voice !== null && preg_match('/^[0-9]+$/D', $voice) === 1 ? (int) $voice : $voice;
         $words     = TranscriptWords::words(
             $cue,
             $words,

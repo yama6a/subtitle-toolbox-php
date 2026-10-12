@@ -118,7 +118,7 @@ final class MicroDvdParser extends SubtitleParser
             $other     = "";
             preg_match_all('/\{([A-Za-z]):([^}]*)\}/', $prefix, $codes, PREG_SET_ORDER);
             foreach ($codes as [$code, $letter, $value]) {
-                $isCueCode = ctype_upper($letter);
+                $isCueCode = $letter === strtoupper($letter);
                 $applied   = $this->applyCode(strtolower($letter), $value, $isCueCode ? $cueStyle : $lineStyle);
                 if ($applied === null) {
                     $other .= $code;

@@ -16,6 +16,8 @@ trait TextTransforms
     /** Abbreviations whose period ends no sentence when a comma or a lower case word follows. */
     private const TEXT_TRANSFORMS_ABBREVIATIONS = ["i.e", "e.g", "etc", "vs"];
 
+    private const TEXT_TRANSFORMS_ASCII_SPACES = [" ", "\t", "\n", "\r", "\v", "\f"];
+
     private const TEXT_TRANSFORMS_BIDI_CONTROLS = [
         "\u{200E}", "\u{200F}", "\u{202A}", "\u{202B}", "\u{202C}", "\u{202D}", "\u{202E}", "\u{2066}", "\u{2067}", "\u{2068}", "\u{2069}",
     ];
@@ -214,7 +216,7 @@ trait TextTransforms
         $abbreviation = false;
         $result       = "";
         foreach ($chars as $index => $char) {
-            if (preg_match('/^[\p{L}\p{N}]$/u', $char) === 1 || (strlen($char) === 1 && ctype_alnum($char))) {
+            if (preg_match('/^[\p{L}\p{N}]$/u', $char) === 1) {
                 if ($capitalizeNext) {
                     $char = self::textTransformsTitle($char, $turkic);
                 }
@@ -229,7 +231,7 @@ trait TextTransforms
                 $word = "";
                 if ($afterPunctuation && $char === ",") {
                     $afterPunctuation = false;
-                } elseif ($afterPunctuation && ctype_space($char)) {
+                } elseif ($afterPunctuation && in_array($char, self::TEXT_TRANSFORMS_ASCII_SPACES, true)) {
                     // Lowering İ adds a combining dot, so the original case is known only when the counts match.
                     $lowerCaseFollows = count($chars) === count($original) && self::textTransformsLowerCaseFollows($original, $index);
                     $afterPunctuation = !($abbreviation && $lowerCaseFollows);
@@ -254,7 +256,7 @@ trait TextTransforms
             if (preg_match('/^\p{L}$/u', $char) === 1) {
                 return preg_match('/^\p{Ll}$/u', $char) === 1;
             }
-            if (!ctype_space($char)) {
+            if (!in_array($char, self::TEXT_TRANSFORMS_ASCII_SPACES, true)) {
                 return false;
             }
         }

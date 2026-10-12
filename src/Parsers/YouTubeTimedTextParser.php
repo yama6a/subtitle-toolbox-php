@@ -298,7 +298,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
                 $id                                = $attributes["id"] ?? "";
                 if ($definition->nodeName === "pen") {
                     $pens[$id] = $this->xmlPenStyle($attributes);
-                } elseif ($definition->nodeName === "wp" && ctype_digit($attributes["ap"] ?? "")) {
+                } elseif ($definition->nodeName === "wp" && preg_match('/^[0-9]+$/D', $attributes["ap"] ?? "") === 1) {
                     $anchors[$id] = (int) $attributes["ap"];
                 }
             }
