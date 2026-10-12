@@ -116,6 +116,28 @@ class ResegmenterTest extends TestCase
     }
 
 
+    // A copy of the new cue list after each cue takes about 16 s here.
+    public function testFortyThousandCuesThatFitStayUnchangedUnderEightSeconds(): void
+    {
+        $bakery = Subtitle::fromString(file_get_contents(__DIR__ . "/files/statistics/own_bakery.srt"), Format::SubRip);
+        $cues   = [];
+        for ($copy = 0; $copy < 10000; $copy++) {
+            foreach ($bakery->getCues() as $cue) {
+                $cues[] = new SubtitleCue($cue->getStart() + 12 * $copy, $cue->getEnd() + 12 * $copy, $cue->getLines());
+            }
+        }
+        $subtitle = TestSubtitles::fromCues($cues);
+        $expected = $subtitle->toString(Format::SubRip);
+
+        $start  = microtime(true);
+        $report = Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong));
+
+        $this->assertLessThan(8, microtime(true) - $start);
+        $this->assertEquals(new ResegmentReport(40000, 40000), $report);
+        $this->assertSame($expected, $subtitle->toString(Format::SubRip));
+    }
+
+
     public function testCueThatFitsStaysUnchanged(): void
     {
         $text = "Short line\nthat fits.";

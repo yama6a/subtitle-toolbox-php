@@ -94,9 +94,9 @@ final class SubtitleStatistics
      */
     private static function addText(SubtitleCue $cue, float $duration, array &$text): void
     {
-        $lineLengths               = LineWrapper::visibleLineLengths($cue->getLines());
-        $text["charactersPerLine"] = [...$text["charactersPerLine"], ...$lineLengths];
-        $characters                = array_sum($lineLengths);
+        $lineLengths = LineWrapper::visibleLineLengths($cue->getLines());
+        array_push($text["charactersPerLine"], ...$lineLengths);
+        $characters = array_sum($lineLengths);
         if ($characters === 0) {
             return;
         }
