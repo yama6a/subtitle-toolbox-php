@@ -40,7 +40,7 @@ jobs:
           coverage: none
           tools: composer, box:4.7.0
       - run: .build/build-phar.sh 0.0.0-ci
-      - run: .build/smoke-test.sh 0.0.0-ci tests/files subtitle-toolbox.phar php
+      - run: .build/smoke-test.sh 0.0.0-ci tests/files stbox.phar php
 
   docker:
     uses: yama6a/gha/.github/workflows/docker-build-check.yaml@v2
@@ -48,7 +48,7 @@ jobs:
       dockerfile: .build/Dockerfile
       build-args: |
         VERSION=0.0.0-ci
-      smoke-test: .build/smoke-test.sh 0.0.0-ci files /usr/local/bin/subtitle-toolbox.phar docker run --rm -v "$PWD/tests/files:/work/files:ro" --entrypoint php "$IMAGE"
+      smoke-test: .build/smoke-test.sh 0.0.0-ci files /usr/local/bin/stbox.phar docker run --rm -v "$PWD/tests/files:/work/files:ro" --entrypoint php "$IMAGE"
 
   docker-tesseract:
     uses: yama6a/gha/.github/workflows/docker-build-check.yaml@v2
@@ -56,7 +56,7 @@ jobs:
       dockerfile: .build/tesseract.Dockerfile
       build-args: |
         VERSION=0.0.0-ci
-      smoke-test: SMOKE_TESSERACT=1 .build/smoke-test.sh 0.0.0-ci files /usr/local/bin/subtitle-toolbox.phar docker run --rm -v "$PWD/tests/files:/work/files:ro" --entrypoint php "$IMAGE"
+      smoke-test: SMOKE_TESSERACT=1 .build/smoke-test.sh 0.0.0-ci files /usr/local/bin/stbox.phar docker run --rm -v "$PWD/tests/files:/work/files:ro" --entrypoint php "$IMAGE"
 
   # The php job has no Tesseract, so its tests skip there and run here.
   tesseract:

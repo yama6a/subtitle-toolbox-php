@@ -143,7 +143,7 @@ class WordTimestampRetimingTest extends TestCase
     public function testCliConvertMovesWordTimestamps(): void
     {
         $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
-        $code    = (new Application(...$streams))->run(["subtitle-toolbox", "convert", self::FILES . "profanity/radio.vtt", "--shift", "2"]);
+        $code    = (new Application(...$streams))->run(["stbox", "convert", self::FILES . "profanity/radio.vtt", "--shift", "2"]);
         rewind($streams[1]);
 
         $this->assertSame(0, $code);

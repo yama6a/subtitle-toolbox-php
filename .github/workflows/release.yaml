@@ -37,13 +37,13 @@ jobs:
       - run: .build/build-phar.sh "$VERSION"
         env:
           VERSION: ${{ needs.version.outputs.version }}
-      - run: .build/smoke-test.sh "$VERSION" tests/files subtitle-toolbox.phar php
+      - run: .build/smoke-test.sh "$VERSION" tests/files stbox.phar php
         env:
           VERSION: ${{ needs.version.outputs.version }}
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: phar
-          path: subtitle-toolbox.phar
+          path: stbox.phar
           if-no-files-found: error
 
   image:
@@ -95,4 +95,4 @@ jobs:
           target: ${{ github.sha }}
           generate-notes: "true"
           notes: "Images: `ghcr.io/${{ github.repository }}:${{ needs.version.outputs.version }}`, with Tesseract `ghcr.io/${{ github.repository }}:${{ needs.version.outputs.version }}-tesseract`"
-          files: subtitle-toolbox.phar
+          files: stbox.phar

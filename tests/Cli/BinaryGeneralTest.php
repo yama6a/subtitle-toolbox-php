@@ -55,8 +55,8 @@ class BinaryGeneralTest extends CliTestCase
 
     public function testUnknownCommandIsAUsageError(): void
     {
-        $this->assertSame([2, "", "Error: Unknown command \"merge\".\nRun \"subtitle-toolbox help\" for the usage.\n"], $this->runCli(["merge"]));
-        $this->assertSame([2, "", "Error: Unknown command \"merge\".\nRun \"subtitle-toolbox help\" for the usage.\n"], $this->runCli(["help", "merge"]));
+        $this->assertSame([2, "", "Error: Unknown command \"merge\".\nRun \"stbox help\" for the usage.\n"], $this->runCli(["merge"]));
+        $this->assertSame([2, "", "Error: Unknown command \"merge\".\nRun \"stbox help\" for the usage.\n"], $this->runCli(["help", "merge"]));
     }
 
 
@@ -72,7 +72,7 @@ class BinaryGeneralTest extends CliTestCase
 
         return [
             "unknown option"      => [["convert", "trip.srt", "--to", "vtt", "--nope"], "convert", "Unknown option --nope."],
-            "unknown format"      => [["convert", "trip.srt", "--to", "docx"], "convert", "Unknown format \"docx\". Run \"subtitle-toolbox formats\" for the list."],
+            "unknown format"      => [["convert", "trip.srt", "--to", "docx"], "convert", "Unknown format \"docx\". Run \"stbox formats\" for the list."],
             "read-only format"    => [["convert", "trip.srt", "--to", "vobsub"], "convert", "The format vobsub can be read but not written."],
             "write-only format"   => [["convert", "trip.srt", "--from", "txt", "--to", "vtt"], "convert", "The format txt can be written but not read."],
             "no input"            => [["convert", "--to", "vtt"], "convert", "Pass at least one input file, or - for standard input."],

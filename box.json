@@ -1,6 +1,6 @@
 {
-    "main": "bin/subtitle-toolbox",
-    "output": "subtitle-toolbox.phar",
+    "main": "bin/stbox",
+    "output": "stbox.phar",
     "compression": "GZ",
     "git-version": "package_version"
 }

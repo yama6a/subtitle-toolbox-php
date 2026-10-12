@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Builds subtitle-toolbox.phar with php-glyph-ocr bundled, from a copy of the tree, so the checkout stays clean.
+# Builds stbox.phar with php-glyph-ocr bundled, from a copy of the tree, so the checkout stays clean.
 # Usage: .build/build-phar.sh <version> [output path]. Needs php, composer and box on the PATH.
 set -euo pipefail
 
 version=${1:?usage: build-phar.sh <version, for example 2.0.0> [output path]}
 root=$(cd "$(dirname "$0")/.." && pwd)
-output=${2:-$root/subtitle-toolbox.phar}
+output=${2:-$root/stbox.phar}
 [[ $output == /* ]] || output=$PWD/$output
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -28,4 +28,4 @@ VERSION=$version php -r '
     file_put_contents("box.json", json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 '
 box compile --no-interaction
-mv subtitle-toolbox.phar "$output"
+mv stbox.phar "$output"

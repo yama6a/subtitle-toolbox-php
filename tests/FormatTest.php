@@ -191,7 +191,7 @@ class FormatTest extends TestCase
     public function testFormatsCommandPrintsTheFormatTable(): void
     {
         $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
-        $code    = (new Cli\Application(...$streams))->run(["subtitle-toolbox", "formats"]);
+        $code    = (new Cli\Application(...$streams))->run(["stbox", "formats"]);
         rewind($streams[1]);
 
         $this->assertSame(0, $code);

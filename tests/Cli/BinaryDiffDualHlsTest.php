@@ -30,7 +30,7 @@ class BinaryDiffDualHlsTest extends CliTestCase
             "diff with - as the new file"     => [["diff", "v1.srt", "-"], "diff", "Standard input works only for the old file. Pass the new file by name."],
             "diff --time-tolerance -1"        => [["diff", "v1.srt", "v2.srt", "--time-tolerance", "-1"], "diff", "The option --time-tolerance must not be negative."],
             "diff --new-from docx"            => [["diff", "trip.srt", "frames.sub", "--new-from", "docx"], "diff",
-                                                  "Unknown format \"docx\". Run \"subtitle-toolbox formats\" for the list."],
+                                                  "Unknown format \"docx\". Run \"stbox formats\" for the list."],
             "diff --new-track x"              => [["diff", "movie.mkv", "movie.mkv", "--track", "3", "--new-track", "x"], "diff",
                                                   "The option --new-track needs a whole number of 1 or more, got \"x\"."],
             "dual without --secondary"        => [["dual", "--primary", "en.srt"], "dual", "Pass --primary FILE and --secondary FILE."],

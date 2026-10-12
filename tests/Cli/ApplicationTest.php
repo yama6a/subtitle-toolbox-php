@@ -130,7 +130,7 @@ class ApplicationTest extends TestCase
     {
         foreach (["retime", "shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "snap"] as $command) {
             $this->assertSame(
-                [2, "", "Error: Unknown command \"$command\".\nRun \"subtitle-toolbox help\" for the usage.\n"],
+                [2, "", "Error: Unknown command \"$command\".\nRun \"stbox help\" for the usage.\n"],
                 self::runApplication([$command, "-", "--by", "1"])
             );
             $this->assertDoesNotMatchRegularExpression("/^  $command +\\S/m", self::runApplication(["--help"])[1]);
@@ -177,7 +177,7 @@ class ApplicationTest extends TestCase
             [$code, $stdout, $stderr] = self::runApplication(["convert", $input, ...$options]);
 
             $this->assertSame([2, ""], [$code, $stdout]);
-            $this->assertStringContainsString("Unknown format \"$alias\". Run \"subtitle-toolbox formats\" for the list.", $stderr);
+            $this->assertStringContainsString("Unknown format \"$alias\". Run \"stbox formats\" for the list.", $stderr);
         }
     }
 

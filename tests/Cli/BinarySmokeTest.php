@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use SubtitleToolbox\Tests\Support\CliTestCase;
 
 /**
- * Runs each command once with bin/subtitle-toolbox, because the other CLI tests run the commands in the test process.
+ * Runs each command once with bin/stbox, because the other CLI tests run the commands in the test process.
  */
 class BinarySmokeTest extends CliTestCase
 {
