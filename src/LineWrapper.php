@@ -266,11 +266,17 @@ final class LineWrapper
             return [];
         }
 
+        // $offsets[$i] is the length of words 0 to $i - 1 without spaces.
+        $offsets = [0];
+        foreach ($words as $index => $word) {
+            $offsets[$index + 1] = $offsets[$index] + $word["length"];
+        }
+
         // $best[$lineCount][$end] holds [overflow, sum of squared lengths, line starts] for words 0 to $end - 1.
         $best = [0 => [0 => [0, 0, []]]];
         for ($lineCount = 1; $lineCount <= min($maxLinesPerCue, $wordCount); $lineCount++) {
             for ($end = $lineCount; $end <= $wordCount; $end++) {
-                $ending = self::bestLastLine($best[$lineCount - 1], $words, $lineCount - 1, $end, $maxCharactersPerLine);
+                $ending = self::bestLastLine($best[$lineCount - 1], $offsets, $lineCount - 1, $end, $maxCharactersPerLine);
                 if ($ending !== null) {
                     $best[$lineCount][$end] = $ending;
                 }
@@ -287,13 +293,13 @@ final class LineWrapper
 
     /**
      * Returns the best breaks for the words before $end when the last line starts at $firstStart or later.
-     * Returns null when no earlier breaks reach such a start.
+     * Returns null when no earlier breaks reach such a start. The first start wins a tie.
      *
      * @param array<int, array{int, int, list<int>}> $previous the best breaks with one line fewer, by their end
-     * @param list<array{text: string, length: int}> $words
+     * @param list<int>                              $offsets  the length of the words before each index, without spaces
      * @return array{int, int, list<int>}|null
      */
-    private static function bestLastLine(array $previous, array $words, int $firstStart, int $end, int $maxCharactersPerLine): ?array
+    private static function bestLastLine(array $previous, array $offsets, int $firstStart, int $end, int $maxCharactersPerLine): ?array
     {
         $best = null;
         for ($start = $firstStart; $start < $end; $start++) {
@@ -301,17 +307,15 @@ final class LineWrapper
                 continue;
             }
 
-            [$overflow, $squares, $starts] = $previous[$start];
-            $length    = self::length(array_slice($words, $start, $end - $start));
-            $candidate = [$overflow + max(0, $length - $maxCharactersPerLine),
-                          $squares + $length ** 2,
-                          [...$starts, $start]];
-            if ($best === null || array_slice($candidate, 0, 2) < array_slice($best, 0, 2)) {
-                $best = $candidate;
+            $length   = $offsets[$end] - $offsets[$start] + $end - $start - 1;
+            $overflow = $previous[$start][0] + max(0, $length - $maxCharactersPerLine);
+            $squares  = $previous[$start][1] + $length ** 2;
+            if ($best === null || $overflow < $best[0] || ($overflow === $best[0] && $squares < $best[1])) {
+                $best = [$overflow, $squares, $start];
             }
         }
 
-        return $best;
+        return $best === null ? null : [$best[0], $best[1], [...$previous[$best[2]][2], $best[2]]];
     }
 
 
