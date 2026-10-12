@@ -102,31 +102,49 @@ final class HlsCommand extends FileCommand
         }
 
         // The segment count is known only after the read, so any file that matches the pattern counts as a segment.
-        $directory = rtrim($this->directory, "/\\");
-        $existing  = OutputFiles::exists($playlist) ? [$this->playlist] : [];
-        foreach (is_dir($directory) ? scandir($directory) ?: [] : [] as $name) {
-            if ($this->isSegment(self::realTarget("$directory/$name"))) {
-                $existing[] = $name;
+        [$directory] = $this->segmentDirectory();
+        $real        = self::realTarget($directory);
+        $existing    = OutputFiles::exists($playlist) ? [rtrim($this->directory, "/\\") . "/$this->playlist"] : [];
+        foreach (is_dir($real) ? scandir($real) ?: [] : [] as $name) {
+            if ($this->isSegment(self::realTarget("$real/$name"))) {
+                $existing[] = "$directory/$name";
             }
         }
         if ($existing !== []) {
-            self::fail("$directory/$existing[0] exists. The tool never overwrites a file. Remove the playlist and the segments, or pass another --output-dir.");
+            self::fail("$existing[0] exists. The tool never overwrites a file. Remove the playlist and the segments, or pass another --output-dir.");
         }
     }
 
 
     private function isSegment(string $realPath): bool
     {
-        $directory = self::realTarget(rtrim($this->directory, "/\\")) . DIRECTORY_SEPARATOR;
+        [$directory, $pattern] = $this->segmentDirectory();
+        $directory             = self::realTarget($directory) . DIRECTORY_SEPARATOR;
         if (!str_starts_with($realPath, $directory)) {
             return false;
         }
-        $name    = substr($realPath, strlen($directory));
-        $pattern = $this->segmentOptions->fileNamePattern;
-        $parsed  = sscanf($name, $pattern);
-        $number  = is_array($parsed) ? $parsed[0] : null;
+        $name   = substr($realPath, strlen($directory));
+        $parsed = sscanf($name, $pattern);
+        $number = is_array($parsed) ? $parsed[0] : null;
 
         return is_int($number) && $number >= 0 && sprintf($pattern, $number) === $name;
+    }
+
+
+    /**
+     * Returns the directory of the segments and the pattern of a segment path in it.
+     * The directory is --output-dir plus the part of --pattern up to the last slash before %d, so "../seg%d.vtt" gives "DIR/..".
+     *
+     * @return array{string, string}
+     */
+    private function segmentDirectory(): array
+    {
+        $directory   = rtrim($this->directory, "/\\");
+        $pattern     = $this->segmentOptions->fileNamePattern;
+        $placeholder = (int)strpos(str_replace("%%", "  ", $pattern), "%");
+        $slash       = strrpos(substr($pattern, 0, $placeholder), "/");
+
+        return $slash === false ? [$directory, $pattern] : ["$directory/" . substr($pattern, 0, $slash), substr($pattern, $slash + 1)];
     }
 
 

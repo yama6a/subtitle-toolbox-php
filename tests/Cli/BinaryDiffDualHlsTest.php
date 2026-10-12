@@ -386,4 +386,23 @@ class BinaryDiffDualHlsTest extends CliTestCase
         }
         $this->assertCount(2, glob("$this->dir/out/*"));
     }
+
+
+    public function testHlsChecksTheSegmentsInTheDirectoryOfThePattern(): void
+    {
+        copy("$this->dir/trip.srt", "$this->dir/outside7.vtt");
+        $before = $this->snapshot();
+
+        $this->assertSame(self::usageError("hls", "new/../outside7.vtt exists. The tool never overwrites a file. " .
+                                                  "Remove the playlist and the segments, or pass another --output-dir."),
+                          $this->runCli(["hls", "trip.srt", "--output-dir", "new", "--pattern", "../outside%d.vtt"]));
+        $this->assertSame(self::usageError("hls", "The output would overwrite the input outside7.vtt. Pass another --output-dir, --playlist or --pattern."),
+                          $this->runCli(["hls", "outside7.vtt", "--output-dir", "new", "--pattern", "../outside%d.vtt", "--playlist", "p.m3u8"]));
+        $this->assertSame(self::usageError("hls", "The playlist ../outside3.vtt has the name of a segment. Pass another --playlist or --pattern."),
+                          $this->runCli(["hls", "trip.srt", "--output-dir", "new", "--pattern", "../outside%d.vtt", "--playlist", "../outside3.vtt"]));
+        $this->assertSame($before, $this->snapshot());
+
+        $this->assertSame(0, $this->runCli(["hls", "trip.srt", "--output-dir", "new", "--pattern", "../seg/%d.vtt"])[0]);
+        $this->assertFileExists("$this->dir/seg/0.vtt");
+    }
 }

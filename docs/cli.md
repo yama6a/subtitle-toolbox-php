@@ -476,7 +476,7 @@ This writes `hls/sub0.vtt` to `hls/sub899.vtt` and `hls/subs.m3u8`.
 | `--local SECONDS` | `local`, the WebVTT cue time that maps to `--mpegts`. The value is a [time](#times) |
 | `--media-duration SECONDS` | `mediaDuration`. Set it to the video duration, so the playlist covers the whole video. Without it, the playlist ends with the last cue. The value is a [time](#times) |
 
-- **Overwrite**: `hls` fails with exit code 2 before it reads the input when the playlist exists. It also fails when a file in `--output-dir` matches `--pattern`. The playlist can be outside `--output-dir`, so `--output-dir new --playlist ../keep.txt` fails when `keep.txt` exists. The segment count is known only after the read, so `hls/sub950.vtt` blocks a run that writes 900 segments.
+- **Overwrite**: `hls` fails with exit code 2 before it reads the input when the playlist exists. It also fails when a file matches `--pattern`. A pattern with a directory part, such as `../seg%d.vtt`, puts the segments in that directory, and the check looks there. The playlist can be outside `--output-dir`, so `--output-dir new --playlist ../keep.txt` fails when `keep.txt` exists. The segment count is known only after the read, so `hls/sub950.vtt` blocks a run that writes 900 segments.
 - **Names**: `hls` fails with exit code 2 before it writes a file when `--playlist` matches `--pattern`, for example `--playlist sub0.vtt`. It also fails when the playlist or a segment would overwrite the input.
 
 ## OCR
