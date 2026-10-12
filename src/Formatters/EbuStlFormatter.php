@@ -32,7 +32,7 @@ final class EbuStlFormatter extends SubtitleFormatter
     // The values of a new GSI (General Subtitle Information) block.
     // EBU Tech 3264 section 4.2.5 fills unused bytes with spaces.
     private const DEFAULT_GSI = [
-        "CPN" => "850", "DSC" => "1", "CCT" => "00", "RN" => "00", "MNC" => "40", "MNR" => "23",
+        "CPN" => "850", "DSC" => "1", "CCT" => EbuStl::CCT_LATIN, "RN" => "00", "MNC" => "40", "MNR" => "23",
         "TCS" => "1", "TCP" => "00000000", "TND" => "1", "DSN" => "1",
     ];
 
@@ -41,6 +41,8 @@ final class EbuStlFormatter extends SubtitleFormatter
     private const MAX_SUBTITLE_NUMBER   = 0xFFFF;
     private const DEFAULT_FRAME_RATE    = 25;
     private const MAX_MNC               = 99;
+    private const TCF_WITHOUT_CUES      = "00000000";
+    private const UNKNOWN_LANGUAGE      = "00";
 
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
@@ -61,7 +63,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             offset: empty($fileData["startOfProgrammeSubtracted"]) ? 0.0 : EbuStl::timeCodeToSeconds($gsi["TCP"], $frameRate),
             characterCodeTable: $gsi["CCT"],
             maxRow: EbuStl::maxRow($gsi),
-            teletext: in_array($gsi["DSC"], ["1", "2"], true),
+            teletext: in_array($gsi["DSC"], EbuStl::TELETEXT_DISPLAY_CODES, true),
             stripTags: $options->stripTags,
         );
 
@@ -125,7 +127,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         $bytes    = implode(chr(EbuStl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode(LineEnding::Lf->value, $text)));
         $position = $this->position($context, Alignment::BottomCenter, count(explode(LineEnding::Lf->value, $text)));
 
-        return $this->textBlocks($context, $bytes, $this->header(0, 0, $timeCode, $timeCode, $position, EbuStl::COMMENT_FLAG));
+        return $this->textBlocks($context, $bytes, $this->header(0, 0, $timeCode, $timeCode, $position, isComment: true));
     }
 
 
@@ -207,7 +209,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         $fields = [];
         while (strlen($bytes) >= EbuStl::TEXT_FIELD_SIZE) {
             $length = EbuStl::TEXT_FIELD_SIZE;
-            if ($context->characterCodeTable === "00" && isset(Iso6937::DIACRITICS[ord($bytes[$length - 1])])) {
+            if ($context->characterCodeTable === EbuStl::CCT_LATIN && isset(Iso6937::DIACRITICS[ord($bytes[$length - 1])])) {
                 $length--;
             }
 
@@ -235,12 +237,12 @@ final class EbuStlFormatter extends SubtitleFormatter
      *
      * @param array{int, int} $position the vertical position and the justification code
      */
-    private function header(int $group, int $cumulativeStatus, string $timeCodeIn, string $timeCodeOut, array $position, int $commentFlag = 0): string
+    private function header(int $group, int $cumulativeStatus, string $timeCodeIn, string $timeCodeOut, array $position, bool $isComment = false): string
     {
         [$verticalPosition, $justificationCode] = $position;
 
         return chr($group) . "\0\0" . chr(EbuStl::LAST_BLOCK) . chr($cumulativeStatus) . $timeCodeIn . $timeCodeOut .
-               chr($verticalPosition) . chr($justificationCode) . chr($commentFlag);
+               chr($verticalPosition) . chr($justificationCode) . chr($isComment ? EbuStl::COMMENT_FLAG : 0);
     }
 
 
@@ -364,7 +366,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             "TNB" => array_sum(array_map(fn (array $set): int => count($set["blocks"]), $sets)),
             "TNS" => count($subtitles),
             "TNG" => count(array_unique(array_map(fn (array $set): int => ord($set["blocks"][0][EbuStl::TTI_SGN]), $subtitles))),
-            "TCF" => $subtitles === [] ? "00000000" : EbuStl::timeCodeDigits(substr($subtitles[0]["blocks"][0], EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE)),
+            "TCF" => $subtitles === [] ? self::TCF_WITHOUT_CUES : EbuStl::timeCodeDigits(substr($subtitles[0]["blocks"][0], EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE)),
         ];
         $formats = ["TNB" => "%05d", "TNS" => "%05d", "TNG" => "%03d", "TCF" => "%s"];
         foreach ($counts as $field => $count) {
@@ -409,7 +411,7 @@ final class EbuStlFormatter extends SubtitleFormatter
      */
     private function longestRow(array $subtitles, string $characterCodeTable): int
     {
-        $character = $characterCodeTable === "00" ? '/[\x20-\x7F\xA0-\xC0\xD0-\xFF]/' : '/[\x20-\x7F\xA0-\xFF]/';
+        $character = $characterCodeTable === EbuStl::CCT_LATIN ? '/[\x20-\x7F\xA0-\xC0\xD0-\xFF]/' : '/[\x20-\x7F\xA0-\xFF]/';
         $longest   = 0;
         foreach ($subtitles as $set) {
             foreach (explode(chr(EbuStl::NEW_LINE), EbuStl::textBytes($set["blocks"])) as $row) {
@@ -424,13 +426,13 @@ final class EbuStlFormatter extends SubtitleFormatter
     private function languageCode(?string $language): string
     {
         if ($language === null) {
-            return "00";
+            return self::UNKNOWN_LANGUAGE;
         }
 
         $languages = array_map("strtolower", EbuStl::LANGUAGES);
         $code      = array_search(strtolower($language), $languages, true)
                      ?: array_search(strtolower(explode("-", $language)[0]), $languages, true);
 
-        return $code === false ? "00" : (string) $code;
+        return $code === false ? self::UNKNOWN_LANGUAGE : (string) $code;
     }
 }
