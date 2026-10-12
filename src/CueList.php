@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
+
 /**
  * @internal
  */
@@ -20,6 +22,27 @@ final class CueList
         usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
 
         return $cues;
+    }
+
+
+    /**
+     * Throws when $map moves the end of a cue to MAX_HOURS or later. The formatters cast times to int milliseconds,
+     * which fails far above MAX_HOURS.
+     *
+     * @param array<int, SubtitleCue> $cues
+     * @param callable(float): float  $map increases with the time
+     * @throws InvalidArgumentException
+     */
+    public static function checkTimeLimit(array $cues, callable $map): void
+    {
+        foreach ($cues as $index => $cue) {
+            $end = $map(max($cue->getStart(), $cue->getEnd()));
+            if (!($end < Timecode::MAX_HOURS * 3600)) {
+                throw new InvalidArgumentException(
+                    "The retimed cue " . ($index + 1) . " would end at $end s. Cue times must be below " . Timecode::MAX_HOURS . " hours."
+                );
+            }
+        }
     }
 
 

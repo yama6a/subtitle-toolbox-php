@@ -16,13 +16,19 @@ trait CueEditing
     /**
      * Appends copies of the cues of $other, with their times and word timestamps moved by $offset seconds.
      * Metadata and format data of $this win.
+     *
+     * @throws InvalidArgumentException when $offset is not finite, or a cue of $other would end at Timecode::MAX_HOURS or later.
      */
     public function merge(Subtitle $other, float $offset = 0): self
     {
+        OptionChecks::finite($offset, "The merge offset must be a finite number of seconds, got %s.");
+        $move = fn (float $time): float => $time + $offset;
+        CueList::checkTimeLimit($other->getCues(), $move);
+
         $ownAnchors = CommentAnchors::of($this->cues, $this->comments);
         $otherCues  = [];
         foreach ($other->getCues() as $index => $cue) {
-            $otherCues[$index] = (clone $cue)->mapTimes(fn (float $time): float => $time + $offset);
+            $otherCues[$index] = (clone $cue)->mapTimes($move);
         }
         $otherAnchors = CommentAnchors::of($otherCues, $other->comments);
 

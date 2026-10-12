@@ -48,7 +48,7 @@ try {
 `InvalidArgumentException` covers these cases:
 
 - An invalid value, for example frame rate 0 or NAN in a number option.
-- A retiming that moves a cue time to 100000 hours or more, for example `scale(1e300)`.
+- A retiming or `merge()` that moves a cue time to 100000 hours or more, for example `scale(1e300)`.
 - A missing MicroDVD output frame rate.
 - 2 objects of one class in `ReadOptions::$formats` or `WriteOptions::$formats`, or a write class in `ReadOptions` and a read class in `WriteOptions`.
 - A missing OCR engine, a missing `tesseract` program, a missing Tesseract language or a missing php-glyph-ocr package.
