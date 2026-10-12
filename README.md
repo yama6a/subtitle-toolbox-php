@@ -34,57 +34,57 @@ The command line tool also comes as a PHAR file and as two container images. The
 
 | Format | Case | Name | Extensions | Read | Write | Notes |
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
-| ASS, SSA | `Ass` | `ass` | `.ass`, `.ssa` | ✅ yes | ✅ yes | |
-| CSV, TSV | `Csv`, `Tsv` | `csv`, `tsv` | `.csv`, `.tsv` | ✅ yes | ✅ yes | not detected from the content |
-| EBU STL | `EbuStl` | `stl` | `.stl` | ✅ yes | ✅ yes | binary, 25 or 30 fps |
-| iTunes Timed Text | `Itt` | `itt` | `.itt` | ✅ yes | ✅ yes | needs a frame rate to write |
-| JSON of this library | `Json` | `json` | `.json` | ✅ yes | ✅ yes | |
-| LRC | `Lyrics` | `lrc` | `.lrc` | ✅ yes | ✅ yes | with enhanced LRC word times |
-| MicroDVD | `MicroDvd` | `microdvd` | `.sub` | ✅ yes | ✅ yes | needs the frame rate of the video |
-| MPL2 | `Mpl2` | `mpl2` | `.txt` | ✅ yes | ✅ yes | |
-| MPSub | `MpSub` | `mpsub` | `.mpsub` | ✅ yes | ✅ yes | |
-| SAMI | `Sami` | `sami` | `.smi`, `.sami` | ✅ yes | ✅ yes | one language class per parse |
-| SBV | `Sbv` | `sbv` | `.sbv` | ✅ yes | ✅ yes | |
-| SCC | `Scc` | `scc` | `.scc` | ✅ yes | ✅ yes | CEA-608 closed captions |
-| SubRip | `SubRip` | `srt` | `.srt` | ✅ yes | ✅ yes | |
-| SubViewer 1 and 2 | `SubViewer` | `subviewer` | `.sub` | ✅ yes | ✅ yes | |
-| TMPlayer | `TmPlayer` | `tmplayer` | `.txt` | ✅ yes | ✅ yes | |
-| TTML, IMSC, DFXP | `Ttml` | `ttml` | `.ttml`, `.dfxp`, `.xml` | ✅ yes | ✅ yes | |
-| WebVTT | `WebVtt` | `vtt` | `.vtt` | ✅ yes | ✅ yes | also chapters |
-| YouTube timed text | `YouTubeTimedText` | `youtube` | `.srv3`, `.json3`, `.srv1` | ✅ yes | ✅ yes | json3, srv1, srv2, srv3 and transcript XML |
+| [ASS](https://aegisub.org/docs/latest/ass_tags/), [SSA](https://en.wikipedia.org/wiki/SubStation_Alpha) | `Ass` | `ass` | `.ass`, `.ssa` | ✅ | ✅ | |
+| [CSV](https://www.rfc-editor.org/rfc/rfc4180), [TSV](https://www.iana.org/assignments/media-types/text/tab-separated-values) | `Csv`, `Tsv` | `csv`, `tsv` | `.csv`, `.tsv` | ✅ | ✅ | not detected from the content |
+| [EBU STL](https://tech.ebu.ch/docs/tech/tech3264.pdf) | `EbuStl` | `stl` | `.stl` | ✅ | ✅ | binary, 25 or 30 fps |
+| [iTunes Timed Text](https://help.apple.com/itc/videoaudioassetguide/#/itc0f1b0a2e0) | `Itt` | `itt` | `.itt` | ✅ | ✅ | needs a frame rate to write |
+| [JSON of this library](docs/json.md) | `Json` | `json` | `.json` | ✅ | ✅ | |
+| [LRC](https://en.wikipedia.org/wiki/LRC_(file_format)) | `Lyrics` | `lrc` | `.lrc` | ✅ | ✅ | with enhanced LRC word times |
+| [MicroDVD](https://en.wikipedia.org/wiki/MicroDVD) | `MicroDvd` | `microdvd` | `.sub` | ✅ | ✅ | needs the frame rate of the video |
+| [MPL2](https://pysubs2.readthedocs.io/en/latest/supported-formats.html) | `Mpl2` | `mpl2` | `.txt` | ✅ | ✅ | |
+| [MPSub](https://man.archlinux.org/man/mplayer.1.en) | `MpSub` | `mpsub` | `.mpsub` | ✅ | ✅ | |
+| [SAMI](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/dnacc/understanding-sami-1.0) | `Sami` | `sami` | `.smi`, `.sami` | ✅ | ✅ | one language class per parse |
+| [SBV](https://support.google.com/youtube/answer/2734698) | `Sbv` | `sbv` | `.sbv` | ✅ | ✅ | |
+| [SCC](https://www.nationalarchives.gov.uk/PRONOM/fmt/1274) | `Scc` | `scc` | `.scc` | ✅ | ✅ | CEA-608 closed captions |
+| [SubRip](https://en.wikipedia.org/wiki/SubRip) | `SubRip` | `srt` | `.srt` | ✅ | ✅ | |
+| [SubViewer](https://man.archlinux.org/man/mplayer.1.en) 1 and 2 | `SubViewer` | `subviewer` | `.sub` | ✅ | ✅ | |
+| [TMPlayer](https://pysubs2.readthedocs.io/en/latest/supported-formats.html) | `TmPlayer` | `tmplayer` | `.txt` | ✅ | ✅ | |
+| [TTML](https://www.w3.org/TR/ttml2/), [IMSC](https://www.w3.org/TR/ttml-imsc1.2/), [DFXP](https://www.w3.org/TR/ttaf1-dfxp/) | `Ttml` | `ttml` | `.ttml`, `.dfxp`, `.xml` | ✅ | ✅ | |
+| [WebVTT](https://www.w3.org/TR/webvtt1/) | `WebVtt` | `vtt` | `.vtt` | ✅ | ✅ | also chapters |
+| [YouTube timed text](https://support.google.com/youtube/answer/2734698) | `YouTubeTimedText` | `youtube` | `.srv3`, `.json3`, `.srv1` | ✅ | ✅ | json3, srv1, srv2, srv3 and transcript XML |
 
 ### Image subtitles
 
 | Format | Case | Name | Extensions | Read | Write | Notes |
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
-| PGS | `Pgs` | `pgs` | `.sup` | ✅ yes | ✅ yes | Blu-ray bitmaps as image cues |
-| VobSub | `VobSub` | `vobsub` | `.idx` with `.sub` | ✅ yes | ❌ no | DVD bitmaps as image cues |
+| [PGS](https://en.wikipedia.org/wiki/Presentation_Graphic_Stream) | `Pgs` | `pgs` | `.sup` | ✅ | ✅ | Blu-ray bitmaps as image cues |
+| [VobSub](https://www.loc.gov/preservation/digital/formats/fdd/fdd000570.shtml) | `VobSub` | `vobsub` | `.idx` with `.sub` | ✅ | ❌ | DVD bitmaps as image cues |
 
 ### Transcripts
 
 | Format | Case | Name | Extensions | Read | Write | Notes |
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
-| Cloud speech-to-text JSON | `AwsTranscribe`, `Deepgram`, `AssemblyAi`, `GoogleSpeech` | `aws-transcribe`, `deepgram`, `assemblyai`, `google-speech` | `.json` | ✅ yes | ✅ yes | not detected from the content |
-| HTML transcript | `HtmlTranscript` | `html` | `.html`, `.htm` | ✅ yes | ✅ yes | the Podcasting 2.0 HTML format |
-| Plain text | `PlainText` | `txt` | `.txt` | ❌ no | ✅ yes | transcript |
-| Podcasting 2.0 transcript JSON | `PodcastTranscript` | `podcast-transcript` | `.json` | ✅ yes | ✅ yes | |
-| Whisper JSON | `Whisper` | `whisper` | `.json` | ✅ yes | ✅ yes | OpenAI API, openai-whisper, faster-whisper, WhisperX, whisper.cpp |
+| Cloud speech-to-text JSON: [AWS Transcribe](https://docs.aws.amazon.com/transcribe/latest/dg/how-it-works.html), [Deepgram](https://developers.deepgram.com/reference/speech-to-text/listen-pre-recorded), [AssemblyAI](https://www.assemblyai.com/docs/api-reference/transcripts/get), [Google Speech-to-Text](https://cloud.google.com/speech-to-text/docs/reference/rest/v1/speech/recognize) | `AwsTranscribe`, `Deepgram`, `AssemblyAi`, `GoogleSpeech` | `aws-transcribe`, `deepgram`, `assemblyai`, `google-speech` | `.json` | ✅ | ✅ | not detected from the content |
+| [HTML transcript](https://podcasting2.org/docs/podcast-namespace/tags/transcript) | `HtmlTranscript` | `html` | `.html`, `.htm` | ✅ | ✅ | the Podcasting 2.0 HTML format |
+| [Plain text](docs/transcripts.md#plain-text) | `PlainText` | `txt` | `.txt` | ❌ | ✅ | transcript |
+| [Podcasting 2.0 transcript JSON](https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/examples/transcripts/transcripts.md) | `PodcastTranscript` | `podcast-transcript` | `.json` | ✅ | ✅ | |
+| [Whisper JSON](https://platform.openai.com/docs/api-reference/audio/verbose_json_object) | `Whisper` | `whisper` | `.json` | ✅ | ✅ | OpenAI API, openai-whisper, faster-whisper, WhisperX, whisper.cpp |
 
 ### Chapters
 
 | Format | Case | Name | Extensions | Read | Write | Notes |
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
-| FFmpeg metadata chapters | `FfMetadataChapters` | `ffmeta-chapters` | `.ffmeta` | ✅ yes | ✅ yes | not detected from the content |
-| OGM chapters | `OgmChapters` | `ogm-chapters` | `.txt` | ✅ yes | ✅ yes | not detected from the content |
-| Podcasting 2.0 chapters | `PodcastChapters` | `podcast-chapters` | `.json` | ✅ yes | ✅ yes | not detected from the content |
-| YouTube chapters | `YouTubeChapters` | `youtube-chapters` | `.txt` | ✅ yes | ✅ yes | not detected from the content |
+| [FFmpeg metadata chapters](https://ffmpeg.org/ffmpeg-formats.html#Metadata-1) | `FfMetadataChapters` | `ffmeta-chapters` | `.ffmeta` | ✅ | ✅ | not detected from the content |
+| [OGM chapters](https://mkvtoolnix.download/doc/mkvmerge.html) | `OgmChapters` | `ogm-chapters` | `.txt` | ✅ | ✅ | not detected from the content |
+| [Podcasting 2.0 chapters](https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/examples/chapters/jsonChapters.md) | `PodcastChapters` | `podcast-chapters` | `.json` | ✅ | ✅ | not detected from the content |
+| [YouTube chapters](https://support.google.com/youtube/answer/9884579) | `YouTubeChapters` | `youtube-chapters` | `.txt` | ✅ | ✅ | not detected from the content |
 
 ### Containers
 
 | Format | Case | Name | Extensions | Read | Write | Notes |
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
-| MKV and WebM tracks | | | `.mkv`, `.webm` | ✅ yes | ❌ no | text, ASS, SSA, WebVTT, PGS and VobSub tracks |
-| MP4 tracks | | | `.mp4`, `.m4v`, `.mov` | ✅ yes | ❌ no | `tx3g` (`mov_text`) tracks |
+| [MKV](https://www.rfc-editor.org/rfc/rfc9559) and [WebM](https://www.webmproject.org/docs/container/) tracks | | | `.mkv`, `.webm` | ✅ | ❌ | text, ASS, SSA, WebVTT, PGS and VobSub tracks |
+| [MP4 tracks](https://www.3gpp.org/dynareport/26245.htm) | | | `.mp4`, `.m4v`, `.mov` | ✅ | ❌ | `tx3g` (`mov_text`) tracks |
 
 ## Command line tool
 Composer installs `vendor/bin/subtitle-toolbox`. Optional parts are in brackets.
