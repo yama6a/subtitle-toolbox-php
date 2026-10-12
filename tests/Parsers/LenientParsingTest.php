@@ -490,6 +490,19 @@ class LenientParsingTest extends TestCase
                                                "The parser dropped the values of this field."],
                 ],
             ],
+            "ASS with minutes and seconds of 60 or more" => [
+                "sixty_minutes.ass",
+                AssParser::class,
+                "The time \"0:75:06.00\" is not valid.",
+                [
+                    [1, 3, "The night bus runs every hour."],
+                    [10, 12, "Please have coins ready."],
+                ],
+                [
+                    [13, 1, self::SKIPPED, "The time \"0:75:06.00\" is not valid."],
+                    [14, 2, self::SKIPPED, "The time \"0:00:75.00\" is not valid."],
+                ],
+            ],
             "ASS with 20 hour digits" => [
                 "absurd_hours.ass",
                 AssParser::class,
@@ -539,6 +552,33 @@ class LenientParsingTest extends TestCase
                                             "The parser read it as 5 s to 6 s."],
                     [14, 3, self::REPAIRED, "The timing line \"0:0:7.50,0:0:8.00\" is not in the form hh:mm:ss.ff,hh:mm:ss.ff. " .
                                             "The parser read it as 7.5 s to 8 s."],
+                ],
+            ],
+            "SubViewer 2 with minutes and seconds of 60 or more" => [
+                "sixty_minutes.sub",
+                SubViewerParser::class,
+                2,
+                [
+                    [1, 3, "The night bus runs every hour."],
+                    [10, 12, "Please have coins ready."],
+                ],
+                [
+                    [16, 1, self::SKIPPED, "The timing line \"00:00:04.00,00:75:06.00\" has a time that is not valid."],
+                    [19, 2, self::SKIPPED, "The timing line \"00:00:75.00,00:00:99.00\" has a time that is not valid."],
+                ],
+            ],
+            "SubViewer 1 with minutes and seconds of 60 or more" => [
+                "sixty_minutes_v1.sub",
+                SubViewerParser::class,
+                "The time \"[00:00:75]\" is not valid.",
+                [
+                    [1, 3, "The night bus runs every hour."],
+                    [7, 10, "The last bus leaves at one."],
+                    [10, 12, "Please have coins ready."],
+                ],
+                [
+                    [17, 1, self::SKIPPED, "The time \"[00:00:75]\" is not valid."],
+                    [23, 2, self::SKIPPED, "The time \"[00:75:09]\" is not valid."],
                 ],
             ],
             "SubViewer with 20 hour digits" => [
@@ -700,6 +740,19 @@ class LenientParsingTest extends TestCase
                 ],
                 [
                     [6, 4, self::SKIPPED, "The line \"[01:2x.00]The path is long\" has a time tag that is not valid."],
+                ],
+            ],
+            "LRC with hours and minutes of 60 or more" => [
+                "sixty_minutes.lrc",
+                LyricsParser::class,
+                3,
+                [
+                    [1, 4, "The night bus runs every hour"],
+                    [4, 10, "The last bus leaves at one"],
+                    [10, 12, "Please have coins ready"],
+                ],
+                [
+                    [6, 4, self::SKIPPED, "The line \"[1:75:00.00]Tickets are sold on board\" has a time tag that is not valid."],
                 ],
             ],
             "SAMI with a SYNC tag without a Start time" => [

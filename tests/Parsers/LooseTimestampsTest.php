@@ -133,13 +133,18 @@ class LooseTimestampsTest extends TestCase
     public static function timesWithMinutesOrSecondsOfSixtyOrMore(): array
     {
         return [
-            "SubRip minutes"          => [Format::SubRip, "1\n00:00:01,000 --> 00:75:02,000\nThe ferry leaves.\n\n2\n02:00:00,000 --> 02:00:02,000\nIt is late.\n"],
-            "SubRip seconds"          => [Format::SubRip, "1\n00:00:01,000 --> 00:00:75,000\nThe ferry leaves.\n\n2\n02:00:00,000 --> 02:00:02,000\nIt is late.\n"],
-            "SubRip without hours"    => [Format::SubRip, "1\n00:01,000 --> 00:60,000\nThe ferry leaves.\n\n2\n02:00:00,000 --> 02:00:02,000\nIt is late.\n"],
-            "WebVTT seconds"          => [Format::WebVtt, "WEBVTT\n\n00:01.000 --> 00:75.000\nThe ferry leaves.\n\n02:00:00.000 --> 02:00:02.000\nIt is late.\n"],
-            "WebVTT minutes"          => [Format::WebVtt, "WEBVTT\n\n00:00:01.000 --> 00:60:02,000\nThe ferry leaves.\n\n02:00:00.000 --> 02:00:02.000\nIt is late.\n"],
-            "ASS minutes"             => [Format::Ass, "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:75:02,Default,,0,0,0,,The ferry leaves.\nDialogue: 0,2:00:00.00,2:00:02.00,Default,,0,0,0,,It is late.\n"],
-            "ASS seconds"             => [Format::Ass, "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:00:99,Default,,0,0,0,,The ferry leaves.\nDialogue: 0,2:00:00.00,2:00:02.00,Default,,0,0,0,,It is late.\n"],
+            "SubRip minutes"            => [Format::SubRip, "1\n00:00:01,000 --> 00:75:02,000\nThe ferry leaves.\n\n2\n02:00:00,000 --> 02:00:02,000\nIt is late.\n"],
+            "SubRip seconds"            => [Format::SubRip, "1\n00:00:01,000 --> 00:00:75,000\nThe ferry leaves.\n\n2\n02:00:00,000 --> 02:00:02,000\nIt is late.\n"],
+            "SubRip without hours"      => [Format::SubRip, "1\n00:01,000 --> 00:60,000\nThe ferry leaves.\n\n2\n02:00:00,000 --> 02:00:02,000\nIt is late.\n"],
+            "WebVTT seconds"            => [Format::WebVtt, "WEBVTT\n\n00:01.000 --> 00:75.000\nThe ferry leaves.\n\n02:00:00.000 --> 02:00:02.000\nIt is late.\n"],
+            "WebVTT minutes"            => [Format::WebVtt, "WEBVTT\n\n00:00:01.000 --> 00:60:02,000\nThe ferry leaves.\n\n02:00:00.000 --> 02:00:02.000\nIt is late.\n"],
+            "ASS minutes"               => [Format::Ass, "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:75:02,Default,,0,0,0,,The ferry leaves.\nDialogue: 0,2:00:00.00,2:00:02.00,Default,,0,0,0,,It is late.\n"],
+            "ASS seconds"               => [Format::Ass, "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:00:99,Default,,0,0,0,,The ferry leaves.\nDialogue: 0,2:00:00.00,2:00:02.00,Default,,0,0,0,,It is late.\n"],
+            "ASS minutes with fraction" => [Format::Ass, "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:75:02.00,Default,,0,0,0,,The ferry leaves.\nDialogue: 0,2:00:00.00,2:00:02.00,Default,,0,0,0,,It is late.\n"],
+            "ASS seconds with fraction" => [Format::Ass, "[Events]\nFormat: Layer, Start, End, Style, Text\nDialogue: 0,0:00:75.00,0:00:99.00,Default,The ferry leaves.\nDialogue: 0,2:00:00.00,2:00:02.00,Default,It is late.\n"],
+            "SubViewer 2 minutes"       => [Format::SubViewer, "[SUBTITLE]\n00:00:01.00,00:75:02.00\nThe ferry leaves.\n\n02:00:00.00,02:00:02.00\nIt is late.\n"],
+            "SubViewer 1 minutes"       => [Format::SubViewer, "******** START SCRIPT ********\n[00:75:01]\nThe ferry leaves.\n\n[02:00:00]\nIt is late.\n[02:00:02]\n"],
+            "LRC minutes after hours"   => [Format::Lyrics, "[00:00.50]\n[1:75:00.00]The ferry leaves.\n[2:00:00.00]It is late.\n[2:00:02.00]\n"],
         ];
     }
 
@@ -151,6 +156,21 @@ class LooseTimestampsTest extends TestCase
 
         $this->assertSame([[7200.0, 7202.0]], array_map(fn ($cue) => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
         $this->assertSame([ParseWarningAction::Skipped], array_map(fn ($warning) => $warning->action, $subtitle->getParseWarnings()));
+    }
+
+
+    #[DataProvider("timesWithMinutesOrSecondsOfSixtyOrMore")]
+    public function testStrictModeRejectsACueWithMinutesOrSecondsOfSixtyOrMore(Format $format, string $content): void
+    {
+        if ($format === Format::Lyrics) {
+            $cues = Subtitle::fromString($content, $format)->getCues();
+            $this->assertSame([[7200.0, 7202.0]], array_map(fn ($cue) => [$cue->getStart(), $cue->getEnd()], $cues));
+
+            return;
+        }
+
+        $this->expectException(ParsingException::class);
+        Subtitle::fromString($content, $format);
     }
 
 

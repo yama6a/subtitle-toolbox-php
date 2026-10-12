@@ -62,4 +62,8 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `absurd_delay_subviewer.sub` | SubViewer 1 with a `[DELAY]` of 359999990 seconds. The third cue starts past 100,000 hours, LF | MIT |
 | `loose_times.ass` | Start and End times with 4 fraction digits, without a fraction, with `,` before the fraction and with `:` before the fraction, LF | MIT |
 | `numeric_field_name.ass` | the number `1` as a field name in the `Format:` line of `[Events]`, in the shape of an Aegisub file, UTF-8 BOM, CR LF | MIT |
+| `sixty_minutes.ass` | an End time with 75 minutes and a Start time with 75 seconds, both with a 2-digit fraction, in the shape of an Aegisub file, LF | MIT |
+| `sixty_minutes.sub` | SubViewer 2 timing lines with 75 minutes and with 75 and 99 seconds, in the shape of the SubViewer 2 example in https://github.com/yama6a/subtitle-toolbox/issues/73, CR LF | MIT |
+| `sixty_minutes_v1.sub` | SubViewer 1 time lines with 75 seconds and with 75 minutes, in the shape of the SubViewer 1.0 output of Subtitle Edit, CR LF | MIT |
+| `sixty_minutes.lrc` | a time tag with hours and 75 minutes, `[1:75:00.00]`, LF | MIT |
 | `loose_times.sub` | SubViewer 2 timing lines with 4 fraction digits, without a fraction and with 1-digit fields, CR LF | MIT |

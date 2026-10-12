@@ -27,7 +27,7 @@ final class SubViewerParser extends SubtitleParser
 
     // Five hour digits keep a time below Timecode::MAX_HOURS.
     private const VERSION_1_TIME_REGEX = '/^\[(0*\d{1,5}):(\d{2}):(\d{2})\]$/';
-    private const VERSION_2_TIME_REGEX = '/^(0*\d{1,5}):(\d{2}):(\d{2})\.(\d{1,3}),(0*\d{1,5}):(\d{2}):(\d{2})\.(\d{1,3})$/';
+    private const VERSION_2_TIME_REGEX = '/^(0*\d{1,5}):([0-5]\d):([0-5]\d)\.(\d{1,3}),(0*\d{1,5}):([0-5]\d):([0-5]\d)\.(\d{1,3})$/';
     private const TAG_REGEX            = '/^\[([^\]]+)\](.*)$/';
     private const STYLE_TAGS           = ["[COLF]", "[SIZE]", "[FONT]", "[STYLE]"];
     private const VERSION_2_BLOCK_TAGS = ["INFORMATION", "END INFORMATION", "SUBTITLE"];
@@ -134,6 +134,9 @@ final class SubViewerParser extends SubtitleParser
             if (preg_match(self::VERSION_1_TIME_REGEX, $line, $matches)) {
                 try {
                     $timeLine  = [$lineIndex + 1, $line];
+                    if ((int) $matches[2] > 59 || (int) $matches[3] > 59) {
+                        throw new ParsingException("The time \"$line\" is not valid.", $lineIndex + 1);
+                    }
                     $afterTime = self::boundedTime(Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3]) + $delay, $delay === 0 ? $line : "$line with DELAY $delay", $lineIndex + 1);
                 } catch (ParsingException $exception) {
                     $this->fail($exception, $lineIndex + 1, count($cues), [$line]);
