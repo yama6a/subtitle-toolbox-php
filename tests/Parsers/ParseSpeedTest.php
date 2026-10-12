@@ -28,6 +28,7 @@ class ParseSpeedTest extends TestCase
             "MicroDVD" => [Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25, writeFrameRateLine: true)])],
             "TTML"     => [Format::Ttml, new WriteOptions()],
             "EBU STL"  => [Format::EbuStl, new WriteOptions()],
+            "SAMI"     => [Format::Sami, new WriteOptions()],
         ];
     }
 
@@ -47,14 +48,24 @@ class ParseSpeedTest extends TestCase
     }
 
 
-    // TTML reads about 3 times slower than SubRip. Quadratic work per paragraph makes it 40 times slower.
-    public function testParsesTtmlAtMostTenTimesSlowerThanSubRip(): void
+    public static function markupFormats(): array
+    {
+        return [
+            "TTML" => [Format::Ttml],
+            "SAMI" => [Format::Sami],
+        ];
+    }
+
+
+    // TTML and SAMI read about 2 to 3 times slower than SubRip. Quadratic work per cue makes them 30 to 40 times slower.
+    #[DataProvider("markupFormats")]
+    public function testParsesAtMostTenTimesSlowerThanSubRip(Format $format): void
     {
         $subtitle = $this->repeatFixture(self::CUE_COUNT);
         $subRip   = $this->parseSeconds($subtitle->toString(Format::SubRip), Format::SubRip);
-        $ttml     = $this->parseSeconds($subtitle->toString(Format::Ttml), Format::Ttml);
+        $seconds  = $this->parseSeconds($subtitle->toString($format), $format);
 
-        $this->assertLessThan(10 * $subRip, $ttml, sprintf("TTML took %.2f s, SubRip %.2f s.", $ttml, $subRip));
+        $this->assertLessThan(10 * $subRip, $seconds, sprintf("%s took %.2f s, SubRip %.2f s.", $format->name, $seconds, $subRip));
     }
 
 

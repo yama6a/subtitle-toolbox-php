@@ -176,17 +176,20 @@ final class SamiParser extends SubtitleParser
         }
         $body = preg_replace('/<\/SYNC\s*>/i', "", $body);
 
-        $syncs = [];
+        $syncs      = [];
+        $lineNumber = 1 + substr_count($content, "\n", 0, $bodyStart);
+        $counted    = 0;
         foreach (array_slice(preg_split('/<SYNC\b/i', $body, -1, PREG_SPLIT_OFFSET_CAPTURE), 1) as $index => [$chunk, $offset]) {
-            $lineNumber = fn (): int => $this->lineNumberInBody($content, $bodyStart, $body, $offset);
-            $block      = fn (): array => array_values(array_filter(
+            $lineNumber += substr_count($body, "\n", $counted, $offset - $counted);
+            $counted     = $offset;
+            $block       = fn (): array => array_values(array_filter(
                 array_map("trim", explode("\n", "<SYNC" . $chunk)),
                 fn (string $line): bool => $line !== ""
             ));
             try {
                 [$start, $syncContent] = $this->readSyncTag($chunk, $index, $lineNumber);
             } catch (ParsingException $exception) {
-                $this->fail($exception, $lineNumber(), $index, $block());
+                $this->fail($exception, $lineNumber, $index, $block());
                 continue;
             }
 
@@ -194,7 +197,7 @@ final class SamiParser extends SubtitleParser
                 if ($this->options->lenient) {
                     $this->warn(
                         "SYNC tag " . ($index + 1) . " has a negative Start. The parser read it as 0.",
-                        $lineNumber(),
+                        $lineNumber,
                         $index,
                         $block(),
                         ParseWarningAction::Repaired
@@ -215,20 +218,14 @@ final class SamiParser extends SubtitleParser
     /**
      * @return array{float, string} the Start time in seconds and the content after the SYNC tag
      */
-    private function readSyncTag(string $chunk, int $index, callable $lineNumber): array
+    private function readSyncTag(string $chunk, int $index, int $lineNumber): array
     {
         if (!preg_match('/^([^>]*)>(.*)$/s', $chunk, $matches) ||
             !preg_match('/\bStart\s*=\s*["\']?\s*(-?\d+)/i', $matches[1], $start)) {
-            throw new ParsingException("SYNC tag " . ($index + 1) . " has no valid Start attribute.", $lineNumber());
+            throw new ParsingException("SYNC tag " . ($index + 1) . " has no valid Start attribute.", $lineNumber);
         }
 
-        return [self::boundedTime(((int) $start[1]) / 1000, $start[1], $lineNumber()), $matches[2]];
-    }
-
-
-    private function lineNumberInBody(string $content, int $bodyStart, string $body, int $offset): int
-    {
-        return 1 + substr_count($content, "\n", 0, $bodyStart) + substr_count(substr($body, 0, $offset), "\n");
+        return [self::boundedTime(((int) $start[1]) / 1000, $start[1], $lineNumber), $matches[2]];
     }
 
 
