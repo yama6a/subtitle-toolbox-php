@@ -10,6 +10,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Tests\Support\TestFiles;
 use SubtitleToolbox\Tests\Support\WriteGoldens;
+use SubtitleToolbox\WriteOptions;
 
 /**
  * Compares the output of the formatters with the write goldens.
@@ -18,7 +19,7 @@ use SubtitleToolbox\Tests\Support\WriteGoldens;
 class WriteGoldensTest extends TestCase
 {
     /**
-     * @return array<string, array{string, Format, Format, string, ReadOptions}>
+     * @return array<string, array{string, Format, Format, string, ReadOptions, WriteOptions}>
      */
     public static function goldens(): array
     {
@@ -27,14 +28,14 @@ class WriteGoldensTest extends TestCase
 
 
     #[DataProvider("goldens")]
-    public function testTheOutputMatchesTheGolden(string $path, Format $inputFormat, Format $outputFormat, string $golden, ReadOptions $options): void
+    public function testTheOutputMatchesTheGolden(string $path, Format $inputFormat, Format $outputFormat, string $golden, ReadOptions $options, WriteOptions $writeOptions): void
     {
-        $this->assertMatchesGolden($path, $golden, WriteGoldens::render($path, $inputFormat, $outputFormat, $options));
+        $this->assertMatchesGolden($path, $golden, WriteGoldens::render($path, $inputFormat, $outputFormat, $options, $writeOptions));
     }
 
 
     /**
-     * @return array<string, array{string, Format, Format, string, ReadOptions}>
+     * @return array<string, array{string, Format, Format, string, ReadOptions, WriteOptions}>
      */
     public static function roundTrips(): array
     {
@@ -43,9 +44,9 @@ class WriteGoldensTest extends TestCase
 
 
     #[DataProvider("roundTrips")]
-    public function testTheDefaultReadOptionsGiveTheSameRoundTrip(string $path, Format $inputFormat, Format $outputFormat, string $golden, ReadOptions $options): void
+    public function testTheDefaultReadOptionsGiveTheSameRoundTrip(string $path, Format $inputFormat, Format $outputFormat, string $golden, ReadOptions $options, WriteOptions $writeOptions): void
     {
-        $this->assertMatchesGolden($path, $golden, WriteGoldens::render($path, $inputFormat, $outputFormat, new ReadOptions()));
+        $this->assertMatchesGolden($path, $golden, WriteGoldens::render($path, $inputFormat, $outputFormat, new ReadOptions(), $writeOptions));
     }
 
 

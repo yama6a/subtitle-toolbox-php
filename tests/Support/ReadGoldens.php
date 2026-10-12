@@ -36,6 +36,8 @@ final class ReadGoldens
         "lrc"                 => Format::Lyrics,
         "csv"                 => Format::Csv,
         "json"                => Format::Json,
+        "ttml"                => Format::Ttml,
+        "itt"                 => Format::Itt,
         "chapters/ffmetadata" => Format::FfMetadataChapters,
         "chapters/ogm"        => Format::OgmChapters,
         "chapters/podcast"    => Format::PodcastChapters,
