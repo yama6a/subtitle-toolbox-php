@@ -344,7 +344,7 @@ $subtitle->toString(Format::TmPlayer);                                     // 00
 
 - **MPL2 times**: tenths of a second.
 - **Italics**: the MPL2 formatter writes `/` for a line whose whole text is inside `<i>`. Both formatters strip all other tags.
-- **TMPlayer end times**: a cue ends at the next line with a time. A line without text only ends the cue before it. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md).
+- **TMPlayer end times**: a cue ends at the next later time in the file, also when a line comes out of time order. For example, `00:00:07:B` before `00:00:04:A` gives A from 4 s to 7 s. A line without text only ends the cue before it. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **TMPlayer gaps**: TMPlayer counts whole seconds, so the formatter rounds each time to the second. A cue that ends before the next cue starts gets a line without text at its end. For a cue shorter than 1 s, that line comes 1 s after the start.
 - **`.txt` files**: see [cli.md](cli.md#formats-and-file-extensions).
 
