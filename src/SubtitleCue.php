@@ -24,8 +24,6 @@ final class SubtitleCue
     /** @var array<string, array> */
     private array $formatData = [];
 
-    private static int $timeEdits = 0;
-
 
     /**
      * @param string|list<string> $lines
@@ -35,18 +33,6 @@ final class SubtitleCue
         $this->setStart($start);
         $this->setEnd($end);
         $this->setLines($lines);
-    }
-
-
-    /**
-     * Returns how often setStart() and setEnd() ran on a cue that a subtitle holds, so a cache of cue times can tell when
-     * it is stale. A cue that no subtitle holds is in no cache.
-     *
-     * @internal
-     */
-    public static function timeEditCount(): int
-    {
-        return self::$timeEdits;
     }
 
 
@@ -61,8 +47,8 @@ final class SubtitleCue
         $before      = $this->start;
         $this->start = Timecode::roundToMilliseconds($start);
         if (CueHolders::isHeld($this)) {
-            self::$timeEdits++;
             CueHolders::startChanged($this, $before);
+            CueHolders::timeChanged($this);
         }
 
         return $this;
@@ -79,7 +65,7 @@ final class SubtitleCue
     {
         $this->end = Timecode::roundToMilliseconds($end);
         if (CueHolders::isHeld($this)) {
-            self::$timeEdits++;
+            CueHolders::timeChanged($this);
         }
 
         return $this;

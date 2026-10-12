@@ -91,6 +91,22 @@ class CueListSpeedTest extends TestCase
     }
 
 
+    // A rebuild of the lookup index after each edit takes minutes here.
+    public function testATimeEditThenALookupInALoopOverTwentyThousandCuesTakesUnderFiveSeconds(): void
+    {
+        $subtitle = $this->repeatHarbourTour(self::CUE_COUNT);
+        $subtitle->findCueIndexAt(100);
+
+        $start = microtime(true);
+        foreach ($subtitle->getCues() as $index => $cue) {
+            $cue->setEnd($cue->getEnd() + 0.001)->setStart($cue->getStart() + 0.001);
+            $this->assertSame($index, $subtitle->findCueIndexAt($cue->getStart()));
+        }
+
+        $this->assertLessThan(5, microtime(true) - $start);
+    }
+
+
     /**
      * @param list<SubtitleCue> $cues
      */
