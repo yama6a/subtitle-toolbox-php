@@ -351,6 +351,13 @@ class BinaryInputTest extends CliTestCase
     }
 
 
+    public function testConvertWritesAVobSubFileAsTheGoldenSup(): void
+    {
+        $this->assertSame([0, file_get_contents(self::FILES . "vobsub/expected/text-pal.idx.0.to.sup"), ""],
+                          $this->runBinary(["convert", self::FILES . "vobsub/text-pal.idx", "--to", "sup", "-o", "-"]));
+    }
+
+
     public function testInfoListsTheTracksOfAnMkvFileOnStandardInput(): void
     {
         $this->assertSame(

@@ -98,13 +98,14 @@ class PgsFormatterTest extends TestCase
 
 
     /**
-     * The fixture generator writes one object per display set in the same segment order as PgsFormatter.
+     * The text fixtures have one object per display set, in the segment order of PgsFormatter.
      *
      * @return array<string, array{string}>
      */
     public static function singleObjectFixtures(): array
     {
-        return array_filter(self::pgsFixtures(), fn (string $key): bool => !str_starts_with($key, "pgs/shapes"), ARRAY_FILTER_USE_KEY);
+        return array_filter(self::pgsFixtures(), fn (string $key): bool => !str_starts_with($key, "pgs/") || str_starts_with($key, "pgs/text"),
+                            ARRAY_FILTER_USE_KEY);
     }
 
 

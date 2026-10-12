@@ -20,6 +20,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
 require_once __DIR__ . "/../Ocr/FakeOcrEngine.php";
+require_once __DIR__ . "/../files/vobsub/generate.php";
 
 class VobSubParserTest extends TestCase
 {
@@ -152,6 +153,13 @@ class VobSubParserTest extends TestCase
         foreach ($cues as $cue) {
             $this->assertSame([], $cue->getLines());
         }
+    }
+
+
+    public function testTheTextFixturesMatchTheGenerator(): void
+    {
+        $this->assertSame([file_get_contents(self::DIR . "text-pal.idx"), file_get_contents(self::DIR . "text-pal.sub")], textFixture());
+        $this->assertSame([file_get_contents(self::DIR . "one-packet-pal.idx"), file_get_contents(self::DIR . "one-packet-pal.sub")], onePacketFixture());
     }
 
 
