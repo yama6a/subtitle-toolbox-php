@@ -48,6 +48,9 @@ final class TmPlayerParser extends SubtitleParser
             $entries[] = ["time" => $time, "lines" => $lines];
         }
 
+        // A cue ends at the next entry in time, not in file order. usort() keeps entries of equal time in file order.
+        usort($entries, fn (array $first, array $second): int => $first["time"] <=> $second["time"]);
+
         $subtitle   = new Subtitle();
         $parsedCues = [];
         foreach ($entries as $index => $entry) {
@@ -57,7 +60,7 @@ final class TmPlayerParser extends SubtitleParser
             }
 
             $end = isset($entries[$index + 1]) ? $entries[$index + 1]["time"] : $entry["time"] + $this->options->lastCueDuration;
-            $parsedCues[] = new SubtitleCue($entry["time"], max($end, $entry["time"]), $entry["lines"]);
+            $parsedCues[] = new SubtitleCue($entry["time"], $end, $entry["lines"]);
         }
 
         return $subtitle->addCues($parsedCues);

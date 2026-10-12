@@ -58,6 +58,13 @@ class TmPlayerParserTest extends TestCase
                 [150.0, 155.0, "Frost on the roads in the morning."],
                 null,
             ],
+            "TMPlayer with a line out of time order" => [
+                "tmplayer_out_of_order.txt",
+                4,
+                [1.0, 4.0, "The ferry leaves at nine."],
+                [12.0, 16.0, "We arrive at the island at noon."],
+                null,
+            ],
             "TMPlayer+ with line numbers and BOM" => [
                 "tmplayer_multiline_bom.txt",
                 3,
@@ -120,6 +127,19 @@ class TmPlayerParserTest extends TestCase
         $cues = (new TmPlayerParser())->parse("00:00:01:One\n00:00:03:Two\n00:00:09:\n", new ReadOptions())->getCues();
 
         $this->assertSame([[1.0, 3.0, "One"], [3.0, 9.0, "Two"]], array_map($this->row(...), $cues));
+    }
+
+
+    public function testALineOutOfTimeOrderEndsTheCueBeforeIt(): void
+    {
+        $cues = $this->parseFile("tmplayer_out_of_order.txt")->getCues();
+
+        $this->assertSame([
+            [1.0, 4.0, "The ferry leaves at nine."],
+            [4.0, 7.0, "Please mind the gap."],
+            [7.0, 10.0, "Tickets are sold\non the upper deck."],
+            [12.0, 16.0, "We arrive at the island at noon."],
+        ], array_map($this->row(...), $cues));
     }
 
 
