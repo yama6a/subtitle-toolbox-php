@@ -40,7 +40,6 @@ The value of a `ValidationRule` case is the name of its field in `ValidationRule
 | `allowedCharacters` | the allowed characters as a string, or a regular expression character class such as `'[A-Za-z0-9 .,!?]'`. Violation limit `null` | characters that are not allowed. A space is always allowed |
 | `noAllCapsLines` | `true` to check, violation limit `null` | lines with two or more upper case letters and no lower case letter. `<v>` names and text in `[]` or `()` do not count |
 | `requireCues` | `true` to check, violation limit `null` | 0. The violation has the cue index `null` |
-| `noUnsortedCues` | `true` to check, violation limit `null` | seconds by which the cue starts before the previous cue in the list |
 | `noNegativeDuration` | `true` to check, violation limit `null` | end minus start, below 0 |
 
 - **Off by default**: a rule with the limit `null` or `false` is off.
@@ -56,7 +55,7 @@ The value of a `ValidationRule` case is the name of its field in `ValidationRule
 |:--- |:--- |:--- |
 | `ValidationRules::netflixEnglish($frameRate)` | 20 characters per second, 42 characters per line, 2 lines, 5/6 s to 7 s, a gap of 2 frames at the frame rate, no overlaps | [English (USA) Timed Text Style Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/217350977-English-USA-Timed-Text-Style-Guide), [General Requirements](https://partnerhelp.netflixstudios.com/hc/en-us/articles/215758617), [Subtitle Timing Guidelines](https://partnerhelp.netflixstudios.com/hc/en-us/articles/360051554394) |
 | `ValidationRules::bbc()` | 37 characters per line, 180 words per minute, 0.3 s per word | [BBC Subtitle Guidelines](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/), sections 3.1 and 4 |
-| `ValidationRules::structure()` | `requireCues`, `noUnsortedCues`, `noNegativeDuration` and `noOverlap` | the cue list of `Subtitle` |
+| `ValidationRules::structure()` | `requireCues`, `noNegativeDuration` and `noOverlap` | the cue list of `Subtitle` |
 
 - **Netflix**: 20 characters per second is the limit for adult programs.
 - **BBC**: 37 characters is the broadcast line length. 180 words per minute is the upper end of the 160 to 180 that the guide gives. 0.3 s per word allows 200 words per minute. So a cue can break the speed rule and still meet the time per word.

@@ -123,6 +123,6 @@ class OptionsCopyTest extends TestCase
         $this->assertEquals(new ReadOptions("Windows-1252", true, 2.0, [new MicroDvdReadOptions(25.0)]), $read);
 
         $rules = OptionsCopy::with(ValidationRules::structure(), ["maxLinesPerCue" => 2]);
-        $this->assertEquals(new ValidationRules(maxLinesPerCue: 2, noOverlap: true, requireCues: true, noUnsortedCues: true, noNegativeDuration: true), $rules);
+        $this->assertEquals(new ValidationRules(maxLinesPerCue: 2, noOverlap: true, requireCues: true, noNegativeDuration: true), $rules);
     }
 }

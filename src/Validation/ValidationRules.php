@@ -46,7 +46,6 @@ final class ValidationRules
      * @param ?string            $allowedCharacters         the allowed characters, or a character class such as "[A-Za-z0-9 .,!?]"
      * @param bool               $noAllCapsLines            check for lines with two or more upper case letters and no lower case letter
      * @param bool               $requireCues               check that the subtitle has at least one cue
-     * @param bool               $noUnsortedCues            check that each cue starts at or after the previous cue
      * @param bool               $noNegativeDuration        check that no cue ends before it starts
      */
     public function __construct(
@@ -68,7 +67,6 @@ final class ValidationRules
         public readonly ?string $allowedCharacters = null,
         public readonly bool $noAllCapsLines = false,
         public readonly bool $requireCues = false,
-        public readonly bool $noUnsortedCues = false,
         public readonly bool $noNegativeDuration = false,
     ) {
         $maximums = ["maxCharactersPerSecond" => $maxCharactersPerSecond, "maxCharactersPerLine" => $maxCharactersPerLine,
@@ -95,13 +93,12 @@ final class ValidationRules
 
     /**
      * Returns the checks of a well-formed cue list.
-     * It needs at least one cue, cues in start order, no cue that ends before it starts, and no overlap.
+     * It needs at least one cue, no cue that ends before it starts, and no overlap.
      */
     public static function structure(): self
     {
         return new self(
             requireCues: true,
-            noUnsortedCues: true,
             noNegativeDuration: true,
             noOverlap: true,
         );

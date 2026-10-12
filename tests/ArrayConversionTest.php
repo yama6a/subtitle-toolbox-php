@@ -78,15 +78,12 @@ class ArrayConversionTest extends TestCase
     }
 
 
-    public function testFromArrayKeepsBinaryFormatDataAndTheCueOrder(): void
+    public function testFromArrayKeepsBinaryFormatData(): void
     {
-        $subtitle = TestSubtitles::inGivenOrder([[5, 6, "Late"], [1, 2, "Early"]]);
+        $subtitle = TestSubtitles::fromTimes([[1, 2], [5, 6]]);
         $subtitle->getCues()[0]->setFormatData("image", ["png" => "\x89PNG\r\n\x1a\n"]);
 
-        $copy = Subtitle::fromArray($subtitle->toArray());
-
-        $this->assertEquals($subtitle, $copy);
-        $this->assertSame(["Late", "Early"], array_map(fn (SubtitleCue $cue): string => $cue->getText(), $copy->getCues()));
+        $this->assertEquals($subtitle, Subtitle::fromArray($subtitle->toArray()));
     }
 
 

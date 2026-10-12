@@ -27,9 +27,7 @@ trait Retiming
             throw new InvalidArgumentException("The end time of the shift must be after its start time, got $fromTime to $toTime.");
         }
 
-        $this->retimingApplyLinearCorrection(1, $seconds, $fromTime, $toTime);
-
-        return $fromTime === null && $toTime === null ? $this : $this->reIndexCues();
+        return $this->retimingApplyLinearCorrection(1, $seconds, $fromTime, $toTime);
     }
 
 
