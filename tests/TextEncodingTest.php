@@ -87,7 +87,7 @@ class TextEncodingTest extends TestCase
 
         $this->assertCount(3, $byCase->getCues());
         $this->assertEquals($byName, $byCase);
-        $this->assertEquals($byName, Subtitle::fromStringAutoDetectFormat((string)file_get_contents($path), new ReadOptions(encoding: $encoding)));
+        $this->assertEquals($byName, Subtitle::fromString((string)file_get_contents($path), options: new ReadOptions(encoding: $encoding)));
     }
 
 

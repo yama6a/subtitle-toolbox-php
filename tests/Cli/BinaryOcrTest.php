@@ -79,7 +79,7 @@ class BinaryOcrTest extends CliTestCase
         [$code, $stdout] = $this->runCli(["convert", "text.sup", "--to", "srt", "-o", "-", "--ocr", "--ocr-database", "empty.nocr"]);
 
         $this->assertSame(0, $code);
-        $subtitle = Subtitle::fromStringAutoDetectFormat($stdout);
+        $subtitle = Subtitle::fromString($stdout);
         $this->assertCount(12, $subtitle->getCues());
         foreach ($subtitle->getCues() as $cue) {
             $this->assertMatchesRegularExpression("/^\\*+( \\*+)*$/", implode(" ", $cue->getLines()));
@@ -136,7 +136,7 @@ class BinaryOcrTest extends CliTestCase
                                                                  "--ocr-language", "deu+eng"]);
 
         $this->assertSame([0, "text.sup: OCR 12/12\n"], [$code, $stderr]);
-        $cues = Subtitle::fromStringAutoDetectFormat($stdout)->getCues();
+        $cues = Subtitle::fromString($stdout)->getCues();
         $this->assertCount(12, $cues);
         $this->assertSame("deu+eng psm6", $cues[0]->getLines()[0]);
     }
@@ -200,7 +200,7 @@ class BinaryOcrTest extends CliTestCase
     public function testOcrLeavesFilesWithoutImageCuesAsTheyAre(): void
     {
         $this->assertSame([0, "trip.srt -> trip.vtt\n", ""], $this->runCli(["convert", "trip.srt", "--to", "vtt", "--ocr", "-o", "trip.vtt"]));
-        $this->assertSame(Subtitle::fromStringAutoDetectFormat($this->file("trip.srt"))->toString(Format::WebVtt), $this->file("trip.vtt"));
+        $this->assertSame(Subtitle::fromString($this->file("trip.srt"))->toString(Format::WebVtt), $this->file("trip.vtt"));
     }
 
 

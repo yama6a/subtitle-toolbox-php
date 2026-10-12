@@ -91,7 +91,7 @@ class ArrayConversionTest extends TestCase
     {
         $subtitle = (new Subtitle())->setMetadata("0", "zero");
 
-        $this->assertEquals($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat($subtitle->toString(Format::Json))->toArray());
+        $this->assertEquals($subtitle->toArray(), Subtitle::fromString($subtitle->toString(Format::Json))->toArray());
     }
 
 
@@ -172,10 +172,10 @@ class ArrayConversionTest extends TestCase
             $file === "sami/real/own_korean_cp949.smi"     => Subtitle::fromString($content, Format::Sami, new ReadOptions(TextEncoding::Cp949)),
             str_starts_with($file, "csv/")                 => (new CsvParser())->parse($content, new ReadOptions()),
             in_array($directory, self::CLOUD_SPEECH, true) => Subtitle::fromString($content, Format::from($directory)),
-            default                                        => Subtitle::fromStringAutoDetectFormat($content),
+            default                                        => Subtitle::fromString($content),
         };
 
         $this->assertEquals($subtitle->toArray(), Subtitle::fromArray($subtitle->toArray())->toArray());
-        $this->assertEquals($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat($subtitle->toString(Format::Json))->toArray());
+        $this->assertEquals($subtitle->toArray(), Subtitle::fromString($subtitle->toString(Format::Json))->toArray());
     }
 }

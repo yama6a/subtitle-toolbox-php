@@ -20,7 +20,7 @@ try {
 | `UnsupportedFormatException` | `\RuntimeException` | 102 | a format that the library cannot read or write, see [Unsupported formats](#unsupported-formats) |
 | `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, see [Invalid arguments](#invalid-arguments) |
 | `CueNotFoundException` | `\RuntimeException` | 105 | `removeCue()`, `splitCue()` or `joinCues()` with an index that has no cue |
-| `UnknownFormatException` | `UnsupportedFormatException` | 106 | `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` when detection finds no format |
+| `UnknownFormatException` | `UnsupportedFormatException` | 106 | `load()` or `fromString()` without a format when detection finds no format |
 | `OcrException` | `\RuntimeException` | 107 | an OCR engine that fails on one image. Tesseract exits with an error, or php-glyph-ocr cannot read the image |
 | `UnwritableContentException` | `\RuntimeException` | 108 | `toString()` or `save()` with a subtitle that the output format cannot hold, see [Unwritable content](#unwritable-content) |
 | `TranslationException` | `\RuntimeException` | 109 | a translation service that fails, see [Translation errors](#translation-errors) |
@@ -39,8 +39,8 @@ try {
 - `fromString()` or `load()` with a format that the library cannot read, such as `Format::PlainText`.
 - `toString()` or `save()` with a format that the library cannot write, such as `Format::VobSub`.
 - `save()` without a format and with an unknown extension, such as `out.unknown`.
-- An MKV, WebM or MP4 file in `load()` or `fromString()`. Call `loadTrack()` instead.
-- An MKV, WebM or MP4 file without exactly 1 subtitle track in `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()`.
+- An MKV, WebM or MP4 file in `load()` or `fromString()` with a format. Call `loadTrack()` instead.
+- An MKV, WebM or MP4 file without exactly 1 subtitle track in `load()` or `fromString()` without a format.
 - Detection that finds no format. This throws the subclass `UnknownFormatException`.
 
 ## Invalid arguments

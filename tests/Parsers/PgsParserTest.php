@@ -77,7 +77,7 @@ class PgsParserTest extends TestCase
         $content = file_get_contents(self::DIR . array_search($method, PgsFixtures::FILES, true));
 
         $this->assertSame(Format::Pgs, Format::detect($content));
-        $this->assertEquals((new PgsParser())->parse($content, new ReadOptions())->getCues(), Subtitle::fromStringAutoDetectFormat($content)->getCues());
+        $this->assertEquals((new PgsParser())->parse($content, new ReadOptions())->getCues(), Subtitle::fromString($content)->getCues());
     }
 
 
@@ -288,7 +288,7 @@ class PgsParserTest extends TestCase
 
     public function testRecognizesTextWithAnOcrEngine(): void
     {
-        $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::DIR . "shapes_1080p.sup"));
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "shapes_1080p.sup"));
         $engine   = new FakeOcrEngine(["Next stop: Main Station"]);
 
         $subtitle->recognizeText($engine, "eng");

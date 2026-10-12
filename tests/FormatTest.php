@@ -184,7 +184,7 @@ class FormatTest extends TestCase
         $expected = file_get_contents(self::FILES . "format/own_styled.1x.srt");
 
         $this->assertSame($expected, Subtitle::fromString($content, Format::SubRip)->toString(Format::SubRip));
-        $this->assertSame($expected, Subtitle::fromStringAutoDetectFormat($content)->toString(Format::SubRip));
+        $this->assertSame($expected, Subtitle::fromString($content)->toString(Format::SubRip));
     }
 
 

@@ -194,7 +194,7 @@ class MicroDvdParserTest extends TestCase
     public function testRealFileWithoutFrameRateParsesInLenientMode(string $file, int $cueCount): void
     {
         $content = file_get_contents(__DIR__ . "/../files/microdvd/real/$file");
-        $lenient = Subtitle::fromStringAutoDetectFormat($content, new ReadOptions(lenient: true));
+        $lenient = Subtitle::fromString($content, options: new ReadOptions(lenient: true));
         $at23976 = Subtitle::fromString($content, Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(23.976)]));
 
         $this->assertCount($cueCount, $lenient->getCues());

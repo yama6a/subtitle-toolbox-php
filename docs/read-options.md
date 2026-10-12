@@ -35,7 +35,7 @@ $table = Subtitle::fromString(file_get_contents('lines.csv'), Format::Csv,
 ```php
 $options = new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 25), new CsvReadOptions(delimiter: ';')]);
 foreach (['a.sub', 'b.csv', 'c.srt'] as $path) {
-    $subtitles[] = Subtitle::loadAutoDetectFormat($path, $options);   // a.sub at 25 fps, b.csv with ';', c.srt with neither
+    $subtitles[] = Subtitle::load($path, options: $options);   // a.sub at 25 fps, b.csv with ';', c.srt with neither
 }
 ```
 

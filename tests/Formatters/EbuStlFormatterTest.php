@@ -102,7 +102,7 @@ class EbuStlFormatterTest extends TestCase
         $this->assertSame("00003", substr($stl, 238, 5));
         $this->assertSame("00001", substr($stl, 243, 5));
         $this->assertSame("\x8F", substr($blocks[2], -1));
-        $this->assertSame($subtitle->getCues()[0]->getText(), Subtitle::fromStringAutoDetectFormat($stl)->getCues()[0]->getText());
+        $this->assertSame($subtitle->getCues()[0]->getText(), Subtitle::fromString($stl)->getCues()[0]->getText());
     }
 
 
@@ -177,7 +177,7 @@ class EbuStlFormatterTest extends TestCase
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "bakery_teletext_25fps.stl"), Format::EbuStl);
         $stl      = $subtitle->toString(Format::EbuStl, new WriteOptions(stripTags: true));
 
-        $this->assertSame("Fresh rolls are warm today.", Subtitle::fromStringAutoDetectFormat($stl)->getCues()[1]->getText());
+        $this->assertSame("Fresh rolls are warm today.", Subtitle::fromString($stl)->getCues()[1]->getText());
     }
 
 
@@ -262,6 +262,6 @@ class EbuStlFormatterTest extends TestCase
         $stl = $subtitle->toString(Format::EbuStl);
 
         $this->assertSame("\xCA\xE1\xEB\xE7\xEC\xDD\xF1\xE1", rtrim(substr(self::ttiBlocks($stl)[0], 16), "\x8F"));
-        $this->assertSame("Καλημέρα", Subtitle::fromStringAutoDetectFormat($stl)->getCues()[0]->getText());
+        $this->assertSame("Καλημέρα", Subtitle::fromString($stl)->getCues()[0]->getText());
     }
 }

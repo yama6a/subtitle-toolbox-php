@@ -43,11 +43,11 @@ class BinaryOutputTest extends CliTestCase
 
     public function testConvertWithoutToKeepsTheInputFormat(): void
     {
-        $trip = Subtitle::fromStringAutoDetectFormat($this->file("trip.srt"));
+        $trip = Subtitle::fromString($this->file("trip.srt"));
 
         $this->assertSame([0, (clone $trip)->shift(2)->toString(Format::SubRip), ""], $this->runCli(["convert", "trip.srt", "--shift", "2"]));
         $this->assertSame([0, "shop.vtt -> out/shop.vtt\n", ""], $this->runCli(["convert", "shop.vtt", "--output-dir", "out"]));
-        $this->assertSame(Subtitle::fromStringAutoDetectFormat($this->file("shop.vtt"))->toString(Format::WebVtt), $this->file("out/shop.vtt"));
+        $this->assertSame(Subtitle::fromString($this->file("shop.vtt"))->toString(Format::WebVtt), $this->file("out/shop.vtt"));
         copy(__DIR__ . "/../files/vobsub/text-pal.idx", "$this->dir/text.idx");
         copy(__DIR__ . "/../files/vobsub/text-pal.sub", "$this->dir/text.sub");
         $this->assertSame([3, "", "text.idx: The format vobsub can be read but not written. Pass --to with another format.\n"],
@@ -71,7 +71,7 @@ class BinaryOutputTest extends CliTestCase
         $this->assertSame([], array_diff(scandir($this->dir), [".", "..", ...array_map("basename", glob(self::FIXTURES . "*")), "lecture.json"]));
 
         $this->assertSame([0, "lecture.json -> out.json\n", ""], $this->runCli(["convert", "lecture.json", "--to", "json", "-o", "out.json"]));
-        $this->assertSame(Subtitle::fromStringAutoDetectFormat($this->file("lecture.json"))->toString(Format::Json), $this->file("out.json"));
+        $this->assertSame(Subtitle::fromString($this->file("lecture.json"))->toString(Format::Json), $this->file("out.json"));
         $this->assertSame(0, $this->runCli(["convert", "trip.srt", "--to", "mpl2", "-o", "trip.txt"])[0]);
         $this->assertSame($this->tripAs(Format::Mpl2), $this->file("trip.txt"));
         $this->assertSame(0, $this->runCli(["convert", "trip.srt", "--to", "vtt", "-o", "trip.bak"])[0]);
@@ -217,7 +217,7 @@ class BinaryOutputTest extends CliTestCase
 
     public function testConvertWritesOneInputToStandardOutput(): void
     {
-        $shop = Subtitle::fromStringAutoDetectFormat($this->file("shop.vtt"));
+        $shop = Subtitle::fromString($this->file("shop.vtt"));
 
         $this->assertSame([0, $shop->toString(Format::SubRip), ""], $this->runCli(["convert", "shop.vtt", "--to", "srt"]));
         $this->assertSame([0, $shop->toString(Format::SubRip), ""], $this->runCli(["convert", "shop.vtt", "--to", "srt", "-o", "-"]));
@@ -254,7 +254,7 @@ class BinaryOutputTest extends CliTestCase
             [0, "season1/shop.vtt -> out/shop.ass\nseason1/trip.srt -> out/trip.ass\n2 files: 2 succeeded, 0 failed.\n", ""],
             $this->runCli(["convert", "season1/shop.vtt", "season1/trip.srt", "--to", "ass", "--output-dir", "out"])
         );
-        $this->assertSame(Subtitle::fromStringAutoDetectFormat($shop)->toString(Format::Ass), $this->file("out/shop.ass"));
+        $this->assertSame(Subtitle::fromString($shop)->toString(Format::Ass), $this->file("out/shop.ass"));
         $this->assertSame($this->tripAs(Format::Ass), $this->file("out/trip.ass"));
     }
 

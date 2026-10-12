@@ -10,14 +10,14 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\TextEncoding;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.srt'), Format::SubRip, new ReadOptions(encoding: TextEncoding::Windows1252));
-$subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.smi'), new ReadOptions(encoding: TextEncoding::Cp949));
+$subtitle = Subtitle::fromString(file_get_contents('movie.smi'), options: new ReadOptions(encoding: TextEncoding::Cp949));
 $subtitle = Subtitle::fromString(file_get_contents('ukrainian.srt'), Format::SubRip, new ReadOptions(encoding: 'CP1125'));
 StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Windows-1252 file with letters such as é
 ```
 
 ## Order of the checks
 
-`load()`, `loadAutoDetectFormat()` and the `fromString` functions take the first rule that applies:
+`load()` and `fromString()` take the first rule that applies:
 
 | Step | Content | Read as |
 |:--- |:--- |:--- |

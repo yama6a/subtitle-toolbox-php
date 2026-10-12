@@ -125,7 +125,7 @@ class CsvFormatterTest extends TestCase
 
     public function testWritesIdentifiersAndOtherColumnsFromAnotherFormat(): void
     {
-        $subtitle = Subtitle::fromStringAutoDetectFormat("WEBVTT\n\nintro\n00:00:01.000 --> 00:00:02.000\nHi\n");
+        $subtitle = Subtitle::fromString("WEBVTT\n\nintro\n00:00:01.000 --> 00:00:02.000\nHi\n");
         $subtitle->getCues()[0]->setFormatData("csv", ["columns" => ["Take" => "2"]]);
 
         $this->assertSame("identifier,start,end,text,Take\nintro,00:00:01.000,00:00:02.000,Hi,2\n", $subtitle->toString(Format::Csv, new WriteOptions(bom: false)));

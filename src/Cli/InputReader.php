@@ -189,15 +189,12 @@ final class InputReader
         if ($track !== null) {
             return Subtitle::loadTrack($path, $track, $this->readOptions);
         }
-        if ($format !== null) {
-            return $this->parse(fn (): Subtitle => Subtitle::load($path, $format, $this->readOptions), fn (): Format => $format);
-        }
-        if (Containers::detectFile($path) !== null) {
-            return Subtitle::loadAutoDetectFormat($path, $this->readOptions);
+        if ($format === null && Containers::detectFile($path) !== null) {
+            return Subtitle::load($path, options: $this->readOptions);
         }
 
-        return $this->parse(fn (): Subtitle => Subtitle::loadAutoDetectFormat($path, $this->readOptions),
-                            fn (): ?Format => $this->detectFormat((string) @file_get_contents($path), $path));
+        return $this->parse(fn (): Subtitle => Subtitle::load($path, $format, $this->readOptions),
+                            fn (): ?Format => $format ?? $this->detectFormat((string) @file_get_contents($path), $path));
     }
 
 
@@ -270,8 +267,7 @@ final class InputReader
 
         $format = $this->fromFormat;
 
-        return $format === null
-            ? $this->parse(fn (): Subtitle => Subtitle::fromStringAutoDetectFormat($content, $this->readOptions), fn (): ?Format => $this->detectFormat($content, null))
-            : $this->parse(fn (): Subtitle => Subtitle::fromString($content, $format, $this->readOptions), fn (): Format => $format);
+        return $this->parse(fn (): Subtitle => Subtitle::fromString($content, $format, $this->readOptions),
+                            fn (): ?Format => $format ?? $this->detectFormat($content, null));
     }
 }

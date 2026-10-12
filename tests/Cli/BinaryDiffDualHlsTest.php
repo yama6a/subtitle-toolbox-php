@@ -124,7 +124,7 @@ class BinaryDiffDualHlsTest extends CliTestCase
     {
         copy(self::FILES . "diff/own_original.srt", "$this->dir/v1.srt");
         copy(self::FILES . "diff/own_edited.srt", "$this->dir/v2.srt");
-        file_put_contents("$this->dir/v1.vtt", Subtitle::fromStringAutoDetectFormat($this->file("v1.srt"))->toString(Format::WebVtt));
+        file_put_contents("$this->dir/v1.vtt", Subtitle::fromString($this->file("v1.srt"))->toString(Format::WebVtt));
     }
 
 
@@ -201,7 +201,7 @@ class BinaryDiffDualHlsTest extends CliTestCase
     {
         copy(self::FILES . "dual/station_en.srt", "$this->dir/en.srt");
         copy(self::FILES . "mkv/text_tracks.mkv", "$this->dir/movie.mkv");
-        $english = Subtitle::fromStringAutoDetectFormat($this->file("en.srt"));
+        $english = Subtitle::fromString($this->file("en.srt"));
         $german  = MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv")->extract(3);
         $frames  = Subtitle::load(self::FIXTURES . "frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
 

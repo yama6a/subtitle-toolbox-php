@@ -133,10 +133,10 @@ class ReadOptionsTest extends TestCase
         $srt      = "1\n00:00:01,000 --> 00:00:02,000\nHello\n";
         $microDvd = file_get_contents(self::FILES . "microdvd/real/subsrt_sample.sub");
 
-        $this->assertSame(Subtitle::fromString($srt, Format::SubRip)->toArray(), Subtitle::fromStringAutoDetectFormat($srt, $options)->toArray());
+        $this->assertSame(Subtitle::fromString($srt, Format::SubRip)->toArray(), Subtitle::fromString($srt, options: $options)->toArray());
         $this->assertSame(
             Subtitle::fromString($microDvd, Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 25)]))->toArray(),
-            Subtitle::fromStringAutoDetectFormat($microDvd, $options)->toArray(),
+            Subtitle::fromString($microDvd, options: $options)->toArray(),
         );
     }
 

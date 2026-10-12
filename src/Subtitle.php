@@ -82,23 +82,16 @@ final class Subtitle implements \IteratorAggregate, \Countable
      * Reads the file at $path in $format. An MKV, WebM or MP4 file throws, see loadTrack().
      * For Format::VobSub, $path is the .idx or the .sub file, and the other file must lie next to it.
      * The content of the .idx file replaces VobSubReadOptions::$idx.
-     */
-    public static function load(string $path, Format $format, ?ReadOptions $options = null): self
-    {
-        return SubtitleReader::load($path, $format, $options ?? new ReadOptions());
-    }
-
-
-    /**
-     * Reads the file at $path in the format that its content shows, else in the format of its extension.
+     *
+     * Without $format, it reads the file in the format that its content shows, else in the format of its extension.
      * It tries only formats whose isAutoDetected() is true. An MKV, WebM or MP4 file must hold exactly 1 subtitle track.
      * An empty or whitespace-only file gives an empty subtitle in the format of its extension.
      *
-     * @throws UnknownFormatException when no such format matches.
+     * @throws UnknownFormatException when $format is null and no such format matches.
      */
-    public static function loadAutoDetectFormat(string $path, ?ReadOptions $options = null): self
+    public static function load(string $path, ?Format $format = null, ?ReadOptions $options = null): self
     {
-        return SubtitleReader::loadAutoDetect($path, $options ?? new ReadOptions());
+        return SubtitleReader::load($path, $format, $options ?? new ReadOptions());
     }
 
 
@@ -127,27 +120,20 @@ final class Subtitle implements \IteratorAggregate, \Countable
      * Reads $content in $format. MKV, WebM and MP4 content throws, see loadTrack().
      * A UTF-16 or UTF-32 BOM, or else ReadOptions::$encoding such as "Windows-1252", sets the encoding to convert from.
      * Valid UTF-8 content without zero bytes stays as is. See docs/encodings.md for UTF-16 without a BOM.
+     *
+     * Without $format, it reads $content in the format that Format::detect() finds. It tries only formats whose
+     * isAutoDetected() is true. MKV, WebM and MP4 content must hold exactly 1 subtitle track.
+     *
+     * @throws UnknownFormatException when $format is null and no such format matches.
      */
-    public static function fromString(string $content, Format $format, ?ReadOptions $options = null): self
+    public static function fromString(string $content, ?Format $format = null, ?ReadOptions $options = null): self
     {
         return SubtitleReader::fromString($content, $format, $options ?? new ReadOptions());
     }
 
 
     /**
-     * Reads $content in the format that Format::detect() finds. It tries only formats whose isAutoDetected() is true.
-     * MKV, WebM and MP4 content must hold exactly 1 subtitle track.
-     *
-     * @throws UnknownFormatException when no such format matches.
-     */
-    public static function fromStringAutoDetectFormat(string $content, ?ReadOptions $options = null): self
-    {
-        return SubtitleReader::fromStringAutoDetect($content, $options ?? new ReadOptions());
-    }
-
-
-    /**
-     * Returns the format that load(), loadAutoDetectFormat(), loadTrack(), a container reader or a fromString call read.
+     * Returns the format that load(), loadTrack(), a container reader or fromString() read.
      * Returns null for a subtitle from new Subtitle() or fromArray(). For an MKV track, it is the format of the track codec.
      */
     public function findFormat(): ?Format
@@ -157,7 +143,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Returns the encoding that load(), loadAutoDetectFormat() or a fromString call read the text from, for example
+     * Returns the encoding that load() or fromString() read the text from, for example
      * "UTF-8", "UTF-16LE" or "Windows-1252". Returns null for a binary format, an MKV, WebM or MP4 track, and a subtitle
      * that no parser read. See docs/encodings.md for the order of the checks.
      */

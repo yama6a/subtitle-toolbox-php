@@ -196,7 +196,7 @@ class CommonErrorFixerTest extends TestCase
     public function testFixesTheFileAsTheGoldenFile(string $input, string $language, ?string $list, string $golden): void
     {
         $content  = file_get_contents(self::FILES . $input);
-        $subtitle = Subtitle::fromStringAutoDetectFormat($content);
+        $subtitle = Subtitle::fromString($content);
         $options  = new CommonErrorOptions(language: $language,
                                            replaceList: $list === null ? null : OcrReplaceList::fromSubtitleEditXml(file_get_contents($list)));
         $lineEnd  = str_contains($content, "\r\n") ? "\r\n" : "\n";
@@ -206,13 +206,13 @@ class CommonErrorFixerTest extends TestCase
         $this->assertStringEqualsFile(self::FILES . $golden,
                                       $subtitle->toString(Format::SubRip, new WriteOptions(lineEnding: LineEnding::from($lineEnd))));
         $this->assertNotEmpty($fixes);
-        $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . $golden)), $options)->fixes);
+        $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromString(file_get_contents(self::FILES . $golden)), $options)->fixes);
     }
 
 
     public function testOptionalRulesFixTheFileAsTheGoldenFile(): void
     {
-        $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/optional-rules.srt"));
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "fixing/optional-rules.srt"));
         $defaults = new CommonErrorOptions();
         $optional = array_filter(array_map(fn (CommonErrorRule $rule): string => $rule->value, CommonErrorRule::cases()),
                                  fn (string $name): bool => ($defaults->$name ?? null) === false);
@@ -222,14 +222,14 @@ class CommonErrorFixerTest extends TestCase
 
         $this->assertSame(["doubleApostrophes", "loneLowercaseI", "unneededPeriods", "dialogueOnOneLine", "musicNotes", "sentenceStartCase"], array_values($optional));
         $this->assertStringEqualsFile(self::FILES . "fixing/optional-rules.fixed.srt", $subtitle->toString(Format::SubRip));
-        $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt")),
+        $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromString(file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt")),
                                                       $options)->fixes);
     }
 
 
     public function testListsEachFixOfTheWebFileWithTheTextBeforeAndAfter(): void
     {
-        $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/web-errors.srt"));
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "fixing/web-errors.srt"));
 
         $fixes = CommonErrorFixer::apply($subtitle, new CommonErrorOptions(language: "en"))->fixes;
 
@@ -277,20 +277,20 @@ class CommonErrorFixerTest extends TestCase
     public function testPreviewListsTheFixesAndChangesNothing(): void
     {
         $content  = file_get_contents(self::FILES . "fixing/web-errors.srt");
-        $subtitle = Subtitle::fromStringAutoDetectFormat($content);
+        $subtitle = Subtitle::fromString($content);
         $before   = $subtitle->toString(Format::SubRip);
 
         $preview = CommonErrorFixer::preview($subtitle, new CommonErrorOptions(language: "en"))->fixes;
 
         $this->assertSame($before, $subtitle->toString(Format::SubRip));
-        $this->assertEquals(CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat($content), new CommonErrorOptions(language: "en"))->fixes, $preview);
+        $this->assertEquals(CommonErrorFixer::apply(Subtitle::fromString($content), new CommonErrorOptions(language: "en"))->fixes, $preview);
     }
 
 
     public function testAllFixesOffChangesNothing(): void
     {
         $content  = file_get_contents(self::FILES . "fixing/ocr-en.ocr.srt");
-        $subtitle = Subtitle::fromStringAutoDetectFormat($content);
+        $subtitle = Subtitle::fromString($content);
 
         $this->assertSame([], CommonErrorFixer::apply($subtitle, new CommonErrorOptions("en", ...self::ALL_OFF))->fixes);
         $this->assertSame($content, $subtitle->toString(Format::SubRip));

@@ -225,8 +225,8 @@ use SubtitleToolbox\Dual\DualSubtitleMode;
 use SubtitleToolbox\Dual\DualSubtitleOptions;
 use SubtitleToolbox\Subtitle;
 
-$english = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.en.srt'));
-$german  = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.de.srt'));
+$english = Subtitle::fromString(file_get_contents('movie.en.srt'));
+$german  = Subtitle::fromString(file_get_contents('movie.de.srt'));
 
 $dual = DualSubtitle::fromPair($english, $german);   // stack mode, the German line without a style
 $dual = DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(secondaryStyle: 'i'));

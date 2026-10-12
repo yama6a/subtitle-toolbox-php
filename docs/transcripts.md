@@ -151,7 +151,7 @@ use SubtitleToolbox\WriteOptions;
 $subtitle = Subtitle::fromString($whisperJson, Format::Whisper, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
 $json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(formats: [new PodcastTranscriptWriteOptions(wordSegments: true)]));
 $html     = $subtitle->toString(Format::HtmlTranscript);
-$subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('episode.json'));   // detects a Podcasting 2.0 transcript
+$subtitle = Subtitle::fromString(file_get_contents('episode.json'));   // detects a Podcasting 2.0 transcript
 $subtitle = Subtitle::fromString($json, Format::PodcastTranscript, new ReadOptions(formats: [new TranscriptReadOptions(keepSegments: true)]));
 ```
 

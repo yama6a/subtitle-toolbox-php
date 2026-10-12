@@ -355,7 +355,7 @@ class BinaryTimingTest extends CliTestCase
             ]), $golden);
         }
 
-        $chained = Subtitle::fromStringAutoDetectFormat($this->file("garden.srt"));
+        $chained = Subtitle::fromString($this->file("garden.srt"));
         ShotChangeTiming::apply($chained, new ShotChangeOptions(24));
         $this->assertSame([0, $chained->toString(Format::SubRip), ""], $this->runCli(["convert", "garden.srt", "--to", "srt", "-o", "-", "--fps", "24", "--snap-min-gap-frames", "2"]));
 
