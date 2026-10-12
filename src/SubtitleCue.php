@@ -32,8 +32,9 @@ final class SubtitleCue
      */
     public function __construct(float $start = 0, float $end = 0, string|array $lines = "")
     {
-        $this->setStart($start);
-        $this->setEnd($end);
+        // A new cue is in no cue list yet, so it leaves every cache of cue times fresh.
+        $this->start = Timecode::roundToMilliseconds($start);
+        $this->end   = Timecode::roundToMilliseconds($end);
         $this->setLines($lines);
     }
 

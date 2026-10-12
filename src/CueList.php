@@ -24,14 +24,16 @@ final class CueList
 
 
     /**
-     * @param list<SubtitleCue> $cues
+     * @param SubtitleCue[] $cues
      */
     public static function startsInOrder(array $cues): bool
     {
-        for ($index = 1; $index < count($cues); $index++) {
-            if ($cues[$index]->getStart() < $cues[$index - 1]->getStart()) {
+        $previous = null;
+        foreach ($cues as $cue) {
+            if ($previous !== null && $cue->getStart() < $previous->getStart()) {
                 return false;
             }
+            $previous = $cue;
         }
 
         return true;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\UnsupportedFormatException;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\Validation\ValidationRule;
 use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
@@ -94,6 +95,29 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $subtitle->addCue(new SubtitleCue(5, 6, "five"));
 
         $this->assertEquals([new Comment("x", 3)], $subtitle->getComments());
+    }
+
+
+    public function testAddCueSortsCuesThatAStartTimeEditLeftOutOfOrder(): void
+    {
+        $subtitle = Subtitle::load(__DIR__ . "/files/editing/harbour_tour.vtt", Format::WebVtt);
+        $subtitle->getCues()[3]->setStart(19)->setEnd(20);
+
+        $subtitle->addCue(new SubtitleCue(25, 26, "Thank you for joining the tour."));
+
+        $this->assertSame([1.0, 4.0, 6.5, 15.0, 18.0, 19.0, 25.0], array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $subtitle->getCues()));
+        $this->assertSame(["The guide speaks from here", 5], [$subtitle->getComments()[3]->text, $subtitle->getComments()[3]->beforeCueIndex]);
+    }
+
+
+    public function testRemoveCueSortsCuesThatAStartTimeEditLeftOutOfOrder(): void
+    {
+        $subtitle = TestSubtitles::fromTimes([[1, 2], [3, 4], [5, 6]]);
+        $subtitle->getCues()[0]->setStart(10)->setEnd(11);
+
+        $subtitle->removeCue(1);
+
+        $this->assertSame(["text2", "text0"], TestSubtitles::texts($subtitle));
     }
 
 
