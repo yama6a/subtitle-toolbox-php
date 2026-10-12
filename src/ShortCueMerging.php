@@ -27,20 +27,13 @@ trait ShortCueMerging
                 continue;
             }
 
-            $lines = null;
-            foreach ([$index, $index - 1] as $first) {
-                if (isset($cues[$first], $cues[$first + 1])) {
-                    $lines = self::shortCueMergingJoinLines($cues[$first], $cues[$first + 1], $options);
-                }
-                if ($lines !== null) {
-                    break;
-                }
-            }
-            if ($lines === null) {
+            $partner = self::shortCueMergingFindPartner($cues, $index, $options);
+            if ($partner === null) {
                 $index++;
                 continue;
             }
 
+            [$first, $lines] = $partner;
             CueList::join([$cues[$first], $cues[$first + 1]], false, $joinedInto);
             $cues[$first]->setLines($lines);
             array_splice($cues, $first + 1, 1);
@@ -50,6 +43,29 @@ trait ShortCueMerging
         $this->comments         = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
+    }
+
+
+    /**
+     * Returns the index of the first of 2 cues to join and their joined lines, or null.
+     * It tries the cue at $index with the next cue first, then the previous cue with the cue at $index.
+     *
+     * @param list<SubtitleCue> $cues
+     *
+     * @return ?array{int, list<string>}
+     */
+    private static function shortCueMergingFindPartner(array $cues, int $index, MergeShortCuesOptions $options): ?array
+    {
+        foreach ([$index, $index - 1] as $first) {
+            if (isset($cues[$first], $cues[$first + 1])) {
+                $lines = self::shortCueMergingJoinLines($cues[$first], $cues[$first + 1], $options);
+                if ($lines !== null) {
+                    return [$first, $lines];
+                }
+            }
+        }
+
+        return null;
     }
 
 
