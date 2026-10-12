@@ -11,6 +11,7 @@ use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\TextEncoding;
 
 /**
  * Lists the read goldens of the real files under tests/files and renders a parse result as a golden file.
@@ -39,6 +40,7 @@ final class ReadGoldens
         "ttml"                => Format::Ttml,
         "itt"                 => Format::Itt,
         "scc"                 => Format::Scc,
+        "sami"                => Format::Sami,
         "chapters/ffmetadata" => Format::FfMetadataChapters,
         "chapters/ogm"        => Format::OgmChapters,
         "chapters/podcast"    => Format::PodcastChapters,
@@ -132,7 +134,8 @@ final class ReadGoldens
 
 
     /**
-     * MicroDVD files need a frame rate. 3 CSV files have no header row or name their columns in words the parser does not guess.
+     * MicroDVD files need a frame rate. 3 CSV files have no header row or name their columns in words the parser does not
+     * guess. The parser does not detect CP949.
      */
     private static function readOptions(string $path): ReadOptions
     {
@@ -141,6 +144,7 @@ final class ReadGoldens
             $path === "csv/real/dubbing_script.csv"         => new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(start: "Start TC", speaker: "Character"), frameRate: 25)]),
             $path === "csv/real/headerless_frame_times.csv" => new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(start: 0, end: 1, text: 2, header: false), frameRate: 25)]),
             $path === "csv/real/excel_de_semicolon.csv"     => new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(end: "Ende", speaker: "Sprecher"))]),
+            $path === "sami/real/own_korean_cp949.smi"      => new ReadOptions(TextEncoding::Cp949),
             default                                         => new ReadOptions(),
         };
     }

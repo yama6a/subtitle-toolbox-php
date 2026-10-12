@@ -8,6 +8,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\WriteOptions;
@@ -46,6 +47,7 @@ final class WriteGoldens
         "ttml/real/w3c_imsc11_regions.ttml"   => Format::Ttml,
         "itt/real/fcp_23976_styles.itt"       => Format::Itt,
         "scc/real/popon_broadcast_df.scc"     => Format::Scc,
+        "sami/real/multi_language.smi"        => Format::Sami,
     ];
 
     /**
@@ -83,6 +85,7 @@ final class WriteGoldens
         "itt/real/fcp_23976_styles.itt"                   => Format::Itt,
         "scc/real/popon_broadcast_df.scc"                 => Format::Scc,
         "scc/real/rollup_news_ndf.scc"                    => Format::Scc,
+        "sami/real/multi_language.smi"                    => Format::Sami,
         "csv/real/mantas_done_shape.csv"                  => Format::Csv,
     ];
 
@@ -204,6 +207,7 @@ final class WriteGoldens
             "itt"     => [Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 23.976)])],
             "scc"     => [Format::Scc, new WriteOptions()],
             "ndf.scc" => [Format::Scc, new WriteOptions(formats: [new SccWriteOptions(dropFrame: false)])],
+            "smi"     => [Format::Sami, new WriteOptions()],
         ];
     }
 
@@ -218,11 +222,16 @@ final class WriteGoldens
 
 
     /**
-     * MicroDVD files need a frame rate. 23.976 fps is the most common rate of MicroDVD files.
+     * MicroDVD files need a frame rate. 23.976 fps is the most common rate of MicroDVD files. The SAMI file converts its
+     * English class.
      */
     private static function readOptions(string $path): ReadOptions
     {
-        return str_starts_with($path, "microdvd/") ? new ReadOptions(formats: [new MicroDvdReadOptions(23.976)]) : new ReadOptions();
+        return match (true) {
+            str_starts_with($path, "microdvd/")       => new ReadOptions(formats: [new MicroDvdReadOptions(23.976)]),
+            $path === "sami/real/multi_language.smi" => new ReadOptions(formats: [new SamiReadOptions("ENCC")]),
+            default                                   => new ReadOptions(),
+        };
     }
 
 
