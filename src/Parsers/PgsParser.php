@@ -8,6 +8,7 @@ use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Image\PaletteReducer;
 use SubtitleToolbox\Image\PgsColors;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Subtitle;
@@ -260,13 +261,13 @@ final class PgsParser extends SubtitleParser
                 continue;
             }
 
-            $pixels = $this->decodeRle($reference["id"], $object, $colors, $presentation["time"]);
+            $indexes = $this->decodeRle($reference["id"], $object, $presentation["time"]);
             if ($part["width"] === $object["width"] && $part["height"] === $object["height"]) {
-                $part["rgba"] = $pixels;
+                $part["indexes"] = $indexes;
             } else {
-                $part["rgba"] = "";
+                $part["indexes"] = "";
                 for ($row = 0; $row < $part["height"]; $row++) {
-                    $part["rgba"] .= substr($pixels, 4 * (($part["top"] + $row) * $object["width"] + $part["left"]), 4 * $part["width"]);
+                    $part["indexes"] .= substr($indexes, ($part["top"] + $row) * $object["width"] + $part["left"], $part["width"]);
                 }
             }
             $parts[] = $part;
@@ -277,10 +278,19 @@ final class PgsParser extends SubtitleParser
             return null;
         }
 
-        [$x, $y, $width, $height, $rgba] = $this->compose($parts);
+        $screen = [$presentation["screenWidth"], $presentation["screenHeight"], $forced];
+        if (count($parts) === 1) {
+            ["x" => $x, "y" => $y, "width" => $width, "height" => $height, "indexes" => $indexes] = $parts[0];
+            // The palette of the used colors in a fixed order makes the PNG depend on the pixels only, so the check for
+            // a repeated image in endDisplaySet() ignores palette entries that no pixel uses.
+            $used = PaletteReducer::reduceIndexed([["palette" => $colors, "indexes" => $indexes]]);
 
-        return new CueImage(PngEncoder::encode($width, $height, array_values(unpack("N*", $rgba))),
-                            $x, $y, $width, $height, $presentation["screenWidth"], $presentation["screenHeight"], $forced);
+            return new CueImage(PngEncoder::encodeIndexed($width, $height, $used["indexes"], $used["palette"]), $x, $y, $width, $height, ...$screen);
+        }
+
+        [$x, $y, $width, $height, $rgba] = $this->compose($parts, $colors);
+
+        return new CueImage(PngEncoder::encode($width, $height, array_values(unpack("N*", $rgba))), $x, $y, $width, $height, ...$screen);
     }
 
 
@@ -319,8 +329,10 @@ final class PgsParser extends SubtitleParser
     /**
      * Places the parts on one transparent canvas that covers all of them. A later part is drawn over the earlier parts.
      * Returns the position, size and RGBA bytes of the canvas.
+     *
+     * @param list<int> $colors 0xRRGGBBAA by palette entry
      */
-    private function compose(array $parts): array
+    private function compose(array $parts, array $colors): array
     {
         $left   = min(array_column($parts, "x"));
         $top    = min(array_column($parts, "y"));
@@ -330,16 +342,18 @@ final class PgsParser extends SubtitleParser
         $height = $bottom - $top;
         self::checkSize($width, $height, "join the objects of one display set");
 
-        if (count($parts) === 1) {
-            return [$left, $top, $width, $height, $parts[0]["rgba"]];
+        $rgbaOf = [];
+        foreach ($colors as $entry => $color) {
+            $rgbaOf[chr($entry)] = pack("N", $color);
         }
 
         $canvas = array_fill(0, $height, str_repeat("\0\0\0\0", $width));
         foreach ($parts as $index => $part) {
             $overlaps  = array_filter(array_slice($parts, 0, $index), fn (array $earlier): bool => self::overlap($earlier, $part));
+            $rgba      = strtr($part["indexes"], $rgbaOf);
             $rowLength = $part["width"] * 4;
             for ($row = 0; $row < $part["height"]; $row++) {
-                $source = substr($part["rgba"], $row * $rowLength, $rowLength);
+                $source = substr($rgba, $row * $rowLength, $rowLength);
                 $line   = &$canvas[$part["y"] - $top + $row];
                 if ($overlaps === []) {
                     $line = substr_replace($line, $source, ($part["x"] - $left) * 4, $rowLength);
@@ -390,59 +404,56 @@ final class PgsParser extends SubtitleParser
 
 
     /**
-     * Decodes the run-length encoded bitmap to 4 RGBA bytes per pixel, row by row.
-     *
-     * @param array<string, string> $colors
+     * Decodes the run-length encoded bitmap to one palette entry byte per pixel, row by row.
      */
-    private function decodeRle(int $id, array $object, array $colors, float $time): string
+    private function decodeRle(int $id, array $object, float $time): string
     {
-        $rle    = $object["rle"];
-        $length = strlen($rle);
-        $size   = $object["width"] * $object["height"];
-        $pixels = "";
-        $offset = 0;
+        $rle     = $object["rle"];
+        $length  = strlen($rle);
+        $size    = $object["width"] * $object["height"];
+        $indexes = "";
+        $offset  = 0;
         // A run fills up to 16,383 pixels, so the runs after the last pixel of the object could take gigabytes.
-        while ($offset < $length && strlen($pixels) < 4 * $size) {
-            $byte = $rle[$offset++];
-            if ($byte !== "\0") {
-                $pixels .= $colors[$byte];
+        while ($offset < $length && strlen($indexes) < $size) {
+            $literals = strcspn($rle, "\0", $offset);
+            if ($literals > 0) {
+                $indexes .= substr($rle, $offset, $literals);
+                $offset  += $literals;
                 continue;
             }
 
-            $flags = ord($rle[$offset++] ?? "\0");
-            $run   = $flags & 0x3F;
+            $flags   = ord($rle[$offset + 1] ?? "\0");
+            $offset += 2;
+            $run     = $flags & 0x3F;
             if ($flags & 0x40) {
                 $run = ($run << 8) | ord($rle[$offset++] ?? "\0");
             }
-            $color   = $flags & 0x80 ? ($rle[$offset++] ?? "\0") : "\0";
-            $pixels .= str_repeat($colors[$color], $run);
+            $entry    = $flags & 0x80 ? ($rle[$offset++] ?? "\0") : "\0";
+            $indexes .= str_repeat($entry, $run);
         }
 
-        if (strlen($pixels) < 4 * $size) {
-            throw new ParsingException("Object $id at $time s has " . strlen($pixels) / 4 . " pixels of run-length data, " .
+        if (strlen($indexes) < $size) {
+            throw new ParsingException("Object $id at $time s has " . strlen($indexes) . " pixels of run-length data, " .
                                        "but its size of {$object["width"]}x{$object["height"]} needs $size.");
         }
 
-        return substr($pixels, 0, 4 * $size);
+        return substr($indexes, 0, $size);
     }
 
 
     /**
-     * Maps each palette entry byte to 4 RGBA bytes. Entries that the palette does not define are transparent.
+     * Returns the 0xRRGGBBAA color of each of the 256 palette entries.
+     * Entries that the palette does not define are transparent.
      *
      * @param array{float, float} $matrix
-     * @return array<string, string>
+     * @return list<int>
      */
     private function colorMap(array $palette, array $matrix): array
     {
-        $map = array_fill(0, 256, "\0\0\0\0");
+        $colors = array_fill(0, 256, 0);
         foreach ($palette as $entryId => [$luma, $chromaRed, $chromaBlue, $alpha]) {
-            $map[$entryId] = pack("C3", ...PgsColors::toRgb($luma, $chromaRed, $chromaBlue, $matrix)) . chr($alpha);
-        }
-
-        $colors = [];
-        foreach ($map as $entryId => $rgba) {
-            $colors[chr($entryId)] = $rgba;
+            [$red, $green, $blue] = PgsColors::toRgb($luma, $chromaRed, $chromaBlue, $matrix);
+            $colors[$entryId]     = $red << 24 | $green << 16 | $blue << 8 | $alpha;
         }
 
         return $colors;

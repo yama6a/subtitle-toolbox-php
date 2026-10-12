@@ -10,6 +10,7 @@ use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Image\PngDecoder;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Ocr\FakeOcrEngine;
 use SubtitleToolbox\ReadOptions;
@@ -48,25 +49,9 @@ class PgsParserTest extends TestCase
     }
 
 
-    /**
-     * Reads one 0xRRGGBBAA pixel from an 8-bit RGBA PNG without filters, the format PngEncoder writes.
-     */
     private function pixelAt(CueImage $image, int $x, int $y): int
     {
-        $png       = $image->png;
-        $imageData = "";
-        $offset    = 8;
-        while ($offset < strlen($png)) {
-            ["length" => $length, "type" => $type] = unpack("Nlength/a4type", $png, $offset);
-            if ($type === "IDAT") {
-                $imageData .= substr($png, $offset + 8, $length);
-            }
-            $offset += 12 + $length;
-        }
-
-        $scanlines = gzuncompress($imageData);
-
-        return unpack("N", $scanlines, $y * (1 + 4 * $image->width) + 1 + 4 * $x)[1];
+        return PngDecoder::decode($image->png)["pixels"][$y * $image->width + $x];
     }
 
 
@@ -193,6 +178,56 @@ class PgsParserTest extends TestCase
         $this->assertSame(self::WHITE, $this->pixelAt($image, 0, 0));
         $this->assertSame(self::YELLOW_BT709, $this->pixelAt($image, 95, 25));
         $this->assertSame(self::WHITE, $this->pixelAt($image, 199, 59));
+    }
+
+
+    public function testWritesOneObjectAsAnIndexedPngOfTheUsedColors(): void
+    {
+        $cues = $this->parseFile("shapes_1080p.sup")->getCues();
+
+        $png = CueImage::fromCue($cues[0])->png;
+        $this->assertSame([PngDecoder::COLOR_PALETTE, "PLTE", 5 * 3], [ord($png[25]), substr($png, 37, 4), unpack("N", $png, 33)[1]]);
+        $this->assertSame(PngDecoder::COLOR_RGBA, ord(CueImage::fromCue($cues[1])->png[25]));   // 2 objects
+    }
+
+
+    public function testAPaletteUpdateOfAnEntryThatNoPixelUsesKeepsTheCue(): void
+    {
+        $object = ["id" => 0, "window" => 0, "x" => 0, "y" => 0];
+        $writer = (new PgsFixtureWriter())
+            ->presentation(90000, 1920, 1080, 1, PgsFixtureWriter::STATE_EPOCH_START, 0, [$object])
+            ->palette(90000, 0, 0, PgsFixtures::PALETTE)
+            ->object(90000, 0, 0, 4, 2, "\1\1\3\3\3\3\0\0")
+            ->end(90000)
+            ->presentation(180000, 1920, 1080, 2, PgsFixtureWriter::STATE_NORMAL, 0, [$object], paletteUpdate: true)
+            ->palette(180000, 0, 1, [PgsFixtures::BLACK => [126, 128, 128, 255]])
+            ->end(180000)
+            ->presentation(270000, 1920, 1080, 3, PgsFixtureWriter::STATE_NORMAL, 0, [])
+            ->end(270000);
+
+        $cues = (new PgsParser())->parse($writer->bytes(), new ReadOptions())->getCues();
+
+        $this->assertSame([[1.0, 3.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $cues));
+    }
+
+
+    public function testReadsAFull3840x2160ObjectInLessThan64MbOfMemory(): void
+    {
+        $object  = ["id" => 0, "window" => 0, "x" => 0, "y" => 0];
+        $content = (new PgsFixtureWriter())
+            ->presentation(90000, 3840, 2160, 1, PgsFixtureWriter::STATE_EPOCH_START, 0, [$object])
+            ->palette(90000, 0, 0, PgsFixtures::PALETTE)
+            ->object(90000, 0, 0, 3840, 2160, str_repeat("\1", 3840 * 1080) . str_repeat("\3", 3840 * 1080))
+            ->end(90000)
+            ->bytes();
+
+        memory_reset_peak_usage();
+        $before = memory_get_usage();
+        $cues   = (new PgsParser())->parse($content, new ReadOptions())->getCues();
+
+        $this->assertLessThan(64 * 1024 * 1024, memory_get_peak_usage() - $before);
+        ["palette" => $palette, "indexes" => $indexes] = PngDecoder::decodeIndexed(CueImage::fromCue($cues[0])->png);
+        $this->assertSame([self::WHITE, self::YELLOW_BT709], [$palette[ord($indexes[0])], $palette[ord($indexes[-1])]]);
     }
 
 

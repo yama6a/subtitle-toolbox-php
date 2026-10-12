@@ -72,6 +72,33 @@ class PaletteReducerTest extends TestCase
     }
 
 
+    public function testReducesIndexedImagesLikeTheirPixels(): void
+    {
+        // Entries 1 and 3 of the first image have the same color. Both images use 0xFF000000, which is transparent.
+        $first  = ["palette" => [0xFFFFFFFF, 0x11223344, 0xFF000000, 0x11223344], "indexes" => "\1\3\0\2\1\0"];
+        $second = ["palette" => [0x55667788, 0xFF000000, 0xFFFFFFFF], "indexes" => "\0\1\2\2\0\5"];
+
+        $pixels = [];
+        foreach ([$first, $second] as ["palette" => $palette, "indexes" => $indexes]) {
+            foreach (str_split($indexes) as $entry) {
+                $pixels[] = $palette[ord($entry)] ?? 0;
+            }
+        }
+
+        $this->assertSame(PaletteReducer::reduce($pixels), PaletteReducer::reduceIndexed([$first, $second]));
+    }
+
+
+    public function testReduceIndexedReturnsNullForMoreThan256Colors(): void
+    {
+        $first  = ["palette" => range(0x100, 0x100 * 200, 0x100), "indexes" => implode("", array_map("chr", range(0, 199)))];
+        $second = ["palette" => range(0x100 * 201, 0x100 * 260, 0x100), "indexes" => implode("", array_map("chr", range(0, 59)))];
+
+        $this->assertNull(PaletteReducer::reduceIndexed([$first, $second]));
+        $this->assertCount(256, PaletteReducer::reduceIndexed([$first, ["palette" => $second["palette"], "indexes" => substr($second["indexes"], 0, 56)]])["palette"]);
+    }
+
+
     public function testRejectsAPaletteSizeAbove256(): void
     {
         $this->expectException(InvalidArgumentException::class);

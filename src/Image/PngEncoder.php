@@ -34,13 +34,43 @@ final class PngEncoder
             $scanlines .= "\0" . pack("N*", ...array_slice($pixels, $row * $width, $width));
         }
 
+        return self::png(pack("NNCCCCC", $width, $height, 8, PngDecoder::COLOR_RGBA, 0, 0, 0), "", $scanlines, $compress);
+    }
+
+
+    /**
+     * Encodes one palette entry byte per pixel, row-major, as an 8-bit indexed PNG string.
+     *
+     * @param list<int> $palette up to 256 colors as 0xRRGGBBAA
+     *
+     * @internal
+     */
+    public static function encodeIndexed(int $width, int $height, string $indexes, array $palette): string
+    {
+        $colors = "";
+        $alphas = "";
+        foreach ($palette as $color) {
+            $colors .= substr(pack("N", $color), 0, 3);
+            $alphas .= chr($color & 0xFF);
+        }
+        $alphas = rtrim($alphas, "\xFF");
+
+        return self::png(pack("NNCCCCC", $width, $height, 8, PngDecoder::COLOR_PALETTE, 0, 0, 0),
+                         self::chunk("PLTE", $colors) . ($alphas === "" ? "" : self::chunk("tRNS", $alphas)),
+                         "\0" . implode("\0", str_split($indexes, $width)), true);
+    }
+
+
+    private static function png(string $header, string $paletteChunks, string $scanlines, bool $compress): string
+    {
         // Level 6, not 9: a 1,500-cue PGS film parses about 4 times faster, for 2.5 KB instead of 1 KB per image.
         $imageData = $compress && function_exists("gzcompress")
             ? gzcompress($scanlines, 6)
             : self::storeUncompressed($scanlines);
 
         return PngDecoder::SIGNATURE
-            . self::chunk("IHDR", pack("NNCCCCC", $width, $height, 8, PngDecoder::COLOR_RGBA, 0, 0, 0))
+            . self::chunk("IHDR", $header)
+            . $paletteChunks
             . self::chunk("IDAT", $imageData)
             . self::chunk("IEND", "");
     }

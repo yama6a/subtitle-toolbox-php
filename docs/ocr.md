@@ -28,7 +28,7 @@ $subtitle->toString(Format::SubRip, new WriteOptions(skipImageCues: true));   //
 - **Confidence**: `(new OcrRunner($engine))->run($subtitle, 'eng')` does the same as `recognizeText()`. It returns an `OcrReport` whose `texts` hold the `RecognizedText` of each cue by cue index.
 - **Forced flag**: `CueImage::toCue()` sets the forced flag of the cue from the `forced` field of the image. OCR keeps the flag.
 - **PNG**: `PngEncoder::encode($width, $height, $pixels)` makes a PNG from a list of `0xRRGGBBAA` integers. It needs no ext-gd. It compresses with ext-zlib when it is loaded. Otherwise it writes larger, uncompressed PNG files. `PngDecoder::decode($png)` returns the width, the height and the pixels of a PNG without interlacing. It needs ext-zlib.
-- **Size limit**: an image is at most 7,680 pixels wide or high. It has at most 8,294,400 pixels, the pixels of a 3840x2160 frame. A larger PGS object or VobSub bitmap throws `ParsingException`. `new CueImage()` and `PngDecoder::decode()` throw `InvalidArgumentException`. The limits are `CueImage::MAX_SIDE` and `CueImage::MAX_PIXELS`. A full 3840x2160 image needs about 330 MB of PHP memory to encode and decode, so raise `memory_limit` for such files.
+- **Size limit**: an image is at most 7,680 pixels wide or high. It has at most 8,294,400 pixels, the pixels of a 3840x2160 frame. A larger PGS object or VobSub bitmap throws `ParsingException`. `new CueImage()` and `PngDecoder::decode()` throw `InvalidArgumentException`. The limits are `CueImage::MAX_SIDE` and `CueImage::MAX_PIXELS`. `PgsParser` and `PgsFormatter` read and write a full 3840x2160 object in about 35 MB of PHP memory. A VobSub bitmap or an RGBA PNG of that size needs about 330 MB, so raise `memory_limit` for such files.
 - **Text errors**: [common error fixes](text.md#fixing-common-errors) correct OCR errors such as `lt's` for `It's`.
 
 ## PGS
@@ -46,7 +46,7 @@ file_put_contents('movie.synced.sup', $subtitle->toString(Format::Pgs));
 ```
 
 - **Cues**: each display set that shows objects gives one cue. It ends at the next display set. A display set that repeats the same image does not start a new cue. A last cue that no later display set ends lasts [`ReadOptions::$lastCueDuration`](read-options.md).
-- **Image**: one PNG covers all objects of the display set on a transparent background. The parser applies cropping, windows and palette updates. Where objects overlap, the parser draws a later object over the earlier ones with alpha blending. A transparent pixel keeps the pixel below.
+- **Image**: one PNG covers all objects of the display set on a transparent background. It is an 8-bit indexed PNG with the colors that its pixels use. A display set with 2 objects gives an RGBA PNG. The parser applies cropping, windows and palette updates. Where objects overlap, the parser draws a later object over the earlier ones with alpha blending. A transparent pixel keeps the pixel below.
 - **Forced**: `forced` in the image data is true when at least one object of the display set has the forced flag.
 - **Alignment**: an image whose center is in the top third of the screen gets `Alignment::TopCenter`.
 - **Errors**: the parser skips segments of unknown types. It throws `ParsingException` for a segment without the `PG` bytes, a cut-off segment, and a bitmap with too few pixels.
@@ -54,7 +54,7 @@ file_put_contents('movie.synced.sup', $subtitle->toString(Format::Pgs));
 - **Overlaps**: while 2 image cues overlap, the formatter shows both images in the same display sets, as 2 objects. PGS shows at most 2 objects at one time, so a third overlapping cue replaces the cue that started first. A cue that starts at the end of the previous cue replaces it. `PgsParser` reads the overlap back as one cue with one image of both objects.
 - **Colors**: the formatter reduces an image with more than 255 colors. A color channel can change by 1.
 - **Round trip**: a PGS file that `PgsParser` reads and `PgsFormatter` writes gives the same pixels, positions and times to 1 ms. Two cues with the same image, where the second starts at the end of the first, come back as one cue.
-- **Speed**: parsing or writing a 1,500-cue file takes about 20 s on PHP 8.5. The PNG compression takes most of this time.
+- **Speed**: parsing or writing a file of 2,000 cues of 640x90 pixels takes about 3 s on PHP 8.5.
 
 ## VobSub
 VobSub is the subtitle format of DVD rips. It is a pair of files. The `.idx` text file holds the palette, the screen size, the tracks and their timestamps. The `.sub` file holds the bitmaps.
