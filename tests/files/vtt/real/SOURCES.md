@@ -30,3 +30,4 @@
 | `own_color_classes.vtt` | Written for this repository. The 8 color classes of https://www.w3.org/TR/webvtt1/#default-text-color, a background class and a class without a color | MIT |
 | `own_font_colors_from_srt.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `srt/real/own_font_colors.srt`. | MIT |
 | `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |
+| `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |

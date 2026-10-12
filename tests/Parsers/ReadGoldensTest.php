@@ -12,10 +12,10 @@ use SubtitleToolbox\Tests\Support\ReadGoldens;
 use SubtitleToolbox\Tests\Support\TestFiles;
 
 /**
- * Compares the full parse result of each real transcript file with its golden file.
+ * Compares the full parse result of each real file with its golden file.
  * After an intended change, run tests/files/generate-read-goldens.php and review the diff.
  */
-class TranscriptReadGoldensTest extends TestCase
+class ReadGoldensTest extends TestCase
 {
     /**
      * @return array<string, array{string, Format, ReadOptions, string}>

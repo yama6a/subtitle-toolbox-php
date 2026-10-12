@@ -9,3 +9,4 @@
 | `own_ssa_v4.ssa` | Written for this repository in the shape of a SubStation Alpha v4.00 file: CR LF, `[V4 Styles]` with decimal colours, `Marked=` columns, four-digit margins and a `{\a6}` legacy alignment tag. | MIT |
 | `own_style_flags.ass` | Written for this repository in the shape of an Aegisub file with named styles: an italic `Thoughts` style at the top, a bold, underlined and struck-out `Sign` style at the top left, an event with an unknown style name, inline `\an2` and `\i0` that override the style, and `\r` with and without a style name. | MIT |
 | `own_script_info_only.ass` | Written for this repository in the shape of a new, empty Aegisub 3.2 project: UTF-8 BOM, LF, `[Script Info]` and `[V4+ Styles]` with one style, and no `[Events]` section. | MIT |
+| `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
