@@ -274,6 +274,12 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testSentenceCaseWritesTheEnglishIInInvalidUtf8(): void
+    {
+        $this->assertSame(["Caf\xE9 I think"], TestSubtitles::texts(TestSubtitles::fromTexts(["CAF\xE9 I THINK"])->changeCase(CaseMode::Sentence)));
+    }
+
+
     public function testInvalidUtf8CueEndsASentence(): void
     {
         $subtitle = TestSubtitles::fromTexts(["\xFF END.", "NEXT"]);
