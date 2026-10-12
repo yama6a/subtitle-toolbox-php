@@ -402,6 +402,9 @@ class LyricsParserTest extends TestCase
             "mantas-done-lrc"      => [
                 "mantas-done-lrc.lrc", 5, [8.62, 9.64, "Trains run early"], [22.63, 27.63, "Rain comes later"],
             ],
+            "whisper.cpp"          => [
+                "own_whisper_cpp.lrc", 5, [0.0, 3.88, "The train to the coast leaves at seven."], [60.15, 65.15, "Thank you for listening."],
+            ],
             "subsrt-sample"        => [
                 "subsrt-sample.lrc", 6, [12.0, 17.2, "Line 1 about the train"], [29.02, 34.02, "Line 6 about the bread"],
             ],
