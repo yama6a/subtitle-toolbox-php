@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Timing;
 
 use SubtitleToolbox\CueList;
+use SubtitleToolbox\SortedSearch;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
 
@@ -28,7 +29,7 @@ final class LeadInOut
                 continue;
             }
             $end  = $ends[$i] + $leadOut;
-            $next = self::firstAtOrAfter($starts, $ends[$i]);
+            $next = SortedSearch::firstAtOrAfter($starts, $ends[$i]);
             if ($next === $i) {
                 $next++;
             }
@@ -49,7 +50,7 @@ final class LeadInOut
                 continue;
             }
             $start    = max(0, $starts[$i] - $leadIn);
-            $previous = self::firstAtOrAfter($sortedEnd, $starts[$i], true) - 1;
+            $previous = SortedSearch::firstAfter($sortedEnd, $starts[$i]) - 1;
             if ($previous >= 0 && $endOrder[$previous] === $i) {
                 $previous--;
             }
@@ -90,27 +91,5 @@ final class LeadInOut
         }
 
         return [$startInside, $endInside];
-    }
-
-
-    /**
-     * Returns the index of the first value at or after $time, or after $time when $strict, in the ascending $values.
-     *
-     * @param list<float> $values
-     */
-    private static function firstAtOrAfter(array $values, float $time, bool $strict = false): int
-    {
-        $low  = 0;
-        $high = count($values);
-        while ($low < $high) {
-            $middle = intdiv($low + $high, 2);
-            if ($values[$middle] < $time || ($strict && $values[$middle] === $time)) {
-                $low = $middle + 1;
-            } else {
-                $high = $middle;
-            }
-        }
-
-        return $low;
     }
 }
