@@ -55,7 +55,7 @@ final class HlsWebVttSegmenter
 
                 yield $fileName => $active === []
                     ? $empty ??= self::write($fileData, [])
-                    : self::write($fileData, array_intersect_key($shifted, $active));
+                    : self::write($fileData, array_map(fn (int $cueIndex): SubtitleCue => $shifted[$cueIndex], array_keys($active)));
             }
         };
 
