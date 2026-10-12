@@ -1,7 +1,7 @@
 # Cue text
 
 ## Text runs
-Most methods on this page see only the **text runs** of a cue. A text run is the text between tags, with `&lt;`, `&gt;` and `&amp;` decoded. So a search for `&` finds `&amp;`, and a search for `font` finds no markup. The method escapes the result again, so a replacement cannot add tags. A match cannot cross a tag: `Colour` does not match `<i>Col</i>our`.
+Most methods on this page see only the **text runs** of a cue. A text run is the text between tags, with `&lt;`, `&gt;` and `&amp;` decoded. So a search for `&` finds `&amp;`, and a search for `font` finds no markup. The method escapes the result again, so a replacement cannot add tags. Other entities, such as `&nbsp;` or `&#233;`, stay as they are, also after a case change. A match cannot cross a tag: `Colour` does not match `<i>Col</i>our`.
 
 ## Transforms
 ```php
