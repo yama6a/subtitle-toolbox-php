@@ -25,7 +25,16 @@ TODO #962
 - `retime` exits with code 2 as an unknown command.
 - `retime` with no edit option exited with code 2. `convert` without an edit option copies the file.
 
-TODO #964
+Chapter format names:
+
+| 4.x | 5.0 |
+|:--- |:--- |
+| `--to ytchapter` | `--to youtube-chapters` |
+| `--to podcast` | `--to podcast-chapters` |
+| `--to ogm` | `--to ogm-chapters` |
+
+- `--from` and `--to` no longer take `ytchapter`, `podcast`, `ogm` and `ffmeta`. The old names exit with code 2 and the message `Unknown format`. The message points to `subtitle-toolbox formats`, which lists the valid names.
+- `ffmeta` still works, because it is the file extension of `ffmeta-chapters`. Use `--to ffmeta-chapters` in scripts.
 
 ## Output file extension
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
@@ -168,19 +169,24 @@ class ApplicationTest extends TestCase
     }
 
 
-    public function testOneXChapterFormatNamesStillWorkAsFromAndTo(): void
+    #[DataProvider("removedChapterAliases")]
+    public function testTheOneXChapterAliasesAreUnknownFormats(string $alias): void
     {
-        $files = __DIR__ . "/../files/chapters/";
-        foreach ([
-            "ytchapter" => ["youtube/real/video_description.txt", Format::YouTubeChapters],
-            "podcast"   => ["podcast/real/spec_basic_example.json", Format::PodcastChapters],
-            "ogm"       => ["ogm/real/mkvextract_simple.txt", Format::OgmChapters],
-            "ffmeta"    => ["ffmetadata/real/m4b_audiobook.ffmeta", Format::FfMetadataChapters],
-        ] as $alias => [$file, $format]) {
-            $expected = Subtitle::load($files . $file, $format)->toString($format);
-            $this->assertSame([0, $expected, ""], self::runApplication(["convert", $files . $file, "--from", $alias, "--to", $alias]), $alias);
-        }
+        $input = __DIR__ . "/../files/chapters/ogm/real/mkvextract_simple.txt";
+        foreach ([["--from", $alias], ["--from", "ogm-chapters", "--to", $alias]] as $options) {
+            [$code, $stdout, $stderr] = self::runApplication(["convert", $input, ...$options]);
 
-        $this->assertNull(Format::tryFrom("ytchapter"));
+            $this->assertSame([2, ""], [$code, $stdout]);
+            $this->assertStringContainsString("Unknown format \"$alias\". Run \"subtitle-toolbox formats\" for the list.", $stderr);
+        }
+    }
+
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function removedChapterAliases(): array
+    {
+        return ["ytchapter" => ["ytchapter"], "podcast" => ["podcast"], "ogm" => ["ogm"]];
     }
 }

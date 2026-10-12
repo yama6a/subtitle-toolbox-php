@@ -67,7 +67,7 @@ php subtitle-toolbox.phar --version
 ## Input and output
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension. The tool counts the inputs after it expands directories and globs.
 - **Positional files**: only inputs with the same role, so their order does not matter. A file with another role takes an option, for example `sync --reference FILE` and `dual --primary FILE --secondary FILE`. `diff OLD NEW` keeps 2 positional files, as `diff` and `git diff` do.
-- **Input format**: `--from`. Without it, the tool detects the format from the content. When that fails, it uses the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta-chapters`. `--from` and `--to` also take the aliases `ytchapter`, `podcast`, `ogm` and `ffmeta`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
+- **Input format**: `--from`. Without it, the tool detects the format from the content. When that fails, it uses the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta-chapters`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
 - **Output**: never positional. `convert`, `sync`, `translate` and `dual` write one input to standard output, or to the file of `-o FILE` (`--output FILE`). Several inputs need `--output-dir DIR`. `hls` always needs `--output-dir`.
 
 | Call | Writes |
