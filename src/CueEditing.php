@@ -19,15 +19,12 @@ trait CueEditing
      */
     public function merge(Subtitle $other, float $offset = 0): self
     {
-        $ownAnchors   = CommentAnchors::of($this->cues, $this->comments);
-        $otherCues    = [];
-        $otherAnchors = [];
+        $ownAnchors = CommentAnchors::of($this->cues, $this->comments);
+        $otherCues  = [];
         foreach ($other->getCues() as $index => $cue) {
             $otherCues[$index] = (clone $cue)->mapTimes(fn (float $time): float => $time + $offset);
         }
-        foreach ($other->comments as $comment) {
-            $otherAnchors[] = CommentAnchors::anchor($otherCues, $comment->beforeCueIndex);
-        }
+        $otherAnchors = CommentAnchors::of($otherCues, $other->comments);
 
         $firstOtherCue = reset($otherCues) ?: null;
         foreach ($ownAnchors as $commentIndex => $anchor) {
