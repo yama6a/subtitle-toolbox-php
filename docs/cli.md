@@ -349,14 +349,25 @@ vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.timed.srt --vide
 ## Validate
 `--preset` takes `netflix-en` or `bbc`, see [validation.md](validation.md#presets). A rule option overrides the value of the preset. `--video-fps` sets the frame rate for the 2-frame gap of `netflix-en`.
 
-| Option | Rule |
-|:--- |:--- |
-| `--max-cps`, `--max-cpl`, `--max-lines` | `maxCharactersPerSecond`, `maxCharactersPerLine`, `maxLinesPerCue` |
-| `--min-duration`, `--max-duration`, `--min-gap` | `minDuration`, `maxDuration`, `minGap`. Each value is a [time](#times) |
-| `--max-wpm`, `--min-seconds-per-word` | `maxWordsPerMinute`, `minSecondsPerWord`. `--min-seconds-per-word` is a [time](#times) |
-| `--max-speakers`, `--dialogue-dash STYLE`, `--allowed-characters LIST` | `maxSpeakersPerCue`, `dialogueDashStyle`, `allowedCharacters` |
-| `--check-overlaps`, `--check-empty-cues`, `--check-double-spaces` | `noOverlap`, `noEmptyCues`, `noDoubleSpaces` |
-| `--check-leading-or-trailing-spaces`, `--check-unbalanced-tags`, `--check-all-caps-lines` | `noLeadingOrTrailingSpaces`, `noUnbalancedTags`, `noAllCapsLines` |
+| Option | Rule | Fix with `convert` |
+|:--- |:--- |:--- |
+| `--max-cps` | `maxCharactersPerSecond` | no option |
+| `--max-cpl` | `maxCharactersPerLine` | `--structure-wrap --structure-max-cpl` |
+| `--max-lines` | `maxLinesPerCue` | `--structure-wrap --structure-max-lines` |
+| `--min-duration` | `minDuration`. The value is a [time](#times) | `--timing-min-duration` |
+| `--max-duration` | `maxDuration`. The value is a [time](#times) | `--timing-max-duration` |
+| `--min-gap` | `minGap`. The value is a [time](#times) | `--timing-fix-overlaps --timing-min-gap` |
+| `--max-wpm` | `maxWordsPerMinute` | no option |
+| `--min-seconds-per-word` | `minSecondsPerWord`. The value is a [time](#times) | no option |
+| `--max-speakers` | `maxSpeakersPerCue` | no option |
+| `--dialogue-dash STYLE` | `dialogueDashStyle` | `--errors-fix`, which writes the style `- ` |
+| `--allowed-characters LIST` | `allowedCharacters` | no option |
+| `--check-overlaps` | `noOverlap` | `--timing-fix-overlaps` |
+| `--check-empty-cues` | `noEmptyCues` | no option |
+| `--check-double-spaces` | `noDoubleSpaces` | `--errors-fix` |
+| `--check-leading-or-trailing-spaces` | `noLeadingOrTrailingSpaces` | no option |
+| `--check-unbalanced-tags` | `noUnbalancedTags` | `--errors-fix` |
+| `--check-all-caps-lines` | `noAllCapsLines` | `--case sentence` or `--case lower` |
 
 ```sh
 vendor/bin/subtitle-toolbox validate movie.srt --preset bbc --check-unbalanced-tags --dialogue-dash '- '
