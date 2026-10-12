@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Diff;
 
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
@@ -269,5 +270,38 @@ class SubtitleDiffTest extends TestCase
 
         $this->assertLessThan(5, microtime(true) - $start);
         $this->assertSame(array_map(fn (int $index): array => [CueDifferenceKind::TimingChanged, $index, $index], range(0, 2999)), $summary);
+    }
+
+
+    /** @return array<string, array{float, bool}> */
+    public static function nearlyEqualCuesWithoutOverlap(): array
+    {
+        return [
+            "4 s earlier, with a long cue" => [-4, true],
+            "4 s later, with a long cue"   => [4, true],
+            "4 s earlier"                  => [-4, false],
+            "4 s later"                    => [4, false],
+        ];
+    }
+
+
+    #[DataProvider("nearlyEqualCuesWithoutOverlap")]
+    public function testLongStretchPairsNoNearlyEqualCueWithoutTimeOverlap(float $shift, bool $longCue): void
+    {
+        $oldCues = [];
+        $newCues = $longCue ? [[0, 6, "Opening title"]] : [];
+        for ($index = 1; $index <= 250; $index++) {
+            $oldCues[] = [$index * 10, $index * 10 + 2, "line number $index"];
+            $newCues[] = [$index * 10, $index * 10 + 2, "LINE NUMBER $index"];
+        }
+        $oldCues[] = [1005, 1007, "The ferry leaves at noon."];
+        $newCues[] = [1005 + $shift, 1007 + $shift, "The ferry leaves at noon!"];
+
+        $old     = TestSubtitles::fromCues($oldCues);
+        $new     = TestSubtitles::fromCues($newCues);
+        $ferry   = fn (CueDifference $difference): bool => str_starts_with(($difference->oldCue ?? $difference->newCue)->getText(), "The ferry");
+        $changes = array_values(array_filter(SubtitleDiff::compare($old, $new), $ferry));
+
+        $this->assertSame([CueDifferenceKind::Removed, CueDifferenceKind::Added], array_map(fn (CueDifference $d): CueDifferenceKind => $d->kind, $changes));
     }
 }

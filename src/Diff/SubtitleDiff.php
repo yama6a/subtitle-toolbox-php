@@ -244,7 +244,9 @@ final class SubtitleDiff
             foreach ($timeLists as [$order, $sortedStarts, $longest]) {
                 for ($k = SortedSearch::firstAtOrAfter($sortedStarts, $this->oldStarts[$i] - $longest);
                      $k < count($sortedStarts) && $sortedStarts[$k] < $this->oldEnds[$i]; $k++) {
-                    $partners[$order[$k]] = true;
+                    if ($this->newEnds[$order[$k]] > $this->oldStarts[$i]) {
+                        $partners[$order[$k]] = true;
+                    }
                 }
             }
 
