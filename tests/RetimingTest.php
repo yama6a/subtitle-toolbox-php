@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
+use Closure;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use SubtitleToolbox\Tests\Support\TestSubtitles;
@@ -231,5 +232,38 @@ class RetimingTest extends \PHPUnit\Framework\TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The new time of a sync point must be a finite number, got NAN.");
         new SyncPoint(1, NAN);
+    }
+
+
+    /**
+     * @return array<string, array{Closure(Subtitle): mixed, string}>
+     */
+    public static function retimingsBeyondTheTimeLimit(): array
+    {
+        return [
+            "scale"                 => [fn (Subtitle $s) => $s->scale(1e300), "The retimed cue 1 would end at 8.0E+300 s. Cue times must be below 100000 hours."],
+            "frame rate"            => [fn (Subtitle $s) => $s->convertFrameRate(1, 1e-300), "The retimed cue 1 would end at 8.0E+300 s. Cue times must be below 100000 hours."],
+            "shift"                 => [fn (Subtitle $s) => $s->shift(360000000), "The retimed cue 1 would end at 360000008 s. Cue times must be below 100000 hours."],
+            "shift from a time"     => [fn (Subtitle $s) => $s->shift(359998500, 1000), "The retimed cue 5 would end at 360000003 s. Cue times must be below 100000 hours."],
+            "sync by 2 points"      => [fn (Subtitle $s) => $s->syncByPoints([new SyncPoint(5, 5), new SyncPoint(10, 2000000)]),
+                                        "The retimed cue 4 would end at 478798808 s. Cue times must be below 100000 hours."],
+            "shift not finite"      => [fn (Subtitle $s) => $s->shift(INF), "The shift must be a finite number of seconds, got INF."],
+        ];
+    }
+
+
+    #[DataProvider("retimingsBeyondTheTimeLimit")]
+    public function testRetimingBeyondTheTimeLimitThrowsAndKeepsTheTimes(Closure $retime, string $message): void
+    {
+        $subtitle = Subtitle::load(self::EDITING . "own_ferry_drift.vtt", Format::WebVtt);
+        $before   = $subtitle->toString(Format::WebVtt);
+
+        try {
+            $retime($subtitle);
+            $this->fail("No exception.");
+        } catch (InvalidArgumentException $exception) {
+            $this->assertSame($message, $exception->getMessage());
+        }
+        $this->assertSame($before, $subtitle->toString(Format::WebVtt));
     }
 }

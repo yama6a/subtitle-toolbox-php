@@ -222,6 +222,15 @@ class BinaryTimingTest extends CliTestCase
     }
 
 
+    public function testRetimeBeyondTheTimeLimitFailsTheFileWithoutAWarning(): void
+    {
+        $message = "trip.srt: The retimed cue 1 would end at 3.0E+300 s. Cue times must be below 100000 hours.\n";
+
+        $this->assertSame([3, "", $message], $this->runCli(["retime", "trip.srt", "--scale", "1e300"]));
+        $this->assertSame([3, "", $message], $this->runCli(["retime", "trip.srt", "--from-fps", "1", "--to-fps", "1e-300"]));
+    }
+
+
     public function testRetimeShiftAfterSortsAMovedCueBeforeTheEarlierCues(): void
     {
         copy(self::FILES . "editing/harbour_tour.vtt", "$this->dir/harbour.vtt");
