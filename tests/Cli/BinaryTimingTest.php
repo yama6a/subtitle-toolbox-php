@@ -210,6 +210,15 @@ class BinaryTimingTest extends CliTestCase
     }
 
 
+    public function testRetimeShiftAfterSortsAMovedCueBeforeTheEarlierCues(): void
+    {
+        copy(self::FILES . "editing/harbour_tour.vtt", "$this->dir/harbour.vtt");
+        $expected = (string)file_get_contents(self::FILES . "editing/harbour_tour_shifted_back.vtt");
+
+        $this->assertSame([0, $expected, ""], $this->runBinary(["retime", "harbour.vtt", "--shift", "-12.5", "--shift-after", "17.5"]));
+    }
+
+
     public function testRetimeShiftBefore(): void
     {
         copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");

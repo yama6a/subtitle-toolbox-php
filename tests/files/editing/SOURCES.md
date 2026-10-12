@@ -10,6 +10,7 @@
 | `harbour_tour_split.vtt` | Written for this repository. Expected `WebVttFormatter` output after `splitCue(2, 9.5, 1)`. | MIT |
 | `harbour_tour_joined.vtt` | Written for this repository. Expected `WebVttFormatter` output after `joinCues(3, 4)`. | MIT |
 | `harbour_tour_slice.vtt` | Written for this repository. Expected `WebVttFormatter` output after `withSlice(6, 16, true)`. | MIT |
+| `harbour_tour_shifted_back.vtt` | Written for this repository. Expected `WebVttFormatter` output after `shift(-12.5, 17.5)`. The last cue moves before the third cue. | MIT |
 | `own_duplicate_cues.srt` | Written for this repository. SubRip with an exact duplicate, an overlapping duplicate, a touching duplicate and a same-text cue 0.5 s later. | MIT |
 | `own_duplicate_cues_deduplicated.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_duplicate_cues.srt` after `removeDuplicateCues()`. | MIT |
 | `own_glow_duplicates.ass` | Written for this repository. ASS with a `Glow` event on layer 0 under a `Default` event on layer 1 with the same text and times, and 2 touching `Default` events with the same text. | MIT |

@@ -14,6 +14,7 @@ trait Retiming
     /**
      * Shifts the cues that start at or after $fromTime and before $toTime by $seconds. A null bound has no limit.
      * The start time of a cue decides, so a cue across $toTime moves as a whole.
+     * The cues are then sorted by start time again, and each comment stays before its cue.
      * The word timestamps in the cue text move with the cue. A time that becomes negative becomes 0, and the cue stays.
      *
      * @throws InvalidArgumentException when $toTime is not after $fromTime.
@@ -24,7 +25,9 @@ trait Retiming
             throw new InvalidArgumentException("The end time of the shift must be after its start time, got $fromTime to $toTime.");
         }
 
-        return $this->retimingApplyLinearCorrection(1, $seconds, $fromTime, $toTime);
+        $this->retimingApplyLinearCorrection(1, $seconds, $fromTime, $toTime);
+
+        return $fromTime === null && $toTime === null ? $this : $this->reIndexCues();
     }
 
 

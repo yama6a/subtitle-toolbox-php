@@ -26,7 +26,7 @@ $subtitle->syncByPoints([                            // 10 s becomes 12 s, 600 s
 ```
 
 - **Negative times**: a start or end time that becomes negative becomes 0. The cue stays in the subtitle.
-- **Shift range**: the start time of a cue decides if `shift()` moves it. So a cue that starts before `$toTime` and ends after it moves as a whole. A cue that starts before `$fromTime` stays. `$toTime` must be after `$fromTime`, else `shift()` throws `InvalidArgumentException`.
+- **Shift range**: the start time of a cue decides if `shift()` moves it. So a cue that starts before `$toTime` and ends after it moves as a whole. A cue that starts before `$fromTime` stays. `$toTime` must be after `$fromTime`, else `shift()` throws `InvalidArgumentException`. A cue that moves before an earlier cue changes its place in the list. Its comments move with it.
 - **Sync by points**: `syncByPoints()` moves each old time to its new time. Between 2 points it corrects the times linearly. Before the first point and after the last point it continues the correction of the nearest 2 points. 1 point shifts all cues.
 - **Point order**: the old and new times must both increase from point to point. Else `syncByPoints()` throws `InvalidArgumentException`.
 - **Cue across a point**: each start, end and word timestamp moves by the segment that holds it. So a cue across a point keeps its times in step with the speech.
