@@ -195,19 +195,38 @@ final class Markup
     /**
      * Escapes a changed text run as escapeText() does.
      * It keeps & and > unescaped where the raw form $raw has them unescaped, as WebVTT text does.
-     * An & before an entity name gets escaped.
+     * An entity such as &nbsp; keeps the form of $raw when $raw holds it as an entity, also after a case change.
+     * Otherwise its & gets escaped.
      *
      * @internal
      */
     public static function escapeTextLike(string $text, string $raw): string
     {
-        $entity = '(?=' . self::ENTITY . ')&';
-        $text   = preg_match("/&(?!lt;|gt;|amp;)/", $raw) === 1
-            ? (preg_replace("/$entity/", "&amp;", $text) ?? str_replace("&", "&amp;", $text))
-            : str_replace("&", "&amp;", $text);
-        $text   = str_replace("<", "&lt;", $text);
+        $bare = str_contains(preg_replace('/' . self::ENTITY . '/', "", $raw), "&");
+        $text = preg_replace_callback('/' . self::ENTITY . '|&/', fn (array $match): string => match (true) {
+            $match[0] !== "&" => self::rawEntity($match[0], $raw) ?? "&amp;" . substr($match[0], 1),
+            $bare             => "&",
+            default           => "&amp;",
+        }, $text);
+        $text = str_replace("<", "&lt;", $text);
 
         return str_contains($raw, ">") ? $text : str_replace(">", "&gt;", $text);
+    }
+
+
+    /**
+     * Returns the form in which $raw holds $entity as an entity, such as &nbsp; for &NBSP;, or null when $raw holds it
+     * as escaped text such as &amp;nbsp;. Decoded text holds &lt;, &gt; and &amp; only as text.
+     */
+    private static function rawEntity(string $entity, string $raw): ?string
+    {
+        if (in_array(strtolower($entity), ["&lt;", "&gt;", "&amp;"], true) || stripos($raw, "&amp;" . substr($entity, 1)) !== false) {
+            return null;
+        }
+        preg_match_all('/' . self::ENTITY . '/', $raw, $matches);
+        $forms = array_values(array_unique(array_filter($matches[0], fn (string $form): bool => strcasecmp($form, $entity) === 0)));
+
+        return in_array($entity, $forms, true) ? $entity : (count($forms) === 1 ? $forms[0] : null);
     }
 
 

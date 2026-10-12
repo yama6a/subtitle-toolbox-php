@@ -280,6 +280,32 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    /**
+     * @return array<string, array{string, \Closure(Subtitle): Subtitle, string}>
+     */
+    public static function entityProvider(): array
+    {
+        return [
+            "upper keeps &nbsp;"          => ["yes &nbsp; x", fn (Subtitle $s): Subtitle => $s->changeCase(CaseMode::Upper), "YES &nbsp; X"],
+            "upper keeps &#233;"          => ["yes &#233; x", fn (Subtitle $s): Subtitle => $s->changeCase(CaseMode::Upper), "YES &#233; X"],
+            "upper keeps &amp; escaped"   => ["yes &amp; &nbsp; x", fn (Subtitle $s): Subtitle => $s->changeCase(CaseMode::Upper), "YES &amp; &nbsp; X"],
+            "sentence case pronoun I"     => ["Yes, i &nbsp; x", fn (Subtitle $s): Subtitle => $s->changeCase(CaseMode::Sentence), "Yes, I &nbsp; x"],
+            "escaped text changes case"   => ["Q&amp;A; FLUX", fn (Subtitle $s): Subtitle => $s->changeCase(CaseMode::Lower), "q&amp;a; flux"],
+            "mapText keeps &nbsp;"        => ["x &nbsp; x", fn (Subtitle $s): Subtitle => $s->mapText(fn (string $text): string => str_replace("x", "y", $text)), "y &nbsp; y"],
+        ];
+    }
+
+
+    /**
+     * @param \Closure(Subtitle): Subtitle $change
+     */
+    #[DataProvider("entityProvider")]
+    public function testEntitiesStayInAChangedTextRun(string $line, \Closure $change, string $expected): void
+    {
+        $this->assertSame([$expected], TestSubtitles::texts($change(TestSubtitles::fromTexts([$line]))));
+    }
+
+
     public function testInvalidUtf8CueEndsASentence(): void
     {
         $subtitle = TestSubtitles::fromTexts(["\xFF END.", "NEXT"]);
