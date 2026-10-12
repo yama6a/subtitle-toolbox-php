@@ -29,7 +29,7 @@ class BinaryInputTest extends CliTestCase
     {
         return [
             "--input-fps 0" => [["convert", "frames.sub", "--input-fps", "0", "--to", "srt", "-o", "-"], "convert", "The option --input-fps must be greater than 0."],
-            "--track x"     => [["convert", "movie.mkv", "--to", "srt", "--track", "x"], "convert", "The option --track needs a whole number greater than 0, got \"x\"."],
+            "--track x"     => [["convert", "movie.mkv", "--to", "srt", "--track", "x"], "convert", "The option --track needs a whole number of 1 or more, got \"x\"."],
         ];
     }
 

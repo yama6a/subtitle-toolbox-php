@@ -372,6 +372,8 @@ class BinaryEditTest extends CliTestCase
 
         $this->assertSame([0, file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt"), ""],
                           $this->runCli(["convert", "optional.srt", "--to", "srt", "-o", "-", "--errors-fix", "--language", "en", "--errors-enable", $enable]));
+        $this->assertSame([0, file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt"), ""],
+                          $this->runCli(["convert", "optional.srt", "--to", "srt", "-o", "-", "--errors-fix", "--language", "en", "--errors-enable", strtoupper($enable)]));
         $this->assertSame([0, file_get_contents(self::FILES . "fixing/optional-rules.srt"), ""],
                           $this->runCli(["convert", "optional.srt", "--to", "srt", "-o", "-", "--errors-fix", "--language", "en", "--no-bom"]));
         $this->assertSame(self::usageError("convert", "Unknown rule \"dialogOnOneLine\" in --errors-enable. The valid names are " . implode(", ", $names) . "."),
@@ -458,7 +460,7 @@ class BinaryEditTest extends CliTestCase
             "--karaoke-words"               => [[...$song, "--karaoke", "--karaoke-words", "2"], "convert", "Unknown option --karaoke-words."],
             "--karaoke-tag"                 => [[...$song, "--karaoke-tag", "k"], "convert", "Unknown option --karaoke-tag."],
             "--structure-max-cpl 0"         => [[...$trip, "--structure-wrap", "--structure-max-cpl", "0"], "convert",
-                                                "The option --structure-max-cpl needs a whole number greater than 0, got \"0\"."],
+                                                "The option --structure-max-cpl needs a whole number of 1 or more, got \"0\"."],
             "--timing-min-gap without fix"  => [[...$trip, "--timing-min-gap", "-1"], "convert",
                                                 "Pass --timing-fix-overlaps, --timing-min-duration, --timing-lead-in or --timing-lead-out with --timing-min-gap."],
             "max cpl without fix"           => [[...$trip, "--structure-max-cpl", "30"], "convert", "$wrapLimits --structure-max-cpl."],
@@ -467,7 +469,7 @@ class BinaryEditTest extends CliTestCase
             "min gap without fix"           => [[...$trip, "--timing-min-gap", "0.1", "--structure-wrap"], "convert",
                                                 "Pass --timing-fix-overlaps, --timing-min-duration, --timing-lead-in or --timing-lead-out with --timing-min-gap."],
             "merge short --structure-max-cpl 0" => [["convert", "speech.srt", "--to", "srt", "-o", "-", "--structure-merge-short", "--structure-max-cpl", "0"], "convert",
-                                                    "The option --structure-max-cpl needs a whole number greater than 0, got \"0\"."],
+                                                    "The option --structure-max-cpl needs a whole number of 1 or more, got \"0\"."],
             "--structure-max-word-gap without resegment" => [["convert", "lecture.json", "--to", "srt", "-o", "-", "--timing-fix-overlaps", "--structure-max-word-gap", "1"],
                                                              "convert", "Pass --structure-resegment with --structure-max-word-gap."],
             "--sdh-brackets {"              => [[...$trip, "--sdh", "--sdh-brackets", "{"], "convert",
