@@ -15,6 +15,7 @@ class FormatDetectorTest extends TestCase
 
     private const FORMATS = [
         "ass"      => Format::Ass,
+        "dcp"      => Format::Dcp,
         "html"     => Format::HtmlTranscript,
         "json"     => Format::Json,
         "lrc"      => Format::Lyrics,

@@ -25,6 +25,7 @@ final class FormatDetector
     private const SIGNATURES = [
         Format::WebVtt->value   => '/\AWEBVTT(?:[ \t\n]|\z)/',
         Format::Ttml->value     => '/\A' . self::XML_PROLOG . '<(?:[A-Za-z_][\w.-]*:)?tt[\s>\/]/s',
+        Format::Dcp->value      => '/\A' . self::XML_PROLOG . '<(?:DCSubtitle|(?:[A-Za-z_][\w.-]*:)?SubtitleReel)[\s>\/]/s',
         Format::Sami->value     => '/\A' . self::XML_PROLOG . '<SAMI[\s>]/is',
         Format::Ass->value      => '/\A\[Script Info\][ \t]*$/im',   // before LRC, which also starts with [
         Format::MpSub->value    => '/\A(?=[A-Z]+=).*?^FORMAT=/ms',

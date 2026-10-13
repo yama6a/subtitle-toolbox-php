@@ -42,6 +42,7 @@ use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\AwsTranscribeParser;
 use SubtitleToolbox\Parsers\CsvParser;
+use SubtitleToolbox\Parsers\DcpParser;
 use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
@@ -108,6 +109,7 @@ final class FormatRegistry
         Format::SpruceStl->value          => [SpruceStlParser::class, SpruceStlFormatter::class, ["stl"]],
         Format::SubViewer->value          => [SubViewerParser::class, SubViewerFormatter::class, ["sub"]],
         Format::Ttml->value               => [TtmlParser::class, TtmlFormatter::class, ["ttml", "dfxp", "xml"]],
+        Format::Dcp->value                => [DcpParser::class, null, ["xml"]],
         Format::Tsv->value                => [CsvParser::class, CsvFormatter::class, ["tsv"]],
         Format::PlainText->value          => [null, PlainTextFormatter::class, ["txt"]],
         Format::Mpl2->value               => [Mpl2Parser::class, Mpl2Formatter::class, ["txt"]],

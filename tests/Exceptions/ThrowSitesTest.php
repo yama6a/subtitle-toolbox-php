@@ -57,6 +57,7 @@ use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\AwsTranscribeParser;
 use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\CsvParser;
+use SubtitleToolbox\Parsers\DcpParser;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\Options\MccReadOptions;
 use SubtitleToolbox\Parsers\DeepgramParser;
@@ -509,6 +510,10 @@ class ThrowSitesTest extends TestCase
             "Parsers/CsvParser.php: bad time"               => [fn () => (new CsvParser())->parse("start,text\nsoon,a", new ReadOptions()), ...$parsing],
             "Parsers/CsvParser.php: missing column"         => [fn () => (new CsvParser())->parse("start,end\n1,2", new ReadOptions()), ...$parsing],
             "Parsers/CsvParser.php: too many columns"       => [fn () => (new CsvParser())->parse(str_repeat("a,", 1000) . "a", new ReadOptions()), ...$parsing],
+            "Parsers/DcpParser.php: no XML"                 => [fn () => (new DcpParser())->parse("<DCSubtitle>", new ReadOptions()), ...$parsing],
+            "Parsers/DcpParser.php: other root"             => [fn () => (new DcpParser())->parse("<tt/>", new ReadOptions()), ...$parsing],
+            "Parsers/DcpParser.php: image"                  => [fn () => (new DcpParser())->parse("<DCSubtitle><Subtitle TimeIn=\"00:00:01:000\" TimeOut=\"00:00:02:000\"><Image>1.png</Image></Subtitle></DCSubtitle>", new ReadOptions()), ...$parsing],
+            "Parsers/DcpParser.php: bad time"               => [fn () => (new DcpParser())->parse("<DCSubtitle><Subtitle TimeIn=\"1s\" TimeOut=\"00:00:02:000\"><Text>a</Text></Subtitle></DCSubtitle>", new ReadOptions()), ...$parsing],
             "Parsers/DeepgramParser.php: no channels"       => [fn () => (new DeepgramParser())->parse('{"metadata": {}}', new ReadOptions()), ...$parsing],
             "Parsers/EbuStlParser.php: no GSI block"        => [fn () => (new EbuStlParser())->parse("STL", new ReadOptions()), ...$parsing],
             "Parsers/EbuStlParser.php: partial TTI block"   => [fn () => (new EbuStlParser())->parse(str_repeat(" ", 1025), new ReadOptions()), ...$parsing],

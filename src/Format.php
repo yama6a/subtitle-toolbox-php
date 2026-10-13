@@ -32,6 +32,7 @@ enum Format: string
     case SpruceStl          = "spruce-stl";
     case SubViewer          = "subviewer";
     case Ttml               = "ttml";
+    case Dcp                = "dcp";
     case Tsv                = "tsv";
     case PlainText          = "txt";
     case Mpl2               = "mpl2";

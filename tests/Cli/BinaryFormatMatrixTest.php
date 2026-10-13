@@ -35,6 +35,7 @@ class BinaryFormatMatrixTest extends CliTestCase
         "spruce-stl"         => "spruce-stl/real/bakery_with_header.stl",
         "subviewer"          => "subviewer/real/subviewer2_crlf.sub",
         "ttml"               => "ttml/real/bbc_ebu_tt_d.ttml",
+        "dcp"                => "dcp/real/dcpomatic_interop_shape.xml",
         "tsv"                => "csv/real/sheets_export.tsv",
         "mpl2"               => "mpl2/real/subtitle_edit_shape.txt",
         "tmplayer"           => "tmplayer/real/tmplayer_multiline_bom.txt",

@@ -40,6 +40,7 @@ final class ReadGoldens
         "csv"                 => Format::Csv,
         "json"                => Format::Json,
         "ttml"                => Format::Ttml,
+        "dcp"                 => Format::Dcp,
         "itt"                 => Format::Itt,
         "scc"                 => Format::Scc,
         "sami"                => Format::Sami,
