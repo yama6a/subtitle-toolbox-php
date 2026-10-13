@@ -34,6 +34,14 @@ class ShortCueMergingTest extends TestCase
     }
 
 
+    public function testMergedLinesGetOneRightToLeftEmbedding(): void
+    {
+        $subtitle = TestSubtitles::fromCues([new SubtitleCue(1, 1.5, "שלום."), new SubtitleCue(1.6, 2.4, "מה שלומך?")])->fixRightToLeft()->mergeShortCues();
+
+        $this->assertSame(["\u{202B}שלום. מה שלומך?\u{202C}"], TestSubtitles::texts($subtitle));
+    }
+
+
     public function testRealSpeechToTextFile(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_speech_to_text.srt"), Format::SubRip);

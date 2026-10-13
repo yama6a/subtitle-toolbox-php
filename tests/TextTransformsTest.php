@@ -326,6 +326,24 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testEachWrappedLineGetsItsOwnRightToLeftEmbedding(): void
+    {
+        $golden = file_get_contents(self::FILES . "own_rtl_long_wrapped.srt");
+
+        $this->assertSame($golden, Subtitle::load(self::FILES . "own_rtl_long.srt", Format::SubRip)->fixRightToLeft()->wrapLines(20)->toString(Format::SubRip));
+        $this->assertSame($golden, Subtitle::load(self::FILES . "own_rtl_long.srt", Format::SubRip)->wrapLines(20)->fixRightToLeft()->toString(Format::SubRip));
+    }
+
+
+    public function testEachUnwrappedLineGetsItsOwnRightToLeftEmbedding(): void
+    {
+        $subtitle = Subtitle::load(self::FILES . "own_rtl_long_wrapped.srt", Format::SubRip)->unwrapLines();
+
+        $this->assertSame(["\u{202B}אתה יכול לסגור את החלון, בבקשה?\u{202C}", "<i>\u{202B}ראית את החתולה</i> <i>שלי בגינה?\u{202C}</i>"],
+                          array_slice(TestSubtitles::texts($subtitle), 0, 2));
+    }
+
+
     #[DataProvider("rightToLeftProvider")]
     public function testFixRightToLeft(string $input, string $expected): void
     {

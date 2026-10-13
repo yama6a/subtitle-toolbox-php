@@ -42,6 +42,7 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
   - Tags and override blocks such as `{\an8}` at the start and the end of the line stay outside the marks, so `<i>שלום!</i>` becomes `<i>`U+202B`שלום!`U+202C`</i>`.
   - The method first removes the U+202B and U+202C marks of the line, so a second call changes nothing.
   - Lines without a right-to-left letter and ASS drawings with `{\p1}` stay unchanged.
+  - **Line breaks**: a line break ends every embedding. So `wrapLines()`, `unwrapLines()`, `mergeShortCues()` and `Resegmenter` give each new line its own marks when a line of the cue holds the marks of this method. The result is the same as `fixRightToLeft()` after the line breaks. For example, `wrapLines(20)` makes U+202B`אתה יכול לסגור את החלון, בבקשה?`U+202C into U+202B`אתה יכול לסגור`U+202C and U+202B`את החלון, בבקשה?`U+202C.
 - **Bidi controls**: `removeBidiControls()` removes the bidi controls LRM, RLM, LRE, RLE, PDF, LRO, RLO and the isolates U+2066 to U+2069 from the text between tags. It undoes `fixRightToLeft()`. Files fixed for one player carry these invisible characters, and they break other players and search. The no-break space U+00A0 stays.
 
 ## Hearing-impaired annotations

@@ -29,12 +29,24 @@ final class LineWrapper
      * A line breaks at a space, or between 2 CJK characters where JIS X 4051 allows it.
      * With $keepDialogueLines, each line that starts with a dialogue dash stays a line of its own.
      * With 2 or more dialogue lines, no line wraps. A single dialogue line wraps like other text.
+     * Each line gets its own right-to-left embedding when an input line holds the embedding of fixRightToLeft().
      *
      * @param list<string> $lines
      *
      * @return list<string>
      */
     public static function wrap(array $lines, int $maxCharactersPerLine, int $maxLinesPerCue, bool $keepDialogueLines = false): array
+    {
+        return self::keepRightToLeftEmbedding($lines, fn (array $lines): array => self::wrapPlain($lines, $maxCharactersPerLine, $maxLinesPerCue, $keepDialogueLines));
+    }
+
+
+    /**
+     * @param list<string> $lines
+     *
+     * @return list<string>
+     */
+    private static function wrapPlain(array $lines, int $maxCharactersPerLine, int $maxLinesPerCue, bool $keepDialogueLines): array
     {
         $segments = self::segments($lines, $keepDialogueLines);
         if (count($segments) > 1) {
@@ -58,6 +70,17 @@ final class LineWrapper
      */
     public static function wrapTurns(array $lines, int $maxCharactersPerLine, int $maxLinesPerCue): array
     {
+        return self::keepRightToLeftEmbedding($lines, fn (array $lines): array => self::wrapTurnsPlain($lines, $maxCharactersPerLine, $maxLinesPerCue));
+    }
+
+
+    /**
+     * @param list<string> $lines
+     *
+     * @return list<string>
+     */
+    private static function wrapTurnsPlain(array $lines, int $maxCharactersPerLine, int $maxLinesPerCue): array
+    {
         $turns = [];
         foreach ($lines as $line) {
             $lineWords = self::measuredWords($line);
@@ -75,7 +98,7 @@ final class LineWrapper
         }
 
         if (count($turns) < 2) {
-            return self::wrap($lines, $maxCharactersPerLine, $maxLinesPerCue);
+            return self::wrapPlain($lines, $maxCharactersPerLine, $maxLinesPerCue, false);
         }
 
         $parts      = [];
@@ -100,6 +123,17 @@ final class LineWrapper
      * @return list<string>
      */
     public static function unwrapTurns(array $lines): array
+    {
+        return self::keepRightToLeftEmbedding($lines, self::unwrapTurnsPlain(...));
+    }
+
+
+    /**
+     * @param list<string> $lines
+     *
+     * @return list<string>
+     */
+    private static function unwrapTurnsPlain(array $lines): array
     {
         $turns = [];
         foreach ($lines as $line) {
@@ -272,6 +306,25 @@ final class LineWrapper
     public static function length(array $words): int
     {
         return array_sum(array_column($words, "length")) + max(0, count($words) - 1);
+    }
+
+
+    /**
+     * Calls $wrap without the embedding marks of fixRightToLeft() when a line holds them, and gives each new line its own embedding.
+     * A line break ends every embedding in the Unicode bidi algorithm.
+     *
+     * @param list<string>                                $lines
+     * @param callable(list<string> $lines): list<string> $wrap
+     *
+     * @return list<string>
+     */
+    private static function keepRightToLeftEmbedding(array $lines, callable $wrap): array
+    {
+        if (!Markup::holdsRightToLeftEmbedding($lines)) {
+            return $wrap($lines);
+        }
+
+        return array_map(Markup::embedRightToLeft(...), $wrap(str_replace(["\u{202B}", "\u{202C}"], "", $lines)));
     }
 
 

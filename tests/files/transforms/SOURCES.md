@@ -16,3 +16,5 @@
 | `own_multilingual_caps_upper.srt` | Generated for this repository. Output of `subtitle-toolbox convert own_multilingual_caps.srt --to srt --case upper`, checked by hand: the text was already upper case | MIT |
 | `own_multilingual_caps_lower_tr.srt` | Generated for this repository. Output of `subtitle-toolbox convert own_multilingual_caps.srt --to srt --case lower --language tr`, checked by hand: the Turkish rules turn every `I` into `ı`, and the Greek word ends with `ς` | MIT |
 | `own_multilingual_caps_replaced.srt` | Generated for this repository. Output of `subtitle-toolbox convert own_multilingual_caps.srt --to srt --replace uhr=Uhr --replace-ignore-case`, checked by hand | MIT |
+| `own_rtl_long.srt` | Written for this repository. SubRip with Hebrew and Arabic lines longer than 20 characters, an italic line, a left-to-right line a Hebrew line with 2 dialogue turns and a cue with 2 Hebrew dialogue lines. | MIT |
+| `own_rtl_long_wrapped.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_rtl_long.srt` after `fixRightToLeft()` and `wrapLines(20)`. | MIT |

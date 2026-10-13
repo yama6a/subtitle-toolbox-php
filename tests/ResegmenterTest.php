@@ -62,6 +62,16 @@ class ResegmenterTest extends TestCase
     }
 
 
+    public function testEachSplitPartGetsItsOwnRightToLeftEmbedding(): void
+    {
+        $subtitle = Subtitle::load(__DIR__ . "/files/transforms/own_rtl_long.srt", Format::SubRip)->fixRightToLeft();
+        self::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong, new CueLimits(10, 1, 0.5)));
+
+        $this->assertSame(["<i>\u{202B}ראית את\u{202C}</i>", "<i>\u{202B}החתולה\u{202C}</i>", "<i>\u{202B}שלי בגינה?\u{202C}</i>"],
+                          array_slice(TestSubtitles::texts($subtitle), 2, 3));
+    }
+
+
     public function testRealWhisperFileSplitLongCues(): void
     {
         $subtitle = $this->parseWhisperFixture();
