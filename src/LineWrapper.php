@@ -38,7 +38,7 @@ final class LineWrapper
     {
         $segments = [];
         foreach ($lines as $line) {
-            if (self::measuredWords($line) === []) {
+            if (trim($line, " ") === "") {
                 continue;
             }
 
@@ -329,14 +329,13 @@ final class LineWrapper
                 continue;
             }
 
-            $length = $endColumn - $starts[$start];
-            $cost   = [
-                $previous[$start][0] + max(0, $length - $maxCharactersPerLine),
-                $previous[$start][1] + (int) $parts[$start]["midPhrase"],
-                $previous[$start][2] + $length ** 2,
-            ];
-            if ($best === null || $cost < array_slice($best, 0, 3)) {
-                $best = [...$cost, $start];
+            $length    = $endColumn - $starts[$start];
+            $overflow  = $previous[$start][0] + max(0, $length - $maxCharactersPerLine);
+            $midPhrase = $previous[$start][1] + (int) $parts[$start]["midPhrase"];
+            $squares   = $previous[$start][2] + $length ** 2;
+            if ($best === null || $overflow < $best[0]
+                || ($overflow === $best[0] && ($midPhrase < $best[1] || ($midPhrase === $best[1] && $squares < $best[2])))) {
+                $best = [$overflow, $midPhrase, $squares, $start];
             }
         }
 
@@ -382,9 +381,10 @@ final class LineWrapper
      */
     private static function breakableParts(string $text): array
     {
-        $parts = [];
+        $hasCjk = preg_match('/[' . self::CJK . ']/u', $text) !== 0;
+        $parts  = [];
         foreach (self::measuredWords($text) as $word) {
-            $pieces = self::splitBetweenCjkCharacters($word["text"]);
+            $pieces = $hasCjk ? self::splitBetweenCjkCharacters($word["text"]) : [$word["text"]];
             foreach ($pieces as $index => $piece) {
                 $parts[] = [
                     "text"        => $piece,

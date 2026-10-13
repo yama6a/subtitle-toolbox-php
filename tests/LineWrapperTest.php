@@ -70,6 +70,12 @@ class LineWrapperTest extends TestCase
     }
 
 
+    public function testBreaksCjkWordsInTextWithAnInvalidByte(): void
+    {
+        $this->assertSame(["Tokyo\xff 我们明", "天早上八点在火车站见"], LineWrapper::wrap(["Tokyo\xff 我们明天早上八点在火车站见"], 10, 2));
+    }
+
+
     public function testBreaksKoreanTextOnlyAtSpaces(): void
     {
         $this->assertSame(["내일 아침 여덟 시에", "기차역에서 만나요"], LineWrapper::wrap(["내일 아침 여덟 시에 기차역에서 만나요"], 12, 2));
