@@ -60,6 +60,15 @@ class CodePageDetectorTest extends TestCase
     }
 
 
+    public function testCjkTextWithABadByteAfterTheSampleIsNotDetected(): void
+    {
+        $cue = "1\r\n00:00:01,000 --> 00:00:02,000\r\n" . iconv("UTF-8", "CP949", "안녕하세요, 오늘 날씨가 정말 좋네요.") . "\r\n\r\n";
+
+        $this->assertSame("CP949", CodePageDetector::detect(str_repeat($cue, 20000))[0] ?? null);
+        $this->assertNull(CodePageDetector::detect(str_repeat($cue, 20000) . "\xB0"));
+    }
+
+
     public function testCutOfTheSampleKeepsCjkCharactersWhole(): void
     {
         // The lines with bytes from 0x80 take 13 bytes each with their line break, so the sample of 65536 bytes ends inside 们.

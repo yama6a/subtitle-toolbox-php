@@ -108,6 +108,24 @@ class EncodingTest extends TestCase
     }
 
 
+    public function testKoreanCp949WithABadByteKeepsItsBytes(): void
+    {
+        $cues = [
+            "안녕하세요, 오늘 날씨가 정말 좋네요.\n\n2\n00:00:03,000 --> 00:00:04,000\n우리 공원에 산책하러 갈까요?",
+            "<i>노란</i> 글자",
+        ];
+        foreach ($cues as $text) {
+            $raw     = iconv("UTF-8", "CP949", "1\n00:00:01,000 --> 00:00:02,000\n$text\n") . "\xB0";
+            $strict  = Subtitle::fromString($raw, Format::SubRip);
+            $lenient = Subtitle::fromString($raw, Format::SubRip, new ReadOptions(lenient: true));
+
+            $this->assertStringStartsWith(iconv("UTF-8", "CP949", explode("\n\n", $text)[0]), $strict->getCues()[0]->getText());
+            $this->assertSame("UTF-8", $strict->findSourceEncoding());
+            $this->assertStringStartsWith("The content is not valid UTF-8.", $lenient->getParseWarnings()[0]->message);
+        }
+    }
+
+
     public function testCp932KeepsTheBackslashesOfAss(): void
     {
         $subtitle = Subtitle::load(self::DIR . "japanese-cp932.ass", Format::Ass);
