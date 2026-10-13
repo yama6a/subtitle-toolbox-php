@@ -186,7 +186,7 @@ trait WordGrouping
         $group  = [];
         $length = 0;
         foreach ($words as $word) {
-            $wordLength = iconv_strlen($word["text"], "UTF-8");
+            $wordLength = Markup::countCharacters($word["text"]);
             if ($group !== []) {
                 $previous = $group[count($group) - 1];
                 if ($previous["speaker"] !== $word["speaker"]
