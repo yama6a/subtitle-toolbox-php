@@ -26,6 +26,7 @@ class BinaryFormatMatrixTest extends CliTestCase
         "mcc"                => "mcc/real/captionmaker_popon_df.mcc",
         "microdvd"           => "microdvd/real/sub_microdvd_with_styles.sub",
         "mpsub"              => "mpsub/real/mplayer_doc_time.sub",
+        "pac"                => "pac/real/bakery_latin.pac",
         "pgs"                => "pgs/text_1080p.sup",
         "sami"               => "sami/real/pysubs2_source_id.smi",
         "sbv"                => "sbv/real/youtube_studio_lf.sbv",
@@ -61,6 +62,9 @@ class BinaryFormatMatrixTest extends CliTestCase
         // CEA-608 cannot show the Chinese characters of the LRC fixture.
         "lrc>mcc" => "convert exit 3",
         "lrc>scc" => "convert exit 3",
+        // CEA-608 cannot show the section sign of the PAC fixture.
+        "pac>mcc" => "convert exit 3",
+        "pac>scc" => "convert exit 3",
         // --skip-image-cues leaves no cue, so the plain text output is empty.
         "pgs>txt" => "empty",
         "vobsub>txt" => "empty",

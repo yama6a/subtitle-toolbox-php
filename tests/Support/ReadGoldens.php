@@ -46,6 +46,7 @@ final class ReadGoldens
         "sami"                => Format::Sami,
         "stl"                 => Format::EbuStl,
         "spruce-stl"          => Format::SpruceStl,
+        "pac"                 => Format::Pac,
         "chapters/ffmetadata" => Format::FfMetadataChapters,
         "chapters/ogm"        => Format::OgmChapters,
         "chapters/podcast"    => Format::PodcastChapters,

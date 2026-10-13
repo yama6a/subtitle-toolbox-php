@@ -443,6 +443,52 @@ $subtitle->toString(Format::MpSub, new WriteOptions(formats: [new MpSubWriteOpti
 - **Overlapping cues**: a cue that starts before the previous cue ends gets a negative wait, for example `-1.5 2`. The parser reads it back. FFmpeg accepts a negative wait.
 - **Output**: the formatter strips all tags and trims each line. Text with `<`, `>` and `&` round-trips. An empty line ends a cue in MPSub, so the formatter drops lines that are empty after the tags go, and skips a cue without text. The wait time of the next cue counts from the end of the last written cue.
 
+## PAC
+PAC is the binary subtitle file of the Screen Electronics subtitling systems. PAC Unicode files (`.fpc`) store the text as UTF-8. PAC has no public spec. The parser and the formatter follow the PAC code of [Subtitle Edit](https://github.com/SubtitleEdit/subtitleedit/blob/a0dfbfe65f0517ef85b1e69f1606bca93f68ac3c/src/libse/SubtitleFormats/Pac.cs). Pass the bytes of the file unchanged.
+
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\TextEncoding;
+
+$subtitle = Subtitle::fromString(file_get_contents('news.pac'));                  // detects PAC and its code page
+$subtitle = Subtitle::fromString(file_get_contents('news.pac'), Format::Pac,
+    new ReadOptions(encoding: TextEncoding::Iso8859_7));                         // Greek
+$subtitle->findFormatData('pac')['codePage'];                                     // 'greek'
+$subtitle->toString(Format::Pac);
+```
+
+- **Code page**: the file does not store it. A story record with `Lang:` names it, for example `Lang:RUS` for Cyrillic. Else the parser decodes the text with each code page and checks that the text looks like the script of the code page. Strict mode throws `ParsingException` when no code page or more than one code page fits. Lenient mode then reads the first code page that fits, or Latin when none fits, and warns. Short text, such as one Greek word without an accent, can read as Latin.
+- **Encoding**: `ReadOptions::$encoding` or `--encoding` names the code page and skips detection:
+
+  | Code page | `codePage` | Encodings |
+  |:--- |:--- |:--- |
+  | Latin | `latin` | ISO-8859-1, Windows-1252 |
+  | Latin with Czech and Polish letters | `latin-czech` | ISO-8859-2, Windows-1250 |
+  | Turkish | `latin-turkish` | ISO-8859-9, Windows-1254 |
+  | Greek | `greek` | ISO-8859-7, Windows-1253 |
+  | Cyrillic | `cyrillic` | ISO-8859-5, Windows-1251 |
+  | Arabic | `arabic` | ISO-8859-6, Windows-1256 |
+  | Hebrew | `hebrew` | ISO-8859-8, Windows-1255 |
+  | Thai | `thai` | Windows-874, TIS-620, ISO-8859-11 |
+  | Chinese traditional | `chinese-traditional` | Big5, CP950 |
+  | Chinese simplified | `chinese-simplified` | GBK, GB2312, GB18030, CP936 |
+  | Korean | `korean` | CP949, EUC-KR |
+  | Japanese | `japanese` | Shift_JIS, CP932 |
+  | PAC Unicode | `unicode` | UTF-8 |
+
+  Another encoding throws `InvalidArgumentException`. The Chinese, Korean and Japanese code pages hold Latin text and double-byte text. PAC Unicode needs no encoding: its marks show in the file.
+- **Times**: the file does not store the frame rate. A time code with a frame number from 25 to 29 gives 30 fps for the file, else the parser reads 25 fps. The key `frameRate` of the format data holds it.
+- **Styles**: `<` and `>` in the text start and end italics, and the end of a line ends them. They become `<i>` and back. Such a code takes the place of the space between it and a letter or digit, so `are<warm>today` reads as `are <i>warm</i> today`. The formatter drops other tags and writes `?` for a literal `<` or `>`.
+- **Alignment**: the alignment byte of the first line gives the column. The vertical position gives the row: 0 to 4 is the top, 5 to 8 the middle, 9 to 11 the bottom. The formatter writes row 1 for the top, row 6 for the middle and the bottom row 11 minus the extra lines for the bottom.
+- **Right to left**: Subtitle Edit stores the Latin letters and digits of Arabic and Hebrew lines in display order. The parser and the formatter turn them around.
+- **Story record**: a first record with `STORY:` holds the programme data and is no cue. The format data keeps it in `header`.
+- **Format data**: the subtitle keeps `codePage`, `frameRate`, the number of the first subtitle in `firstNumber`, and the bytes before the first and after the last subtitle in `header` and `footer`. Each cue keeps its vertical position, the alignment byte, its text and the original text bytes.
+- **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text and alignment keeps its text bytes, also after retiming. New text keeps the code page of the file and gets `?` for a character outside it.
+- **New files**: Latin when Latin holds all the text, else PAC Unicode. 25 fps, subtitle numbers from 0, and the end block of Subtitle Edit.
+- **Limits**: the parser does not read colors, and it reads lines that Screen marks for a second code page with the code page of the file.
+
 ## QuickTime text
 QuickTime text is the text track format of QuickTime Player 7 and older Apple tools, from Apple's [text descriptors](https://developer.apple.com/library/archive/documentation/QuickTime/Conceptual/QTScripting_HTML/QTScripting_HTML_Document/ScriptingHTML.html). Files use the `.txt` extension. Detection finds them by `{QTtext}` at the start.
 

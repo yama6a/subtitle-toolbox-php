@@ -101,6 +101,7 @@ final class WriteGoldens
         "microdvd/real/sub_microdvd_with_styles.sub"      => Format::MicroDvd,
         "mpl2/real/subtitle_edit_shape.txt"               => Format::Mpl2,
         "mpsub/real/mplayer_doc_time.sub"                 => Format::MpSub,
+        "pac/real/bakery_latin.pac"                       => Format::Pac,
         "tmplayer/real/tmplayer_multiline_bom.txt"        => Format::TmPlayer,
         "spruce-stl/real/dvdsp_full_header_ntsc.stl"      => Format::SpruceStl,
         "qttext/real/quicktime_export_styles.txt"         => Format::QuickTimeText,
@@ -265,6 +266,7 @@ final class WriteGoldens
             "dcp.xml" => [Format::Dcp, new WriteOptions()],
             "25.stl"  => [Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 25)])],
             "30.stl"  => [Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 30)])],
+            "pac"     => [Format::Pac, new WriteOptions()],
         ];
     }
 

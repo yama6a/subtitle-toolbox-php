@@ -22,6 +22,7 @@ use SubtitleToolbox\Formatters\MicroDvdFormatter;
 use SubtitleToolbox\Formatters\Mpl2Formatter;
 use SubtitleToolbox\Formatters\MpSubFormatter;
 use SubtitleToolbox\Formatters\OgmChaptersFormatter;
+use SubtitleToolbox\Formatters\PacFormatter;
 use SubtitleToolbox\Formatters\PgsFormatter;
 use SubtitleToolbox\Formatters\PlainTextFormatter;
 use SubtitleToolbox\Formatters\PodcastChaptersFormatter;
@@ -57,6 +58,7 @@ use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\OgmChaptersParser;
+use SubtitleToolbox\Parsers\PacParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
@@ -101,6 +103,7 @@ final class FormatRegistry
         Format::Mcc->value                => [MccParser::class, MccFormatter::class, ["mcc"]],
         Format::MicroDvd->value           => [MicroDvdParser::class, MicroDvdFormatter::class, ["sub"]],
         Format::MpSub->value              => [MpSubParser::class, MpSubFormatter::class, ["mpsub"]],
+        Format::Pac->value                => [PacParser::class, PacFormatter::class, ["pac", "fpc"]],
         Format::Pgs->value                => [PgsParser::class, PgsFormatter::class, ["sup"]],
         Format::Sami->value               => [SamiParser::class, SamiFormatter::class, ["smi", "sami"]],
         Format::Sbv->value                => [SbvParser::class, SbvFormatter::class, ["sbv"]],

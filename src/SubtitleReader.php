@@ -54,7 +54,7 @@ final class SubtitleReader
         }
 
         $content = self::readFile($path);
-        $decoded = StringHelpers::decode($content, $options->encoding, !self::isBinary(Format::detect($content)));
+        $decoded = self::decode($content, Format::detect($content), $options);
         if (trim(StringHelpers::removeUtf8Bom($decoded->content)) === "" && ($byPath = self::formatOfExtension($path)) !== null) {
             return (new Subtitle())->setFormat($byPath);
         }
@@ -88,7 +88,7 @@ final class SubtitleReader
             throw new UnsupportedFormatException("The content is an " . Containers::label($container) . " file. Call loadTrack() with a track number.");
         }
 
-        return self::parseDecoded(StringHelpers::decode($content, $options->encoding, !self::isBinary($format)), $format, $options);
+        return self::parseDecoded(self::decode($content, $format, $options), $format, $options);
     }
 
 
@@ -102,7 +102,7 @@ final class SubtitleReader
             return self::readOnlyTrack(Containers::open($stream), $container, $options);
         }
 
-        $decoded = StringHelpers::decode($content, $options->encoding, !self::isBinary(Format::detect($content)));
+        $decoded = self::decode($content, Format::detect($content), $options);
         $format  = self::detectFormat($decoded->content) ?? throw new UnknownFormatException(self::unknownFormatMessage("fromString()"));
 
         return self::parseDecoded($decoded, $format, $options);
@@ -136,6 +136,15 @@ final class SubtitleReader
         }
 
         return $subtitle;
+    }
+
+
+    /**
+     * Converts text content to UTF-8. A binary format keeps its bytes, and its parser reads ReadOptions::$encoding.
+     */
+    private static function decode(string $content, ?Format $format, ReadOptions $options): DecodedText
+    {
+        return self::isBinary($format) ? new DecodedText($content, "UTF-8") : StringHelpers::decode($content, $options->encoding);
     }
 
 

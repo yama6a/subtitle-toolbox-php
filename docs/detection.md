@@ -43,13 +43,14 @@ Other content goes to the signatures of the text and binary formats. Detection c
 | 12 | `Lyrics` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
 | 13 | `Pgs` | the bytes `PG`, then a known segment type |
 | 14 | `EbuStl` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
-| 15 | `SpruceStl` | `00:00:01:10 , 00:00:03:10 ,` after optional `$` command and `//` comment lines. Without such a line first, the text must not start with `"` |
-| 16 | `Scc` | `Scenarist_SCC V1.0` |
-| 17 | `Mcc` | `File Format=MacCaption_MCC V2.0` or `V1.0` |
-| 18 | `YouTubeTimedText` | a `<timedtext>` or `<transcript>` root |
-| 19 | `Mpl2` | `[12][45]` |
-| 20 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=`, but not an `hh:mm:ss:ff` frame timecode such as `00:00:01:10,` |
-| 21 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |
+| 15 | `Pac` | the byte 01h, 20 zero bytes, a subtitle number of 2 bytes and a byte from 60h to 67h |
+| 16 | `SpruceStl` | `00:00:01:10 , 00:00:03:10 ,` after optional `$` command and `//` comment lines. Without such a line first, the text must not start with `"` |
+| 17 | `Scc` | `Scenarist_SCC V1.0` |
+| 18 | `Mcc` | `File Format=MacCaption_MCC V2.0` or `V1.0` |
+| 19 | `YouTubeTimedText` | a `<timedtext>` or `<transcript>` root |
+| 20 | `Mpl2` | `[12][45]` |
+| 21 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=`, but not an `hh:mm:ss:ff` frame timecode such as `00:00:01:10,` |
+| 22 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line but with cue numbers looks like SubRip, so it detects as SubRip.
 - **SubRip without cue numbers**: read such a file in lenient mode. Strict mode throws `ParsingException` for a missing cue number and for text before the first cue. A timing line with a dot, such as `00:00:01.000 -->`, needs a cue number in the first line.
