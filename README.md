@@ -40,6 +40,7 @@ The command line tool also comes as a PHAR file and as two container images. The
 | [iTunes Timed Text](https://help.apple.com/itc/videoaudioassetguide/#/itc0f1b0a2e0) | `Itt` | `itt` | `.itt` | ✅ | ✅ | needs a frame rate to write |
 | [JSON of this library](docs/json.md) | `Json` | `json` | `.json` | ✅ | ✅ | |
 | [LRC](https://en.wikipedia.org/wiki/LRC_(file_format)) | `Lyrics` | `lrc` | `.lrc` | ✅ | ✅ | with enhanced LRC word times |
+| [MCC](https://www.telestream.net/pdfs/user-guides/MacCaption-UserGuide.pdf) | `Mcc` | `mcc` | `.mcc` | ✅ | ✅ | CEA-608 closed captions of MacCaption and CaptionMaker |
 | [MicroDVD](https://en.wikipedia.org/wiki/MicroDVD) | `MicroDvd` | `microdvd` | `.sub` | ✅ | ✅ | needs the frame rate of the video |
 | [MPL2](https://pysubs2.readthedocs.io/en/latest/supported-formats.html) | `Mpl2` | `mpl2` | `.txt` | ✅ | ✅ | |
 | [MPSub](https://man.archlinux.org/man/mplayer.1.en) | `MpSub` | `mpsub` | `.mpsub` | ✅ | ✅ | |

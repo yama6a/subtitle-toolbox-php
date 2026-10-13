@@ -64,7 +64,7 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 - **`findFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV or MP4 track, it is the format of the codec, for example `Format::SubRip`.
 - **`findSourceEncoding()`**: the encoding that the load call read the text from, for example `Windows-1252`. See [encodings.md](encodings.md#order-of-the-checks).
 - **`save()`**: writes the format argument. Without it, `save()` writes the format of the extension. It throws `UnsupportedFormatException` for an unknown extension.
-- **Frame rate**: MicroDVD output takes the frame rate from `MicroDvdWriteOptions::$frameRate`. Without it, the frame rate comes from a MicroDVD input. iTT output takes it from `IttWriteOptions::$frameRate`. Without it, the frame rate comes from an iTT input. Without either, `toString()` and `save()` throw `InvalidArgumentException`.
+- **Frame rate**: MicroDVD output takes the frame rate from `MicroDvdWriteOptions::$frameRate`. Without it, the frame rate comes from a MicroDVD input. iTT output takes it from `IttWriteOptions::$frameRate`. Without it, the frame rate comes from an iTT input. Without either, `toString()` and `save()` throw `InvalidArgumentException`. MCC output takes it from `MccWriteOptions::$frameRate`, else from an MCC input, else 29.97 fps.
 - **CSV and TSV**: TSV output has tabs. CSV output from a TSV input has commas. A `CsvWriteOptions::$delimiter` wins.
 
 ## Write options
@@ -97,6 +97,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWri
 | `HtmlTranscriptWriteOptions` | HTML transcript | `paragraphGap` |
 | `IttWriteOptions` | iTT | `frameRate` |
 | `JsonWriteOptions` | JSON | `prettyPrint`, `withFormatData` |
+| `MccWriteOptions` | MCC | `frameRate`, `dropFrame` |
 | `MicroDvdWriteOptions` | MicroDVD | `frameRate`, `writeFrameRateLine` |
 | `MpSubWriteOptions` | MPSub | `frameRate` |
 | `PlainTextWriteOptions` | plain text | `joinLines`, `joinCues`, `paragraphGap`, `withTimes` |
@@ -295,6 +296,42 @@ $subtitle->toString(Format::Lyrics);                                       // ID
 - **Text on the next line**: a timestamp line without text takes the next line as its text, if that line has no timestamp and is no ID tag. So `[00:02:35]` and then `Hello` on the next line give one cue at 2 min 35 s.
 - **End times**: a cue ends at the next timestamp in time order. A timestamp without text, such as `[00:17.20]` before another timestamp line, only ends the cue before it. The formatter writes such a line back. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **Output**: times in centiseconds. The formatter strips all tags. Text with `<`, `>` and `&` round-trips.
+
+## MCC
+MCC (MacCaption) is the closed caption file of Telestream MacCaption and CaptionMaker. Broadcasters and caption services deliver it next to the video. Each line holds a time code and the caption data of one frame as hex: a SMPTE 334-2 caption distribution packet with CEA-608 byte pairs and CEA-708 data.
+
+```text
+File Format=MacCaption_MCC V2.0
+...
+Time Code Rate=30DF
+
+00:00:01:12	T59S594F67Z0F72F4FC94AEROO73F2E0656E677E3FFFE1656E67C13FFF74Z0FD6BB
+```
+
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\MccWriteOptions;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
+use SubtitleToolbox\Parsers\Options\SccRollUp;
+use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
+
+$subtitle = Subtitle::load('show.mcc');                                              // detects MCC
+$subtitle->findFormatData('mcc');   // ['version' => '2.0', 'frameRate' => '29.97', 'dropFrame' => true, 'header' => ['UUID' => '...', ...]]
+Subtitle::load('show.mcc', Format::Mcc, new ReadOptions(formats: [new SccReadOptions(rollUp: SccRollUp::Lines)]));
+
+$subtitle->toString(Format::Mcc, new WriteOptions(formats: [new MccWriteOptions(frameRate: 23.976)]));
+```
+
+- **Reads**: the CEA-608 byte pairs of field 1. The parser decodes them as [SCC](#scc) does, so `SccReadOptions` and `--scc-roll-up` apply, and the cues get the `scc` format data. It reads version 1.0 and 2.0.
+- **Frame rates**: the `Time Code Rate` line holds 24, 25, 30, 30DF, 50, 60 or 60DF. The frame rate code of the caption distribution packets tells 23.976 from 24, 29.97 from 30 and 59.94 from 60. So a file with `Time Code Rate=24` and the code of 23.976 fps reads at 23.976 fps. The format data holds the frame rate as `23.976`, `24`, `25`, `29.97`, `30`, `50`, `59.94` or `60`.
+- **Times**: the cue times fall on the CEA-608 frames of 29.97 fps, as in SCC. At other frame rates a time can move by up to 17 ms.
+- **Writes**: one line per frame with CEA-608 data. Frames without data get no line, as in files from ffmpeg. The CEA-608 field 1 data are the pop-on captions that the [SCC](#scc) formatter writes, with the same limits and exceptions. Field 2 holds null pairs, and the CEA-708 part holds empty data, as MacCaption writes a file with CEA-608 captions only. The output uses the alias letters of the MCC header, except `U`, as writers disagree on its length.
+- **Round trip**: the formatter keeps the version, the frame rate, the drop-frame mode and the header fields of the input, such as `UUID` and `Creation Date`. A new file gets version 2.0, 29.97 fps with drop-frame time code, a `UUID` from a hash of its caption data and the date of today in UTC. So the same captions give the same file on one day. Version 1.0 has no 60DF, so 59.94 fps with drop-frame time code writes version 2.0.
+- **Options**: `MccWriteOptions(frameRate: 25)` or the CLI option `--output-fps 25` sets the frame rate. `MccWriteOptions(dropFrame: false)` writes non-drop time code at 29.97 and 59.94 fps.
+- **Damaged data**: the parser ignores the checksums, as some writers leave them wrong. A line without a time code, a character outside the hex digits and the alias letters, and a packet that is shorter than its data throw `ParsingException` in strict mode. Lenient mode skips the line with a warning. A file without a `Time Code Rate` line reads as 30DF in lenient mode.
+- **Not read**: CEA-608 data of field 2 (CC3 and CC4). MCC data inside video files.
 
 ## MicroDVD
 MicroDVD counts time in video frames, so the parser and the formatter need the frame rate of the video.

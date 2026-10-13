@@ -18,6 +18,7 @@ use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\Formatters\Options\HtmlTranscriptWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\JsonWriteOptions;
+use SubtitleToolbox\Formatters\Options\MccWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
 use SubtitleToolbox\Formatters\Options\PlainTextWriteOptions;
@@ -58,6 +59,7 @@ class OutputOptionsTest extends TestCase
         "html"               => HtmlTranscriptWriteOptions::class,
         "itt"                => IttWriteOptions::class,
         "json"               => JsonWriteOptions::class,
+        "mcc"                => MccWriteOptions::class,
         "microdvd"           => MicroDvdWriteOptions::class,
         "mpsub"              => MpSubWriteOptions::class,
         "podcast-transcript" => PodcastTranscriptWriteOptions::class,

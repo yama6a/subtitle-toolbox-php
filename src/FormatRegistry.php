@@ -16,6 +16,7 @@ use SubtitleToolbox\Formatters\HtmlTranscriptFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\JsonFormatter;
 use SubtitleToolbox\Formatters\LyricsFormatter;
+use SubtitleToolbox\Formatters\MccFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
 use SubtitleToolbox\Formatters\Mpl2Formatter;
 use SubtitleToolbox\Formatters\MpSubFormatter;
@@ -47,6 +48,7 @@ use SubtitleToolbox\Parsers\HtmlTranscriptParser;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
+use SubtitleToolbox\Parsers\MccParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Parsers\MpSubParser;
@@ -90,6 +92,7 @@ final class FormatRegistry
         Format::Deepgram->value           => [DeepgramParser::class, DeepgramFormatter::class, ["json"]],
         Format::GoogleSpeech->value       => [GoogleSpeechParser::class, GoogleSpeechFormatter::class, ["json"]],
         Format::Lyrics->value             => [LyricsParser::class, LyricsFormatter::class, ["lrc"]],
+        Format::Mcc->value                => [MccParser::class, MccFormatter::class, ["mcc"]],
         Format::MicroDvd->value           => [MicroDvdParser::class, MicroDvdFormatter::class, ["sub"]],
         Format::MpSub->value              => [MpSubParser::class, MpSubFormatter::class, ["mpsub"]],
         Format::Pgs->value                => [PgsParser::class, PgsFormatter::class, ["sup"]],

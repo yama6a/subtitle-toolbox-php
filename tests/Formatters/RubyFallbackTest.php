@@ -94,6 +94,7 @@ class RubyFallbackTest extends TestCase
     {
         return [
             "SCC"     => [Format::Scc],
+            "MCC"     => [Format::Mcc],
             "EBU STL" => [Format::EbuStl],
             "SAMI"    => [Format::Sami],
             "TTML"    => [Format::Ttml],

@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Tests\Support;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
+use SubtitleToolbox\Formatters\Options\MccWriteOptions;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\Options\SamiReadOptions;
@@ -48,6 +49,8 @@ final class WriteGoldens
         "ttml/real/mantas_netflix_ticks.dfxp" => Format::Ttml,
         "ttml/real/w3c_imsc11_regions.ttml"   => Format::Ttml,
         "itt/real/fcp_23976_styles.itt"       => Format::Itt,
+        "mcc/real/captionmaker_popon_df.mcc"  => Format::Mcc,
+        "mcc/real/v1_23976_timecode.mcc"      => Format::Mcc,
         "scc/real/popon_broadcast_df.scc"     => Format::Scc,
         "sami/real/multi_language.smi"        => Format::Sami,
     ];
@@ -98,6 +101,7 @@ final class WriteGoldens
         "lrc/real/handwritten-enhanced.lrc"               => Format::Lyrics,
         "ttml/real/bbc_ebu_tt_d.ttml"                     => Format::Ttml,
         "itt/real/fcp_23976_styles.itt"                   => Format::Itt,
+        "mcc/real/v2_5994df_fields.mcc"                   => Format::Mcc,
         "scc/real/popon_broadcast_df.scc"                 => Format::Scc,
         "scc/real/rollup_news_ndf.scc"                    => Format::Scc,
         "sami/real/multi_language.smi"                    => Format::Sami,
@@ -181,6 +185,12 @@ final class WriteGoldens
             $stl["gsi"] = ["CD" => "261012", "RD" => "261012"] + ($stl["gsi"] ?? []);
             $subtitle->setFormatData("stl", $stl);
         }
+        $mcc = $subtitle->findFormatData("mcc") ?? [];
+        if ($outputFormat === Format::Mcc && !isset($mcc["header"]["Creation Date"])) {
+            // A new MCC file holds the date of today.
+            $mcc["header"] = ["Creation Date" => "Monday, October 12, 2026"] + ($mcc["header"] ?? []);
+            $subtitle->setFormatData("mcc", $mcc);
+        }
 
         return $subtitle->toString($outputFormat, $writeOptions);
     }
@@ -233,6 +243,8 @@ final class WriteGoldens
         return [
             "ttml"    => [Format::Ttml, new WriteOptions()],
             "itt"     => [Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 23.976)])],
+            "mcc"     => [Format::Mcc, new WriteOptions()],
+            "23.976.mcc" => [Format::Mcc, new WriteOptions(formats: [new MccWriteOptions(frameRate: 23.976)])],
             "scc"     => [Format::Scc, new WriteOptions()],
             "ndf.scc" => [Format::Scc, new WriteOptions(formats: [new SccWriteOptions(dropFrame: false)])],
             "smi"     => [Format::Sami, new WriteOptions()],

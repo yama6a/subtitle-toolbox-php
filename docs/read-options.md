@@ -46,7 +46,7 @@ A class that the table lists for several formats applies to each of them. For ex
 | `CsvReadOptions` | CSV, TSV | `columns` | a `CsvColumns` layout. Null reads the header names |
 | | | `delimiter` | `,`, `;` or a tab. Null detects it |
 | | | `frameRate` | the frames per second of times in `hh:mm:ss:ff` |
-| `SccReadOptions` | SCC | `channel` | 1 reads CC1 and CC3, 2 reads CC2 and CC4 |
+| `SccReadOptions` | SCC, MCC, MP4 `c608` | `channel` | 1 reads CC1 and CC3, 2 reads CC2 and CC4 |
 | | | `rollUp` | `SccRollUp::Screen`, the default, gives one cue per screen of roll-up captions. `SccRollUp::Lines` gives one cue per row, see [formats.md](formats.md#scc) |
 | `EbuStlReadOptions` | EBU STL | `subtractStartOfProgramme` | subtracts the TCP time code from every cue time |
 | `TranscriptReadOptions` | Whisper, cloud speech-to-text JSON, YouTube timed text, Podcasting 2.0 transcript | `wordTimestamps` | word times as core markup, see [transcripts.md](transcripts.md) |

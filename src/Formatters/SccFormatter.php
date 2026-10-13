@@ -55,10 +55,24 @@ final class SccFormatter extends SubtitleFormatter
         $options     ??= new WriteOptions();
         $formatOptions = $this->formatOptions($options);
         $dropFrame     = $formatOptions->dropFrame ?? $subtitle->findFormatData(SccParser::FORMAT_DATA_KEY)["dropFrame"] ?? true;
-        $fit           = $formatOptions->fit;
-        $this->changes = [];
+        $timeline      = $this->captionWords($subtitle, $formatOptions->fit);
 
-        $timeline    = [];
+        return new SccWriteReport($this->applyOutputOptions($this->writeLines($timeline, $dropFrame), $options), $this->changes);
+    }
+
+
+    /**
+     * Returns the CEA-608 words of data channel 1 by frame at 29.97 fps. MccFormatter writes them too.
+     * With $fit, it records each change for formatWithReport().
+     *
+     * @return array<int, int>
+     * @throws UnwritableContentException as format() does.
+     * @internal
+     */
+    public function captionWords(Subtitle $subtitle, bool $fit): array
+    {
+        $this->changes = [];
+        $timeline      = [];
         $nextFree    = 0;
         $previousEnd = null;
         foreach ($subtitle->getCues() as $index => $cue) {
@@ -81,8 +95,9 @@ final class SccFormatter extends SubtitleFormatter
             $edm                                   = max($previousEnd, $nextFree);
             [$timeline[$edm], $timeline[$edm + 1]] = $this->commandTwice(Cea608::ERASE_DISPLAYED_MEMORY);
         }
+        ksort($timeline);
 
-        return new SccWriteReport($this->applyOutputOptions($this->writeLines($timeline, $dropFrame), $options), $this->changes);
+        return $timeline;
     }
 
 
@@ -380,7 +395,6 @@ final class SccFormatter extends SubtitleFormatter
      */
     private function writeLines(array $wordsByFrame, bool $dropFrame): string
     {
-        ksort($wordsByFrame);
         $frameRate = new FrameRate(self::FRAMES_PER_SECOND);
         $lines     = [];
         $previous  = null;

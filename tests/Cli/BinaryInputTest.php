@@ -203,6 +203,17 @@ class BinaryInputTest extends CliTestCase
     }
 
 
+    public function testOutputFpsSetsTheFrameRateOfMccOutput(): void
+    {
+        copy(self::FILES . "mcc/real/v1_23976_timecode.mcc", "$this->dir/news.mcc");
+        $source = Subtitle::load(self::FILES . "mcc/real/v1_23976_timecode.mcc");
+
+        [$code, $stdout] = $this->runCli(["convert", "news.mcc", "--output-fps", "25", "-o", "-"]);
+        $this->assertSame([0, "25"], [$code, Subtitle::fromString($stdout)->findFormatData("mcc")["frameRate"]]);
+        $this->assertSame([0, $source->toString(Format::Mcc), ""], $this->runCli(["convert", "news.mcc", "-o", "-"]));
+    }
+
+
     public function testConvertReadsATrackOfAnMkvFile(): void
     {
         copy(self::FILES . "mkv/text_tracks.mkv", "$this->dir/movie.mkv");
