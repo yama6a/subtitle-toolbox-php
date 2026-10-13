@@ -422,6 +422,7 @@ $report->changes[0]->message;                                                   
 ```
 
 - **Reads**: pop-on, roll-up and paint-on captions, as the screen model of [47 CFR 15.119](https://www.govinfo.gov/content/pkg/CFR-2010-title47-vol1/xml/CFR-2010-title47-vol1-sec15-119.xml) defines them. Each change of the displayed captions starts a new cue. So a roll-up file gives one cue per screen, and a row shows in each cue until it rolls off.
+- **Video files**: an MP4 or MOV `c608` track holds the same byte pairs. `loadTrack()` reads it as SCC, see [mkv.md](mkv.md#mp4).
 - **Roll-up by row**: with `SccReadOptions(rollUp: SccRollUp::Lines)` or the CLI option `--scc-roll-up lines`, each row of roll-up captions gives one cue. The cue starts at the first character of the row. It ends when the row rolls up, or when an EDM or EOC clears the screen. A row that is still on the screen at the end of the file lasts [`ReadOptions::$lastCueDuration`](read-options.md). So a transcript of a live roll-up file holds each line once. Pop-on and paint-on captions give the same cues as without the option.
 - **Writes**: pop-on captions on data channel 1, with drop-frame time codes by default. A cue with more than 4 lines, a line longer than 32 characters or a character that CEA-608 lacks throws `UnwritableContentException`.
 - **Late captions**: each caption needs 1 frame per 2 characters, and some frames for control codes, before it shows. When the frames before the cue start are too few, the caption shows late.

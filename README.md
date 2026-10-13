@@ -84,7 +84,7 @@ The command line tool also comes as a PHAR file and as two container images. The
 | Format | Case | Name | Extensions | Read | Write | Notes |
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
 | [MKV](https://www.rfc-editor.org/rfc/rfc9559) and [WebM](https://www.webmproject.org/docs/container/) tracks | | | `.mkv`, `.webm` | ✅ | ❌ | text, ASS, SSA, WebVTT, PGS and VobSub tracks |
-| [MP4 tracks](https://www.3gpp.org/dynareport/26245.htm) | | | `.mp4`, `.m4v`, `.mov` | ✅ | ❌ | `tx3g` (`mov_text`) tracks |
+| [MP4 tracks](https://www.3gpp.org/dynareport/26245.htm) | | | `.mp4`, `.m4v`, `.mov` | ✅ | ❌ | `tx3g` (`mov_text`) tracks, `c608` closed caption tracks |
 
 ## Command line tool
 Composer installs `vendor/bin/stbox`. Optional parts are in brackets.

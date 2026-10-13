@@ -4,15 +4,11 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use SubtitleToolbox\Alignment;
-use SubtitleToolbox\Encoding\Cea608;
-use SubtitleToolbox\Encoding\Cea608Decoder;
+use SubtitleToolbox\Encoding\Cea608Cues;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
-use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleCue;
 
 /**
  * Reads Scenarist Closed Captions: CEA-608 byte pairs, one pair per frame at 29.97 fps, after a SMPTE time code.
@@ -29,10 +25,8 @@ final class SccParser extends SubtitleParser
     /** @internal */
     public const HEADER = "Scenarist_SCC V1.0";
 
-    // SCC time codes count 30 frame labels per second at 29.97 fps, so a frame lasts 1001/30000 s.
-    private const NOMINAL_FRAME_RATE   = 30;
-    private const FRAME_RATE_NUMERATOR = 30000;
-    private const FRAME_RATE_DIVISOR   = 1001;
+    // SCC time codes count 30 frame labels per second at 29.97 fps.
+    private const NOMINAL_FRAME_RATE = 30;
 
     // The null byte pair with odd parity that fills frames without data.
     private const PADDING = 0x8080;
@@ -41,65 +35,12 @@ final class SccParser extends SubtitleParser
     protected function read(string $content): Subtitle
     {
         $codeLines = $this->readCodeLines($this->lines($content), $dropFrame);
-        $decoder   = new Cea608Decoder($this->formatOptions()->channel);
-        $states    = $decoder->decode($codeLines);
-        $byLine    = $this->formatOptions()->rollUp === SccRollUp::Lines;
-
-        $subtitle   = new Subtitle();
-        $parsedCues = [];
+        $subtitle  = new Subtitle();
         if ($dropFrame !== null) {
             $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["dropFrame" => $dropFrame]);
         }
-        foreach ($states as $index => $state) {
-            if ($state["lines"] === []) {
-                continue;
-            }
 
-            if ($byLine && $state["mode"] === Cea608Decoder::MODE_ROLL_UP) {
-                continue;
-            }
-
-            $start = $this->frameToSeconds($state["frame"]);
-            if (!isset($states[$index + 1])) {
-                $end = $start + $this->options->lastCueDuration;
-            } else {
-                $end = $this->frameToSeconds($states[$index + 1]["frame"]);
-                if ($end <= $start) {
-                    continue;
-                }
-            }
-
-            $parsedCues[] = self::cue($start, $end, $state["lines"], $state["mode"]);
-        }
-        if ($byLine) {
-            foreach ($decoder->rollUpLines() as $line) {
-                $start = $this->frameToSeconds($line["start"]);
-                $end   = $line["end"] === null ? $start + $this->options->lastCueDuration : $this->frameToSeconds($line["end"]);
-                if ($end > $start) {
-                    $parsedCues[] = self::cue($start, $end, [$line], Cea608Decoder::MODE_ROLL_UP);
-                }
-            }
-            usort($parsedCues, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
-        }
-
-        return $subtitle->addCues($parsedCues);
-    }
-
-
-    /**
-     * @param list<array{row: int, column: int, text: string}> $lines
-     */
-    private static function cue(float $start, float $end, array $lines, string $mode): SubtitleCue
-    {
-        $cue = new SubtitleCue($start, $end, array_column($lines, "text"));
-        $cue->setAlignment($lines[0]["row"] <= Cea608::MAX_LINES ? Alignment::TopCenter : Alignment::BottomCenter);
-        $cue->setFormatData(self::FORMAT_DATA_KEY, [
-            "mode"    => $mode,
-            "rows"    => array_column($lines, "row"),
-            "columns" => array_column($lines, "column"),
-        ]);
-
-        return $cue;
+        return $subtitle->addCues(Cea608Cues::read($codeLines, $this->formatOptions(), $this->options->lastCueDuration));
     }
 
 
@@ -196,11 +137,5 @@ final class SccParser extends SubtitleParser
         }
 
         return hexdec($pair);
-    }
-
-
-    private function frameToSeconds(int $frame): float
-    {
-        return $frame * self::FRAME_RATE_DIVISOR / self::FRAME_RATE_NUMERATOR;
     }
 }

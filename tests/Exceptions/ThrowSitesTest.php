@@ -312,7 +312,7 @@ class ThrowSitesTest extends TestCase
             "Container/Matroska/MatroskaReader.php: unsupported codec" => [fn () => self::mkv("", ["codecId" => "S_DVBSUB"])->extract(2), ...$parsing],
             "Container/Mp4/Mp4Reader.php: stream not seekable" => [fn () => Mp4Reader::open(fopen("php://output", "wb")), ...$invalid],
             "Container/Mp4/Mp4Reader.php: encrypted track" => [fn () => Mp4Reader::open(self::FILES . "mp4/text_tracks.mp4")->extract(5), ...$parsing],
-            "Container/Mp4/Mp4Reader.php: unsupported codec" => [fn () => Mp4Reader::open(self::FILES . "mp4/text_tracks.mp4")->extract(4), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: unsupported codec" => [fn () => self::mp4(["entry" => Mp4FixtureWriter::box("wvtt", "")])->extract(1), ...$parsing],
             "Container/Mp4/Mp4Reader.php: unknown track" => [fn () => self::mp4()->extract(9), ...$invalid],
             "Container/Mp4/Mp4Reader.php: not MP4" => [fn () => Mp4Reader::open(self::stream(str_repeat("\0", 16))), ...$parsing],
             "Container/Mp4/Mp4Reader.php: no moov" => [fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp())), ...$parsing],
