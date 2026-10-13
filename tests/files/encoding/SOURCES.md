@@ -21,3 +21,9 @@ All files are written for this repository. Each one started as a UTF-8 file with
 | `russian-koi8-r.srt` | Written for this repository. KOI8-R, CR LF, no BOM | MIT |
 | `thai-windows-874.srt` | Written for this repository. Windows-874, CR LF, no BOM. Holds `…`, which is 0x85 in Windows-874 and missing in TIS-620 | MIT |
 | `arabic-iso-8859-6.srt` | Written for this repository. ISO-8859-6, CR LF, no BOM | MIT |
+| `chinese-gbk.srt` | Written for this repository. GBK, CR LF, no BOM | MIT |
+| `chinese-big5.srt` | Written for this repository. CP950, the Windows form of Big5, CR LF, no BOM | MIT |
+| `japanese-euc-jp.srt` | Written for this repository. EUC-JP, CR LF, no BOM | MIT |
+| `japanese-cp932.ass` | Written for this repository. CP932, the Windows form of Shift_JIS, CR LF, no BOM. Holds `\N` and `{\i1}`, and `表` and `ソ` with 0x5C as their second byte | MIT |
+| `thai-tis-620.srt` | Written for this repository. TIS-620, CR LF, no BOM. Also decodes as CP932 without an error | MIT |
+| `estonian-windows-1257.srt` | Written for this repository. Windows-1257, CR LF, no BOM. Also decodes as GBK without an error | MIT |

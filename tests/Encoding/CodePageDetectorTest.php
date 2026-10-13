@@ -14,6 +14,7 @@ class CodePageDetectorTest extends TestCase
 
     /**
      * The UTF-16 files are missing, because the library decodes UTF-16 before it calls the detector.
+     * The Thai TIS-620 file also decodes as CP932, and the Estonian file as GBK, without an iconv error.
      */
     public static function encodingFiles(): array
     {
@@ -21,7 +22,10 @@ class CodePageDetectorTest extends TestCase
             "arabic-iso-8859-6.srt"            => ["arabic-iso-8859-6.srt", "ISO-8859-6"],
             "arabic-utf-8.srt"                 => ["arabic-utf-8.srt", null],
             "arabic-windows-1256.srt"          => ["arabic-windows-1256.srt", "Windows-1256"],
+            "chinese-big5.srt"                 => ["chinese-big5.srt", "CP950"],
+            "chinese-gbk.srt"                  => ["chinese-gbk.srt", "GBK"],
             "czech-windows-1250.srt"           => ["czech-windows-1250.srt", "Windows-1250"],
+            "estonian-windows-1257.srt"        => ["estonian-windows-1257.srt", "Windows-1257"],
             "french-windows-1252.srt"          => ["french-windows-1252.srt", "Windows-1252"],
             "greek-windows-1253.srt"           => ["greek-windows-1253.srt", "Windows-1253"],
             "invalid-utf-8/one-bad-byte.ass"   => ["invalid-utf-8/one-bad-byte.ass", null],
@@ -34,11 +38,14 @@ class CodePageDetectorTest extends TestCase
             "invalid-utf-8/one-bad-byte.sub"   => ["invalid-utf-8/one-bad-byte.sub", null],
             "invalid-utf-8/one-bad-byte.ttml"  => ["invalid-utf-8/one-bad-byte.ttml", null],
             "invalid-utf-8/one-bad-byte.vtt"   => ["invalid-utf-8/one-bad-byte.vtt", null],
-            "japanese-shift_jis.srt"           => ["japanese-shift_jis.srt", null],
-            "korean-cp949.smi"                 => ["korean-cp949.smi", null],
+            "japanese-cp932.ass"               => ["japanese-cp932.ass", "CP932"],
+            "japanese-euc-jp.srt"              => ["japanese-euc-jp.srt", "EUC-JP"],
+            "japanese-shift_jis.srt"           => ["japanese-shift_jis.srt", "CP932"],
+            "korean-cp949.smi"                 => ["korean-cp949.smi", "CP949"],
             "polish-iso-8859-2.srt"            => ["polish-iso-8859-2.srt", "ISO-8859-2"],
             "russian-koi8-r.srt"               => ["russian-koi8-r.srt", "KOI8-R"],
             "russian-windows-1251.srt"         => ["russian-windows-1251.srt", "Windows-1251"],
+            "thai-tis-620.srt"                 => ["thai-tis-620.srt", "Windows-874"],
             "thai-windows-874.srt"             => ["thai-windows-874.srt", "Windows-874"],
             "turkish-windows-1254.srt"         => ["turkish-windows-1254.srt", "Windows-1254"],
             "utf-8-declared-utf-16.ttml"       => ["utf-8-declared-utf-16.ttml", null],
@@ -50,5 +57,14 @@ class CodePageDetectorTest extends TestCase
     public function testDetectsTheCodePageOfTheFile(string $file, ?string $codePage): void
     {
         $this->assertSame($codePage, CodePageDetector::detect(file_get_contents(self::DIR . $file))[0] ?? null);
+    }
+
+
+    public function testCutOfTheSampleKeepsCjkCharactersWhole(): void
+    {
+        // The lines with bytes from 0x80 take 13 bytes each with their line break, so the sample of 65536 bytes ends inside 们.
+        $cue = "1\r\n00:00:01,000 --> 00:00:02,000\r\n" . iconv("UTF-8", "GBK", "我们走吧") . "...\r\n\r\n";
+
+        $this->assertSame("GBK", CodePageDetector::detect(str_repeat($cue, 20000))[0] ?? null);
     }
 }

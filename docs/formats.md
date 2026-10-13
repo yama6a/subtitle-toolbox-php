@@ -385,7 +385,7 @@ $subtitle->findFormatData('sami');                                              
 - **Text**: a line break in the file is a space, as in HTML. Only `<br>` starts a new cue line. `<b>`, `<i>`, `<u>`, `<s>`, `<strike>` and `<font color>` become core markup. `<font color>` accepts `#rrggbb`, `rrggbb` and the 16 color names of HTML 4. The parser drops other tags from the cue text.
 - **Formatter**: it keeps `<b>`, `<i>`, `<u>`, `<s>` and `<font>` and strips all other tags. It closes a tag that the cue leaves open at the end of the cue, so `<i>Italics that never close` becomes `<i>Italics that never close</i>`. An HTML parser would keep the tag open into the next cue. It writes the stored `<TITLE>`, STYLE block and `<SAMIParam>`, without the rules of the other language classes. Without a stored block, it names the class after the language metadata, for example `KOKRCC` for `ko-KR`, or `SUBTTL` without a language.
 - **Timing**: the formatter writes a `&nbsp;` SYNC after each cue that has a gap before the next cue. A cue that overlaps the next cue ends where the next cue starts. An unchanged cue keeps the HTML of its `<P>`.
-- **Encoding**: the parser reads UTF-8 only. It throws `ParsingException` for other encodings. For a file in EUC-KR or CP949, pass `ReadOptions::$encoding`, see [encodings.md](encodings.md).
+- **Encoding**: `load()` and `fromString()` detect a Korean file in EUC-KR or CP949. The parser itself reads UTF-8 only and throws `ParsingException` for other encodings, see [encodings.md](encodings.md).
 
 ## SBV
 SBV is the YouTube caption format `0:00:01.500,0:00:04.000`.
