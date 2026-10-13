@@ -131,6 +131,64 @@ class LenientTtmlTest extends TestCase
     }
 
 
+    public function testLenientModeReadsBareSecondsWithAFractionOfAnAppleMusicFile(): void
+    {
+        $subtitle = (new TtmlParser())->parse(file_get_contents(self::DIR . "bare_seconds.ttml"), new ReadOptions(lenient: true));
+
+        // The spec adds the begin of the div to the begin of the paragraph. The second div holds absolute paragraph times, which the parser detects.
+        $this->assertSame(
+            [[39.528, 41.664], [60.998, 62.794]],
+            array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues())
+        );
+        $this->assertSame(["Walking home"], $subtitle->getCues()[0]->getLines());
+        $this->assertContains(
+            "The time expression \"19.764\" is not valid. The parser read it as 19.764s.",
+            array_column(TestSubtitles::warnings($subtitle), 3)
+        );
+    }
+
+
+    public function testStrictModeRejectsBareSecondsWithAFraction(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("is not valid.");
+        (new TtmlParser())->parse(file_get_contents(self::DIR . "bare_seconds.ttml"), new ReadOptions());
+    }
+
+
+    public function testLenientModeReadsBareSecondsOnAParagraphWithADuration(): void
+    {
+        $subtitle = (new TtmlParser())->parse(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div><p begin=\"1.5\" dur=\"2.5\">Text</p></div></body></tt>",
+            new ReadOptions(lenient: true)
+        );
+
+        $this->assertSame([[1.5, 4.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+    }
+
+
+    public function testLenientModeKeepsTheParagraphsOfADivWithABadTime(): void
+    {
+        $subtitle = (new TtmlParser())->parse(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body>\n<div begin=\"soon\"><p begin=\"1s\" end=\"2s\">Text</p></div></body></tt>",
+            new ReadOptions(lenient: true)
+        );
+
+        $this->assertSame([[1.0, 2.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertSame(
+            [[2, null, self::REPAIRED, "The time expression \"soon\" is not valid. The parser ignored the timing of the div."]],
+            TestSubtitles::warnings($subtitle)
+        );
+    }
+
+
+    public function testStrictModeRejectsADivWithABadTime(): void
+    {
+        $this->expectException(ParsingException::class);
+        (new TtmlParser())->parse("<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div begin=\"soon\"><p begin=\"1s\" end=\"2s\">Text</p></div></body></tt>", new ReadOptions());
+    }
+
+
     public function testLenientModeWarnsForALooseTtmlTimeOnADivWithoutAParagraphIndex(): void
     {
         $subtitle = (new TtmlParser())->parse(

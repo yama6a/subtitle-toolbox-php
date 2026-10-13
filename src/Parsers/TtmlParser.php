@@ -275,7 +275,21 @@ final class TtmlParser extends SubtitleParser
      */
     private function readContainer(array &$cues, DOMElement $container, TtmlScope $parent, array $divAttributes): void
     {
-        [$begin, $end] = $this->interval($container, $parent->begin, $parent->end);
+        try {
+            [$begin, $end] = $this->interval($container, $parent->begin, $parent->end);
+        } catch (ParsingException $exception) {
+            if (!$this->options->lenient) {
+                throw $exception;
+            }
+            [$begin, $end] = [$parent->begin, $parent->end];
+            $this->warn(
+                $exception->getRawMessage() . " The parser ignored the timing of the " . $container->localName . ".",
+                $container->getLineNo(),
+                null,
+                [],
+                ParseWarningAction::Repaired
+            );
+        }
         $properties    = $this->styles->ownProperties($container);
         $scope         = new TtmlScope(
             $begin,

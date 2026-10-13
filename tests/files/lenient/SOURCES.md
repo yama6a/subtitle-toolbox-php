@@ -41,6 +41,7 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `bad_sync_start.smi` | a `SYNC` tag with an empty `Start` attribute, CR LF | MIT |
 | `bad_begin.ttml` | a letter in a `begin` time, a `p` without `end` or `dur`, LF | MIT |
 | `mantas_multiple_divs.ttml` | a `p` with absolute times in a timed `div`, so it begins after the `div` ends. In the shape of https://github.com/mantas-done/subtitles/blob/959d1705b1ed12cbb9ddba517f8bcb814e1919a8/tests/files/ttml_with_multiple_divs.ttml, LF | MIT |
+| `bare_seconds.ttml` | times as bare seconds with a fraction, such as `19.764`, and as `m:ss.fff`, in the shape of an Apple Music lyrics file with own text, LF | MIT |
 | `credit_before_xml.ttml` | a credit line before the XML declaration, a letter in a `begin` time, CR LF | MIT |
 | `credit_before_xml.srv3` | YouTube srv3 XML with a credit line before the XML declaration, LF | MIT |
 | `html_entities.ttml` | the HTML entities `&eacute;`, `&nbsp;`, `&agrave;`, `&ndash;`, `&euro;`, `&laquo;` and `&raquo;`, which XML does not define, LF | MIT |
