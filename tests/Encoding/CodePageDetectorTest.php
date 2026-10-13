@@ -18,6 +18,7 @@ class CodePageDetectorTest extends TestCase
     public static function encodingFiles(): array
     {
         return [
+            "arabic-iso-8859-6.srt"            => ["arabic-iso-8859-6.srt", "ISO-8859-6"],
             "arabic-utf-8.srt"                 => ["arabic-utf-8.srt", null],
             "arabic-windows-1256.srt"          => ["arabic-windows-1256.srt", "Windows-1256"],
             "czech-windows-1250.srt"           => ["czech-windows-1250.srt", "Windows-1250"],
@@ -38,6 +39,7 @@ class CodePageDetectorTest extends TestCase
             "polish-iso-8859-2.srt"            => ["polish-iso-8859-2.srt", "ISO-8859-2"],
             "russian-koi8-r.srt"               => ["russian-koi8-r.srt", "KOI8-R"],
             "russian-windows-1251.srt"         => ["russian-windows-1251.srt", "Windows-1251"],
+            "thai-windows-874.srt"             => ["thai-windows-874.srt", "Windows-874"],
             "turkish-windows-1254.srt"         => ["turkish-windows-1254.srt", "Windows-1254"],
             "utf-8-declared-utf-16.ttml"       => ["utf-8-declared-utf-16.ttml", null],
         ];
