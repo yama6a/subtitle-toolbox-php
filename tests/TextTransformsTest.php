@@ -344,6 +344,15 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testFixRightToLeftMovesSentenceEndPunctuationFromTheStartToTheEnd(): void
+    {
+        $subtitle = Subtitle::load(self::FILES . "own_rtl_reversed.srt", Format::SubRip)->fixRightToLeft();
+
+        $this->assertSame(file_get_contents(self::FILES . "own_rtl_reversed_fixed.srt"), $subtitle->toString(Format::SubRip));
+        $this->assertSame(file_get_contents(self::FILES . "own_rtl_reversed_fixed.srt"), $subtitle->fixRightToLeft()->toString(Format::SubRip));
+    }
+
+
     #[DataProvider("rightToLeftProvider")]
     public function testFixRightToLeft(string $input, string $expected): void
     {
@@ -367,6 +376,11 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
             "Arabic digits only"    => ["١٢٣.", "١٢٣."],
             "drawing"               => ["{\\p1}m 0 0 l 10 10{\\p0}", "{\\p1}m 0 0 l 10 10{\\p0}"],
             "tags only"             => ["<i></i>", "<i></i>"],
+            "punctuation first"     => [".מחר", "\u{202B}מחר.\u{202C}"],
+            "space after it"        => ["?! מה", "\u{202B}מה?!\u{202C}"],
+            "tag after it"          => [".<i>מחר</i>", "<i>\u{202B}מחר.\u{202C}</i>"],
+            "earlier fix"           => ["\u{202B}.מחר\u{202C}", "\u{202B}מחר.\u{202C}"],
+            "left-to-right first"   => [".Hello", ".Hello"],
         ];
     }
 
