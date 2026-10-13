@@ -335,7 +335,7 @@ final class LineWrapper
      */
     private static function startsInlineTurn(array $previous, array $word, ?array $next): bool
     {
-        return preg_match('/[.?!\x{2026}]$/u', Markup::visibleText($previous["text"])) === 1
+        return preg_match('/[.?!\x{2026}\x{3002}\x{FF01}\x{FF1F}\x{FF61}]$/u', Markup::visibleText($previous["text"])) === 1
             && preg_match(DialogueDash::REGEX, Markup::visibleText($word["text"] . " " . ($next["text"] ?? ""))) === 1;
     }
 

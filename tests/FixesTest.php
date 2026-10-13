@@ -501,6 +501,16 @@ class FixesTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testWrapLinesStartsADialogueTurnAfterAChineseOrJapaneseSentenceEnd(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/files/fixes/own_cjk_dialogue.srt"), Format::SubRip);
+
+        $subtitle->wrapLines(16);
+
+        $this->assertSame(file_get_contents(__DIR__ . "/files/fixes/own_cjk_dialogue_wrapped.srt"), $subtitle->toString(Format::SubRip));
+    }
+
+
     public function testUnwrapLines(): void
     {
         $subtitle = new Subtitle();
