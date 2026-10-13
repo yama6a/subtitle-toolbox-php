@@ -81,7 +81,8 @@ final readonly class TtmlClock
 
     /**
      * Reads the time expressions that TTML does not allow but some tools write:
-     * one-digit clock fields, m:ss without hours, hh:mm:ss:fff with milliseconds, and a bare number of milliseconds.
+     * one-digit clock fields, m:ss without hours, hh:mm:ss:fff with milliseconds, a bare integer of milliseconds,
+     * and a bare number with a fraction, which is in seconds.
      */
     public static function looseSeconds(string $expression): ?float
     {
@@ -94,6 +95,8 @@ final readonly class TtmlClock
                 => Timecode::toSeconds(0, (int) $matches[1], (int) $matches[2], $matches[3] ?? ""),
             (bool) preg_match("/^\d{1,15}$/", $expression)
                 => (int) $expression / 1000,
+            (bool) preg_match("/^\d{1,15}\.\d{1,9}$/", $expression)
+                => (float) $expression,
             default => null,
         };
     }
