@@ -67,7 +67,7 @@ class FormatTest extends TestCase
     {
         $rows = (new \ReflectionClassConstant(FormatRegistry::class, "FORMATS"))->getValue();
 
-        $this->assertCount(38, Format::cases());
+        $this->assertCount(39, Format::cases());
         $this->assertSame(array_keys($rows), array_map(fn (Format $format): string => $format->value, Format::cases()));
     }
 

@@ -55,6 +55,7 @@ use SubtitleToolbox\Ocr\TesseractOcrOptions;
 use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\AwsTranscribeParser;
+use SubtitleToolbox\Parsers\Cavena890Parser;
 use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Parsers\DcpParser;
@@ -430,6 +431,8 @@ class ThrowSitesTest extends TestCase
 
                 return $subtitle->toString(Format::GoogleSpeech);
             }, ...$unwritable],
+            "Parsers/Cavena890Variant.php: line of 52 bytes" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 52)))
+                ->toString(Format::Cavena890), ...$unwritable],
             "Formatters/PacFormatter.php: subtitle number 65536" => [fn () => self::subtitle()->setFormatData("pac", ["firstNumber" => 65536])
                 ->toString(Format::Pac), ...$unwritable],
             "Formatters/PacFormatter.php: text too long" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 70000)))
@@ -567,6 +570,7 @@ class ThrowSitesTest extends TestCase
                 "CHAPTER01=00:00:00.000\nCHAPTER02=00:00:01.000\n", new ReadOptions()), ...$parsing],
             "Parsers/OgmChaptersParser.php: no time line"   => [fn () => (new OgmChaptersParser())->parse("CHAPTER01NAME=x\n", new ReadOptions()), ...$parsing],
             "Parsers/OgmChaptersParser.php: second 60"      => [fn () => (new OgmChaptersParser())->parse("CHAPTER01=00:00:60.000\n", new ReadOptions()), ...$parsing],
+            "Parsers/Cavena890Parser.php: no header"        => [fn () => (new Cavena890Parser())->parse("\0", new ReadOptions()), ...$parsing],
             "Parsers/PacParser.php: no header"              => [fn () => (new PacParser())->parse("\x01\0", new ReadOptions()), ...$parsing],
             "Parsers/PacParser.php: encoding KOI8-R"        => [fn () => (new PacParser())->parse(self::pac("Hello"),
                 new ReadOptions(encoding: "KOI8-R")), ...$invalid],

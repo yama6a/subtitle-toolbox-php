@@ -35,6 +35,7 @@ The command line tool also comes as a PHAR file and as two container images. The
 | Format | Case | Name | Extensions | Read | Write | Notes |
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
 | [ASS](https://aegisub.org/docs/latest/ass_tags/), [SSA](https://en.wikipedia.org/wiki/SubStation_Alpha) | `Ass` | `ass` | `.ass`, `.ssa` | ✅ | ✅ | |
+| [Cavena 890](https://titlevision.dk/sm/890_format.htm) | `Cavena890` | `cavena890` | `.890` | ✅ | ✅ | binary, no public spec, not detected from the content |
 | [CSV](https://www.rfc-editor.org/rfc/rfc4180), [TSV](https://www.iana.org/assignments/media-types/text/tab-separated-values) | `Csv`, `Tsv` | `csv`, `tsv` | `.csv`, `.tsv` | ✅ | ✅ | not detected from the content |
 | DCP subtitles: [SMPTE ST 428-7](https://pub.smpte.org/doc/st428-7/20140211-pub/st0428-7-2014.pdf), [Interop](https://cinepedia.com/interop-docs/Reference_Documents/CineCanvas(tm)_RevC.pdf) | `Dcp` | `dcp` | `.xml` | ✅ | ✅ | digital cinema text subtitles |
 | [EBU STL](https://tech.ebu.ch/docs/tech/tech3264.pdf) | `EbuStl` | `stl` | `.stl` | ✅ | ✅ | binary, 25 or 30 fps |

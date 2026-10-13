@@ -96,6 +96,7 @@ final class WriteGoldens
         "vtt/real/own_openai_whisper_highlight_words.vtt" => Format::WebVtt,
         "ass/real/own_aegisub.ass"                        => Format::Ass,
         "ass/real/own_signs_crlf.ass"                     => Format::Ass,
+        "cavena890/real/harbour_english.890"              => Format::Cavena890,
         "sbv/real/youtube_studio_lf.sbv"                  => Format::Sbv,
         "subviewer/real/subviewer2_crlf.sub"              => Format::SubViewer,
         "microdvd/real/sub_microdvd_with_styles.sub"      => Format::MicroDvd,
@@ -267,6 +268,7 @@ final class WriteGoldens
             "25.stl"  => [Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 25)])],
             "30.stl"  => [Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 30)])],
             "pac"     => [Format::Pac, new WriteOptions()],
+            "cavena890.890" => [Format::Cavena890, new WriteOptions()],
         ];
     }
 

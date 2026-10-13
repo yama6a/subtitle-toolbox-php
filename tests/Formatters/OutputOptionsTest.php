@@ -37,8 +37,8 @@ class OutputOptionsTest extends TestCase
 {
     private const FILES = __DIR__ . "/../files/";
 
-    // EBU STL, PAC and PGS are binary, so they have no line ending and no BOM.
-    private const BINARY = [Format::EbuStl, Format::Pac, Format::Pgs];
+    // Cavena 890, EBU STL, PAC and PGS are binary, so they have no line ending and no BOM.
+    private const BINARY = [Format::Cavena890, Format::EbuStl, Format::Pac, Format::Pgs];
 
     // Compact JSON without a write option for line breaks.
     private const ONE_LINE = [Format::Whisper, Format::AwsTranscribe, Format::Deepgram, Format::AssemblyAi, Format::GoogleSpeech];
@@ -277,6 +277,7 @@ class OutputOptionsTest extends TestCase
     {
         return [
             "ASS"      => [Format::Ass],
+            "Cavena"   => [Format::Cavena890],
             "EBU STL"  => [Format::EbuStl],
             "iTT"      => [Format::Itt],
             "MicroDVD" => [Format::MicroDvd],

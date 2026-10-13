@@ -7,6 +7,7 @@ namespace SubtitleToolbox;
 use SubtitleToolbox\Formatters\AssemblyAiFormatter;
 use SubtitleToolbox\Formatters\AssFormatter;
 use SubtitleToolbox\Formatters\AwsTranscribeFormatter;
+use SubtitleToolbox\Formatters\Cavena890Formatter;
 use SubtitleToolbox\Formatters\CsvFormatter;
 use SubtitleToolbox\Formatters\DcpFormatter;
 use SubtitleToolbox\Formatters\DeepgramFormatter;
@@ -43,6 +44,7 @@ use SubtitleToolbox\Formatters\YouTubeTimedTextFormatter;
 use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\AwsTranscribeParser;
+use SubtitleToolbox\Parsers\Cavena890Parser;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Parsers\DcpParser;
 use SubtitleToolbox\Parsers\DeepgramParser;
@@ -90,6 +92,7 @@ final class FormatRegistry
      */
     private const FORMATS = [
         Format::Ass->value                => [AssParser::class, AssFormatter::class, ["ass", "ssa"]],
+        Format::Cavena890->value          => [Cavena890Parser::class, Cavena890Formatter::class, ["890"]],
         Format::Csv->value                => [CsvParser::class, CsvFormatter::class, ["csv"]],
         Format::FfMetadataChapters->value => [FfMetadataChaptersParser::class, FfMetadataChaptersFormatter::class, ["ffmeta"]],
         Format::HtmlTranscript->value     => [HtmlTranscriptParser::class, HtmlTranscriptFormatter::class, ["html", "htm"]],

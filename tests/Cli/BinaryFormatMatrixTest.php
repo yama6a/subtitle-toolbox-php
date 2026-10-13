@@ -13,6 +13,7 @@ class BinaryFormatMatrixTest extends CliTestCase
 {
     private const INPUTS = [
         "ass"                => "ass/real/own_aegisub.ass",
+        "cavena890"          => "cavena890/real/harbour_english.890",
         "csv"                => "csv/real/mantas_done_shape.csv",
         "ffmeta-chapters"    => "chapters/ffmetadata/real/ffmpeg_mp4_export.ffmeta",
         "html"               => "html/real/spec_example_shape.html",
@@ -57,6 +58,9 @@ class BinaryFormatMatrixTest extends CliTestCase
     /** SCC and MCC output also get these options, because CEA-608 allows 32 characters per line and 4 lines per cue. */
     private const SCC_OPTIONS = ["--structure-split-long", "--structure-wrap", "--structure-max-cpl", "32", "--structure-max-lines", "4"];
 
+    /** Cavena 890 output also gets these options, because Cavena 890 allows 51 bytes per line. */
+    private const CAVENA_OPTIONS = ["--structure-split-long", "--structure-wrap", "--structure-max-cpl", "40", "--structure-max-lines", "4"];
+
     /** Conversions that fail on purpose, as "input>output" => outcome. Pairs that are not listed must succeed. */
     private const EXPECTED_FAILURES = [
         // CEA-608 cannot show the Chinese characters of the LRC fixture.
@@ -92,7 +96,11 @@ class BinaryFormatMatrixTest extends CliTestCase
         $converts = [];
         foreach (self::INPUTS as $input => $fixture) {
             foreach ($writable as $output) {
-                $options = in_array($output, ["scc", "mcc"], true) ? [...self::CONVERT_OPTIONS, ...self::SCC_OPTIONS] : self::CONVERT_OPTIONS;
+                $options = match ($output) {
+                    "scc", "mcc" => [...self::CONVERT_OPTIONS, ...self::SCC_OPTIONS],
+                    "cavena890"  => [...self::CONVERT_OPTIONS, ...self::CAVENA_OPTIONS],
+                    default      => self::CONVERT_OPTIONS,
+                };
                 $converts["$input>$output"] = ["convert", self::FILES . $fixture, "--from", $input, "--to", $output,
                                                "-o", "$this->dir/$input-to-$output.out", ...$options];
             }
