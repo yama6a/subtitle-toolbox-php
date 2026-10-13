@@ -58,6 +58,7 @@ use SubtitleToolbox\Parsers\AwsTranscribeParser;
 use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
+use SubtitleToolbox\Parsers\Options\MccReadOptions;
 use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
@@ -526,6 +527,7 @@ class ThrowSitesTest extends TestCase
             "Parsers/Mcc.php: half a byte"                  => [fn () => self::mcc("00:00:00:00\tT5"), ...$parsing],
             "Parsers/Mcc.php: no CDP"                       => [fn () => self::mcc("00:00:00:00\tT09ZZZZZZZZZZZZZZZZZZ"), ...$parsing],
             "Parsers/Mcc.php: short cc_data"                => [fn () => self::mcc("00:00:00:00\tT0AS0A4F43ZZ72F4ZZ"), ...$parsing],
+            "Parsers/Options/MccReadOptions.php: service 0" => [fn () => new MccReadOptions(service: 0), ...$invalid],
             "Parsers/MccParser.php: no header"              => [fn () => (new MccParser())->parse("Time Code Rate=30DF", new ReadOptions()), ...$parsing],
             "Parsers/MccParser.php: version 3.0"            => [fn () => (new MccParser())->parse("File Format=MacCaption_MCC V3.0", new ReadOptions()), ...$parsing],
             "Parsers/MccParser.php: no time code"           => [fn () => self::mcc("text"), ...$parsing],

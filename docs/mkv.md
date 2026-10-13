@@ -58,7 +58,7 @@ Subtitle::load('/media/one-track.webm');                       // reads the only
 
 ## MP4
 
-`ffmpeg -c:s mov_text`, HandBrake and phones store text subtitles in MP4 and MOV files as 3GPP timed text (`tx3g`). Final Cut Pro, Compressor, Premiere Pro and iTunes Store files carry CEA-608 closed captions in a `c608` track. The same calls read them: `Subtitle::tracks()`, `loadTrack()` and `load()` without a format. `Mp4Reader` in the namespace `SubtitleToolbox\Container\Mp4` has the methods of `MatroskaReader`.
+`ffmpeg -c:s mov_text`, HandBrake and phones store text subtitles in MP4 and MOV files as 3GPP timed text (`tx3g`). Final Cut Pro, Compressor, Premiere Pro and iTunes Store files carry CEA-608 closed captions in a `c608` track, and CEA-708 captions in a `c708` track. The same calls read them: `Subtitle::tracks()`, `loadTrack()` and `load()` without a format. `Mp4Reader` in the namespace `SubtitleToolbox\Container\Mp4` has the methods of `MatroskaReader`.
 
 ```php
 Subtitle::loadTrack('/media/phone-video.mp4', 2)->save('phone-video.srt');
@@ -69,7 +69,7 @@ Subtitle::loadTrack('/media/phone-video.mp4', 2)->save('phone-video.srt');
 | `container` | `ContainerFormat::Mp4` |
 | `number` | the track ID of `tkhd` |
 | `codecId` | the sample entry type, for example `tx3g` or `c608` |
-| `format` | `Format::SubRip` for `tx3g`, `Format::Scc` for `c608`, null for other codecs and encrypted tracks |
+| `format` | `Format::SubRip` for `tx3g`, `Format::Scc` for `c608`, `Format::Mcc` for `c708`, null for other codecs and encrypted tracks |
 | `language` | the `elng` box, else the `mdhd` language, for example `eng` |
 | `name` | the `udta/name` box |
 | `default` | the track enabled flag of `tkhd` |
@@ -78,10 +78,11 @@ Subtitle::loadTrack('/media/phone-video.mp4', 2)->save('phone-video.srt');
 - **Tracks**: `tracks()` lists tracks with the handler `text`, `sbtl`, `subt` or `clcp` (closed captions).
 - **Cues**: each `tx3g` sample with text becomes a cue with the sample times. An empty sample is a gap. The text is UTF-8, or UTF-16 after a byte order mark. The reader turns the bold, italic and underline runs of a `styl` box into `<b>`, `<i>` and `<u>` tags, so `ffmpeg -c:s mov_text` output keeps the tags of the SubRip input. It ignores the font, the size and the color of a run, and other modifier boxes such as `hlit`.
 - **Closed captions**: each `c608` sample holds a `cdat` box with the CEA-608 byte pairs of field 1, one pair per frame at 29.97 fps. The reader decodes them as [SCC](formats.md#scc) does, so `ffmpeg -i captions.scc -c:s copy captions.mov` gives the cues of `captions.scc`, with the `scc` format data. [`SccReadOptions`](formats.md#scc) and `--scc-roll-up` apply. The reader ignores field 2 (`cdt2`), as SCC files hold field 1 only.
+- **CEA-708**: each `c708` sample holds a `ccdp` box with a caption distribution packet of SMPTE 334-2, as each line of an [MCC](formats.md#mcc) file does. The reader reads it as MCC: CEA-708 service 1, else the CEA-608 data of field 1. `MccReadOptions(service: 2)` reads service 2.
 - **Edit list**: the reader moves the samples by the empty edits at the start of the `elst` box, and by the media time of the first edit after them. ffmpeg writes an empty edit for a `c608` track that starts after 0 s. A sample that ends before 0 s drops. Later edits do not change the times.
-- **Format**: `findFormat()` is `Format::SubRip` for `tx3g`. The cues hold text with SubRip tags, as from an `S_TEXT/UTF8` track of an MKV file. It is `Format::Scc` for `c608`, so `convert movie.mov --track 3` without `--to` writes SCC.
+- **Format**: `findFormat()` is `Format::SubRip` for `tx3g`. The cues hold text with SubRip tags, as from an `S_TEXT/UTF8` track of an MKV file. It is `Format::Scc` for `c608`, so `convert movie.mov --track 3` without `--to` writes SCC. It is `Format::Mcc` for `c708`.
 - **Detection**: `load()` and `fromString()` without a format know an MP4 file by the `ftyp` box at byte 4.
 - **Memory**: the reader reads the sample tables of the wanted track and its samples only. It skips the media data with `fseek()`.
 - **Errors**: `extract()` throws `ParsingException` for another codec, such as `wvtt`, and for an encrypted track (`enct` or a `sinf` box). It also throws `ParsingException` for a sample outside the file. The same applies when the `stsz` box lists more sample bytes than the file has.
 - **Not read**: CEA-608 data inside the H.264 or HEVC video stream. Tools such as CCExtractor and ffmpeg extract it.
-- **Spec**: ISO/IEC 14496-12 for the boxes, 3GPP TS 26.245 for timed text, the [QuickTime File Format](https://developer.apple.com/documentation/quicktime-file-format/closed_captioning_sample_data) for `c608` samples.
+- **Spec**: ISO/IEC 14496-12 for the boxes, 3GPP TS 26.245 for timed text, the [QuickTime File Format](https://developer.apple.com/documentation/quicktime-file-format/closed_captioning_sample_data) for `c608` and `c708` samples.

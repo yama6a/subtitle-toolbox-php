@@ -48,6 +48,7 @@ const HEADER = <<<'MCC'
     MCC;
 
 // The service info section of a CDP with two services: CEA-608 CC1 and CEA-708 service 1, both in English.
+// captionmaker_608_708.mcc keeps it, as a service info section lists only some services.
 const SERVICE_INFO = "\x73\xF2\xE0eng\x7E\x3F\xFF\xE1eng\xC1\x3F\xFF";
 
 
@@ -224,8 +225,112 @@ function v2At5994(): string
 }
 
 
+/**
+ * Returns the bytes of a CEA-708 command: the code and its parameter bytes.
+ */
+function command(int $code, int ...$parameters): string
+{
+    return pack("C*", $code, ...$parameters);
+}
+
+
+/**
+ * Returns the commands that load a pop-on caption into hidden window $window. Each line is a list of pen changes and
+ * text: a pen change is [italic, color], with color as 6 bits of red, green and blue.
+ *
+ * @param list<list<string|array{bool, int}>> $lines
+ * @return list<string>
+ */
+function popOn(int $window, int $anchorPoint, int $vertical, int $horizontal, array $lines): array
+{
+    $commands = [
+        command(0x8C, 1 << $window),
+        command(0x98 + $window, 0x18, 0x80 | $vertical, $horizontal, $anchorPoint << 4 | (count($lines) - 1), 31, 0x09),
+    ];
+    foreach ($lines as $row => $parts) {
+        $commands[] = command(0x92, $row, 0);
+        foreach ($parts as $part) {
+            if (is_array($part)) {
+                $commands[] = command(0x90, 0x01, $part[0] ? 0x80 : 0x00);
+                $commands[] = command(0x91, $part[1], 0x00, 0x00);
+                continue;
+            }
+            foreach (str_split($part) as $byte) {
+                $commands[] = $byte;
+            }
+        }
+    }
+
+    return $commands;
+}
+
+
+/**
+ * Splits the commands of one service into DTVCC packets of at most 31 bytes of service data, one packet per frame
+ * from $frame on. Returns the triplets of each frame.
+ *
+ * @param array<int, string> $triplets the triplets by frame, which the packets extend
+ * @param list<string>       $commands
+ */
+function dtvcc(array &$triplets, int $frame, int $service, array $commands): void
+{
+    $block = "";
+    $flush = function () use (&$block, &$frame, &$triplets, $service): void {
+        $packet = chr($service << 5 | strlen($block)) . $block;
+        $packet .= strlen($packet) % 2 === 0 ? "\0" : "";
+        $packet  = chr(($frame & 3) << 6 | intdiv(strlen($packet) + 1, 2)) . $packet;
+        foreach (str_split($packet, 2) as $index => $pair) {
+            $triplets[$frame] = ($triplets[$frame] ?? "") . triplet($index === 0 ? 3 : 2, unpack("n", $pair)[1]);
+        }
+        $block = "";
+        $frame++;
+    };
+    foreach ($commands as $command) {
+        if (strlen($block) + strlen($command) > 31) {
+            $flush();
+        }
+        $block .= $command;
+    }
+    $flush();
+}
+
+
+/**
+ * CaptionMaker shape with CEA-608 CC1 and two CEA-708 services: the pop-on captions of captionmaker_popon_df.scc in
+ * field 1, French captions in service 1 and Spanish captions in service 2. Service 1 has an accented letter of G1,
+ * an ellipsis of G2, the music note, italics, a yellow pen and a window at the top left.
+ */
+function captionMaker708(): string
+{
+    $words    = sccWords("captionmaker_popon_df.scc");
+    $triplets = [];
+    $yellow   = [false, 0x3C];
+    $white    = [false, 0x3F];
+    dtvcc($triplets, 50, 1, popOn(0, 7, 90, 50, [["L'horaire d'hiver"], ["d\xE9bute lundi\x10\x25"]]));
+    dtvcc($triplets, 69, 1, [command(0x89, 0x01)]);
+    dtvcc($triplets, 140, 1, popOn(1, 0, 10, 10, [[[true, 0x3F], "\x7F Annonce \x7F"]]));
+    dtvcc($triplets, 164, 1, [command(0x8C, 0x01) . command(0x89, 0x02)]);
+    dtvcc($triplets, 210, 1, [command(0x8C, 0x02)]);
+    dtvcc($triplets, 225, 1, popOn(0, 7, 90, 50, [[$yellow, "Le train c\xF4tier part"], [$white, "\xE0 6 h 50."]]));
+    dtvcc($triplets, 254, 1, [command(0x89, 0x01)]);
+    dtvcc($triplets, 330, 1, [command(0x8C, 0x01)]);
+    dtvcc($triplets, 55, 2, popOn(0, 7, 90, 50, [["El horario de invierno"], ["empieza el lunes."]]));
+    dtvcc($triplets, 69, 2, [command(0x89, 0x01)]);
+    dtvcc($triplets, 210, 2, [command(0x8C, 0x01)]);
+
+    $output = fileHeader("2.0", "30DF", "7A2B4C6D-8E9F-4A0B-9C1D-2E3F4A5B6C7D", "Monday, October 12, 2026", "10:20:30");
+    for ($frame = 30, $sequence = 0; $frame <= 345; $frame++, $sequence++) {
+        $data    = triplet(0, $words[$frame] ?? 0x8080) . triplet(1, 0x8080) . ($triplets[$frame] ?? "");
+        $output .= vsprintf("%02d:%02d:%02d:%02d", timeCode($frame, 30, true)) . "\t" . compress(packet(4, $sequence, $data, 20, SERVICE_INFO)) . "\n";
+    }
+
+    return $output;
+}
+
+
 $files = [
     "captionmaker_popon_df.mcc" => captionMakerPopOn(),
+    "captionmaker_608_708.mcc"  => captionMaker708(),
     "v1_23976_timecode.mcc"     => v1At23976(),
     "v2_5994df_fields.mcc"      => v2At5994(),
 ];

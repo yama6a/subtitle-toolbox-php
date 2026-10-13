@@ -716,6 +716,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 - Checked at: `58fad713d9c2b322784bc2fa52148e078dbc8759`. Older commits are GPL-3.0, and nothing comes from them.
 - Code adapted from it:
   - `src/Parsers/Mcc.php`: the MCC alias letters, the MCC header text and the packet layout, from `src/libse/SubtitleFormats/MacCaption10.cs` and `src/libse/Cea708/Smpte291M.cs`
+  - `src/Encoding/Cea708.php`: the G2 character table, from `src/libse/Cea708/Cea708.cs`
 
 ```text
 MIT License

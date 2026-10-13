@@ -8,11 +8,13 @@ use Generator;
 use SubtitleToolbox\Container\ContainerFormat;
 use SubtitleToolbox\Container\ContainerReader;
 use SubtitleToolbox\Container\SubtitleTrack;
+use SubtitleToolbox\Encoding\CaptionDataCues;
 use SubtitleToolbox\Encoding\Cea608Cues;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatOptionsList;
+use SubtitleToolbox\Parsers\Mcc;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Streaming\Streams;
@@ -31,16 +33,19 @@ final class Mp4Reader implements ContainerReader
 {
     public const CODEC_TX3G = "tx3g";
     public const CODEC_C608 = "c608";
+    public const CODEC_C708 = "c708";
 
-    public const CODECS = [self::CODEC_TX3G, self::CODEC_C608];
+    public const CODECS = [self::CODEC_TX3G, self::CODEC_C608, self::CODEC_C708];
 
     /** The type of the first box of an MP4 file, at byte 4. */
     public const FTYP = "ftyp";
 
-    private const FORMATS = [self::CODEC_TX3G => Format::SubRip, self::CODEC_C608 => Format::Scc];
+    private const FORMATS = [self::CODEC_TX3G => Format::SubRip, self::CODEC_C608 => Format::Scc, self::CODEC_C708 => Format::Mcc];
 
     // A c608 sample holds a cdat box with the CEA-608 byte pairs of field 1, one pair per frame.
+    // A c708 sample holds a ccdp box with a caption distribution packet of SMPTE 334-2.
     private const FIELD_1_DATA = "cdat";
+    private const CAPTION_PACKET = "ccdp";
 
     // The handler types of timed text, subtitle and closed caption tracks.
     private const SUBTITLE_HANDLERS = ["text", "sbtl", "subt", "clcp"];
@@ -168,7 +173,11 @@ final class Mp4Reader implements ContainerReader
         }
 
         $options ??= new ReadOptions();
-        $cues      = $track->codecId === self::CODEC_C608 ? $this->captionCues($trackNumber, $options) : $this->textCues($trackNumber, $track->forced);
+        $cues      = match ($track->codecId) {
+            self::CODEC_C608 => $this->captionCues($trackNumber, $options),
+            self::CODEC_C708 => $this->packetCues($trackNumber, $options),
+            default          => $this->textCues($trackNumber, $track->forced),
+        };
 
         $subtitle = (new Subtitle())->addCues($cues);
         $subtitle->setFormat($track->format);
@@ -217,6 +226,26 @@ final class Mp4Reader implements ContainerReader
         $sccOptions = FormatOptionsList::find($options->formats, SccReadOptions::class) ?? new SccReadOptions();
 
         return Cea608Cues::read($codeLines, $sccOptions, $options->lastCueDuration);
+    }
+
+
+    /**
+     * Reads the caption distribution packets of the ccdp boxes as an MCC file with one line per sample.
+     *
+     * @return list<SubtitleCue>
+     */
+    private function packetCues(int $trackNumber, ReadOptions $options): array
+    {
+        $frames = [];
+        foreach ($this->sampleTimes($trackNumber) as [$start, , $offset, $size]) {
+            foreach (self::sampleBoxes($this->sampleData($trackNumber, $offset, $size)) as [$type, $data]) {
+                if ($type === self::CAPTION_PACKET) {
+                    $frames[] = [$start, Mcc::readCdp($data)[1]];
+                }
+            }
+        }
+
+        return CaptionDataCues::read($frames, $options);
     }
 
 
