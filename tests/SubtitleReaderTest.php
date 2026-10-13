@@ -71,6 +71,28 @@ class SubtitleReaderTest extends TestCase
     }
 
 
+    public static function binaryFiles(): array
+    {
+        return [
+            "EBU STL" => ["stl/real/harbour_open_30fps.stl", null],
+            "EBU STL with format" => ["stl/real/harbour_open_30fps.stl", Format::EbuStl],
+            "PGS"     => ["pgs/text_1080p.sup", null],
+        ];
+    }
+
+
+    #[DataProvider("binaryFiles")]
+    public function testABinaryFileKeepsItsBytesWithAnEncoding(string $file, ?Format $format): void
+    {
+        $expected = Subtitle::load(self::FILES . $file, $format);
+
+        $subtitle = Subtitle::load(self::FILES . $file, $format, new ReadOptions(encoding: TextEncoding::Windows1252));
+
+        $this->assertEquals($expected->getCues(), $subtitle->getCues());
+        $this->assertEquals($expected->getCues(), Subtitle::fromString(file_get_contents(self::FILES . $file), $format, new ReadOptions(encoding: TextEncoding::Windows1252))->getCues());
+    }
+
+
     public function testAnEmptyFileTakesTheFormatOfItsExtension(): void
     {
         file_put_contents("$this->dir/empty.srt", " \n");
