@@ -26,6 +26,8 @@ Rules for adding a port are in [CONTRIBUTING.md](CONTRIBUTING.md).
   - `tests/files/sami/real/mantas_smi_formatted.smi`
   - `tests/files/subviewer/real/mantas_headers_shape.sub`
   - `tests/files/subviewer/real/mantas_plain_shape.sub`
+  - `tests/files/spruce-stl/real/bakery.stl`
+  - `tests/files/spruce-stl/real/bakery_with_header.stl`
   - `tests/files/lenient/mantas_multiple_divs.ttml`
   - `tests/files/ttml/real/mantas_netflix_ticks.dfxp`
 

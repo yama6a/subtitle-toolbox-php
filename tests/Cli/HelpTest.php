@@ -70,7 +70,7 @@ class HelpTest extends TestCase
     private const DESCRIBED_DEFAULTS = [
         "the format detected from the content", "as for --from",
         "UTF-8", "stop at the first failure", "the input format", "the format of the primary file",
-        "the frame rate of a MicroDVD, iTT or MCC input", "the BOM rule of the output format", "the end of the last cue",
+        "the frame rate of a MicroDVD, Spruce STL, iTT or MCC input", "the BOM rule of the output format", "the end of the last cue",
         "half the --video-fps, rounded to the nearest frame", "tesseract when it is installed", "the subtitle fonts database of php-glyph-ocr",
         "the environment variable of the engine", "the engine detects it",
     ];
@@ -195,8 +195,8 @@ class HelpTest extends TestCase
         return [
             "convert --lenient"       => [["convert"], '/^  --lenient +Skip or repair broken cues and print a warning for each\. SCC, PGS, VobSub and chapter input ignore it\.$/m'],
             "convert --encoding"      => [["convert"], '/^  --encoding NAME +.*It replaces code page detection\. A BOM, valid UTF-8 and UTF-16 input win over it\.$/m'],
-            "convert --input-fps"     => [["convert"], '/^  --input-fps RATE +Frame rate of a MicroDVD input without a \{1\}\{1\}<fps> first line, and of CSV or TSV times in hh:mm:ss:ff\.$/m'],
-            "convert --output-fps"    => [["convert"], '/^  --output-fps RATE +Frame rate of MicroDVD, iTT and MCC output\..*$/m'],
+            "convert --input-fps"     => [["convert"], '/^  --input-fps RATE +Frame rate of a MicroDVD input without a \{1\}\{1\}<fps> first line, of Spruce STL timecodes, and of CSV or TSV times in hh:mm:ss:ff\.$/m'],
+            "convert --output-fps"    => [["convert"], '/^  --output-fps RATE +Frame rate of MicroDVD, Spruce STL, iTT and MCC output\..*$/m'],
             "convert --fps"           => [["convert"], '/^  --fps RATE +Sets --input-fps, --output-fps and --video-fps\. A specific option wins over --fps\.$/m'],
             "convert --from"          => [["convert"], '/^  --from FORMAT +Input format\./m'],
             "convert --to"            => [["convert"], '/^  --to FORMAT +Output format\./m'],

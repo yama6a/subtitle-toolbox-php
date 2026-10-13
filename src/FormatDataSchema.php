@@ -20,6 +20,7 @@ use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SccParser;
+use SubtitleToolbox\Parsers\SpruceStlParser;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
@@ -112,6 +113,12 @@ final class FormatDataSchema
         SccParser::FORMAT_DATA_KEY                => [
             "dropFrame" => "bool",
         ],
+        SpruceStlParser::FORMAT_DATA_KEY          => [
+            "frameRate" => "number",
+            "header"    => self::STRINGS,
+            "separator" => "string",
+            "lineBreak" => "string",
+        ],
         EbuStlParser::FORMAT_DATA_KEY             => [
             "gsi"                        => self::STRINGS,
             "startOfProgrammeSubtracted" => "bool",
@@ -167,6 +174,9 @@ final class FormatDataSchema
         ],
         SamiParser::FORMAT_DATA_KEY               => [
             "paragraphs" => ["list", ["object", ["!attributes" => self::ATTRIBUTES, "!html" => "string"]]],
+        ],
+        SpruceStlParser::FORMAT_DATA_KEY          => [
+            "commands" => self::STRINGS,
         ],
         SubRipParser::FORMAT_DATA_KEY             => [
             "coordinates" => ["object", ["!x1" => "int", "!x2" => "int", "!y1" => "int", "!y2" => "int"]],

@@ -28,6 +28,7 @@ use SubtitleToolbox\Formatters\PodcastTranscriptFormatter;
 use SubtitleToolbox\Formatters\SamiFormatter;
 use SubtitleToolbox\Formatters\SbvFormatter;
 use SubtitleToolbox\Formatters\SccFormatter;
+use SubtitleToolbox\Formatters\SpruceStlFormatter;
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\SubViewerFormatter;
 use SubtitleToolbox\Formatters\TmPlayerFormatter;
@@ -59,6 +60,7 @@ use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SccParser;
+use SubtitleToolbox\Parsers\SpruceStlParser;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TmPlayerParser;
@@ -101,6 +103,7 @@ final class FormatRegistry
         Format::Scc->value                => [SccParser::class, SccFormatter::class, ["scc"]],
         Format::SubRip->value             => [SubRipParser::class, SubRipFormatter::class, ["srt"]],
         Format::EbuStl->value             => [EbuStlParser::class, EbuStlFormatter::class, ["stl"]],
+        Format::SpruceStl->value          => [SpruceStlParser::class, SpruceStlFormatter::class, ["stl"]],
         Format::SubViewer->value          => [SubViewerParser::class, SubViewerFormatter::class, ["sub"]],
         Format::Ttml->value               => [TtmlParser::class, TtmlFormatter::class, ["ttml", "dfxp", "xml"]],
         Format::Tsv->value                => [CsvParser::class, CsvFormatter::class, ["tsv"]],

@@ -24,6 +24,7 @@ class FormatDetectorTest extends TestCase
         "podcast"  => Format::PodcastTranscript,
         "sami"     => Format::Sami,
         "sbv"      => Format::Sbv,
+        "spruce-stl" => Format::SpruceStl,
         "srt"      => Format::SubRip,
         "subviewer" => Format::SubViewer,
         "stl"      => Format::EbuStl,
@@ -37,11 +38,9 @@ class FormatDetectorTest extends TestCase
     // Chapters and cloud speech-to-text JSON load only with an explicit format.
     private const NOT_DETECTED_DIRECTORIES = ["chapters", "aws-transcribe", "deepgram", "assemblyai", "google-speech"];
 
-    // Spruce STL and headerless CSV start with hh:mm:ss:ff frame timecodes, which are not TMPlayer.
+    // Headerless CSV starts with hh:mm:ss:ff frame timecodes, which are neither TMPlayer nor Spruce STL.
     private const FRAME_TIMECODE_FIXTURES = [
         "csv/real/headerless_frame_times.csv",
-        "spruce-stl/real/bakery.stl",
-        "spruce-stl/real/bakery_with_header.stl",
     ];
 
     // These fixtures break their own format on purpose, so their parser rejects them.
@@ -128,6 +127,10 @@ class FormatDetectorTest extends TestCase
             "SubRip with dot"            => ["1\n00:00:01.000 --> 00:00:04.000\nHello\n", Format::SubRip],
             "SubRip without cue number"  => ["00:00:01,000 --> 00:00:04,000\nHello\n", Format::SubRip],
             "SubRip after five lines"    => ["a\nb\nc\nd\n\n 1\n00:00:01,000 --> 00:00:04,000\nHello\n", Format::SubRip],
+            "Spruce STL"                 => ["00:00:01:10 , 00:00:03:10 , The bakery opens at seven.\n", Format::SpruceStl],
+            "Spruce STL without spaces"  => ["00:00:01:10,00:00:03:10,The bakery opens at seven.\n", Format::SpruceStl],
+            "Spruce STL with tabs"       => ["\$FadeOut\t=\t0\n \n00:00:01:10\t,\t00:00:03:10\t,\tBakery\n", Format::SpruceStl],
+            "Spruce STL quote after comment" => ["//Subtitles\n00:00:01:10 , 00:00:03:10 , \"Bakery\"\n", Format::SpruceStl],
             "SBV"                        => ["0:00:01.500,0:00:04.000\nHello\n", Format::Sbv],
             "SubViewer 2 information"    => ["[INFORMATION]\r\n[TITLE]Bakery\r\n[END INFORMATION]\r\n", Format::SubViewer],
             "SubViewer 2 timing line"    => ["00:00:01.50,00:00:04.00\nHello[br]world\n", Format::SubViewer],
@@ -286,8 +289,7 @@ class FormatDetectorTest extends TestCase
             "Podcast chapters first"     => ["{\"chapters\": [], \"version\": \"1.2.0\"}"],
             "FFmpeg metadata"            => [";FFMETADATA1\ntitle=Meetup\n"],
             "OGM with blank line"        => ["CHAPTER00 = 00:00:00.000\r\n\r\nCHAPTER00NAME=Intro\r\n"],
-            "Spruce STL"                 => ["00:00:01:10 , 00:00:03:10 , The bakery opens at seven.\n"],
-            "Spruce STL without spaces"  => ["00:00:01:10,00:00:03:10,The bakery opens at seven.\n"],
+            "Headerless CSV with quotes" => ["00:00:01:10,00:00:03:10,\"The bakery opens at seven.\"\n"],
             "two frame timecodes"        => ["00:00:01:10:00:00:03:10 Hello\n"],
             "Podcast chapters, not a transcript" => ["{\"version\": \"1.2.0\", \"chapters\": [{\"startTime\": 0, \"title\": \"Intro\"}]}"],
         ];

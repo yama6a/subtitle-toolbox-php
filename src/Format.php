@@ -29,6 +29,7 @@ enum Format: string
     case Scc                = "scc";
     case SubRip             = "srt";
     case EbuStl             = "stl";
+    case SpruceStl          = "spruce-stl";
     case SubViewer          = "subviewer";
     case Ttml               = "ttml";
     case Tsv                = "tsv";
