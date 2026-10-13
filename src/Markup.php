@@ -506,6 +506,7 @@ final class Markup
 
     /**
      * Wraps a line with right-to-left letters in the embedding marks U+202B and U+202C, inside its leading and trailing tags, as fixRightToLeft() does.
+     * Sentence-end punctuation at the start of such a line moves to its end, unless the line ends with punctuation.
      *
      * @internal
      */
@@ -517,6 +518,13 @@ final class Markup
             || preg_match('/(?=\p{L})[\p{Arabic}\p{Hebrew}\p{Syriac}\p{Thaana}\p{Nko}]/u', self::visibleText($text)) !== 1
             || preg_match("/^((?:$tag)*)(.*?)((?:$tag)*)\$/su", $text, $matches) !== 1) {
             return $line;
+        }
+
+        $end = '[.,!?:;\x{061F}\x{060C}]';
+        if (preg_match("/^([" . DialogueDash::CHARACTERS . "][ \\t]*)?(?!\\.\\.)($end+)[ \\t]*(.*\\S)(\\s*)\$/su", $matches[2], $start) === 1
+            && preg_match("/$end\$/u", $start[3]) !== 1) {
+            // The second pass puts a tag at the start of the moved text outside the marks.
+            return self::embedRightToLeft($matches[1] . $start[1] . $start[3] . $start[2] . $start[4] . $matches[3]);
         }
 
         return "$matches[1]\u{202B}$matches[2]\u{202C}$matches[3]";

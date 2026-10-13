@@ -38,12 +38,15 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
   - It starts 2 s or more after the end of the cue before it.
 - **Speaker changes**: a cue or line that starts with the CEA-608 speaker change `>>` or a dialogue dash always starts a new sentence. `>> TICKETS` becomes `>> Tickets`. A dash before a digit, as in `-20`, is a minus sign.
 - **English `I`**: with the language `en`, `en-*` or `null`, sentence case writes the pronoun `I` and `I'm`, `I'll`, `I've` and `I'd` in upper case. `i.e.` stays lower case. Sentence case reads the whole line across tags, so `W<b>I</b>NDOW` becomes `W<b>i</b>ndow`. Names become lower case. Fix them after with `replaceText()`.
-- **Right-to-left text**: players with a left-to-right base direction show `مرحبا؟` with the `؟` at the left end. `fixRightToLeft()` wraps each line with an Arabic, Hebrew, Syriac, Thaana or N'Ko letter in the embedding marks U+202B and U+202C. Then the punctuation shows at the right end.
+- **Right-to-left text**: players with a left-to-right base direction show `שלום?` with the `?` at the right end, where a Hebrew reader starts. `fixRightToLeft()` wraps each line with an Arabic, Hebrew, Syriac, Thaana or N'Ko letter in the embedding marks U+202B and U+202C. Then the punctuation shows at the left end, where the sentence ends.
   - Tags and override blocks such as `{\an8}` at the start and the end of the line stay outside the marks, so `<i>שלום!</i>` becomes `<i>`U+202B`שלום!`U+202C`</i>`.
   - The method first removes the U+202B and U+202C marks of the line, so a second call changes nothing.
   - Lines without a right-to-left letter and ASS drawings with `{\p1}` stay unchanged.
+  - **Punctuation first**: files made for players with a left-to-right base direction often store the sentence end at the start of the line, as in `.מחר בבוקר`. Without a move, the period would show at the right end after the fix. So such a line becomes U+202B`מחר בבוקר.`U+202C.
+    - The moved run holds `.`, `,`, `!`, `?`, `:`, `;`, `؟` and `،`. Leading tags, override blocks and a dialogue dash stay in front, so `- ?לאן` becomes U+202B`- לאן?`U+202C.
+    - A line that ends with punctuation, or starts with an ellipsis such as `...`, keeps its order. A line that does not start with punctuation keeps its bytes and gets only the marks.
   - **Line breaks**: a line break ends every embedding. So `wrapLines()`, `unwrapLines()`, `mergeShortCues()` and `Resegmenter` give each new line its own marks when a line of the cue holds the marks of this method. The result is the same as `fixRightToLeft()` after the line breaks. For example, `wrapLines(20)` makes U+202B`אתה יכול לסגור את החלון, בבקשה?`U+202C into U+202B`אתה יכול לסגור`U+202C and U+202B`את החלון, בבקשה?`U+202C.
-- **Bidi controls**: `removeBidiControls()` removes the bidi controls LRM, RLM, LRE, RLE, PDF, LRO, RLO and the isolates U+2066 to U+2069 from the text between tags. It undoes `fixRightToLeft()`. Files fixed for one player carry these invisible characters, and they break other players and search. The no-break space U+00A0 stays.
+- **Bidi controls**: `removeBidiControls()` removes the bidi controls LRM, RLM, LRE, RLE, PDF, LRO, RLO and the isolates U+2066 to U+2069 from the text between tags. It undoes `fixRightToLeft()`, except for punctuation that it moved. Files fixed for one player carry these invisible characters, and they break other players and search. The no-break space U+00A0 stays.
 
 ## Hearing-impaired annotations
 ```php
