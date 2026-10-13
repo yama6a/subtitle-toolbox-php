@@ -175,9 +175,11 @@ final class WriteGoldens
     public static function render(string $path, Format $inputFormat, Format $outputFormat, ReadOptions $options, WriteOptions $writeOptions = new WriteOptions()): string
     {
         $subtitle = TestFiles::parse($path, $inputFormat, $options);
-        if ($outputFormat === Format::EbuStl && $subtitle->findFormatData("stl") === null) {
+        $stl = $subtitle->findFormatData("stl") ?? [];
+        if ($outputFormat === Format::EbuStl && !isset($stl["gsi"]["CD"])) {
             // A new EBU STL file holds the date of today in the GSI fields CD and RD.
-            $subtitle->setFormatData("stl", ["gsi" => ["CD" => "261012", "RD" => "261012"]]);
+            $stl["gsi"] = ["CD" => "261012", "RD" => "261012"] + ($stl["gsi"] ?? []);
+            $subtitle->setFormatData("stl", $stl);
         }
 
         return $subtitle->toString($outputFormat, $writeOptions);
