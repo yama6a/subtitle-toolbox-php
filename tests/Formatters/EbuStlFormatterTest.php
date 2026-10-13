@@ -264,4 +264,42 @@ class EbuStlFormatterTest extends TestCase
         $this->assertSame("\xCA\xE1\xEB\xE7\xEC\xDD\xF1\xE1", rtrim(substr(self::ttiBlocks($stl)[0], 16), "\x8F"));
         $this->assertSame("Καλημέρα", Subtitle::fromString($stl)->getCues()[0]->getText());
     }
+
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function characterCodeTables(): array
+    {
+        return [
+            "Cyrillic" => ["train_cyrillic.stl", "01"],
+            "Arabic"   => ["market_arabic.stl", "02"],
+            "Greek"    => ["weather_greek.stl", "03"],
+            "Hebrew"   => ["library_hebrew.stl", "04"],
+            "Latin"    => ["bakery_teletext_25fps.stl", "00"],
+        ];
+    }
+
+
+    #[DataProvider("characterCodeTables")]
+    public function testSubtitleFromAnotherFormatGetsTheTableThatHoldsItsText(string $file, string $table): void
+    {
+        $srt = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::EbuStl)->toString(Format::SubRip);
+
+        $stl = Subtitle::fromString($srt, Format::SubRip)->toString(Format::EbuStl);
+
+        $this->assertSame($table, EbuStl::readGsi(substr($stl, 0, 1024))["CCT"]);
+        $this->assertSame($srt, Subtitle::fromString($stl, Format::EbuStl)->toString(Format::SubRip));
+    }
+
+
+    public function testTableWithTheFewestMissingCharactersWins(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "— Поезд «Стрела» уходит."));
+
+        $stl = $subtitle->toString(Format::EbuStl);
+
+        $this->assertSame("01", EbuStl::readGsi(substr($stl, 0, 1024))["CCT"]);
+        $this->assertSame("? Поезд ?Стрела? уходит.", Subtitle::fromString($stl)->getCues()[0]->getText());
+    }
 }
