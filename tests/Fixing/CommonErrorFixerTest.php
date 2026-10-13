@@ -317,6 +317,18 @@ class CommonErrorFixerTest extends TestCase
     }
 
 
+    public function testDialogueOnOneLineSplitsAtADashAfterAChineseOrJapaneseSentenceEnd(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "fixes/own_cjk_dialogue.srt"));
+        $options  = new CommonErrorOptions("zh", dialogueOnOneLine: true);
+
+        CommonErrorFixer::apply($subtitle, $options);
+
+        $this->assertStringEqualsFile(self::FILES . "fixing/cjk-dialogue.fixed.srt", $subtitle->toString(Format::SubRip));
+        $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromString(file_get_contents(self::FILES . "fixing/cjk-dialogue.fixed.srt")), $options)->fixes);
+    }
+
+
     public function testLoneLowercaseIIsOffByDefault(): void
     {
         $this->assertSame(["i think"], self::fixLines(["i think"], new CommonErrorOptions(language: "en"))[0]);

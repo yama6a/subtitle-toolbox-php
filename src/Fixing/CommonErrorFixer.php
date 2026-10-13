@@ -162,7 +162,7 @@ final class CommonErrorFixer
         $joined  = implode(" ", $lines);
         $dash    = '[' . DialogueDash::CHARACTERS . ']';
         $tags    = '(?:' . Markup::TAG . ')*';
-        $pattern = '/[.?!\x{2026}]["\'\x{2019}\x{201D})\]]*' . $tags . '(' . self::SPACES . '+)(?=' . $tags . $dash . '(?!' . $dash . ')'
+        $pattern = '/[.?!\x{2026}\x{3002}\x{FF01}\x{FF1F}\x{FF61}]["\'\x{2019}\x{201D})\]]*' . $tags . '(' . self::SPACES . '+)(?=' . $tags . $dash . '(?!' . $dash . ')'
                    . self::SPACES . '*[^\s\p{N}])/u';
         if (preg_match_all($pattern, $joined, $matches, PREG_OFFSET_CAPTURE) !== 1) {
             return $lines;

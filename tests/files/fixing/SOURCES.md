@@ -27,3 +27,4 @@ php tests/files/fixing/generate.php
 | `latin1_unclosed_italic.srt` | Written for this repository in Windows-1252: one cue with an `<i>` tag without its end tag | MIT |
 | `rtl-dialogue.srt` | Written for this repository in the shape of a Hebrew and Arabic SubRip file after `fixRightToLeft()`: no BOM, LF, U+202B and U+202C around each line, `<i>` tags, dialogue dashes without a space, a minus sign at a line start and a line with U+200F before the dash | MIT |
 | `rtl-dialogue.fixed.srt` | `CommonErrorFixer` output for `rtl-dialogue.srt`, language `he` | MIT |
+| `cjk-dialogue.fixed.srt` | `CommonErrorFixer` output for `../fixes/own_cjk_dialogue.srt`, language `zh`, with `dialogueOnOneLine` | MIT |
