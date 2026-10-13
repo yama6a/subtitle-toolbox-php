@@ -40,6 +40,18 @@ final class Mp4FixtureWriter
 
 
     /**
+     * A c608 sample: a cdat box with the CEA-608 words of field 1 and a cdt2 box with those of field 2.
+     *
+     * @param list<int> $field1
+     * @param list<int> $field2
+     */
+    public static function captionSample(array $field1, array $field2 = []): string
+    {
+        return self::box("cdat", pack("n*", ...$field1)) . ($field2 === [] ? "" : self::box("cdt2", pack("n*", ...$field2)));
+    }
+
+
+    /**
      * A tx3g sample entry, or with $type "enct" and a sinf box the entry of an encrypted track.
      */
     public static function tx3gEntry(int $displayFlags = 0, string $type = "tx3g", string $extraBoxes = ""): string
@@ -100,8 +112,9 @@ final class Mp4FixtureWriter
     /**
      * @param array{id: int, handler: string, entry: string, chunks: list<array{int, list<array{int, int}>}>, timescale?: int,
      *              language?: string, elng?: string, name?: string, enabled?: bool, version1?: bool, co64?: bool, stz2?: bool,
-     *              boxes?: array<string, string>} $track
+     *              boxes?: array<string, string>, edits?: list<array{int, int}>} $track
      *        chunks holds the file offset of each chunk and the duration and size of its samples.
+     *        edits holds the segment duration and the media time of each edit list entry. A media time of -1 is an empty edit.
      *        boxes replaces the stsd, stts, stsc, stsz or stco box, so a test can write a broken one.
      */
     public static function trak(array $track): string
@@ -124,7 +137,12 @@ final class Mp4FixtureWriter
         $mdia = self::box("mdia", $mdhd . $hdlr . $elng . self::box("minf", self::box("stbl", self::sampleTables($track))));
         $udta = isset($track["name"]) ? self::box("udta", self::box("name", $track["name"])) : "";
 
-        return self::box("trak", $tkhd . $mdia . $udta);
+        $edts = isset($track["edits"])
+            ? self::box("edts", self::fullBox("elst", 0, 0, pack("N", count($track["edits"])) .
+                                    implode("", array_map(fn (array $edit): string => pack("NNnn", $edit[0], $edit[1] & 0xFFFFFFFF, 1, 0), $track["edits"]))))
+            : "";
+
+        return self::box("trak", $tkhd . $edts . $mdia . $udta);
     }
 
 

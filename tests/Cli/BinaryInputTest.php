@@ -337,7 +337,15 @@ class BinaryInputTest extends CliTestCase
             "mkvmerge S_TEXT/UTF8 to SubRip"        => ["mkv/mkvmerge.mkv", 2, "srt"],
             "ffmpeg D_WEBVTT/SUBTITLES to WebVTT" => ["mkv/ffmpeg_webvtt.webm", 2, "vtt"],
             "ffmpeg mov_text to SubRip"           => ["mp4/ffmpeg_mov_text.mp4", 2, "srt"],
+            "ffmpeg c608 to SubRip"               => ["mp4/ffmpeg_c608.mov", 1, "srt"],
         ];
+    }
+
+
+    public function testConvertWritesAC608TrackAsSccWithoutTo(): void
+    {
+        $this->assertSame([0, file_get_contents(self::FILES . "mp4/expected/ffmpeg_c608.mov.1.scc"), ""],
+                          $this->runBinary(["convert", self::FILES . "mp4/ffmpeg_c608.mov", "--track", "1", "-o", "-"]));
     }
 
 

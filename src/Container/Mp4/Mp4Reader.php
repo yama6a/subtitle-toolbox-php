@@ -8,9 +8,12 @@ use Generator;
 use SubtitleToolbox\Container\ContainerFormat;
 use SubtitleToolbox\Container\ContainerReader;
 use SubtitleToolbox\Container\SubtitleTrack;
+use SubtitleToolbox\Encoding\Cea608Cues;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\FormatOptionsList;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Streaming\Streams;
 use SubtitleToolbox\StringHelpers;
@@ -20,18 +23,24 @@ use SubtitleToolbox\SubtitleCue;
 /**
  * Reads the subtitle tracks of MP4 and MOV files. It reads only the samples of the wanted track and skips media data with fseek().
  *
- * Boxes: ISO/IEC 14496-12. Timed text samples: 3GPP TS 26.245.
+ * Boxes: ISO/IEC 14496-12. Timed text samples: 3GPP TS 26.245. Closed caption samples: Apple QuickTime File Format.
+ *
+ * @see https://developer.apple.com/documentation/quicktime-file-format/closed_captioning_sample_data
  */
 final class Mp4Reader implements ContainerReader
 {
     public const CODEC_TX3G = "tx3g";
+    public const CODEC_C608 = "c608";
 
-    public const CODECS = [self::CODEC_TX3G];
+    public const CODECS = [self::CODEC_TX3G, self::CODEC_C608];
 
     /** The type of the first box of an MP4 file, at byte 4. */
     public const FTYP = "ftyp";
 
-    private const FORMATS = [self::CODEC_TX3G => Format::SubRip];
+    private const FORMATS = [self::CODEC_TX3G => Format::SubRip, self::CODEC_C608 => Format::Scc];
+
+    // A c608 sample holds a cdat box with the CEA-608 byte pairs of field 1, one pair per frame.
+    private const FIELD_1_DATA = "cdat";
 
     // The handler types of timed text, subtitle and closed caption tracks.
     private const SUBTITLE_HANDLERS = ["text", "sbtl", "subt", "clcp"];
@@ -66,6 +75,10 @@ final class Mp4Reader implements ContainerReader
     private const TKHD_TRACK_ID_OFFSET     = [0 => 12, 1 => 20];
     private const MDHD_TIMESCALE_OFFSET    = [0 => 12, 1 => 20];
     private const MDHD_LANGUAGE_OFFSET     = [0 => 20, 1 => 32];
+    private const MVHD_TIMESCALE_OFFSET    = [0 => 12, 1 => 20];
+
+    // An edit list entry with this media time is an empty edit, a span without media before the track starts.
+    private const EMPTY_EDIT = -1;
 
     /** @var resource */
     private $stream;
@@ -77,8 +90,10 @@ final class Mp4Reader implements ContainerReader
     /** @var array<int, SubtitleTrack> */
     private array $tracks = [];
 
-    /** @var array<int, array{timescale: int, encrypted: bool, tables: array<string, array{offset: int, end: int}>}> */
+    /** @var array<int, array{timescale: int, encrypted: bool, tables: array<string, array{offset: int, end: int}>, delay: float}> */
     private array $trackData = [];
+
+    private int $movieTimescale = 0;
 
 
     /**
@@ -152,21 +167,116 @@ final class Mp4Reader implements ContainerReader
                                        implode(", ", self::CODECS) . ".");
         }
 
-        $cues = [];
-        foreach ($this->samples($trackNumber) as [$start, $duration, $offset, $size]) {
-            $text = $this->sampleText($trackNumber, $offset, $size);
-            if ($text !== "") {
-                $startSeconds = $start / $data["timescale"];
-                $cues[]       = (new SubtitleCue($startSeconds, ($start + $duration) / $data["timescale"], explode("\n", $text)))
-                    ->setForced($track->forced);
-            }
-        }
+        $options ??= new ReadOptions();
+        $cues      = $track->codecId === self::CODEC_C608 ? $this->captionCues($trackNumber, $options) : $this->textCues($trackNumber, $track->forced);
 
         $subtitle = (new Subtitle())->addCues($cues);
         $subtitle->setFormat($track->format);
         $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $track->language);
 
         return $subtitle;
+    }
+
+
+    /**
+     * @return list<SubtitleCue>
+     */
+    private function textCues(int $trackNumber, bool $forced): array
+    {
+        $cues = [];
+        foreach ($this->sampleTimes($trackNumber) as [$start, $end, $offset, $size]) {
+            $text = $this->sampleText($trackNumber, $offset, $size);
+            if ($text !== "") {
+                $cues[] = (new SubtitleCue($start, $end, explode("\n", $text)))->setForced($forced);
+            }
+        }
+
+        return $cues;
+    }
+
+
+    /**
+     * Decodes the byte pairs of the cdat boxes as an SCC file with one line per sample.
+     *
+     * @return list<SubtitleCue>
+     */
+    private function captionCues(int $trackNumber, ReadOptions $options): array
+    {
+        $codeLines = [];
+        foreach ($this->sampleTimes($trackNumber) as [$start, , $offset, $size]) {
+            $words = [];
+            foreach (self::sampleBoxes($this->sampleData($trackNumber, $offset, $size)) as [$type, $data]) {
+                if ($type === self::FIELD_1_DATA) {
+                    array_push($words, ...array_values(unpack("n*", substr($data, 0, strlen($data) & ~1))));
+                }
+            }
+            if ($words !== []) {
+                $codeLines[] = [Cea608Cues::secondsToFrame($start), $words];
+            }
+        }
+        $sccOptions = FormatOptionsList::find($options->formats, SccReadOptions::class) ?? new SccReadOptions();
+
+        return Cea608Cues::read($codeLines, $sccOptions, $options->lastCueDuration);
+    }
+
+
+    /**
+     * Yields the start and the end in seconds, the file offset and the size of each sample that ends after 0 s.
+     * The edit list moves the samples, see readEditList().
+     *
+     * @return Generator<int, array{float, float, int, int}>
+     */
+    private function sampleTimes(int $trackNumber): Generator
+    {
+        ["timescale" => $timescale, "delay" => $delay] = $this->trackData[$trackNumber];
+        foreach ($this->samples($trackNumber) as [$start, $duration, $offset, $size]) {
+            $end = ($start + $duration) / $timescale + $delay;
+            if ($end > 0) {
+                yield [max(0.0, $start / $timescale + $delay), $end, $offset, $size];
+            }
+        }
+    }
+
+
+    /**
+     * Returns the type and the data of each box in a sample. A box that does not fit ends the list.
+     *
+     * @return list<array{string, string}>
+     */
+    private static function sampleBoxes(string $sample): array
+    {
+        $boxes  = [];
+        $offset = 0;
+        while ($offset + self::BOX_HEADER_SIZE <= strlen($sample)) {
+            ["size" => $size, "type" => $type] = unpack("Nsize/a4type", $sample, $offset);
+            if ($size < self::BOX_HEADER_SIZE || $offset + $size > strlen($sample)) {
+                break;
+            }
+            $boxes[] = [$type, substr($sample, $offset + self::BOX_HEADER_SIZE, $size - self::BOX_HEADER_SIZE)];
+            $offset += $size;
+        }
+
+        return $boxes;
+    }
+
+
+    private function sampleData(int $trackNumber, int $offset, int $size): string
+    {
+        $this->checkSample($trackNumber, $offset, $size);
+        if ($size === 0) {
+            return "";
+        }
+        fseek($this->stream, $offset);
+
+        return (string) fread($this->stream, $size);
+    }
+
+
+    private function checkSample(int $trackNumber, int $offset, int $size): void
+    {
+        if ($offset + $size > $this->fileSize) {
+            throw new ParsingException("A sample of track $trackNumber at byte $offset lies outside the file.");
+        }
     }
 
 
@@ -186,6 +296,10 @@ final class Mp4Reader implements ContainerReader
 
         foreach ($this->children(0, $this->fileSize) as $box) {
             if ($box["type"] === "moov") {
+                $mvhd = $this->childMap($box)["mvhd"] ?? null;
+                if ($mvhd !== null) {
+                    $this->movieTimescale = unpack("N", $this->read($mvhd, self::MVHD_TIMESCALE_OFFSET[$this->boxVersion($mvhd)], 4))[1];
+                }
                 foreach ($this->children($box["offset"], $box["end"]) as $child) {
                     if ($child["type"] === "trak") {
                         $this->readTrack($child);
@@ -235,7 +349,42 @@ final class Mp4Reader implements ContainerReader
             $enabled,
             $entry["forced"],
         );
-        $this->trackData[$id] = ["timescale" => $timescale, "encrypted" => $entry["encrypted"], "tables" => $stbl];
+        $edts                 = isset($boxes["edts"]) ? $this->childMap($boxes["edts"]) : [];
+        $this->trackData[$id] = [
+            "timescale" => $timescale,
+            "encrypted" => $entry["encrypted"],
+            "tables"    => $stbl,
+            "delay"     => isset($edts["elst"]) ? $this->readEditList($edts["elst"], $timescale) : 0.0,
+        ];
+    }
+
+
+    /**
+     * Returns the seconds by which the edit list moves the samples: the empty edits at the start, minus the media time
+     * of the first edit after them. ffmpeg writes an empty edit for a c608 track that starts after 0 s.
+     * Later edits, which cut or repeat parts of the media, do not change the times.
+     *
+     * @param array{type: string, offset: int, end: int} $elst
+     */
+    private function readEditList(array $elst, int $mediaTimescale): float
+    {
+        $version   = $this->boxVersion($elst);
+        $entrySize = $version === 1 ? 20 : 12;
+        $count     = unpack("N", $this->read($elst, 4, 4))[1];
+        $count     = min($count, intdiv($elst["end"] - $elst["offset"] - 8, $entrySize));
+        $empty     = 0;
+        for ($index = 0; $index < $count; $index++) {
+            $entry = $this->read($elst, 8 + $index * $entrySize, $entrySize);
+            [$duration, $mediaTime] = $version === 1
+                ? array_values(unpack("Jduration/Jtime", $entry))
+                : [unpack("N", $entry)[1], unpack("N", $entry, 4)[1] << 32 >> 32];
+            if ($mediaTime !== self::EMPTY_EDIT) {
+                return ($this->movieTimescale === 0 ? 0.0 : $empty / $this->movieTimescale) - $mediaTime / $mediaTimescale;
+            }
+            $empty += $duration;
+        }
+
+        return 0.0;
     }
 
 
@@ -444,9 +593,7 @@ final class Mp4Reader implements ContainerReader
      */
     private function sampleText(int $trackNumber, int $offset, int $size): string
     {
-        if ($offset + $size > $this->fileSize) {
-            throw new ParsingException("A sample of track $trackNumber at byte $offset lies outside the file.");
-        }
+        $this->checkSample($trackNumber, $offset, $size);
         if ($size < self::TEXT_LENGTH_SIZE) {
             return "";
         }

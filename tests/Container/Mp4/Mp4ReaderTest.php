@@ -11,6 +11,9 @@ use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
+use SubtitleToolbox\Parsers\Options\SccRollUp;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -52,7 +55,7 @@ class Mp4ReaderTest extends TestCase
             [
                 [ContainerFormat::Mp4, 2, "tx3g", Format::SubRip, "eng", "English", true, false],
                 [ContainerFormat::Mp4, 3, "tx3g", Format::SubRip, "fr-CA", null, false, true],
-                [ContainerFormat::Mp4, 4, "c608", null, "eng", null, false, false],
+                [ContainerFormat::Mp4, 4, "c608", Format::Scc, "eng", null, false, false],
                 [ContainerFormat::Mp4, 5, "enct", null, "deu", null, false, false],
             ],
             array_map(fn (SubtitleTrack $t): array => [$t->container, $t->number, $t->codecId, $t->format, $t->language, $t->name, $t->default, $t->forced],
@@ -90,12 +93,74 @@ class Mp4ReaderTest extends TestCase
     }
 
 
-    public function testThrowsForAClosedCaptionTrack(): void
+    public static function c608Files(): array
     {
-        $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Track 4 has the codec c608. The reader extracts only tx3g.");
+        return [
+            "pop-on"  => ["ffmpeg_c608.mov", "captionmaker_popon_df.scc", SccRollUp::Screen],
+            "roll-up" => ["ffmpeg_c608_rollup.mov", "rollup_news_ndf.scc", SccRollUp::Screen],
+            "roll-up by row" => ["ffmpeg_c608_rollup.mov", "rollup_news_ndf.scc", SccRollUp::Lines],
+        ];
+    }
 
-        Mp4Reader::open(self::DIR . "text_tracks.mp4")->extract(4);
+
+    #[DataProvider("c608Files")]
+    public function testReadsAC608TrackAsTheSccFileItCameFrom(string $mov, string $scc, SccRollUp $rollUp): void
+    {
+        $options  = new ReadOptions(formats: [new SccReadOptions(rollUp: $rollUp)]);
+        $subtitle = Mp4Reader::open(self::DIR . $mov)->extract(1, $options);
+        $source   = Subtitle::load(self::DIR . "../scc/real/$scc", options: $options);
+
+        $this->assertSame(Format::Scc, $subtitle->findFormat());
+        $this->assertNotSame([], $subtitle->getCues());
+        $this->assertSame($source->toArray()["cues"], $subtitle->toArray()["cues"]);
+    }
+
+
+    public function testWritesAC608TrackAsTheGoldenSccFile(): void
+    {
+        $subtitle = Mp4Reader::open(self::DIR . "ffmpeg_c608.mov")->extract(1);
+
+        $this->assertStringEqualsFile(self::DIR . "expected/ffmpeg_c608.mov.1.scc", $subtitle->toString(Format::Scc));
+    }
+
+
+    public function testReadsField1OfAC608TrackAfterItsEditList(): void
+    {
+        $cues = Mp4Reader::open(self::DIR . "text_tracks.mp4")->extract(4)->getCues();
+
+        $this->assertSame(
+            [[0.734, 2.002, ["BUS 7"], ["mode" => "pop-on", "rows" => [15], "columns" => [0]]]],
+            array_map(fn (SubtitleCue $cue): array => [round($cue->getStart(), 3), round($cue->getEnd(), 3), $cue->getLines(),
+                                                       $cue->findFormatData(Format::Scc->value)], $cues),
+        );
+    }
+
+
+    public function testMovesTheSamplesByTheEditList(): void
+    {
+        $reader = self::oneTrack(["edits" => [[1500, -1], [500, 250], [1000, 0]]]);
+
+        $this->assertSame([[1.25, 2.25]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $reader->extract(1)->getCues()));
+    }
+
+
+    public function testDropsTheSamplesBeforeTheMediaTimeOfTheEditList(): void
+    {
+        $reader = self::oneTrack(["edits" => [[1000, 2000]]]);
+
+        $this->assertSame([], $reader->extract(1)->getCues());
+    }
+
+
+    public function testThrowsForACodecThatTheReaderDoesNotExtract(): void
+    {
+        $reader = self::oneTrack(["entry" => Mp4FixtureWriter::box("wvtt", str_repeat("\0", 6) . pack("n", 1))]);
+
+        $this->assertNull($reader->trackFormat(1));
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("Track 1 has the codec wvtt. The reader extracts only tx3g, c608.");
+
+        $reader->extract(1);
     }
 
 

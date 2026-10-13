@@ -48,7 +48,11 @@ final class Mp4Fixtures
              "language" => "fra", "elng" => "fr-CA", "enabled" => false, "timescale" => 90000, "version1" => true, "co64" => true,
              "stz2" => true, "perChunk" => 1, "samples" => $french],
             ["id" => 4, "handler" => "clcp", "entry" => Mp4FixtureWriter::box("c608", str_repeat("\0", 6) . pack("n", 1)),
-             "language" => "eng", "enabled" => false, "perChunk" => 1, "samples" => [[2000, "\x00\x00\x00\x00"]]],
+             "language" => "eng", "enabled" => false, "perChunk" => 1, "edits" => [[1000, -1], [2000, 500]], "samples" => [
+                 [1500, Mp4FixtureWriter::captionSample([0x9420, 0x9420, 0x94E0, 0x94E0, 0xC2D5, 0xD320, 0x3780, 0x942F, 0x942F],
+                                                        [0x9420, 0x9420, 0x94E0, 0x94E0, 0xCE4F, 0x942F, 0x942F])],
+                 [500, Mp4FixtureWriter::captionSample([0x942C, 0x942C])],
+             ]],
             ["id" => 5, "handler" => "sbtl", "language" => "deu", "enabled" => false, "perChunk" => 1,
              "entry" => Mp4FixtureWriter::tx3gEntry(0, "enct", Mp4FixtureWriter::box("sinf", Mp4FixtureWriter::box("frma", "tx3g"))),
              "samples" => [[2000, str_repeat("\x5A", 24)]]],
