@@ -131,7 +131,7 @@ class FormatTest extends TestCase
     {
         $readOnly = array_filter(Format::cases(), fn (Format $format): bool => !$format->canWrite());
         $this->assertSame(
-            ["dcp", "vobsub"],
+            ["vobsub"],
             self::sortedNames($readOnly)
         );
 

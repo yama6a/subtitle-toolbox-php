@@ -8,3 +8,4 @@
 | `subtitle_edit_smpte2014_shape.xml` | Written for this repository in the shape of the SMPTE ST 428-7 files that Subtitle Edit writes, and of the test `testConvertFromXml6b` of https://github.com/mantas-done/subtitles/blob/959d1705b1ed12cbb9ddba517f8bcb814e1919a8/tests/formats/TtmlTest.php: the `dcst:` prefix, the 2014 namespace, `TimeCodeRate` 25, a `Space` element and a top line | MIT |
 | `expected/*.json` | Generated for this repository. Expected parse result of the file with the same name, written by `tests/files/generate-read-goldens.php` | MIT |
 | `expected/*.to.*` | Generated for this repository. Expected output of the file with the same name in another format, written by `tests/files/generate-write-goldens.php` | MIT |
+| `expected/*.out.xml` | Generated for this repository. Expected `DcpFormatter` output of the file with the same name: no comments, 2-space indent, one `Font` around the subtitles and a `Font` inside `Text` only for a style change | MIT |

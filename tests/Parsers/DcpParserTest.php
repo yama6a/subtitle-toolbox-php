@@ -98,12 +98,12 @@ class DcpParserTest extends TestCase
 
         $this->assertSame("Harbour Lights", $interop->findMetadata(Subtitle::METADATA_TITLE));
         $this->assertNull($interop->findMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame(["dialect" => "interop"], $interop->findFormatData("dcp"));
+        $this->assertSame("interop", $interop->findFormatData("dcp")["dialect"]);
+        $this->assertSame(["Id" => "font", "URI" => "font.ttf"], $interop->findFormatData("dcp")["loadFonts"][0]["attributes"]);
         $this->assertSame("fr", $smpte->findMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame(
-            ["dialect" => "smpte", "namespace" => "http://www.smpte-ra.org/schemas/428-7/2014/DCST", "timeCodeRate" => 25.0, "startTime" => "00:00:00:00"],
-            $smpte->findFormatData("dcp")
-        );
+        $fileData = $smpte->findFormatData("dcp");
+        $this->assertSame(["smpte", "http://www.smpte-ra.org/schemas/428-7/2014/DCST", "dcst", 25], [$fileData["dialect"], $fileData["namespace"], $fileData["prefix"], $fileData["timeCodeRate"]]);
+        $this->assertSame("00:00:00:00", $fileData["header"]["StartTime"]);
     }
 
 
@@ -114,8 +114,8 @@ class DcpParserTest extends TestCase
 
         $subtitle = Subtitle::fromString($content);
 
-        $this->assertEquals([new SubtitleCue(13, 15, "Wind")], $subtitle->getCues());
-        $this->assertSame("10:00:00:00", $subtitle->findFormatData("dcp")["startTime"]);
+        $this->assertSame([[13.0, 15.0, ["Wind"]]], self::describe($subtitle));
+        $this->assertSame("10:00:00:00", $subtitle->findFormatData("dcp")["header"]["StartTime"]);
     }
 
 
@@ -157,7 +157,7 @@ class DcpParserTest extends TestCase
 
         $subtitle = Subtitle::fromString(sprintf(self::SMPTE, $subtitles), Format::Dcp, new ReadOptions(lenient: true));
 
-        $this->assertEquals([new SubtitleCue(5, 6, "Text")], $subtitle->getCues());
+        $this->assertSame([[5.0, 6.0, ["Text"]]], self::describe($subtitle));
         $this->assertSame([ParseWarningAction::Skipped, ParseWarningAction::Skipped], array_map(fn ($warning) => $warning->action, $subtitle->getParseWarnings()));
         $this->assertStringContainsString("The time \"00:00:03:25\" is not a DCP time code at 25 units per second.", $subtitle->getParseWarnings()[1]->message);
     }
@@ -168,5 +168,14 @@ class DcpParserTest extends TestCase
         $this->assertSame(Format::Dcp, Format::detect("<?xml version=\"1.0\"?>\n<DCSubtitle Version=\"1.1\"></DCSubtitle>"));
         $this->assertSame(Format::Dcp, Format::detect("<dcst:SubtitleReel xmlns:dcst=\"http://www.smpte-ra.org/schemas/428-7/2007/DCST\"/>"));
         $this->assertSame(Format::Ttml, Format::detect(file_get_contents(__DIR__ . "/../files/ttml/real/bbc_ebu_tt_d.ttml")));
+    }
+
+
+    /**
+     * @return list<array{float, float, list<string>}>
+     */
+    private static function describe(Subtitle $subtitle): array
+    {
+        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $subtitle->getCues());
     }
 }

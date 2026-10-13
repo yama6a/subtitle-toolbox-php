@@ -221,15 +221,16 @@ $csv = $english->toString(Format::Csv, new WriteOptions(formats: [new CsvWriteOp
 - **Detection**: a CSV file has no signature, so pass `Format::Csv` or `Format::Tsv`. The command line tool reads `.csv` and `.tsv` files by their extension.
 
 ## DCP subtitles
-Digital cinema packages hold subtitles as XML in 2 dialects: Interop `<DCSubtitle>`, from the [CineCanvas specification](https://cinepedia.com/interop-docs/Reference_Documents/CineCanvas(tm)_RevC.pdf), and [SMPTE ST 428-7](https://pub.smpte.org/doc/st428-7/20140211-pub/st0428-7-2014.pdf) `<SubtitleReel>` in the 2007, 2010 and 2014 namespaces. The library reads both and writes neither. Files use the `.xml` extension, which TTML owns, so `load()` finds them by detection.
+Digital cinema packages hold subtitles as XML in 2 dialects: Interop `<DCSubtitle>`, from the [CineCanvas specification](https://cinepedia.com/interop-docs/Reference_Documents/CineCanvas(tm)_RevC.pdf), and [SMPTE ST 428-7](https://pub.smpte.org/doc/st428-7/20140211-pub/st0428-7-2014.pdf) `<SubtitleReel>` in the 2007, 2010 and 2014 namespaces. The library reads and writes both. Files use the `.xml` extension, which TTML owns, so `load()` finds them by detection. Pass `Format::Dcp` to `save()`.
 
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::load('reel1_subtitles.xml');                 // detects Format::Dcp
-$subtitle->findFormatData('dcp');                                   // ['dialect' => 'smpte', 'namespace' => '...', 'timeCodeRate' => 24.0, 'startTime' => '00:00:00:00']
+$subtitle->findFormatData('dcp')['header']['StartTime'];            // '00:00:00:00'
 $subtitle->save('reel1.srt');
+$subtitle->save('reel1_fixed.xml', Format::Dcp);                     // the dialect, header and fonts of the input
 ```
 
 | Input | Parser result |
@@ -240,11 +241,15 @@ $subtitle->save('reel1.srt');
 | 2 `<Text>` elements with `VAlign="bottom"` and `VPosition` 8 and 15 | 2 lines, the line at 15 first |
 | `<Font Italic="yes">`, `Weight="bold"`, `Underlined="yes"`, `Color="FFFFFF00"` | `<i>`, `<b>`, `<u>`, `<font color="#ffff00">` |
 
-- **Times**: SMPTE times count units of `TimeCodeRate`, else of the `EditRate` rounded, else of 24 per second. The parser keeps the times as they are and does not subtract `StartTime`. The format data holds `startTime`, so the caller can shift the cues with `shift()`, see [editing.md](editing.md#retiming).
+- **Times**: SMPTE times count units of `TimeCodeRate`, else of the `EditRate` rounded, else of 24 per second. The parser keeps the times as they are and does not subtract `StartTime`. The `StartTime` header value stays in the format data, so the caller can shift the cues with `shift()`, see [editing.md](editing.md#retiming).
 - **Lines**: each `<Text>` element is one line. The parser sorts the lines from the top of the screen to the bottom by `VAlign` and `VPosition`. `<Space>` becomes a space, and ruby becomes `base (annotation)`. Line breaks and tabs inside `<Text>` do not count, as the screen does not show them.
 - **Fonts**: a `<Font>` element passes its attributes to the elements inside it, also around `<Subtitle>` elements. White text gives no tag. The parser ignores the font name, the size and the effects.
 - **Alignment**: the middle of the lines gives the row: the top, middle or bottom third of the screen. `HAlign` of the top line gives the column.
 - **Metadata**: the title is `MovieTitle` or `ContentTitleText`. The language is the SMPTE `Language`, such as `de`. Interop names the language in words, so the parser does not read it.
+- **Format data**: the `dcp` data keeps the dialect, the SMPTE namespace and prefix, `timeCodeRate`, the root attributes, the header elements such as `MovieTitle` or `IssueDate` in `header`, the `<LoadFont>` elements and the attributes of the first `<Font>` around the subtitles. Each cue keeps the attributes of its `<Subtitle>` and `<Text>` elements.
+- **Output**: the formatter writes the dialect, the header and the fonts of the input. The title and the SMPTE language come from the metadata. It writes times in 4 ms ticks for Interop and in units of `TimeCodeRate` for SMPTE, and numbers the subtitles from 1. A cue keeps its `<Text>` positions while its alignment and line count stay the same. Otherwise the formatter places the lines by the alignment, 7 percent of the screen height apart and 8 percent from the edge. `<b>`, `<i>`, `<u>` and `<font color>` become a `<Font>` element inside `<Text>` where the style differs from the `<Font>` around the subtitles. It strips other tags.
+- **Round trip**: a file from DCP-o-matic comes out byte for byte. Other files keep their data, but the formatter drops comments, writes one `<Font>` around all subtitles and indents with 2 spaces.
+- **New files**: SMPTE ST 428-7:2014 at 24 fps with the `<Font>` defaults of DCP-o-matic. The `Id` and the font `urn:uuid` come from a hash of the subtitles, so the same subtitles give the same file. `IssueDate` is the time of the write in UTC.
 - **Images**: the parser reads only text subtitles. A subtitle with only an `<Image>` throws `ParsingException`, and lenient mode skips it with a warning.
 
 ## EBU STL

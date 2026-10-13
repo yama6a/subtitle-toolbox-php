@@ -9,6 +9,7 @@ use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\CsvParser;
+use SubtitleToolbox\Parsers\DcpParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\IttParser;
@@ -83,6 +84,16 @@ final class FormatDataSchema
             "frameRate"     => "?number",
             "quotedColumns" => ["list", ["range", 0, self::CSV_MAX_COLUMNS - 1]],
         ],
+        DcpParser::FORMAT_DATA_KEY                => [
+            "dialect"      => ["oneOf", ["interop", "smpte"]],
+            "namespace"    => "string",
+            "prefix"       => "string",
+            "timeCodeRate" => ["range", 1, 1000],
+            "attributes"   => self::ATTRIBUTES,
+            "header"       => self::ATTRIBUTES,
+            "loadFonts"    => ["list", ["object", ["attributes" => self::ATTRIBUTES, "text" => "string"]]],
+            "font"         => self::ATTRIBUTES,
+        ],
         FfMetadataChaptersParser::FORMAT_DATA_KEY => [
             "tags"    => ["list", "?string"],
             "streams" => ["list", self::STRINGS],
@@ -156,6 +167,10 @@ final class FormatDataSchema
         ],
         CsvParser::FORMAT_DATA_KEY                => [
             "columns" => ["list", "scalar"],
+        ],
+        DcpParser::FORMAT_DATA_KEY                => [
+            "subtitle" => self::ATTRIBUTES,
+            "texts"    => ["list", self::ATTRIBUTES],
         ],
         FfMetadataChaptersParser::FORMAT_DATA_KEY => [
             "timeBase" => "timeBase",

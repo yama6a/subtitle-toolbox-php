@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SubtitleReel xmlns="http://www.smpte-ra.org/schemas/428-7/2014/DCST" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <Id>urn:uuid:6775cb6e-78ca-3d07-9724-d5f1558cf43d</Id>
+  <ContentTitleText></ContentTitleText>
+  <IssueDate>2026-10-12T00:00:00</IssueDate>
+  <ReelNumber>1</ReelNumber>
+  <Language>en</Language>
+  <EditRate>24 1</EditRate>
+  <TimeCodeRate>24</TimeCodeRate>
+  <StartTime>00:00:00:00</StartTime>
+  <LoadFont ID="font">urn:uuid:aeec19a9-9538-3b90-981d-4043657d1671</LoadFont>
+  <SubtitleList>
+    <Font AspectAdjust="1.0" Color="FFFFFFFF" Effect="none" EffectColor="FF000000" ID="font" Italic="no" Script="normal" Size="42" Underline="no" Weight="normal">
+      <Subtitle SpotNumber="1" TimeIn="00:00:18:00" TimeOut="00:00:20:13" FadeUpTime="00:00:00:00" FadeDownTime="00:00:00:00">
+        <Text Valign="bottom" Vposition="8"><Font Color="FF00FF00" Weight="bold">[train horn]</Font></Text>
+      </Subtitle>
+      <Subtitle SpotNumber="2" TimeIn="00:00:47:03" TimeOut="00:00:48:07" FadeUpTime="00:00:00:00" FadeDownTime="00:00:00:00">
+        <Text Valign="bottom" Vposition="8"><Font Color="FFFF00FF">[rain]</Font></Text>
+      </Subtitle>
+      <Subtitle SpotNumber="3" TimeIn="00:00:58:05" TimeOut="00:00:59:17" FadeUpTime="00:00:00:00" FadeDownTime="00:00:00:00">
+        <Text Valign="bottom" Vposition="8"><Font Color="FF00FF00">[train horn]</Font></Text>
+      </Subtitle>
+      <Subtitle SpotNumber="4" TimeIn="00:01:01:16" TimeOut="00:01:03:02" FadeUpTime="00:00:00:00" FadeDownTime="00:00:00:00">
+        <Text Valign="bottom" Vposition="8"><Font Weight="bold" Underline="yes">[oven door opens]</Font></Text>
+      </Subtitle>
+      <Subtitle SpotNumber="5" TimeIn="00:01:26:19" TimeOut="00:01:29:13" FadeUpTime="00:00:00:00" FadeDownTime="00:00:00:00">
+        <Text Valign="bottom" Vposition="8">[whistle]</Text>
+      </Subtitle>
+      <Subtitle SpotNumber="6" TimeIn="00:01:29:14" TimeOut="00:01:32:00" FadeUpTime="00:00:00:00" FadeDownTime="00:00:00:00">
+        <Text Valign="bottom" Vposition="15">[station speaker]</Text>
+        <Text Valign="bottom" Vposition="8"><Font Italic="yes">Thebakeryopensat7:35.</Font></Text>
+      </Subtitle>
+      <Subtitle SpotNumber="7" TimeIn="00:08:00:00" TimeOut="00:09:00:00" FadeUpTime="00:00:00:00" FadeDownTime="00:00:00:00">
+        <Text Valign="bottom" Vposition="15"><Font Italic="yes">Italics over two lines</Font></Text>
+        <Text Valign="bottom" Vposition="8"><Font Italic="yes">that close on the second line</Font></Text>
+      </Subtitle>
+      <Subtitle SpotNumber="8" TimeIn="00:09:00:00" TimeOut="00:10:00:00" FadeUpTime="00:00:00:00" FadeDownTime="00:00:00:00">
+        <Text Valign="bottom" Vposition="8"><Font Italic="yes">Italics that never close</Font></Text>
+      </Subtitle>
+      <Subtitle SpotNumber="9" TimeIn="00:10:00:00" TimeOut="00:11:00:00" FadeUpTime="00:00:00:00" FadeDownTime="00:00:00:00">
+        <Text Valign="bottom" Vposition="8">The next cue is not italic</Text>
+      </Subtitle>
+      <Subtitle SpotNumber="10" TimeIn="00:12:00:00" TimeOut="00:13:00:00" FadeUpTime="00:00:00:00" FadeDownTime="00:00:00:00">
+        <Text Valign="bottom" Vposition="8"><Font Italic="yes">x</Font>^3 * <Font Italic="yes">x</Font> = 100</Text>
+      </Subtitle>
+    </Font>
+  </SubtitleList>
+</SubtitleReel>
