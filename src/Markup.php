@@ -66,6 +66,9 @@ final class Markup
 
     private const TAG_REGEX = '/' . self::TAG . '/';
 
+    // The soft hyphen, the zero-width space, the bidi controls and the BOM, as Subtitle Edit skips them in its default count.
+    private const INVISIBLE_CHARACTERS = '\x{00AD}\x{200B}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}\x{FEFF}';
+
 
     /**
      * Returns the tag name of a tag body such as "font color=\"yellow\"", in lower case: "font".
@@ -502,14 +505,18 @@ final class Markup
 
 
     /**
-     * Counts UTF-8 characters, or bytes for invalid UTF-8 such as the Latin-1 bytes that MicroDVD keeps.
+     * Counts the characters a reader sees, the extended grapheme clusters of UAX #29, or bytes for invalid UTF-8 such as the Latin-1 bytes that MicroDVD keeps.
+     * Invisible format characters and the soft hyphen count 0.
      *
      * @internal
      */
     public static function countCharacters(string $text): int
     {
+        // Each invisible format character is a cluster of its own, so the lookahead skips exactly these clusters.
+        $count = preg_match_all('/(?![' . self::INVISIBLE_CHARACTERS . '])\X/u', $text);
+
         // preg_match_all() fails on invalid UTF-8, so such text counts its bytes.
-        return preg_match_all('/./su', $text) ?: strlen($text);
+        return $count === false ? strlen($text) : $count;
     }
 
 

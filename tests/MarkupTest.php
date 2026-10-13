@@ -153,9 +153,13 @@ class MarkupTest extends TestCase
     }
 
 
-    public function testCountCharactersCountsUtf8LettersOrBytesOfInvalidUtf8(): void
+    public function testCountCharactersCountsCharactersAsReadersSeeThemOrBytesOfInvalidUtf8(): void
     {
         $this->assertSame(4, Markup::countCharacters("Caf\u{e9}"));
+        $this->assertSame(4, Markup::countCharacters("Cafe\u{301}"));
+        $this->assertSame(3, Markup::countCharacters("\u{1F44D}\u{1F3FD} \u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}"));
+        $this->assertSame(2, Markup::countCharacters("\u{202B}\u{05D0}\u{05D1}\u{202C}"));
+        $this->assertSame(0, Markup::countCharacters("\u{200E}\u{200F}\u{202A}\u{202D}\u{202E}\u{2066}\u{2069}\u{200B}\u{FEFF}\u{00AD}"));
         $this->assertSame(2, Markup::countCharacters("\u{4f60}\u{597d}"));
         $this->assertSame(4, Markup::countCharacters("Caf\xe9"));
         $this->assertSame(0, Markup::countCharacters(""));
