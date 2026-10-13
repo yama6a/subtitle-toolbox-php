@@ -51,7 +51,7 @@ The command line tool also comes as a PHAR file and as two container images. The
 | [TMPlayer](https://pysubs2.readthedocs.io/en/latest/supported-formats.html) | `TmPlayer` | `tmplayer` | `.txt` | ✅ | ✅ | |
 | [TTML](https://www.w3.org/TR/ttml2/), [IMSC](https://www.w3.org/TR/ttml-imsc1.2/), [DFXP](https://www.w3.org/TR/ttaf1-dfxp/) | `Ttml` | `ttml` | `.ttml`, `.dfxp`, `.xml` | ✅ | ✅ | |
 | [WebVTT](https://www.w3.org/TR/webvtt1/) | `WebVtt` | `vtt` | `.vtt` | ✅ | ✅ | also chapters |
-| [YouTube timed text](https://support.google.com/youtube/answer/2734698) | `YouTubeTimedText` | `youtube` | `.srv3`, `.json3`, `.srv1` | ✅ | ✅ | json3, srv1, srv2, srv3 and transcript XML |
+| [YouTube timed text](https://support.google.com/youtube/answer/2734698) | `YouTubeTimedText` | `youtube` | `.srv3`, `.json3`, `.srv1`, `.ytt` | ✅ | ✅ | json3, srv1, srv2, srv3 and transcript XML |
 
 ### Image subtitles
 

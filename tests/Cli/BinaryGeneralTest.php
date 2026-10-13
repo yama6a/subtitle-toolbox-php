@@ -149,6 +149,18 @@ class BinaryGeneralTest extends CliTestCase
     }
 
 
+    public function testYttFilesAreSubtitlesInADirectoryAndKeepTheirExtensionInOutputDir(): void
+    {
+        mkdir("$this->dir/subs");
+        file_put_contents("$this->dir/subs/video.ytt", $this->tripAs(Format::YouTubeTimedText));
+
+        $this->assertSame([0, "subs/video.ytt -> out/video.srt\n", ""], $this->runCli(["convert", "subs", "--to", "srt", "--output-dir", "out"]));
+        $this->assertFileExists("$this->dir/out/video.srt");
+        $this->assertSame([0, "out/video.srt -> yt/video.srv3\n", ""], $this->runCli(["convert", "out/video.srt", "--to", "youtube", "--output-dir", "yt"]));
+        $this->assertSame([0, "subs/video.ytt -> same/video.ytt\n", ""], $this->runCli(["convert", "subs/video.ytt", "--to", "youtube", "--output-dir", "same"]));
+    }
+
+
     public function testFileErrorsExitWith3(): void
     {
         file_put_contents("$this->dir/blocker", "a file, not a directory");

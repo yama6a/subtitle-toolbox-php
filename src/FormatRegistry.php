@@ -107,7 +107,7 @@ final class FormatRegistry
         Format::VobSub->value             => [VobSubParser::class, null, ["idx"]],
         Format::WebVtt->value             => [WebVttParser::class, WebVttFormatter::class, ["vtt"]],
         Format::Whisper->value            => [WhisperJsonParser::class, WhisperJsonFormatter::class, ["json"]],
-        Format::YouTubeTimedText->value   => [YouTubeTimedTextParser::class, YouTubeTimedTextFormatter::class, ["srv3", "json3", "srv1"]],
+        Format::YouTubeTimedText->value   => [YouTubeTimedTextParser::class, YouTubeTimedTextFormatter::class, ["srv3", "json3", "srv1", "ytt"]],
         Format::OgmChapters->value        => [OgmChaptersParser::class, OgmChaptersFormatter::class, ["txt"]],
         Format::PodcastChapters->value    => [PodcastChaptersParser::class, PodcastChaptersFormatter::class, ["json"]],
         Format::PodcastTranscript->value  => [PodcastTranscriptParser::class, PodcastTranscriptFormatter::class, ["json"]],

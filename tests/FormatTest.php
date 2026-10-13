@@ -101,6 +101,7 @@ class FormatTest extends TestCase
         $this->assertSame(Format::Ttml, Format::tryFromPath("movie.dfxp"));
         $this->assertSame(Format::Tsv, Format::tryFromPath("script.TSV"));
         $this->assertSame(Format::YouTubeTimedText, Format::tryFromPath("video.en.json3"));
+        $this->assertSame(Format::YouTubeTimedText, Format::tryFromPath("video.YTT"));
         $this->assertNull(Format::tryFromPath("README"));
         $this->assertNull(Format::tryFromPath("report.doc"));
     }
