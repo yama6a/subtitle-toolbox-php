@@ -19,3 +19,5 @@ All files are written for this repository. Each one started as a UTF-8 file with
 | `greek-windows-1253.srt` | Written for this repository. Windows-1253, CR LF, no BOM | MIT |
 | `turkish-windows-1254.srt` | Written for this repository. Windows-1254, CR LF, no BOM | MIT |
 | `russian-koi8-r.srt` | Written for this repository. KOI8-R, CR LF, no BOM | MIT |
+| `thai-windows-874.srt` | Written for this repository. Windows-874, CR LF, no BOM. Holds `…`, which is 0x85 in Windows-874 and missing in TIS-620 | MIT |
+| `arabic-iso-8859-6.srt` | Written for this repository. ISO-8859-6, CR LF, no BOM | MIT |

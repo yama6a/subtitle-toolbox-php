@@ -102,7 +102,9 @@ class EncodingTest extends TestCase
             "Windows-1253" => ["greek-windows-1253.srt", "Windows-1253", "Ευχαριστώ, πρέπει να φύγω."],
             "Windows-1254" => ["turkish-windows-1254.srt", "Windows-1254", "Teşekkürler, şimdi eve gitmeliyim."],
             "Windows-1256" => ["arabic-windows-1256.srt", "Windows-1256", "شكرا جزيلا."],
+            "Windows-874"  => ["thai-windows-874.srt", "Windows-874", "ขอบคุณมาก ฉันต้องกลับบ้านแล้ว"],
             "ISO-8859-2"   => ["polish-iso-8859-2.srt", "ISO-8859-2", "Dziękuję, muszę już iść."],
+            "ISO-8859-6"   => ["arabic-iso-8859-6.srt", "ISO-8859-6", "شكرا، يجب أن أعود إلى البيت."],
             "KOI8-R"       => ["russian-koi8-r.srt", "KOI8-R", "Спасибо, мне пора домой."],
         ];
     }

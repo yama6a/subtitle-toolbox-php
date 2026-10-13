@@ -25,11 +25,13 @@ final class CodePageDetector
         "Windows-1255" => ["he"],
         "Windows-1257" => ["lt", "lv", "et"],
         "Windows-1258" => ["vi"],
+        "Windows-874"  => ["th"],
         "KOI8-R"       => ["ru", "bg"],
         "KOI8-U"       => ["uk", "ru", "be"],
         "ISO-8859-1"   => ["fr", "de", "es", "pt", "it", "nl", "da", "sv", "fi", "is", "ca", "sq"],
         "ISO-8859-2"   => ["cs", "sk", "pl", "hu", "sl", "hr", "ro", "sq", "de"],
         "ISO-8859-5"   => ["ru", "uk", "be", "bg", "sr", "mk"],
+        "ISO-8859-6"   => ["ar"],
         "ISO-8859-7"   => ["el"],
         "ISO-8859-9"   => ["tr"],
     ];
@@ -68,12 +70,13 @@ final class CodePageDetector
         "mk" => "абвгдѓежзѕијклљмнњопрстќуфхцчџшАБВГДЃЕЖЗЅИЈКЛЉМНЊОПРСТЌУФХЦЧЏШ",
     ];
 
-    /** Unicode ranges of the Arabic and Hebrew letters and vowel marks. */
+    /** Unicode ranges of the Arabic, Hebrew and Thai letters, vowel marks and tone marks. */
     private const RANGES = [
         "ar" => [[0x0621, 0x063A], [0x0640, 0x0652], [0x0679, 0x0679], [0x067E, 0x067E], [0x0686, 0x0686], [0x0688, 0x0688],
                  [0x0691, 0x0691], [0x0698, 0x0698], [0x06A9, 0x06A9], [0x06AF, 0x06AF], [0x06BA, 0x06BA], [0x06BE, 0x06BE],
                  [0x06C1, 0x06C1], [0x06CC, 0x06CC], [0x06D2, 0x06D2]],
         "he" => [[0x05B0, 0x05C7], [0x05D0, 0x05EA]],
+        "th" => [[0x0E01, 0x0E3A], [0x0E40, 0x0E5B]],
     ];
 
     private const PUNCTUATION = "\u{00A0}\u{2018}\u{2019}\u{201A}\u{201C}\u{201D}\u{201E}\u{2013}\u{2014}\u{2026}\u{00AB}\u{00BB}" .
@@ -81,7 +84,11 @@ final class CodePageDetector
                                 "\u{2022}\u{00B4}\u{00D7}\u{00B1}\u{00BD}\u{00BC}\u{00BE}\u{2116}\u{00A2}\u{00A5}\u{00B9}\u{00B2}" .
                                 "\u{00B3}\u{00B6}\u{266A}";
 
-    private const NON_LATIN = '[\p{Greek}\p{Cyrillic}\p{Arabic}\p{Hebrew}]';
+    private const NON_LATIN = '[\p{Greek}\p{Cyrillic}\p{Arabic}\p{Hebrew}\p{Thai}]';
+
+    // A Thai vowel or tone mark above or below a letter that follows no consonant, or a leading vowel that no consonant follows.
+    private const THAI_MISPLACED_MARK = '/(?<![\x{0E01}-\x{0E2E}\x{0E31}\x{0E34}-\x{0E3A}\x{0E47}-\x{0E4E}])[\x{0E31}\x{0E34}-\x{0E3A}\x{0E47}-\x{0E4E}]|' .
+                                        '[\x{0E40}-\x{0E44}](?![\x{0E01}-\x{0E2E}])/u';
 
     private const SAMPLE_BYTES = 65536;
 
@@ -217,7 +224,7 @@ final class CodePageDetector
 
 
     /**
-     * Returns the cost of odd letter case, mixed scripts and symbols inside words.
+     * Returns the cost of odd letter case, mixed scripts, symbols inside words and Thai marks out of place.
      */
     private static function penalty(string $text): float
     {
@@ -236,8 +243,9 @@ final class CodePageDetector
         $lowercaseStarts = preg_match_all('/\p{Ll}/u', implode("", $starts[1]));
         $mixedScripts    = preg_match_all('/\p{Latin}(?=' . self::NON_LATIN . ')|' . self::NON_LATIN . '(?=\p{Latin})/u', $text);
         $symbolsInWords  = preg_match_all('/(?<=\p{L})[^\p{L}\p{M}\s\x00-\x7F\x{2019}\x{00B7}](?=\p{L})/u', $text);
+        $misplacedMarks  = preg_match_all(self::THAI_MISPLACED_MARK, $text);
 
-        return $extraCapitals + self::CASE_PENALTY * ($caseChanges + $lowercaseStarts + $mixedScripts) + self::SYMBOL_IN_WORD_PENALTY * $symbolsInWords;
+        return $extraCapitals + self::CASE_PENALTY * ($caseChanges + $lowercaseStarts + $mixedScripts) + self::SYMBOL_IN_WORD_PENALTY * ($symbolsInWords + $misplacedMarks);
     }
 
 
@@ -251,7 +259,7 @@ final class CodePageDetector
             foreach (self::RANGES as $code => $ranges) {
                 foreach ($ranges as [$first, $last]) {
                     for ($codePoint = $first; $codePoint <= $last; $codePoint++) {
-                        self::$letters[$code][self::utf8($codePoint)] = true;
+                        self::$letters[$code][mb_chr($codePoint, "UTF-8")] = true;
                     }
                 }
             }
@@ -265,11 +273,5 @@ final class CodePageDetector
     private static function punctuation(): array
     {
         return self::$punctuation ??= array_fill_keys(preg_split('//u', self::PUNCTUATION, -1, PREG_SPLIT_NO_EMPTY), true);
-    }
-
-
-    private static function utf8(int $codePoint): string
-    {
-        return chr(0xC0 | $codePoint >> 6) . chr(0x80 | $codePoint & 0x3F);
     }
 }
