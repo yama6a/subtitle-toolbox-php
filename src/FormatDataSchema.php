@@ -13,6 +13,8 @@ use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\LyricsParser;
+use SubtitleToolbox\Parsers\Mcc;
+use SubtitleToolbox\Parsers\MccParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
@@ -90,6 +92,12 @@ final class FormatDataSchema
         LyricsParser::FORMAT_DATA_KEY             => [
             "idTags"          => self::STRINGS,
             "spacedWordTimes" => "bool",
+        ],
+        MccParser::FORMAT_DATA_KEY                => [
+            "version"   => ["oneOf", Mcc::VERSIONS],
+            "frameRate" => ["oneOf", Mcc::FRAME_RATE_NAMES],
+            "dropFrame" => "bool",
+            "header"    => self::STRINGS,
         ],
         MicroDvdParser::FORMAT_DATA_KEY           => [
             "frameRate"     => "number",

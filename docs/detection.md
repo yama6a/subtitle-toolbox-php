@@ -42,10 +42,11 @@ Other content goes to the signatures of the text and binary formats. Detection c
 | 11 | `Pgs` | the bytes `PG`, then a known segment type |
 | 12 | `EbuStl` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
 | 13 | `Scc` | `Scenarist_SCC V1.0` |
-| 14 | `YouTubeTimedText` | a `<timedtext>` or `<transcript>` root |
-| 15 | `Mpl2` | `[12][45]` |
-| 16 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=`, but not an `hh:mm:ss:ff` frame timecode such as `00:00:01:10,` |
-| 17 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |
+| 14 | `Mcc` | `File Format=MacCaption_MCC V2.0` or `V1.0` |
+| 15 | `YouTubeTimedText` | a `<timedtext>` or `<transcript>` root |
+| 16 | `Mpl2` | `[12][45]` |
+| 17 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=`, but not an `hh:mm:ss:ff` frame timecode such as `00:00:01:10,` |
+| 18 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line but with cue numbers looks like SubRip, so it detects as SubRip.
 - **SubRip without cue numbers**: read such a file in lenient mode. Strict mode throws `ParsingException` for a missing cue number and for text before the first cue. A timing line with a dot, such as `00:00:01.000 -->`, needs a cue number in the first line.

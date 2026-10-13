@@ -20,6 +20,7 @@ enum Format: string
     case Deepgram           = "deepgram";
     case GoogleSpeech       = "google-speech";
     case Lyrics             = "lrc";
+    case Mcc                = "mcc";
     case MicroDvd           = "microdvd";
     case MpSub              = "mpsub";
     case Pgs                = "pgs";

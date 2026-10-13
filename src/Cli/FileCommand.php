@@ -101,7 +101,7 @@ abstract class FileCommand extends Command
             Option::value("input-fps", "RATE", "Frame rate of a MicroDVD input without a {1}{1}<fps> first line, and of CSV or TSV times in hh:mm:ss:ff."),
             Option::value("fps", "RATE", $this->fpsDescription()),
             Option::flag("word-timestamps", "Keep the word times of speech-to-text JSON, YouTube timed text and Podcasting 2.0 transcript input."),
-            Option::value("scc-roll-up", "MODE", "How SCC input reads roll-up captions: screen gives one cue per screen, lines gives one cue per row. Default: screen."),
+            Option::value("scc-roll-up", "MODE", "How SCC, MCC and MP4 c608 input reads roll-up captions: screen gives one cue per screen, lines gives one cue per row. Default: screen."),
             Option::value("track", "NUMBER", "Subtitle track of an MKV, WebM or MP4 input. Needed when the file has 2 or more subtitle tracks. \"info\" lists them."),
         ];
         if ($this->takesManyInputs()) {

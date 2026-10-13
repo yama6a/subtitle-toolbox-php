@@ -29,6 +29,7 @@ use SubtitleToolbox\Formatters\XmlOutput;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
+use SubtitleToolbox\Formatters\Options\MccWriteOptions;
 use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
@@ -63,6 +64,7 @@ use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\GoogleSpeechParser;
 use SubtitleToolbox\Parsers\HtmlTranscriptParser;
 use SubtitleToolbox\Parsers\JsonParser;
+use SubtitleToolbox\Parsers\MccParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Parsers\MpSubParser;
@@ -219,6 +221,12 @@ class ThrowSitesTest extends TestCase
     /**
      * Opens an MP4 file with one tx3g track 1 that holds $sample, with the given track fields.
      */
+    private static function mcc(string $line): Subtitle
+    {
+        return (new MccParser())->parse("File Format=MacCaption_MCC V2.0\nTime Code Rate=30DF\n\n$line\n", new ReadOptions());
+    }
+
+
     private static function mp4(array $track = [], ?string $sample = null): Mp4Reader
     {
         return Mp4Reader::open(self::stream(Mp4FixtureWriter::file([$track + [
@@ -398,6 +406,7 @@ class ThrowSitesTest extends TestCase
                                                                 ...$invalid],
             "Formatters/Options/EbuStlWriteOptions.php: frame rate 24" => [fn () => new EbuStlWriteOptions(frameRate: 24), ...$invalid],
             "Formatters/Options/IttWriteOptions.php: frame rate 50" => [fn () => new IttWriteOptions(frameRate: 50), ...$invalid],
+            "Formatters/Options/MccWriteOptions.php: frame rate 48" => [fn () => new MccWriteOptions(frameRate: 48), ...$invalid],
             "Formatters/Options/MpSubWriteOptions.php: frame rate 23.976" => [fn () => new MpSubWriteOptions(frameRate: 23.976), ...$invalid],
             "Formatters/GoogleSpeechFormatter.php: diarized cue without words" => [function (): string {
                 $subtitle = Subtitle::load(self::FILES . "google-speech/real/restaurant_v2_diarization.json", Format::GoogleSpeech);
@@ -513,6 +522,14 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/JsonParser.php: invalid base64"        => [fn () => (new JsonParser())->parse(
                 '{"version": 1, "cues": [], "formatData": {"stl": {"base64": "!"}}}', new ReadOptions()), ...$parsing],
+            "Parsers/Mcc.php: invalid character"            => [fn () => self::mcc("00:00:00:00\tT5V"), ...$parsing],
+            "Parsers/Mcc.php: half a byte"                  => [fn () => self::mcc("00:00:00:00\tT5"), ...$parsing],
+            "Parsers/Mcc.php: no CDP"                       => [fn () => self::mcc("00:00:00:00\tT09ZZZZZZZZZZZZZZZZZZ"), ...$parsing],
+            "Parsers/Mcc.php: short cc_data"                => [fn () => self::mcc("00:00:00:00\tT0AS0A4F43ZZ72F4ZZ"), ...$parsing],
+            "Parsers/MccParser.php: no header"              => [fn () => (new MccParser())->parse("Time Code Rate=30DF", new ReadOptions()), ...$parsing],
+            "Parsers/MccParser.php: version 3.0"            => [fn () => (new MccParser())->parse("File Format=MacCaption_MCC V3.0", new ReadOptions()), ...$parsing],
+            "Parsers/MccParser.php: no time code"           => [fn () => self::mcc("text"), ...$parsing],
+            "Parsers/MccParser.php: no time code rate"      => [fn () => (new MccParser())->parse("File Format=MacCaption_MCC V2.0\n", new ReadOptions()), ...$parsing],
             "Parsers/MicroDvdParser.php: no frame rate"     => [fn () => (new MicroDvdParser())->parse("{0}{25}text", new ReadOptions()), ...$parsing],
             "Parsers/MicroDvdParser.php: frame rate 0"      => [fn () => (new MicroDvdParser())->parse("{1}{1}0\n{0}{25}text", new ReadOptions()), ...$parsing],
             "Parsers/MicroDvdParser.php: no MicroDVD cue"   => [fn () => (new MicroDvdParser())->parse("{1}{1}25\ntext", new ReadOptions()), ...$parsing],

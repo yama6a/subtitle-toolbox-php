@@ -35,6 +35,7 @@ final class ReadGoldens
         "mpsub"               => Format::MpSub,
         "tmplayer"            => Format::TmPlayer,
         "lrc"                 => Format::Lyrics,
+        "mcc"                 => Format::Mcc,
         "csv"                 => Format::Csv,
         "json"                => Format::Json,
         "ttml"                => Format::Ttml,

@@ -23,6 +23,7 @@ class BinaryFormatMatrixTest extends CliTestCase
         "deepgram"           => "deepgram/real/pool_utterances_diarize.json",
         "google-speech"      => "google-speech/real/restaurant_v2_diarization.json",
         "lrc"                => "lrc/real/lrc-maker-nami.lrc",
+        "mcc"                => "mcc/real/captionmaker_popon_df.mcc",
         "microdvd"           => "microdvd/real/sub_microdvd_with_styles.sub",
         "mpsub"              => "mpsub/real/mplayer_doc_time.sub",
         "pgs"                => "pgs/text_1080p.sup",
@@ -49,12 +50,13 @@ class BinaryFormatMatrixTest extends CliTestCase
     /** Every conversion gets these options. They prevent the failures for a missing frame rate and for image cues. */
     private const CONVERT_OPTIONS = ["--input-fps", "25", "--output-fps", "25", "--skip-image-cues"];
 
-    /** SCC output also gets these options, because SCC allows 32 characters per line and 4 lines per cue. */
+    /** SCC and MCC output also get these options, because CEA-608 allows 32 characters per line and 4 lines per cue. */
     private const SCC_OPTIONS = ["--structure-split-long", "--structure-wrap", "--structure-max-cpl", "32", "--structure-max-lines", "4"];
 
     /** Conversions that fail on purpose, as "input>output" => outcome. Pairs that are not listed must succeed. */
     private const EXPECTED_FAILURES = [
         // CEA-608 cannot show the Chinese characters of the LRC fixture.
+        "lrc>mcc" => "convert exit 3",
         "lrc>scc" => "convert exit 3",
         // --skip-image-cues leaves no cue, so the plain text output is empty.
         "pgs>txt" => "empty",
@@ -83,7 +85,7 @@ class BinaryFormatMatrixTest extends CliTestCase
         $converts = [];
         foreach (self::INPUTS as $input => $fixture) {
             foreach ($writable as $output) {
-                $options = $output === "scc" ? [...self::CONVERT_OPTIONS, ...self::SCC_OPTIONS] : self::CONVERT_OPTIONS;
+                $options = in_array($output, ["scc", "mcc"], true) ? [...self::CONVERT_OPTIONS, ...self::SCC_OPTIONS] : self::CONVERT_OPTIONS;
                 $converts["$input>$output"] = ["convert", self::FILES . $fixture, "--from", $input, "--to", $output,
                                                "-o", "$this->dir/$input-to-$output.out", ...$options];
             }
