@@ -30,6 +30,7 @@ final class CommonErrorOptions
      * @param bool              $musicNotes                   write a "#" or "*" at the start or end of a line as U+266A, as in "# la la #". Off by default
      * @param bool              $doubleApostrophes            write 2 apostrophes as a double quote, as in "''Hi''". Off by default
      * @param bool              $unneededPeriods              remove a period after "?" or "!", as in "Really?.". Off by default
+     * @param bool              $adCues                       remove a cue that names a subtitle download site, as in "Downloaded from YTS.MX". Off by default
      */
     public function __construct(
         public readonly ?string $language = null,
@@ -51,6 +52,7 @@ final class CommonErrorOptions
         public readonly bool $musicNotes = false,
         public readonly bool $doubleApostrophes = false,
         public readonly bool $unneededPeriods = false,
+        public readonly bool $adCues = false,
     ) {
     }
 
@@ -63,6 +65,7 @@ final class CommonErrorOptions
     public function enables(CommonErrorRule $rule, ?string $language): bool
     {
         return match ($rule) {
+            CommonErrorRule::AdCues                       => $this->adCues,
             CommonErrorRule::ReplaceList                  => $this->replaceList !== null,
             CommonErrorRule::UnbalancedTags               => $this->unbalancedTags,
             CommonErrorRule::EmptyTags                    => $this->emptyTags,

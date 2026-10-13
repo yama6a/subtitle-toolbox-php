@@ -9,6 +9,7 @@ namespace SubtitleToolbox\Fixing;
  */
 enum CommonErrorRule: string
 {
+    case AdCues                       = "adCues";
     case ReplaceList                  = "replaceList";
     case UnbalancedTags               = "unbalancedTags";
     case EmptyTags                    = "emptyTags";
