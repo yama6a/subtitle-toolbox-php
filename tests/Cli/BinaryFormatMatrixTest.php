@@ -38,6 +38,7 @@ class BinaryFormatMatrixTest extends CliTestCase
         "tsv"                => "csv/real/sheets_export.tsv",
         "mpl2"               => "mpl2/real/subtitle_edit_shape.txt",
         "tmplayer"           => "tmplayer/real/tmplayer_multiline_bom.txt",
+        "qttext"             => "qttext/real/subtitle_edit_shape.txt",
         "vobsub"             => "vobsub/text-pal.idx",
         "vtt"                => "vtt/real/w3c_voices.vtt",
         "whisper"            => "whisper/real/openai_whisper_word_timestamps.json",

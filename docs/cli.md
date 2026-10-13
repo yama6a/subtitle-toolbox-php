@@ -145,7 +145,7 @@ Run `stbox formats` for the list. For an extension that two formats share, see [
 - **`.stl`**: format detection reads binary EBU STL and text Spruce STL. Pass `--to spruce-stl` for Spruce STL output from another format.
 - **`.sub`**: MicroDVD. Pass `--from subviewer` for SubViewer. A directory skips a `.sub` file that has an `.idx` file next to it.
 - **VobSub**: pass the `.idx` file. The tool reads the `.sub` file next to it. Standard input does not work.
-- **`.json` and `.txt` input**: format detection finds 6 of these formats by their content. These are the library JSON, Whisper JSON, YouTube json3, Podcasting 2.0 transcripts, MPL2 and TMPlayer. Other `.json` and `.txt` input fails without `--from`.
+- **`.json` and `.txt` input**: format detection finds 7 of these formats by their content. These are the library JSON, Whisper JSON, YouTube json3, Podcasting 2.0 transcripts, MPL2, TMPlayer and QuickTime text. Other `.json` and `.txt` input fails without `--from`.
 - **Other output formats**: pass `--to`, for example `--to mpl2`, `--to podcast-transcript` or `--to youtube-chapters`.
 - **CSV and TSV**: see [Load and save](formats.md#load-and-save) for the delimiter of the output.
 

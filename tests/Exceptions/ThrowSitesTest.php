@@ -73,6 +73,7 @@ use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
+use SubtitleToolbox\Parsers\QuickTimeTextParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\Parsers\SbvParser;
@@ -573,6 +574,8 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/PodcastTranscriptParser.php: time no number" => [fn () => (new PodcastTranscriptParser())->parse(
                 '{"segments": [{"startTime": "0"}]}', new ReadOptions()), ...$parsing],
+            "Parsers/QuickTimeTextParser.php: no {QTtext}"  => [fn () => (new QuickTimeTextParser())->parse("[00:00:01.00]\ntext\n", new ReadOptions()), ...$parsing],
+            "Parsers/QuickTimeTextParser.php: fraction"     => [fn () => (new QuickTimeTextParser())->parse("{QTtext}{timeScale:30}\n[00:00:01.45]\ntext\n", new ReadOptions()), ...$parsing],
             "Parsers/SamiParser.php: no Start attribute"    => [fn () => (new SamiParser())->parse("<SAMI><BODY><SYNC>text</BODY></SAMI>", new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/SamiParser.php: unknown class"         => [fn () => (new SamiParser())->parse(

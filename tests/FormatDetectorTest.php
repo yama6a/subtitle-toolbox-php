@@ -22,6 +22,7 @@ class FormatDetectorTest extends TestCase
         "mpl2"     => Format::Mpl2,
         "mpsub"    => Format::MpSub,
         "podcast"  => Format::PodcastTranscript,
+        "qttext"   => Format::QuickTimeText,
         "sami"     => Format::Sami,
         "sbv"      => Format::Sbv,
         "spruce-stl" => Format::SpruceStl,

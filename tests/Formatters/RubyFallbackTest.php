@@ -58,6 +58,7 @@ class RubyFallbackTest extends TestCase
             "MPL2"                => [Format::Mpl2, new WriteOptions()],
             "TMPlayer"            => [Format::TmPlayer, new WriteOptions()],
             "Spruce STL"          => [Format::SpruceStl, new WriteOptions()],
+            "QuickTime text"      => [Format::QuickTimeText, new WriteOptions()],
             "SubViewer"           => [Format::SubViewer, new WriteOptions()],
             "CSV"                 => [Format::Csv, new WriteOptions()],
             "TSV"                 => [Format::Tsv, new WriteOptions()],

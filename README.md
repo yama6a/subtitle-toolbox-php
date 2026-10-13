@@ -44,6 +44,7 @@ The command line tool also comes as a PHAR file and as two container images. The
 | [MicroDVD](https://en.wikipedia.org/wiki/MicroDVD) | `MicroDvd` | `microdvd` | `.sub` | ✅ | ✅ | needs the frame rate of the video |
 | [MPL2](https://pysubs2.readthedocs.io/en/latest/supported-formats.html) | `Mpl2` | `mpl2` | `.txt` | ✅ | ✅ | |
 | [MPSub](https://man.archlinux.org/man/mplayer.1.en) | `MpSub` | `mpsub` | `.mpsub` | ✅ | ✅ | |
+| [QuickTime text](https://developer.apple.com/library/archive/documentation/QuickTime/Conceptual/QTScripting_HTML/QTScripting_HTML_Document/ScriptingHTML.html) | `QuickTimeText` | `qttext` | `.txt` | ✅ | ✅ | `{QTtext}` text tracks of QuickTime |
 | [SAMI](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/dnacc/understanding-sami-1.0) | `Sami` | `sami` | `.smi`, `.sami` | ✅ | ✅ | one language class per parse |
 | [SBV](https://support.google.com/youtube/answer/2734698) | `Sbv` | `sbv` | `.sbv` | ✅ | ✅ | |
 | [SCC](https://www.nationalarchives.gov.uk/PRONOM/fmt/1274) | `Scc` | `scc` | `.scc` | ✅ | ✅ | CEA-608 closed captions |
