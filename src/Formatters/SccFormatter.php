@@ -245,6 +245,12 @@ final class SccFormatter extends SubtitleFormatter
             return $lines;
         }
 
+        // Wrapping keeps every visible character but spaces, so more of them than the rows hold never fit.
+        // The check skips a break search that takes seconds for a long CJK cue with a break point after each character.
+        if (array_sum(array_column(LineWrapper::measuredWords(implode(" ", $lines)), "length")) > Cea608::COLUMNS * Cea608::MAX_LINES) {
+            return $lines;
+        }
+
         $wrapped = LineWrapper::wrapToFit($lines, Cea608::COLUMNS, Cea608::MAX_LINES);
         if ($wrapped === null) {
             $wrapped = LineWrapper::wrap($lines, Cea608::COLUMNS, Cea608::MAX_LINES);
@@ -268,7 +274,7 @@ final class SccFormatter extends SubtitleFormatter
         $columns = Cea608::COLUMNS;
         $lines   = Cea608::MAX_LINES;
 
-        return count(LineWrapper::wrap($cue->getLines(), Cea608::COLUMNS, PHP_INT_MAX)) <= Cea608::MAX_LINES
+        return LineWrapper::fewestLines($cue->getLines(), Cea608::COLUMNS) <= Cea608::MAX_LINES
             ? "Call wrapLines($columns, $lines) first."
             : "Call Resegmenter::apply() with ResegmentMode::SplitLong and new CueLimits($columns, $lines), then wrapLines($columns, $lines).";
     }

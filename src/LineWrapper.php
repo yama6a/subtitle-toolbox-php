@@ -36,20 +36,7 @@ final class LineWrapper
      */
     public static function wrap(array $lines, int $maxCharactersPerLine, int $maxLinesPerCue, bool $keepDialogueLines = false): array
     {
-        $segments = [];
-        foreach ($lines as $line) {
-            if (trim($line, " ") === "") {
-                continue;
-            }
-
-            $startsWithDash = preg_match('/^(?:\s|' . Markup::TAG . ')*[' . DialogueDash::CHARACTERS . ']/u', $line) === 1;
-            if ($segments === [] || ($keepDialogueLines && $startsWithDash)) {
-                $segments[] = $line;
-            } else {
-                $segments[count($segments) - 1] = self::joinLine($segments[count($segments) - 1], $line);
-            }
-        }
-
+        $segments = self::segments($lines, $keepDialogueLines);
         if (count($segments) > 1) {
             return array_map(fn (string $segment): string => implode(" ", array_column(self::measuredWords($segment), "text")), $segments);
         }
@@ -139,6 +126,36 @@ final class LineWrapper
         $wrapped = self::wrap($lines, $maxCharactersPerLine, $maxLinesPerCue, true);
 
         return self::fits($wrapped, $maxCharactersPerLine, $maxLinesPerCue) ? $wrapped : null;
+    }
+
+
+    /**
+     * Returns count(wrap($lines, $maxCharactersPerLine, PHP_INT_MAX)) in linear time.
+     * The fewest lines that fit come from filling each line with as many parts as fit.
+     * When a part is longer than a line, no lines fit, and wrap() puts each part on a line of its own.
+     *
+     * @param list<string> $lines
+     */
+    public static function fewestLines(array $lines, int $maxCharactersPerLine): int
+    {
+        $parts     = self::breakableParts(self::segments($lines, false)[0] ?? "");
+        $lineCount = 0;
+        $length    = 0;
+        foreach ($parts as $part) {
+            if ($part["length"] > $maxCharactersPerLine) {
+                return count($parts);
+            }
+
+            $joined = $length + (int) $part["spaceBefore"] + $part["length"];
+            if ($lineCount > 0 && $joined <= $maxCharactersPerLine) {
+                $length = $joined;
+            } else {
+                $lineCount++;
+                $length = $part["length"];
+            }
+        }
+
+        return $lineCount;
     }
 
 
@@ -435,6 +452,33 @@ final class LineWrapper
         $pieces[] = substr($word, $pieceStart);
 
         return $pieces;
+    }
+
+
+    /**
+     * Joins the lines that have words into one segment. With $keepDialogueLines, each line that starts with a dialogue dash starts a new segment.
+     *
+     * @param list<string> $lines
+     *
+     * @return list<string>
+     */
+    private static function segments(array $lines, bool $keepDialogueLines): array
+    {
+        $segments = [];
+        foreach ($lines as $line) {
+            if (trim($line, " ") === "") {
+                continue;
+            }
+
+            $startsWithDash = preg_match('/^(?:\s|' . Markup::TAG . ')*[' . DialogueDash::CHARACTERS . ']/u', $line) === 1;
+            if ($segments === [] || ($keepDialogueLines && $startsWithDash)) {
+                $segments[] = $line;
+            } else {
+                $segments[count($segments) - 1] = self::joinLine($segments[count($segments) - 1], $line);
+            }
+        }
+
+        return $segments;
     }
 
 

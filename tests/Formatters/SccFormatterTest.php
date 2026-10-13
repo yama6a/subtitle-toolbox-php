@@ -268,6 +268,24 @@ class SccFormatterTest extends TestCase
     }
 
 
+    // The break search for the fit and the hint took over a second for this cue, with a break point after almost every character.
+    public function testFitAnswersForALongCjkCueUnderATenthOfASecond(): void
+    {
+        $text     = mb_substr(str_repeat("今天早上我们一起去市场买新鲜的蔬菜和水果，然后回家做午饭。", 12), 0, 341);
+        $subtitle = $this->subtitle(new SubtitleCue(1.0, 8.0, $text));
+
+        $start = microtime(true);
+        try {
+            $subtitle->toString(Format::Scc, new WriteOptions(formats: [new SccWriteOptions(fit: true)]));
+            $this->fail("The cue fits.");
+        } catch (UnwritableContentException $exception) {
+            $this->assertStringEndsWith("Call Resegmenter::apply() with ResegmentMode::SplitLong and new CueLimits(32, 4), then wrapLines(32, 4).", $exception->getMessage());
+        }
+
+        $this->assertLessThan(0.1, microtime(true) - $start);
+    }
+
+
     public function testSplitLongAndWrapLinesMakeTheCueFit(): void
     {
         $subtitle = $this->subtitle(new SubtitleCue(1.0, 8.0, implode(" ", array_fill(0, 20, "bakery"))));
