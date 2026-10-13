@@ -75,6 +75,8 @@ class CloudSpeechParsersTest extends TestCase
                                           [[0.0, 0.6, str_repeat("a", 41) . " " . str_repeat("b", 42)], [0.6, 0.9, "c"]]],
             "84 characters in UTF-8"  => [[[str_repeat("\u{e9}", 41), 0, 300], [str_repeat("\u{e8}", 42), 300, 600]],
                                           [[0.0, 0.6, str_repeat("\u{e9}", 41) . " " . str_repeat("\u{e8}", 42)]]],
+            "84 characters with marks" => [[[str_repeat("e\u{301}", 41), 0, 300], [str_repeat("a\u{308}", 42), 300, 600], ["c", 600, 900]],
+                                          [[0.0, 0.6, str_repeat("e\u{301}", 41) . " " . str_repeat("a\u{308}", 42)], [0.6, 0.9, "c"]]],
         ];
     }
 

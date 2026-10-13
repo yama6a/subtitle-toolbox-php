@@ -76,7 +76,7 @@ $subtitle->getCues()[2]->findFormatData('deepgram')['confidence'];           // 
 | [AssemblyAI](https://www.assemblyai.com/docs/api-reference/transcripts/get) | `AssemblyAiParser`, `assemblyai` | one per `utterances` entry. Without utterances, grouped from `words` |
 | [Google Cloud Speech-to-Text](https://cloud.google.com/speech-to-text/docs/async-time-offsets) | `GoogleSpeechParser`, `google-speech` | one per result. With diarization, grouped from the words of the last result |
 
-- **Word grouping**: a cue ends after a word that ends a sentence with `.`, `?`, `!` or their CJK forms. It also ends before a pause of 1 s or more and where the speaker changes. A cue also ends before a word that makes it longer than 84 characters.
+- **Word grouping**: a cue ends after a word that ends a sentence with `.`, `?`, `!` or their CJK forms. It also ends before a pause of 1 s or more and where the speaker changes. A cue also ends before a word that makes it longer than 84 characters. Characters count as in [Statistics](subtitle.md#statistics), so a letter with its marks counts 1.
 - **Long cues**: an audio segment, utterance or result stays one cue. [`Resegmenter`](editing.md#long-cues) breaks it up. With `TranscriptReadOptions::$wordTimestamps`, `ResegmentMode::ByWords` regroups the words with other limits.
 - **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each word gets a word timestamp before it.
 - **Speakers**: off by default. `TranscriptReadOptions::$speakerVoices` writes the speaker label of the service as a `<v>` tag, for example `<v spk_0>`, `<v 0>`, `<v A>` or `<v 1>`. The `rename` option of [`SpeakerLabels::apply()`](text.md#speakers) gives them names.
