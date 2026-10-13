@@ -1,0 +1,48 @@
+{
+    "warnings": [],
+    "subtitle": {
+        "version": 1,
+        "metadata": {
+            "title": "THE LIGHTHOUSE"
+        },
+        "comments": [],
+        "formatData": {
+            "dcp": {
+                "dialect": "interop"
+            }
+        },
+        "cues": [
+            {
+                "start": 51.0,
+                "end": 52.5,
+                "lines": [
+                    "Over here."
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            },
+            {
+                "start": 90.08,
+                "end": 93.124,
+                "lines": [
+                    "<i>Every night at dusk</i>",
+                    "<i>the lamp still turns.</i>"
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            },
+            {
+                "start": 94.0,
+                "end": 96.0,
+                "lines": [
+                    "<font color=\"#ffff00\">Keep the door shut.</font>"
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            }
+        ]
+    }
+}

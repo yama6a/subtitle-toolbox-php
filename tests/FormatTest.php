@@ -67,7 +67,7 @@ class FormatTest extends TestCase
     {
         $rows = (new \ReflectionClassConstant(FormatRegistry::class, "FORMATS"))->getValue();
 
-        $this->assertCount(36, Format::cases());
+        $this->assertCount(37, Format::cases());
         $this->assertSame(array_keys($rows), array_map(fn (Format $format): string => $format->value, Format::cases()));
     }
 
@@ -131,7 +131,7 @@ class FormatTest extends TestCase
     {
         $readOnly = array_filter(Format::cases(), fn (Format $format): bool => !$format->canWrite());
         $this->assertSame(
-            ["vobsub"],
+            ["dcp", "vobsub"],
             self::sortedNames($readOnly)
         );
 

@@ -31,24 +31,25 @@ Other content goes to the signatures of the text and binary formats. Detection c
 |:--- |:--- |:--- |
 | 1 | `WebVtt` | `WEBVTT` |
 | 2 | `Ttml` | `<tt` after an optional XML declaration, comments and DOCTYPE |
-| 3 | `Sami` | `<SAMI>` |
-| 4 | `Ass` | `[Script Info]`, for ASS and SSA |
-| 5 | `MpSub` | a first line such as `TITLE=`, and a `FORMAT=` line |
-| 6 | `MicroDvd` | `{24}{72}` |
-| 7 | `QuickTimeText` | `{QTtext}`, in any case |
-| 8 | `SubRip` | `1`, then `00:00:01,000 -->`. The cue number can come after at most 5 lines of other text. A first line such as `00:00:01,000 -->` matches without a cue number. |
-| 9 | `Sbv` | `0:00:01.500,0:00:04.000` |
-| 10 | `SubViewer` | `******** START SCRIPT ********`, `[INFORMATION]` or `00:00:01.50,00:00:04.00` |
-| 11 | `Lyrics` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
-| 12 | `Pgs` | the bytes `PG`, then a known segment type |
-| 13 | `EbuStl` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
-| 14 | `SpruceStl` | `00:00:01:10 , 00:00:03:10 ,` after optional `$` command and `//` comment lines. Without such a line first, the text must not start with `"` |
-| 15 | `Scc` | `Scenarist_SCC V1.0` |
-| 16 | `Mcc` | `File Format=MacCaption_MCC V2.0` or `V1.0` |
-| 17 | `YouTubeTimedText` | a `<timedtext>` or `<transcript>` root |
-| 18 | `Mpl2` | `[12][45]` |
-| 19 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=`, but not an `hh:mm:ss:ff` frame timecode such as `00:00:01:10,` |
-| 20 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |
+| 3 | `Dcp` | a `<DCSubtitle>` or `<SubtitleReel>` root, with any namespace prefix |
+| 4 | `Sami` | `<SAMI>` |
+| 5 | `Ass` | `[Script Info]`, for ASS and SSA |
+| 6 | `MpSub` | a first line such as `TITLE=`, and a `FORMAT=` line |
+| 7 | `MicroDvd` | `{24}{72}` |
+| 8 | `QuickTimeText` | `{QTtext}`, in any case |
+| 9 | `SubRip` | `1`, then `00:00:01,000 -->`. The cue number can come after at most 5 lines of other text. A first line such as `00:00:01,000 -->` matches without a cue number. |
+| 10 | `Sbv` | `0:00:01.500,0:00:04.000` |
+| 11 | `SubViewer` | `******** START SCRIPT ********`, `[INFORMATION]` or `00:00:01.50,00:00:04.00` |
+| 12 | `Lyrics` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
+| 13 | `Pgs` | the bytes `PG`, then a known segment type |
+| 14 | `EbuStl` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
+| 15 | `SpruceStl` | `00:00:01:10 , 00:00:03:10 ,` after optional `$` command and `//` comment lines. Without such a line first, the text must not start with `"` |
+| 16 | `Scc` | `Scenarist_SCC V1.0` |
+| 17 | `Mcc` | `File Format=MacCaption_MCC V2.0` or `V1.0` |
+| 18 | `YouTubeTimedText` | a `<timedtext>` or `<transcript>` root |
+| 19 | `Mpl2` | `[12][45]` |
+| 20 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=`, but not an `hh:mm:ss:ff` frame timecode such as `00:00:01:10,` |
+| 21 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line but with cue numbers looks like SubRip, so it detects as SubRip.
 - **SubRip without cue numbers**: read such a file in lenient mode. Strict mode throws `ParsingException` for a missing cue number and for text before the first cue. A timing line with a dot, such as `00:00:01.000 -->`, needs a cue number in the first line.

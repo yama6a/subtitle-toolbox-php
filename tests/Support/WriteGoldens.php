@@ -105,6 +105,8 @@ final class WriteGoldens
         "qttext/real/quicktime_export_styles.txt"         => Format::QuickTimeText,
         "lrc/real/handwritten-enhanced.lrc"               => Format::Lyrics,
         "ttml/real/bbc_ebu_tt_d.ttml"                     => Format::Ttml,
+        "dcp/real/monal_interop_shape.xml"                => Format::Dcp,
+        "dcp/real/subtitle_edit_smpte2014_shape.xml"      => Format::Dcp,
         "itt/real/fcp_23976_styles.itt"                   => Format::Itt,
         "mcc/real/v2_5994df_fields.mcc"                   => Format::Mcc,
         "mcc/real/captionmaker_608_708.mcc"               => Format::Mcc,

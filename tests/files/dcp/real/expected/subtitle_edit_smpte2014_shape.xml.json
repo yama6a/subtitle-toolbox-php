@@ -1,0 +1,41 @@
+{
+    "warnings": [],
+    "subtitle": {
+        "version": 1,
+        "metadata": {
+            "title": "Le Phare",
+            "language": "fr"
+        },
+        "comments": [],
+        "formatData": {
+            "dcp": {
+                "dialect": "smpte",
+                "namespace": "http://www.smpte-ra.org/schemas/428-7/2014/DCST",
+                "timeCodeRate": 25.0,
+                "startTime": "00:00:00:00"
+            }
+        },
+        "cues": [
+            {
+                "start": 30.16,
+                "end": 33.84,
+                "lines": [
+                    "La lampe tourne encore."
+                ],
+                "identifier": null,
+                "alignment": null,
+                "formatData": {}
+            },
+            {
+                "start": 34.0,
+                "end": 36.48,
+                "lines": [
+                    "<i><u>Radio</u></i>"
+                ],
+                "identifier": null,
+                "alignment": 8,
+                "formatData": {}
+            }
+        ]
+    }
+}

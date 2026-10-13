@@ -29,6 +29,8 @@ Rules for adding a port are in [CONTRIBUTING.md](CONTRIBUTING.md).
   - `tests/files/spruce-stl/real/bakery.stl`
   - `tests/files/spruce-stl/real/bakery_with_header.stl`
   - `tests/files/qttext/real/subtitle_edit_shape.txt`
+  - `tests/files/dcp/real/monal_interop_shape.xml`
+  - `tests/files/dcp/real/subtitle_edit_smpte2014_shape.xml`
   - `tests/files/lenient/mantas_multiple_divs.ttml`
   - `tests/files/ttml/real/mantas_netflix_ticks.dfxp`
 
