@@ -118,6 +118,25 @@ class LineWrapperTest extends TestCase
     }
 
 
+    public function testFewestLinesIsTheLineCountOfWrapWithoutALineLimit(): void
+    {
+        $cases = [
+            [["The bakery opens at seven tomorrow."], 20],
+            [["one two three four"], 10],
+            [["我们明天早上八点在火车站见面，然后一起坐车去北京看望奶奶。"], 16],
+            [["Supercalifragilisticexpialidocious is long"], 10],
+            [["<i>Tags count</i> no &amp; characters"], 12],
+            [["- First line", "- Second line"], 32],
+            [[""], 32],
+        ];
+        foreach ($cases as [$lines, $width]) {
+            $this->assertSame(count(LineWrapper::wrap($lines, $width, PHP_INT_MAX)), LineWrapper::fewestLines($lines, $width));
+        }
+        $this->assertSame(2, LineWrapper::fewestLines(["one two three four"], 10));
+        $this->assertSame(3, LineWrapper::fewestLines(["Supercalifragilisticexpialidocious is long"], 10));
+    }
+
+
     public function testClosesAndReopensItalicTagsAtTheLineBreak(): void
     {
         $this->assertSame(["<i>Are you coming</i>", "<i>to the party?</i>"],
