@@ -11,6 +11,8 @@ use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Alignment;
+use SubtitleToolbox\Parsers\Options\MccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\ReadOptions;
@@ -136,6 +138,21 @@ class Mp4ReaderTest extends TestCase
     }
 
 
+    public function testReadsAC708TrackAsTheMccFileItCameFrom(): void
+    {
+        $reader = Mp4Reader::open(self::DIR . "c708_track.mov");
+        $mcc    = Subtitle::load(self::DIR . "../mcc/real/captionmaker_608_708.mcc");
+
+        $this->assertSame([[1, "c708", Format::Mcc, "fra"]],
+                          array_map(fn (SubtitleTrack $t): array => [$t->number, $t->codecId, $t->format, $t->language], $reader->getSubtitleTracks()));
+        $this->assertSame(self::rounded($mcc), self::rounded($reader->extract(1)));
+        $this->assertSame(self::rounded(Subtitle::load(self::DIR . "../mcc/real/captionmaker_608_708.mcc", Format::Mcc,
+                                                       new ReadOptions(formats: [new MccReadOptions(service: 2)]))),
+                          self::rounded($reader->extract(1, new ReadOptions(formats: [new MccReadOptions(service: 2)]))));
+        $this->assertSame(Format::Mcc, $reader->extract(1)->findFormat());
+    }
+
+
     public function testMovesTheSamplesByTheEditList(): void
     {
         $reader = self::oneTrack(["edits" => [[1500, -1], [500, 250], [1000, 0]]]);
@@ -158,7 +175,7 @@ class Mp4ReaderTest extends TestCase
 
         $this->assertNull($reader->trackFormat(1));
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Track 1 has the codec wvtt. The reader extracts only tx3g, c608.");
+        $this->expectExceptionMessage("Track 1 has the codec wvtt. The reader extracts only tx3g, c608, c708.");
 
         $reader->extract(1);
     }
@@ -439,6 +456,16 @@ class Mp4ReaderTest extends TestCase
         $this->assertSame(["The bus leaves in 5 minutes."], $cues[0]->getLines());
         $this->assertLessThan(4 << 20, memory_get_peak_usage() - $before);
         fclose($stream);
+    }
+
+
+    /**
+     * @return list<array{float, float, list<string>, ?Alignment}>
+     */
+    private static function rounded(Subtitle $subtitle): array
+    {
+        return array_map(fn (SubtitleCue $cue): array => [round($cue->getStart(), 3), round($cue->getEnd(), 3), $cue->getLines(), $cue->getAlignment()],
+                         $subtitle->getCues());
     }
 
 

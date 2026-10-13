@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Encoding\Cea708Encoder;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Formatters\Options\MccWriteOptions;
 use SubtitleToolbox\FrameRate;
@@ -15,9 +16,9 @@ use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
 /**
- * Writes MCC (MacCaption) files with one line per frame that holds CEA-608 data, as ffmpeg writes them.
- * The CEA-608 field 1 data are the byte pairs that SccFormatter writes. Field 2 holds null pairs, and the CEA-708 part
- * holds empty triplets, as MacCaption writes them for CEA-608 captions.
+ * Writes MCC (MacCaption) files with one line per frame that holds caption data, as ffmpeg writes them.
+ * The CEA-608 field 1 data are the byte pairs that SccFormatter writes with its fit option. Field 2 holds null pairs.
+ * The CEA-708 data are the service blocks of Cea708Encoder, one DTVCC packet per frame.
  *
  * @see Mcc
  */
@@ -31,13 +32,16 @@ final class MccFormatter extends SubtitleFormatter
 
     private const NULL_PAIR = 0x8080;
 
+    // A DTVCC packet starts with a header byte, then a service block header byte for service 1.
+    private const SERVICE_1 = 0x20;
+
     // A CEA-608 byte pair lasts 1001/30000 s.
     private const CEA608_NUMERATOR   = 30000;
     private const CEA608_DENOMINATOR = 1001;
 
 
     /**
-     * @throws UnwritableContentException for a cue that SCC cannot hold, see SccFormatter::format().
+     * @throws UnwritableContentException for a cue that SCC cannot hold with SccWriteOptions::$fit, see SccFormatter::format().
      */
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
@@ -54,20 +58,28 @@ final class MccFormatter extends SubtitleFormatter
         }
 
         $byFrame = [];
-        foreach ((new SccFormatter())->captionWords($subtitle, false) as $frame608 => $word) {
+        foreach ((new SccFormatter())->captionWords($subtitle, true) as $frame608 => $word) {
             $byFrame[(int) round($frame608 * self::CEA608_DENOMINATOR * $numerator / (self::CEA608_NUMERATOR * $denominator))][] = $word;
         }
+        // A packet holds a header byte and a block header byte. A cc_data triplet holds 2 bytes.
+        $capacity = 2 * ($tripletCount - 2) - 2;
+        $blocks   = (new Cea708Encoder())->blocks($subtitle, fn (float $seconds): int => (int) round($seconds * $numerator / $denominator), $capacity);
+        $frames   = array_unique([...array_keys($byFrame), ...array_keys($blocks)]);
+        sort($frames);
 
         $lines    = "";
         $rate     = new FrameRate($numerator / $denominator);
         $sequence = 0;
-        foreach ($byFrame as $frame => $words) {
+        foreach ($frames as $frame) {
             $triplets = [];
-            foreach ($words as $word) {
+            foreach ($byFrame[$frame] ?? [self::NULL_PAIR] as $word) {
                 $triplets[] = [Mcc::NTSC_FIELD_1, true, $word];
             }
             $triplets[] = [Mcc::NTSC_FIELD_2, true, self::NULL_PAIR];
-            $triplets   = array_pad($triplets, $tripletCount, [Mcc::DTVCC_DATA, false, 0]);
+            if (isset($blocks[$frame])) {
+                array_push($triplets, ...self::dtvccTriplets($blocks[$frame], $sequence));
+            }
+            $triplets = array_pad($triplets, $tripletCount, [Mcc::DTVCC_DATA, false, 0]);
 
             [$hours, $minutes, $seconds, $frames] = Timecode::frameNumber($frame, $rate, $dropFrame);
             $packet  = Mcc::writePacket($code, $sequence++ & 0xFFFF, $triplets);
@@ -76,6 +88,27 @@ final class MccFormatter extends SubtitleFormatter
         $output = $this->header($version, $labels . ($dropFrame ? "DF" : ""), $data["header"] ?? [], $lines) . $lines;
 
         return $this->applyOutputOptions($output, $options);
+    }
+
+
+    /**
+     * Returns the triplets of a DTVCC packet with one service block. The packet header holds a sequence number from
+     * 0 to 3 and the packet size in pairs of bytes.
+     *
+     * @return list<array{int, bool, int}>
+     */
+    private static function dtvccTriplets(string $block, int $sequence): array
+    {
+        $packet  = chr(self::SERVICE_1 | strlen($block)) . $block;
+        $packet .= strlen($packet) % 2 === 0 ? "\0" : "";
+        $packet  = chr(($sequence & 3) << 6 | intdiv(strlen($packet) + 1, 2)) . $packet;
+
+        $triplets = [];
+        foreach (str_split($packet, 2) as $index => $pair) {
+            $triplets[] = [$index === 0 ? Mcc::DTVCC_START : Mcc::DTVCC_DATA, true, unpack("n", $pair)[1]];
+        }
+
+        return $triplets;
     }
 
 

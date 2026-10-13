@@ -6,8 +6,11 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Alignment;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\MccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\ParseWarningAction;
@@ -20,6 +23,12 @@ class MccParserTest extends TestCase
     private const DIR = __DIR__ . "/../files/";
 
     private const HEADER = "File Format=MacCaption_MCC V2.0\nTime Code Rate=30DF\n\n";
+
+    private const CEA608_CUES = [
+        [2.302, 4.671, ["THE WINTER TIMETABLE", "STARTS ON MONDAY."], Alignment::BottomCenter],
+        [5.472, 7.007, ["<i>[ANNOUNCER]</i>"], Alignment::BottomCenter],
+        [8.475, 11.011, ["THE COAST TRAIN LEAVES AT", "6:50, TEN MINUTES EARLIER."], Alignment::BottomCenter],
+    ];
 
     // The CEA-608 command EDM (Erase Displayed Memory) with parity.
     private const EDM = 0x942C;
@@ -44,6 +53,43 @@ class MccParserTest extends TestCase
             Subtitle::load(self::DIR . "scc/real/$scc", options: $options)->toArray()["cues"],
             Subtitle::load(self::DIR . "mcc/real/$mcc", options: $options)->toArray()["cues"],
         );
+    }
+
+
+    public static function services(): array
+    {
+        return [
+            "service 1 by default" => [new ReadOptions(), [
+                [2.302, 5.472, ["L'horaire d'hiver", "débute lundi\u{2026}"], Alignment::BottomCenter],
+                [5.472, 7.007, ["<i>\u{266A} Annonce \u{266A}</i>"], Alignment::TopLeft],
+                [8.475, 11.011, ['<font color="#ffff00">Le train côtier part</font>', "à 6 h 50."], Alignment::BottomCenter],
+            ]],
+            "service 2"            => [new ReadOptions(formats: [new MccReadOptions(service: 2)]), [
+                [2.302, 7.007, ["El horario de invierno", "empieza el lunes."], Alignment::BottomCenter],
+            ]],
+            "service 3 without captions gives CEA-608" => [new ReadOptions(formats: [new MccReadOptions(service: 3)]), self::CEA608_CUES],
+            "CEA-608 only"         => [new ReadOptions(formats: [new MccReadOptions(service: null)]), self::CEA608_CUES],
+        ];
+    }
+
+
+    #[DataProvider("services")]
+    public function testReadsTheCea708ServiceAndElseTheCea608Captions(ReadOptions $options, array $cues): void
+    {
+        $subtitle = Subtitle::load(self::DIR . "mcc/real/captionmaker_608_708.mcc", Format::Mcc, $options);
+
+        $this->assertSame($cues, array_map(fn (SubtitleCue $cue): array => [round($cue->getStart(), 3), round($cue->getEnd(), 3), $cue->getLines(),
+                                                                         $cue->getAlignment()], $subtitle->getCues()));
+    }
+
+
+    public function testServiceOptionTakes1To63(): void
+    {
+        $this->assertSame(63, (new MccReadOptions(service: 63))->service);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The CEA-708 service must be from 1 to 63, got 64.");
+
+        new MccReadOptions(service: 64);
     }
 
 
@@ -92,7 +138,7 @@ class MccParserTest extends TestCase
         $this->assertSame("\xFA\0\0\xFA\0\0\xFB\x80\x80\xFC\x80\x80\xFD\x80\x80\x96\x69\x61\x01\xE1\0\0\0\0\x9F\xA0",
                           Mcc::decodeHex("HPQRSTUZ9fA0", 1));
         $packet = self::packet(self::EDM);
-        $this->assertSame([4, [[0, true, self::EDM], [1, true, 0x8080], ...array_fill(0, 18, [2, false, 0])]],
+        $this->assertSame([4, "\x00\x94\x2C"],
                           Mcc::readPacket(Mcc::decodeHex(strtolower(bin2hex(Mcc::decodeHex($packet, 1))), 1), 1));
     }
 
@@ -107,7 +153,7 @@ class MccParserTest extends TestCase
 
     public function testReadsAPacketWithoutSections(): void
     {
-        $this->assertSame([4, []], Mcc::readPacket("\x61\x01\x07\x96\x69\x07\x4F\x43\x00\x00", 1));
+        $this->assertSame([4, ""], Mcc::readPacket("\x61\x01\x07\x96\x69\x07\x4F\x43\x00\x00", 1));
     }
 
 
@@ -142,7 +188,7 @@ class MccParserTest extends TestCase
             "no time code"       => ["captions", "The MCC line \"captions\" does not start with a time code."],
             "invalid letter"     => ["00:00:00:00\tT49SV", "The MCC data has the invalid character \"V\" at position 5."],
             "half a byte"        => ["00:00:00:00\tT4", "The MCC data ends with half a byte."],
-            "no CDP identifier"  => ["00:00:00:00\tT0A9670ZZZZZZZZZZZZZZ", "The MCC packet holds no caption distribution packet."],
+            "no CDP identifier"  => ["00:00:00:00\tT0A9670ZZZZZZZZZZZZZZ", "The data holds no caption distribution packet."],
             "short cc_data"      => ["00:00:00:00\tT0BS0B4F43ZZ72F4FC", "The caption distribution packet is shorter than its 20 cc_data triplets."],
         ];
     }

@@ -40,7 +40,7 @@ The command line tool also comes as a PHAR file and as two container images. The
 | [iTunes Timed Text](https://help.apple.com/itc/videoaudioassetguide/#/itc0f1b0a2e0) | `Itt` | `itt` | `.itt` | ✅ | ✅ | needs a frame rate to write |
 | [JSON of this library](docs/json.md) | `Json` | `json` | `.json` | ✅ | ✅ | |
 | [LRC](https://en.wikipedia.org/wiki/LRC_(file_format)) | `Lyrics` | `lrc` | `.lrc` | ✅ | ✅ | with enhanced LRC word times |
-| [MCC](https://www.telestream.net/pdfs/user-guides/MacCaption-UserGuide.pdf) | `Mcc` | `mcc` | `.mcc` | ✅ | ✅ | CEA-608 closed captions of MacCaption and CaptionMaker |
+| [MCC](https://www.telestream.net/pdfs/user-guides/MacCaption-UserGuide.pdf) | `Mcc` | `mcc` | `.mcc` | ✅ | ✅ | CEA-608 and CEA-708 closed captions of MacCaption and CaptionMaker |
 | [MicroDVD](https://en.wikipedia.org/wiki/MicroDVD) | `MicroDvd` | `microdvd` | `.sub` | ✅ | ✅ | needs the frame rate of the video |
 | [MPL2](https://pysubs2.readthedocs.io/en/latest/supported-formats.html) | `Mpl2` | `mpl2` | `.txt` | ✅ | ✅ | |
 | [MPSub](https://man.archlinux.org/man/mplayer.1.en) | `MpSub` | `mpsub` | `.mpsub` | ✅ | ✅ | |
@@ -85,7 +85,7 @@ The command line tool also comes as a PHAR file and as two container images. The
 | Format | Case | Name | Extensions | Read | Write | Notes |
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
 | [MKV](https://www.rfc-editor.org/rfc/rfc9559) and [WebM](https://www.webmproject.org/docs/container/) tracks | | | `.mkv`, `.webm` | ✅ | ❌ | text, ASS, SSA, WebVTT, PGS and VobSub tracks |
-| [MP4 tracks](https://www.3gpp.org/dynareport/26245.htm) | | | `.mp4`, `.m4v`, `.mov` | ✅ | ❌ | `tx3g` (`mov_text`) tracks, `c608` closed caption tracks |
+| [MP4 tracks](https://www.3gpp.org/dynareport/26245.htm) | | | `.mp4`, `.m4v`, `.mov` | ✅ | ❌ | `tx3g` (`mov_text`) tracks, `c608` and `c708` closed caption tracks |
 
 ## Command line tool
 Composer installs `vendor/bin/stbox`. Optional parts are in brackets.

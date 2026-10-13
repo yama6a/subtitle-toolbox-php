@@ -14,6 +14,7 @@ final class Mp4Fixtures
     public const FILES = [
         "text_tracks.mp4" => "textTracks",
         "one_track.mp4"   => "oneTrack",
+        "c708_track.mov"  => "c708Track",
     ];
 
 
@@ -76,6 +77,31 @@ final class Mp4Fixtures
                  [3000, Mp4FixtureWriter::textSample("The museum opens at ten.")],
                  [4000, Mp4FixtureWriter::textSample("Entry is free on Sundays.")],
              ]],
+        ];
+
+        return Mp4FixtureWriter::file($tracks, true);
+    }
+
+
+    /**
+     * A c708 track at 29.97 fps with one ccdp box per sample, from the packets of ../mcc/real/captionmaker_608_708.mcc.
+     * Its first line has the time code 00:00:01;00, so an empty edit of 1001 ms comes before the first sample.
+     */
+    public static function c708Track(): string
+    {
+        $aliases = ["G" => "FA0000", "H" => str_repeat("FA0000", 2), "I" => str_repeat("FA0000", 3), "J" => str_repeat("FA0000", 4),
+                    "K" => str_repeat("FA0000", 5), "L" => str_repeat("FA0000", 6), "M" => str_repeat("FA0000", 7), "N" => str_repeat("FA0000", 8),
+                    "O" => str_repeat("FA0000", 9), "P" => "FB8080", "Q" => "FC8080", "R" => "FD8080", "S" => "9669", "T" => "6101", "Z" => "00"];
+        $samples = [];
+        foreach (file(__DIR__ . "/../../mcc/real/captionmaker_608_708.mcc", FILE_IGNORE_NEW_LINES) as $line) {
+            if (preg_match('/^\d\d:\d\d:\d\d:\d\d\t(\S+)$/', $line, $matches) === 1) {
+                $anc       = hex2bin(strtr($matches[1], $aliases));
+                $samples[] = [1001, Mp4FixtureWriter::box("ccdp", substr($anc, 3, ord($anc[2])))];
+            }
+        }
+        $tracks = [
+            ["id" => 1, "handler" => "clcp", "entry" => Mp4FixtureWriter::box("c708", str_repeat("\0", 6) . pack("n", 1)), "language" => "fra",
+             "timescale" => 30000, "perChunk" => 30, "edits" => [[1001, -1], [intdiv(count($samples) * 1001, 30), 0]], "samples" => $samples],
         ];
 
         return Mp4FixtureWriter::file($tracks, true);

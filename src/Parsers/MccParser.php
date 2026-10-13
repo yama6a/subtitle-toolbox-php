@@ -4,30 +4,27 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use SubtitleToolbox\Encoding\Cea608Cues;
+use SubtitleToolbox\Encoding\CaptionDataCues;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Parsers\Options\SccReadOptions;
+use SubtitleToolbox\Parsers\Options\MccReadOptions;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Subtitle;
 
 /**
  * Reads MCC (MacCaption) files of Telestream MacCaption and CaptionMaker, version 1.0 and 2.0.
- * Each line holds a time code and the caption data of one frame. The parser decodes the CEA-608 byte pairs of field 1
- * as SccParser does, so SccReadOptions apply.
+ * Each line holds a time code and the caption data of one frame. The parser reads the CEA-708 service of
+ * MccReadOptions. Without its captions, it decodes the CEA-608 byte pairs of field 1 as SccParser does, so SccReadOptions apply.
  *
  * @see Mcc
  */
 final class MccParser extends SubtitleParser
 {
-    protected const FORMAT_OPTIONS = SccReadOptions::class;
+    protected const FORMAT_OPTIONS = MccReadOptions::class;
     public const FORMAT_DATA_KEY = Format::Mcc->value;
 
     private const FILE_FORMAT = "File Format=MacCaption_MCC V";
     private const TIME_CODE_RATE = "Time Code Rate";
-
-    // The CEA-608 null byte pair with odd parity fills a frame without data.
-    private const PADDING = 0x8080;
 
 
     protected function read(string $content): Subtitle
@@ -56,7 +53,7 @@ final class MccParser extends SubtitleParser
             }
             if ($packet !== null) {
                 $rateCode ??= $packet[0];
-                $packets[]  = [$timeCode, self::field1Words($packet[1])];
+                $packets[]  = [$timeCode, $packet[1]];
             }
         }
 
@@ -66,7 +63,7 @@ final class MccParser extends SubtitleParser
         $subtitle = new Subtitle();
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["version" => $version, "frameRate" => $frameRate, "dropFrame" => $dropFrame, "header" => $header]);
 
-        return $subtitle->addCues(Cea608Cues::read(self::codeLines($packets, $frameRate, $dropFrame), $this->formatOptions(), $this->options->lastCueDuration));
+        return $subtitle->addCues(CaptionDataCues::read(self::frames($packets, $frameRate, $dropFrame), $this->options));
     }
 
 
@@ -135,58 +132,29 @@ final class MccParser extends SubtitleParser
 
 
     /**
-     * Joins the CEA-608 field 1 byte pairs of consecutive frames into code lines, as an SCC file holds them.
-     * A null pair ends a line, and so does a gap of more than one frame at 29.97 fps.
+     * Returns the time in seconds and the triplets of each frame with caption data, in time order.
      *
-     * @return list<array{int, list<int>}>
+     * @param list<array{int, string}> $packets the time code as HHMMSSFF digits and the triplets of each packet
+     * @return list<array{float, string}>
      */
-    private static function codeLines(array $packets, string $frameRate, bool $dropFrame): array
+    private static function frames(array $packets, string $frameRate, bool $dropFrame): array
     {
         [$labels, $numerator, $denominator] = Mcc::FRAME_RATES[$frameRate];
         $byFrame = [];
-        foreach ($packets as [$timeCode, $words]) {
-            if ($words !== []) {
-                $frame             = self::frameNumber($timeCode, $labels, $dropFrame);
-                $byFrame[$frame] = [...$byFrame[$frame] ?? [], ...$words];
+        foreach ($packets as [$timeCode, $triplets]) {
+            if ($triplets !== "") {
+                $frame           = self::frameNumber($timeCode, $labels, $dropFrame);
+                $byFrame[$frame] = ($byFrame[$frame] ?? "") . $triplets;
             }
         }
         ksort($byFrame);
 
-        $codeLines = [];
-        $line      = null;
-        foreach ($byFrame as $frame => $words) {
-            $frame608 = Cea608Cues::secondsToFrame($frame * $denominator / $numerator);
-            foreach ($words as $word) {
-                if (($word & 0x7F7F) === (self::PADDING & 0x7F7F)) {
-                    $line = null;
-                    continue;
-                }
-                if ($line === null || $frame608 > $codeLines[$line][0] + count($codeLines[$line][1]) + 1) {
-                    $codeLines[] = [$frame608, []];
-                    $line        = count($codeLines) - 1;
-                }
-                $codeLines[$line][1][] = $word;
-            }
+        $frames = [];
+        foreach ($byFrame as $frame => $triplets) {
+            $frames[] = [$frame * $denominator / $numerator, $triplets];
         }
 
-        return $codeLines;
-    }
-
-
-    /**
-     * @param list<array{int, bool, int}> $triplets
-     * @return list<int>
-     */
-    private static function field1Words(array $triplets): array
-    {
-        $words = [];
-        foreach ($triplets as [$type, $valid, $word]) {
-            if ($valid && $type === Mcc::NTSC_FIELD_1) {
-                $words[] = $word;
-            }
-        }
-
-        return $words;
+        return $frames;
     }
 
 

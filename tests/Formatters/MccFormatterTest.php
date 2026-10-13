@@ -11,6 +11,8 @@ use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MccWriteOptions;
 use SubtitleToolbox\Parsers\Mcc;
+use SubtitleToolbox\Parsers\Options\MccReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -18,6 +20,20 @@ use SubtitleToolbox\WriteOptions;
 class MccFormatterTest extends TestCase
 {
     private const FILES = __DIR__ . "/../files/";
+
+    // The CEA-708 part keeps the text of own_styled.srt with italics, underline and the colors of CEA-608.
+    private const CEA708_LINES = [
+        ['<font color="#00ff00">[train horn]</font>'],
+        ['<font color="#ff00ff">[rain]</font>'],
+        ['<font color="#00ff00">[train horn]</font>'],
+        ["<u>[oven door opens]</u>"],
+        ["[whistle]"],
+        ["[station speaker]", "<i>Thebakeryopensat7:35.</i>"],
+        ["<i>Italics over two lines</i>", "<i>that close on the second line</i>"],
+        ["<i>Italics that never close</i>"],
+        ["The next cue is not italic"],
+        ["<i>x</i>^3 * <i>x</i> = 100"],
+    ];
 
 
     public static function frameRates(): array
@@ -43,17 +59,21 @@ class MccFormatterTest extends TestCase
         $scc      = Subtitle::fromString($subtitle->toString(Format::Scc), Format::Scc);
 
         $output = $subtitle->toString(Format::Mcc, new WriteOptions(formats: [new MccWriteOptions(frameRate: $frameRate, dropFrame: $dropFrame)]));
-        $reread = Subtitle::fromString($output);
+        $cea708 = Subtitle::fromString($output)->getCues();
+        $cea608 = Subtitle::fromString($output, Format::Mcc, new ReadOptions(formats: [new MccReadOptions(service: null)]))->getCues();
 
         $this->assertStringContainsString("\nTime Code Rate=$timeCodeRate\n", $output);
         preg_match('/^\d\d:\d\d:\d\d:\d\d\t(\S+)$/m', $output, $line);
-        $packet = Mcc::readPacket(Mcc::decodeHex($line[1], 1), 1);
-        $this->assertSame([$code, $triplets], [$packet[0], count($packet[1])]);
-        foreach ($scc->getCues() as $index => $cue) {
-            $this->assertSame($cue->getLines(), $reread->getCues()[$index]->getLines());
-            $this->assertEqualsWithDelta($cue->getStart(), $reread->getCues()[$index]->getStart(), 0.04);
+        $anc = Mcc::decodeHex($line[1], 1);
+        $this->assertSame([$code, $triplets], [Mcc::readPacket($anc, 1)[0], ord($anc[11]) & 0x1F]);
+        $this->assertSame(array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $scc->getCues()),
+                          array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $cea608));
+        $this->assertSame(self::CEA708_LINES, array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $cea708));
+        foreach ($subtitle->getCues() as $index => $cue) {
+            $this->assertEqualsWithDelta($scc->getCues()[$index]->getStart(), $cea608[$index]->getStart(), 0.04);
+            $this->assertEqualsWithDelta($cue->getStart(), $cea708[$index]->getStart(), 1 / $frameRate);
+            $this->assertEqualsWithDelta($cue->getEnd(), $cea708[$index]->getEnd(), 1 / $frameRate);
         }
-        $this->assertCount(count($scc->getCues()), $reread->getCues());
     }
 
 

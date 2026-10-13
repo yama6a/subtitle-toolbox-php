@@ -41,6 +41,7 @@ final class Mcc
     public const NTSC_FIELD_1 = 0;
     public const NTSC_FIELD_2 = 1;
     public const DTVCC_DATA   = 2;
+    public const DTVCC_START  = 3;
 
     // The ANC packet of a CDP has the DID 0x61 and the SDID 0x01.
     private const CDP_DATA_ID = "\x61\x01";
@@ -212,10 +213,10 @@ final class Mcc
 
 
     /**
-     * Reads the CDP of an ANC packet: its frame rate code and its cc_data triplets.
-     * Returns null for an ANC packet of other data. The reader ignores both checksums, as some writers leave them wrong.
+     * Reads the CDP of an ANC packet. Returns null for an ANC packet of other data.
+     * The reader ignores both checksums, as some writers leave them wrong.
      *
-     * @return array{int, list<array{int, bool, int}>}|null the frame rate code, and the type, the valid flag and the 16-bit data of each triplet
+     * @return array{int, string}|null see readCdp()
      */
     public static function readPacket(string $anc, int $lineNumber): ?array
     {
@@ -223,24 +224,37 @@ final class Mcc
             return null;
         }
 
-        $cdp = substr($anc, 3, ord($anc[2]));
+        return self::readCdp(substr($anc, 3, ord($anc[2])), $lineNumber);
+    }
+
+
+    /**
+     * Reads the frame rate code and the cc_data triplets of a CDP.
+     * It keeps the valid triplets of CEA-608 field 1 and of DTVCC data, each as 3 bytes: the cc_type and the 2 data bytes.
+     *
+     * @return array{int, string}
+     */
+    public static function readCdp(string $cdp, ?int $lineNumber = null): array
+    {
         if (strlen($cdp) < self::CDP_HEADER_SIZE || unpack("n", $cdp)[1] !== self::CDP_IDENTIFIER) {
-            throw new ParsingException("The MCC packet holds no caption distribution packet.", $lineNumber);
+            throw new ParsingException("The data holds no caption distribution packet.", $lineNumber);
         }
 
         $offset = self::CDP_HEADER_SIZE;
         if (($cdp[$offset] ?? "") === chr(self::TIME_CODE_SECTION)) {
             $offset += self::TIME_CODE_SECTION_SIZE;
         }
-        $triplets = [];
+        $triplets = "";
         if ($offset + 1 < strlen($cdp) && ord($cdp[$offset]) === self::CC_DATA_SECTION) {
             $count = ord($cdp[$offset + 1]) & 0x1F;
             if ($offset + 2 + 3 * $count > strlen($cdp)) {
                 throw new ParsingException("The caption distribution packet is shorter than its $count cc_data triplets.", $lineNumber);
             }
-            for ($index = 0; $index < $count; $index++) {
-                ["flags" => $flags, "data" => $data] = unpack("Cflags/ndata", $cdp, $offset + 2 + 3 * $index);
-                $triplets[] = [$flags & 0x03, ($flags & self::CC_VALID) !== 0, $data];
+            for ($index = 0, $at = $offset + 2; $index < $count; $index++, $at += 3) {
+                $flags = ord($cdp[$at]);
+                if (($flags & self::CC_VALID) !== 0 && ($flags & 0x03) !== self::NTSC_FIELD_2) {
+                    $triplets .= chr($flags & 0x03) . substr($cdp, $at + 1, 2);
+                }
             }
         }
 

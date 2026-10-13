@@ -311,6 +311,7 @@ Time Code Rate=30DF
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MccWriteOptions;
+use SubtitleToolbox\Parsers\Options\MccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\ReadOptions;
@@ -319,19 +320,24 @@ use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::load('show.mcc');                                              // detects MCC
 $subtitle->findFormatData('mcc');   // ['version' => '2.0', 'frameRate' => '29.97', 'dropFrame' => true, 'header' => ['UUID' => '...', ...]]
-Subtitle::load('show.mcc', Format::Mcc, new ReadOptions(formats: [new SccReadOptions(rollUp: SccRollUp::Lines)]));
+Subtitle::load('show.mcc', Format::Mcc, new ReadOptions(formats: [new MccReadOptions(service: 2)]));          // CEA-708 service 2
+Subtitle::load('show.mcc', Format::Mcc, new ReadOptions(formats: [new MccReadOptions(service: null)]));       // CEA-608 only
+Subtitle::load('show.mcc', Format::Mcc, new ReadOptions(formats: [new MccReadOptions(service: null), new SccReadOptions(rollUp: SccRollUp::Lines)]));
 
 $subtitle->toString(Format::Mcc, new WriteOptions(formats: [new MccWriteOptions(frameRate: 23.976)]));
 ```
 
-- **Reads**: the CEA-608 byte pairs of field 1. The parser decodes them as [SCC](#scc) does, so `SccReadOptions` and `--scc-roll-up` apply, and the cues get the `scc` format data. It reads version 1.0 and 2.0.
+- **Reads**: CEA-708 service 1 by default. Its captions win, because CEA-708 holds accented letters and other languages that the CEA-608 part lacks. `MccReadOptions(service: 2)` reads service 2. A file without captions in the service, or `MccReadOptions(service: null)`, gives the CEA-608 byte pairs of field 1. The parser decodes them as [SCC](#scc) does, so `SccReadOptions` and `--scc-roll-up` apply, and the cues get the `scc` format data. It reads version 1.0 and 2.0.
+- **CEA-708**: each change of the text in the visible windows starts a new cue. Italics, underline and the pen color become `<i>`, `<u>` and `<font color>`. The window anchor gives the alignment: its anchor point gives left, center or right, and its height on the screen gives top, middle or bottom. The decoder reads the characters of G0, G1 and G2 and the music note. It skips the icons of G3, P16 characters and the commands of C2 and C3. Window colors, borders, fonts and pen sizes do not change the cues.
 - **Frame rates**: the `Time Code Rate` line holds 24, 25, 30, 30DF, 50, 60 or 60DF. The frame rate code of the caption distribution packets tells 23.976 from 24, 29.97 from 30 and 59.94 from 60. So a file with `Time Code Rate=24` and the code of 23.976 fps reads at 23.976 fps. The format data holds the frame rate as `23.976`, `24`, `25`, `29.97`, `30`, `50`, `59.94` or `60`.
-- **Times**: the cue times fall on the CEA-608 frames of 29.97 fps, as in SCC. At other frame rates a time can move by up to 17 ms.
-- **Writes**: one line per frame with CEA-608 data. Frames without data get no line, as in files from ffmpeg. The CEA-608 field 1 data are the pop-on captions that the [SCC](#scc) formatter writes, with the same limits and exceptions. Field 2 holds null pairs, and the CEA-708 part holds empty data, as MacCaption writes a file with CEA-608 captions only. The output uses the alias letters of the MCC header, except `U`, as writers disagree on its length.
+- **Times**: a CEA-708 cue starts at the frame of the packet that shows it. A CEA-608 cue starts on a CEA-608 frame of 29.97 fps, as in SCC. At other frame rates a CEA-608 time can move by up to 17 ms.
+- **Writes**: one line per frame with caption data. Frames without data get no line, as in files from ffmpeg. The output uses the alias letters of the MCC header, except `U`, as writers disagree on its length.
+  - CEA-708 service 1 holds the cue text, the italics, the underline and the colors of CEA-608. Each cue loads into a hidden window, which shows at the cue start. Two windows take turns. The alignment sets the anchor of the window and the justification of its lines. A line longer than 42 characters wraps. A character outside G0, G1 and G2 becomes its CEA-608 replacement.
+  - CEA-608 field 1 holds the pop-on captions that the [SCC](#scc) formatter writes with `SccWriteOptions(fit: true)`. So the CEA-608 part replaces characters that it lacks, wraps lines to 32 characters, and delays or drops captions that do not fit in time. Text that the fit cannot hold throws `UnwritableContentException`, as in SCC. Field 2 holds null pairs.
 - **Round trip**: the formatter keeps the version, the frame rate, the drop-frame mode and the header fields of the input, such as `UUID` and `Creation Date`. A new file gets version 2.0, 29.97 fps with drop-frame time code, a `UUID` from a hash of its caption data and the date of today in UTC. So the same captions give the same file on one day. Version 1.0 has no 60DF, so 59.94 fps with drop-frame time code writes version 2.0.
 - **Options**: `MccWriteOptions(frameRate: 25)` or the CLI option `--output-fps 25` sets the frame rate. `MccWriteOptions(dropFrame: false)` writes non-drop time code at 29.97 and 59.94 fps.
 - **Damaged data**: the parser ignores the checksums, as some writers leave them wrong. A line without a time code, a character outside the hex digits and the alias letters, and a packet that is shorter than its data throw `ParsingException` in strict mode. Lenient mode skips the line with a warning. A file without a `Time Code Rate` line reads as 30DF in lenient mode.
-- **Not read**: CEA-608 data of field 2 (CC3 and CC4). MCC data inside video files.
+- **Not read**: CEA-608 data of field 2 (CC3 and CC4). MCC data inside video files. An MP4 or MOV `c708` track holds the same packets and reads as MCC, see [mkv.md](mkv.md#mp4).
 
 ## MicroDVD
 MicroDVD counts time in video frames, so the parser and the formatter need the frame rate of the video.
