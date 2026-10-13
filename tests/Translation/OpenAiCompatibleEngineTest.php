@@ -149,6 +149,41 @@ class OpenAiCompatibleEngineTest extends TestCase
     }
 
 
+    #[DataProvider("reasoningFields")]
+    public function testReadsTheArrayFromTheReasoningWhenTheContentIsEmpty(string $field): void
+    {
+        $answer = str_replace('"reasoning"', '"' . $field . '"', file_get_contents(self::FILES . "openai_reasoning_de.json"));
+        $client = new FakeHttpClient([[200, $answer]]);
+
+        $this->assertSame(self::GERMAN, self::engine($client)->translate(self::TEXTS, "en", "de"));
+        $this->assertCount(1, $client->requests);
+    }
+
+
+    public static function reasoningFields(): array
+    {
+        return ["reasoning" => ["reasoning"], "reasoning_content" => ["reasoning_content"]];
+    }
+
+
+    public function testIgnoresTheReasoningWhenTheContentHasAnAnswer(): void
+    {
+        $answer = json_encode(["choices" => [["message" => ["content" => "[\"Hallo\", \"Tschüss\"]", "reasoning" => "[\"Hi\", \"Ciao\"]"]]]]);
+
+        $this->assertSame(["Hallo", "Tschüss"], self::engine(new FakeHttpClient([[200, $answer]]))->translate(["Hello", "Bye"], "en", "de"));
+    }
+
+
+    public function testEmptyContentAndEmptyReasoningFailWithTheArrayMessage(): void
+    {
+        $answer = json_encode(["choices" => [["message" => ["content" => "", "reasoning" => ""]]]]);
+
+        $this->expectException(TranslationException::class);
+        $this->expectExceptionMessage("did not answer with a JSON array that holds 1 string for 1 text.");
+        self::engine(new FakeHttpClient(respond: fn (): array => [200, $answer]))->translate(["Hello", "Bye"], "en", "de");
+    }
+
+
     public function testAFallbackAnswerWithoutAJsonArrayFails(): void
     {
         $this->expectException(TranslationException::class);

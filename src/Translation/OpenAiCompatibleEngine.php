@@ -101,9 +101,15 @@ final class OpenAiCompatibleEngine implements TranslationEngine
             throw new TranslationException($this->options->apiKey !== null ? str_replace($this->options->apiKey, "***", $message) : $message);
         }
 
-        $content = is_array($data) ? ($data["choices"][0]["message"]["content"] ?? null) : null;
+        $message = is_array($data) ? ($data["choices"][0]["message"] ?? null) : null;
+        foreach (["content", "reasoning", "reasoning_content"] as $field) {
+            $answer = is_array($message) ? ($message[$field] ?? null) : null;
+            if (is_string($answer) && trim($answer) !== "") {
+                return self::stringArray($answer, count($texts));
+            }
+        }
 
-        return is_string($content) ? self::stringArray($content, count($texts)) : null;
+        return null;
     }
 
 

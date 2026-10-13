@@ -9,6 +9,7 @@
 | `google_fr.json` | Written for this repository in the shape of a Cloud Translation v2 `translate` response to the sentences of `own_station.srt`. | MIT |
 | `google_error.json` | Written for this repository in the shape of a Cloud Translation v2 HTTP 400 error body. | MIT |
 | `openai_de.json` | Written for this repository in the shape of an OpenAI `/v1/chat/completions` response to the sentences of `own_station.srt`. | MIT |
+| `openai_reasoning_de.json` | The answer `openai_de.json` in the shape of a thinking model on Ollama: an empty `content` and the array in `reasoning`. | MIT |
 | `openai_error.json` | Written for this repository in the shape of an OpenAI chat completions error body. | MIT |
 | `fake-server.php` | Written for this repository. A `php -S` router script that plays DeepL, Google and an OpenAI-compatible service in the tests. | MIT |
 | `deepl_entities_de.json` | Written for this repository in the shape of a DeepL `/v2/translate` response to the sentences of `own_entities.srt`, with the entities as DeepL keeps them. | MIT |
