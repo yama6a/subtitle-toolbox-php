@@ -244,10 +244,30 @@ final class CodePageDetector
         preg_match_all('/[^\x00-\x7F]/u', $text, $matches);
         $counts  = array_count_values($matches[0]);
         $letters = self::letterCounts($counts);
-        $score   = self::letterScore($letters, $encoding) + self::symbolScore(array_diff_key($counts, $letters)) - self::penalty($text);
+        $score   = self::letterScore($letters, self::CANDIDATES[$encoding]) + self::symbolScore(array_diff_key($counts, $letters)) - self::penalty($text);
         $score  /= max(1, count($matches[0]));
 
         return $score > self::MIN_SCORE_PER_CHARACTER ? $score : 0.0;
+    }
+
+
+    /**
+     * Returns the score per non-ASCII character of the UTF-8 $text in the language of $languages that fits best, as
+     * detect() scores a candidate. Text without a non-ASCII character scores 0.
+     *
+     * @param list<string> $languages the codes of the alphabets, such as "cs"
+     */
+    public static function scoreText(string $text, array $languages): float
+    {
+        preg_match_all('/[^\x00-\x7F]/u', $text, $matches);
+        if ($matches[0] === []) {
+            return 0.0;
+        }
+
+        $counts  = array_count_values($matches[0]);
+        $letters = self::letterCounts($counts);
+
+        return (self::letterScore($letters, $languages) + self::symbolScore(array_diff_key($counts, $letters)) - self::penalty($text)) / count($matches[0]);
     }
 
 
@@ -262,14 +282,15 @@ final class CodePageDetector
 
 
     /**
-     * Returns the score of the language of $encoding that fits $letters best.
+     * Returns the score of the language of $languages that fits $letters best.
      *
      * @param array<string, int> $letters
+     * @param list<string>       $languages
      */
-    private static function letterScore(array $letters, string $encoding): float
+    private static function letterScore(array $letters, array $languages): float
     {
         $best = $letters === [] ? 0.0 : -INF;
-        foreach (self::CANDIDATES[$encoding] as $code) {
+        foreach ($languages as $code) {
             $alphabet = self::letters()[$code];
             $rare     = self::RARE_LETTERS[$code] ?? null;
             $score    = 0.0;

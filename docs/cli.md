@@ -102,7 +102,7 @@ php stbox.phar --version
 - **Option names**: `--no-X` always turns X off, for example `--no-bom`. A time option is in seconds, unless its name ends in `-frames`.
 - **Defaults**: `stbox help COMMAND` prints the default of each option after `Default:`. This page does not repeat the values. Without the option, the tool passes no value, so the library default applies.
 - **Choice values**: a value from a fixed list ignores case. `--line-ending CRLF`, `--mode Top-Bottom`, `--preset BBC` and `--errors-enable MusicNotes` work.
-- **Encoding**: `--encoding` names the encoding of input that is not UTF-8, for example `Windows-1252`. It replaces code page detection. Files with a BOM, valid UTF-8 files and UTF-16 files stay as they are. See [encodings.md](encodings.md#order-of-the-checks).
+- **Encoding**: `--encoding` names the encoding of input that is not UTF-8, for example `Windows-1252`. It replaces code page detection. Files with a BOM, valid UTF-8 files and UTF-16 files stay as they are. See [encodings.md](encodings.md#order-of-the-checks). For a PAC file, it names the code page, for example `--encoding ISO-8859-7` for Greek.
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
 - **Broken files**: `--lenient` skips or repairs broken cues and prints one warning for each broken cue. It applies to each file that a command reads, also a second file or a `--reference`. Without `--lenient`, the error message of a file that fails to parse is followed by the line `Pass --lenient to skip or repair broken cues.` on standard error. Chapter files get no such line. See [lenient-parsing.md](lenient-parsing.md).
 - **Frame rate**: see [Frame rates](#frame-rates).

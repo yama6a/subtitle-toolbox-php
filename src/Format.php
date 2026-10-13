@@ -23,6 +23,7 @@ enum Format: string
     case Mcc                = "mcc";
     case MicroDvd           = "microdvd";
     case MpSub              = "mpsub";
+    case Pac                = "pac";
     case Pgs                = "pgs";
     case Sami               = "sami";
     case Sbv                = "sbv";

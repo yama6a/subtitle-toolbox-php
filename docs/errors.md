@@ -52,6 +52,7 @@ try {
 - 2 objects of one class in `ReadOptions::$formats` or `WriteOptions::$formats`, or a write class in `ReadOptions` and a read class in `WriteOptions`.
 - A missing OCR engine, a missing `tesseract` program, a missing Tesseract language or a missing php-glyph-ocr package.
 - A missing `ext-curl` for the translation engines.
+- A `ReadOptions::$encoding` without a PAC code page, such as `KOI8-R`, for a PAC file.
 
 ## Unwritable content
 `UnwritableContentException` covers these cases:
@@ -65,6 +66,7 @@ try {
 - A cue time after 13:15:21.858 in PGS, the limit of its 32-bit time stamps of 90 kHz.
 - A subtitle number over 65535 in EBU STL.
 - Cue text that needs more than 241 TTI blocks of 112 bytes in EBU STL.
+- A subtitle number over 65535, or cue text of 65535 bytes or more, in PAC.
 - Text that is not UTF-8 in a JSON format.
 - Text that is not UTF-8 in TTML, iTT or SAMI output.
 - A stored TTML head that is not valid XML.

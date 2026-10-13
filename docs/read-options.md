@@ -19,7 +19,7 @@ $table = Subtitle::fromString(file_get_contents('lines.csv'), Format::Csv,
 
 | Field | Default | Used by |
 |:--- |:--- |:--- |
-| `encoding` | null, UTF-8 | text formats. The encoding of input that is not UTF-8. A `TextEncoding` case or an iconv name such as `'CP1125'`. A UTF-16 or UTF-32 BOM wins. See [encodings.md](encodings.md) |
+| `encoding` | null, UTF-8 | text formats and PAC. The encoding of input that is not UTF-8. A `TextEncoding` case or an iconv name such as `'CP1125'`. A UTF-16 or UTF-32 BOM wins. See [encodings.md](encodings.md). For PAC, it names the code page, see [formats.md](formats.md#pac) |
 | `lenient` | false | skips or repairs a broken block and records a warning, see [lenient-parsing.md](lenient-parsing.md). For a cue that ends before it starts, see [that rule](lenient-parsing.md#cue-that-ends-before-it-starts) |
 | `lastCueDuration` | 5.0 | seconds that a last cue without an end lasts |
 | `formats` | `[]` | per-format classes, at most one object per class, see below |

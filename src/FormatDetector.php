@@ -40,6 +40,7 @@ final class FormatDetector
                                    self::LRC_TIMESTAMP . '/ms',
         Format::Pgs->value      => '/\APG.{8}[\x14-\x17\x80]/s',
         Format::EbuStl->value   => '/\A\d{3}STL(?:25|30)\.01/',
+        Format::Pac->value      => '/\A\x01\x00{20}[\s\S]{2}[\x60-\x67]/',
         // Without a $ or // line first, a quote after the times marks a headerless CSV row.
         Format::SpruceStl->value => '/\A(?:(?:\$|\/\/)[^\n]*\n[ \t\n]*)+' . self::SPRUCE_STL_TIMING . '|\A' . self::SPRUCE_STL_TIMING . '(?![ \t]*\x22)/',
         Format::Scc->value      => '/\AScenarist_SCC V1\.0[ \t]*$/m',

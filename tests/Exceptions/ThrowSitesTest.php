@@ -71,6 +71,7 @@ use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\OgmChaptersParser;
+use SubtitleToolbox\Parsers\PacParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
@@ -156,6 +157,17 @@ class ThrowSitesTest extends TestCase
     private const FAKE_TESSERACT = __DIR__ . "/../files/ocr/fake-tesseract/tesseract";
 
     private const TTML = '<tt xmlns="http://www.w3.org/ns/ttml"><body><div>%s</div></body></tt>';
+
+
+    /**
+     * Returns a PAC file with one record that holds $text.
+     */
+    private static function pac(string $text): string
+    {
+        $text = "\xFE\x02\x03$text";
+
+        return "\x01" . str_repeat("\0", 19) . "\0\0\0\x60" . pack("v4", 0, 100, 0, 200) . pack("v", strlen($text) + 1) . "\x0B" . $text . "\xFF" . str_repeat("\0", 20);
+    }
 
 
     private static function pgsSegment(int $type, string $data): string
@@ -418,6 +430,10 @@ class ThrowSitesTest extends TestCase
 
                 return $subtitle->toString(Format::GoogleSpeech);
             }, ...$unwritable],
+            "Formatters/PacFormatter.php: subtitle number 65536" => [fn () => self::subtitle()->setFormatData("pac", ["firstNumber" => 65536])
+                ->toString(Format::Pac), ...$unwritable],
+            "Formatters/PacFormatter.php: text too long" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 70000)))
+                ->toString(Format::Pac), ...$unwritable],
             "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: negative x"       => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage(self::png(), -1, 0, 1, 1, 9, 9),
                 new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
@@ -551,6 +567,10 @@ class ThrowSitesTest extends TestCase
                 "CHAPTER01=00:00:00.000\nCHAPTER02=00:00:01.000\n", new ReadOptions()), ...$parsing],
             "Parsers/OgmChaptersParser.php: no time line"   => [fn () => (new OgmChaptersParser())->parse("CHAPTER01NAME=x\n", new ReadOptions()), ...$parsing],
             "Parsers/OgmChaptersParser.php: second 60"      => [fn () => (new OgmChaptersParser())->parse("CHAPTER01=00:00:60.000\n", new ReadOptions()), ...$parsing],
+            "Parsers/PacParser.php: no header"              => [fn () => (new PacParser())->parse("\x01\0", new ReadOptions()), ...$parsing],
+            "Parsers/PacParser.php: encoding KOI8-R"        => [fn () => (new PacParser())->parse(self::pac("Hello"),
+                new ReadOptions(encoding: "KOI8-R")), ...$invalid],
+            "Parsers/PacParser.php: unclear code page"      => [fn () => (new PacParser())->parse(self::pac("\xC3\xC4"), new ReadOptions()), ...$parsing],
             "Parsers/PgsParser.php: no magic bytes"         => [fn () => (new PgsParser())->parse("XG", new ReadOptions()), ...$parsing],
             "Parsers/PgsParser.php: cut off header"         => [fn () => (new PgsParser())->parse("PG\0\0", new ReadOptions()), ...$parsing],
             "Parsers/PgsParser.php: cut off data"           => [fn () => (new PgsParser())->parse(substr(self::pgsSegment(0x14, "\0\0"), 0, -1), new ReadOptions()),

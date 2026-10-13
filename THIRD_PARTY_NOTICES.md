@@ -722,6 +722,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 - Code adapted from it:
   - `src/Parsers/Mcc.php`: the MCC alias letters, the MCC header text and the packet layout, from `src/libse/SubtitleFormats/MacCaption10.cs` and `src/libse/Cea708/Smpte291M.cs`
   - `src/Encoding/Cea708.php`: the G2 character table, from `src/libse/Cea708/Cea708.cs`
+  - `src/Parsers/Pac.php`, `src/Parsers/PacCodePage.php`, `src/Parsers/PacCodeTables.php`, `src/Parsers/PacCodePageDetector.php`, `src/Parsers/PacParser.php` and `src/Formatters/PacFormatter.php`: the PAC record layout, control codes, character tables and the script checks of the code page detection, from `src/libse/SubtitleFormats/Pac.cs` at `a0dfbfe65f0517ef85b1e69f1606bca93f68ac3c`, which has the same MIT licence
+- Files written for this repository in the shape that its PAC code reads, with the bytes of its PAC character tables:
+  - `tests/files/pac/real/*.pac`, `tests/files/pac/real/bakery_unicode.fpc`
 
 ```text
 MIT License
