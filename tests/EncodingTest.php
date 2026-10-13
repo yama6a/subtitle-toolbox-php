@@ -117,6 +117,18 @@ class EncodingTest extends TestCase
     }
 
 
+    public function testShiftJisKeepsTheBackslashesOfAss(): void
+    {
+        foreach ([TextEncoding::ShiftJis, "SJIS", "shift_jis"] as $encoding) {
+            $subtitle = Subtitle::load(self::DIR . "japanese-cp932.ass", Format::Ass, new ReadOptions(encoding: $encoding));
+
+            $this->assertSame(["<i>このバスは空港へ行きますか？</i>", "時刻表はソファの上です。"], $subtitle->getCues()[1]->getLines());
+            $this->assertSame($encoding instanceof TextEncoding ? $encoding->value : $encoding, $subtitle->findSourceEncoding());
+        }
+        $this->assertSame("a\\b~c", StringHelpers::convertToUtf8("a\\b~c", TextEncoding::ShiftJis));
+    }
+
+
     public static function codePageFiles(): array
     {
         return [

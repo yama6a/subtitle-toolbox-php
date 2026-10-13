@@ -23,6 +23,9 @@ final class StringHelpers
     private const UTF16_MIN_ZERO_SHARE = 0.4;
     private const UTF16_MAX_ZERO_SHARE = 0.05;
 
+    // iconv reads 0x5C as a yen sign and 0x7E as an overline in Shift_JIS. Windows tools write both as ASCII, as CP932 reads them.
+    private const SHIFT_JIS_NAMES = ["SHIFT_JIS", "SHIFT-JIS", "SJIS", "MS_KANJI", "CSSHIFTJIS"];
+
     // UTF-32 LE comes before UTF-16 LE because their BOMs share the first two bytes.
     private const UNICODE_BOMS = [
         "\x00\x00\xFE\xFF" => "UTF-32BE",
@@ -209,7 +212,7 @@ final class StringHelpers
 
     private static function iconvToUtf8(string $str, string $encoding): string
     {
-        $converted = @iconv($encoding, "UTF-8", $str);
+        $converted = @iconv(in_array(strtoupper($encoding), self::SHIFT_JIS_NAMES, true) ? "CP932" : $encoding, "UTF-8", $str);
         if ($converted === false) {
             throw new ParsingException("Cannot convert the content from $encoding to UTF-8.");
         }
