@@ -411,6 +411,34 @@ $subtitle->toString(Format::MpSub, new WriteOptions(formats: [new MpSubWriteOpti
 - **Overlapping cues**: a cue that starts before the previous cue ends gets a negative wait, for example `-1.5 2`. The parser reads it back. FFmpeg accepts a negative wait.
 - **Output**: the formatter strips all tags and trims each line. Text with `<`, `>` and `&` round-trips. An empty line ends a cue in MPSub, so the formatter drops lines that are empty after the tags go, and skips a cue without text. The wait time of the next cue counts from the end of the last written cue.
 
+## QuickTime text
+QuickTime text is the text track format of QuickTime Player 7 and older Apple tools, from Apple's [text descriptors](https://developer.apple.com/library/archive/documentation/QuickTime/Conceptual/QTScripting_HTML/QTScripting_HTML_Document/ScriptingHTML.html). Files use the `.txt` extension. Detection finds them by `{QTtext}` at the start.
+
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Subtitle;
+
+$content  = "{QTtext} {timeScale:30}\n[00:00:01.15]\nThe museum opens at ten.\n[00:00:04.00]\n\n";
+$subtitle = Subtitle::fromString($content);                     // detects QuickTime text
+$subtitle->getCues()[0]->getStart();                            // 1.5: 15 units of 1/30 s
+$subtitle->toString(Format::QuickTimeText);
+```
+
+| Input | Parser result |
+|:--- |:--- |
+| `{timeScale:600}` and `[00:00:07.300]` | 7.5 s. The fraction counts units of the time scale |
+| `[00:00:07.25]` without `{timeScale}` | 7.25 s. The fraction is a decimal fraction |
+| `[00:00:01.00]`, `One`, `[00:00:04.00]`, `[00:00:05.00]`, `Two` | `One` from 1 s to 4 s, `Two` from 5 s for [`ReadOptions::$lastCueDuration`](read-options.md) |
+| `{italic}Sung`, then `{plain}Spoken` in a later sample | `<i>Sung</i>`, then `Spoken` |
+
+- **Samples**: each timestamp starts a sample, and the next timestamp ends it. A sample without text is a gap. Text after the `]` on the timestamp line belongs to the sample.
+- **Relative timestamps**: with `{timeStamps:relative}`, each timestamp counts from the one before it.
+- **Styles**: `{bold}`, `{italic}` and `{underline}` become `<b>`, `<i>` and `<u>`. They apply to the rest of the sample and to all later samples, until `{plain}` resets them. The parser drops the other descriptors from the text, such as `{font:Geneva}` or `{justify:center}`.
+- **Strict mode**: a file must start with `{QTtext}`, and a fraction must be below the time scale. Lenient mode reads both with a `ParseWarning`.
+- **Format data**: the `qttext` data keeps the lines before the first timestamp in `header`. `pairedTimestamps` is `true` when each cue has its own end timestamp and an empty line after it, as Subtitle Edit writes. A cue whose text holds descriptors keeps the text in `source`.
+- **Round trip**: an unchanged file comes out byte for byte, except for empty lines between samples in the QuickTime layout.
+- **Output**: the formatter writes the header of the input, or the 5 header lines of Subtitle Edit with `{timeScale:30}` for a new file. Subtitle Edit reads only 2 fraction digits. Without `{timeScale}`, the formatter writes milliseconds. It writes `<b>`, `<i>` and `<u>` as descriptors, with `{plain}` to end a style, and strips all other tags.
+
 ## SAMI
 ```php
 use SubtitleToolbox\Format;

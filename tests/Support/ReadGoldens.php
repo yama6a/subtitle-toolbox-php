@@ -34,6 +34,7 @@ final class ReadGoldens
         "mpl2"                => Format::Mpl2,
         "mpsub"               => Format::MpSub,
         "tmplayer"            => Format::TmPlayer,
+        "qttext"              => Format::QuickTimeText,
         "lrc"                 => Format::Lyrics,
         "mcc"                 => Format::Mcc,
         "csv"                 => Format::Csv,

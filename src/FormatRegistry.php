@@ -25,6 +25,7 @@ use SubtitleToolbox\Formatters\PgsFormatter;
 use SubtitleToolbox\Formatters\PlainTextFormatter;
 use SubtitleToolbox\Formatters\PodcastChaptersFormatter;
 use SubtitleToolbox\Formatters\PodcastTranscriptFormatter;
+use SubtitleToolbox\Formatters\QuickTimeTextFormatter;
 use SubtitleToolbox\Formatters\SamiFormatter;
 use SubtitleToolbox\Formatters\SbvFormatter;
 use SubtitleToolbox\Formatters\SccFormatter;
@@ -57,6 +58,7 @@ use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
+use SubtitleToolbox\Parsers\QuickTimeTextParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SccParser;
@@ -110,6 +112,7 @@ final class FormatRegistry
         Format::PlainText->value          => [null, PlainTextFormatter::class, ["txt"]],
         Format::Mpl2->value               => [Mpl2Parser::class, Mpl2Formatter::class, ["txt"]],
         Format::TmPlayer->value           => [TmPlayerParser::class, TmPlayerFormatter::class, ["txt"]],
+        Format::QuickTimeText->value      => [QuickTimeTextParser::class, QuickTimeTextFormatter::class, ["txt"]],
         Format::VobSub->value             => [VobSubParser::class, null, ["idx"]],
         Format::WebVtt->value             => [WebVttParser::class, WebVttFormatter::class, ["vtt"]],
         Format::Whisper->value            => [WhisperJsonParser::class, WhisperJsonFormatter::class, ["json"]],

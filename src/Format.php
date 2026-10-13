@@ -36,6 +36,7 @@ enum Format: string
     case PlainText          = "txt";
     case Mpl2               = "mpl2";
     case TmPlayer           = "tmplayer";
+    case QuickTimeText      = "qttext";
     case VobSub             = "vobsub";
     case WebVtt             = "vtt";
     case Whisper            = "whisper";

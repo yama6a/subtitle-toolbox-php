@@ -18,6 +18,7 @@ use SubtitleToolbox\Parsers\MccParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
+use SubtitleToolbox\Parsers\QuickTimeTextParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\Parsers\SpruceStlParser;
@@ -105,6 +106,10 @@ final class FormatDataSchema
             "frameRateLine" => "bool",
         ],
         MpSubParser::FORMAT_DATA_KEY              => "strings",
+        QuickTimeTextParser::FORMAT_DATA_KEY      => [
+            "header"           => self::STRINGS,
+            "pairedTimestamps" => "bool",
+        ],
         SamiParser::FORMAT_DATA_KEY               => [
             "style"     => "?string",
             "class"     => "?string",
@@ -171,6 +176,9 @@ final class FormatDataSchema
         ],
         MicroDvdParser::FORMAT_DATA_KEY           => [
             "lines" => ["list", ["object", ["!codes" => "string", "!color" => "?string", "!tags" => self::STRINGS, "otherCodes" => "string"]]],
+        ],
+        QuickTimeTextParser::FORMAT_DATA_KEY      => [
+            "source" => self::STRINGS,
         ],
         SamiParser::FORMAT_DATA_KEY               => [
             "paragraphs" => ["list", ["object", ["!attributes" => self::ATTRIBUTES, "!html" => "string"]]],

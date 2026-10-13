@@ -29,6 +29,7 @@ final class FormatDetector
         Format::Ass->value      => '/\A\[Script Info\][ \t]*$/im',   // before LRC, which also starts with [
         Format::MpSub->value    => '/\A(?=[A-Z]+=).*?^FORMAT=/ms',
         Format::MicroDvd->value => '/\A\{\d+\}\{\d*\}/',
+        Format::QuickTimeText->value => '/\A\{QTtext\}/i',
         Format::SubRip->value   => '/\A\d+[ \t]*\n[ \t]*\d+:\d{2}:\d{2}(?:[,.]\d+)?[ \t]*-->' .   // after WebVTT, which looks the same without its header
                                    '|\A(?:[^\n]*\n){0,5}?[ \t]*\d+[ \t]*\n[ \t]*' . self::SUBRIP_TIMING . '|\A' . self::SUBRIP_TIMING . '/',
         Format::Sbv->value      => '/\A\d+:\d{2}:\d{2}\.\d{3},\d+:\d{2}:\d{2}\.\d{3}[ \t]*$/m',

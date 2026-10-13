@@ -26,6 +26,7 @@ tsv                 .tsv                     yes   yes
 txt                 .txt                     no    yes
 mpl2                .txt                     yes   yes
 tmplayer            .txt                     yes   yes
+qttext              .txt                     yes   yes
 vobsub              .idx                     yes   no
 vtt                 .vtt                     yes   yes
 whisper             .json                    yes   yes
