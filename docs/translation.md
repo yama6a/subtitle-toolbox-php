@@ -96,7 +96,7 @@ $ollama = new OpenAiCompatibleEngine(new OpenAiCompatibleOptions('http://localho
 | `httpClient` | null, a client that uses `ext-curl` | the `HttpClient` that sends the requests |
 
 - **Request**: the engine sends all texts of one call as a JSON array in the user message. The built-in prompt asks for a JSON array of the same length, with the `<xN>` tags and the entities `&lt;`, `&gt;` and `&amp;` kept.
-- **Answer**: the engine reads the first JSON array in `choices[0].message.content`. Text around it, a code block and a `<think>` block do not matter.
+- **Answer**: the engine reads the first JSON array in `choices[0].message.content`. When `content` is empty or missing, it reads `reasoning`, then `reasoning_content`, because a thinking model on Ollama or llama.cpp can put its answer there. The count check below applies to every field. Text around the array, a code block and a `<think>` block do not matter.
 - **Fallback**: an answer without a JSON array, or with another number of strings, makes the engine send each text in a request of its own. When such an answer has no array with 1 string, the engine throws `TranslationException`.
 - **Quality**: a model can change the meaning or drop a placeholder. A dropped placeholder gives a `TranslationWarning`, as with the other engines.
 
