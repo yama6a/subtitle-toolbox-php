@@ -16,7 +16,7 @@ use SubtitleToolbox\Subtitle;
 
 class NoCuesTest extends TestCase
 {
-    private const BINARY_FORMATS = [Format::EbuStl, Format::Pac, Format::Pgs, Format::VobSub];
+    private const BINARY_FORMATS = [Format::Cavena890, Format::EbuStl, Format::Pac, Format::Pgs, Format::VobSub];
 
     private const ASS_HEADER = "[Script Info]\nTitle: Harbour walk\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n";
 

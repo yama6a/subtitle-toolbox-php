@@ -10,6 +10,7 @@ namespace SubtitleToolbox;
 enum Format: string
 {
     case Ass                = "ass";
+    case Cavena890          = "cavena890";
     case Csv                = "csv";
     case FfMetadataChapters = "ffmeta-chapters";
     case HtmlTranscript     = "html";

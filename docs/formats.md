@@ -156,6 +156,40 @@ $subtitle->toString(Format::Ass, new WriteOptions(formats: [new AssWriteOptions(
 - **Limits**: other override tags, `{...}` notes and `\p1` drawings are not cue text. An event that holds only a drawing becomes a cue without lines. Events come out in time order.
 - **Output**: times in centiseconds. A cue from another format gets style `Default`. A subtitle from another format gets the minimal header that FFmpeg writes.
 
+## Cavena 890
+Cavena 890 is the binary subtitle file of the Cavena subtitling systems, used by Scandinavian broadcasters. It has no public spec. The parser and the formatter follow the Cavena 890 code of [Subtitle Edit](https://github.com/SubtitleEdit/subtitleedit/blob/a0dfbfe65f0517ef85b1e69f1606bca93f68ac3c/src/libse/SubtitleFormats/Cavena890.cs). Pass the bytes of the file unchanged.
+
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Subtitle;
+
+$subtitle = Subtitle::load('news.890');                                              // by the .890 extension
+$subtitle = Subtitle::fromString(file_get_contents('news.890'), Format::Cavena890);
+$subtitle->findFormatData('cavena890')['variant'];                                  // 'scandinavian'
+$subtitle->toString(Format::Cavena890);
+```
+
+- **Detection**: the file has no signature, so `Format::detect()` returns null. `load()` takes the format of the `.890` extension.
+- **Text tables**: the language codes and the font names of the header name the table. The key `variant` of the format data holds it:
+
+  | Variant | Header | Text |
+  |:--- |:--- |:--- |
+  | `latin` | other language codes, such as `09` for English | Windows-1252 with 2-byte accent codes, such as `82 65` for `é` |
+  | `scandinavian` | `07` Danish, `28` Swedish, `1E` Norwegian | as `latin`, but `E5` and `E6` stay `å` and `æ` |
+  | `hebrew` | `8F` or the font `HEBNOA` | Hebrew letters on the ASCII letter bytes. Runs of other characters and the punctuation at the line ends are in display order |
+  | `russian` | `56` or a font from `KYRIL` | Cyrillic letters on the ASCII letter bytes |
+  | `greek` | `70` or a font from `GREEK` | Greek letters on the ASCII letter bytes |
+  | `arabic` | `80` for line 2 or the font `ARABIC` | Arabic letters on the ASCII letter bytes |
+  | `chinese` | `90`, `91` or the font `CCKM44` | UTF-16BE |
+
+- **Times**: frame numbers at 25 fps. The file does not store the frame rate.
+- **Lines**: each block holds 2 lines of 51 bytes. A cue of 1 line uses the lower line. The parser joins the blocks with the same subtitle number into 1 cue, and the formatter writes a cue of 3 or 4 lines in 2 such blocks. A line of more than 51 bytes throws `UnwritableContentException`. Wrap long lines before the write, with `wrapLines(40)` or the CLI options `--structure-wrap --structure-max-cpl 40`.
+- **Styles**: the codes 88h and 98h start and end italics in the Latin, Scandinavian and Chinese tables. They become `<i>` and back. The parser drops the color codes F1h to F8h and reads BEh as a dash.
+- **Alignment**: the alignment byte 50h is left and 52h is right. Everything else is bottom center.
+- **Format data**: the subtitle keeps `variant`, the `header` bytes and `shortEnd`, which is true when the last block lacks its last 4 bytes, as Subtitle Edit writes it. Each cue keeps its text and its original blocks.
+- **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text keeps its blocks, also after retiming. New text keeps the table of the file and gets `?` for a character outside it. The formatter writes the number of blocks in the 3 count fields of the header.
+- **New files**: Latin with the English language code, the header of Subtitle Edit and subtitle numbers 16, 32, 48 and so on.
+
 ## CSV and TSV
 Translators, reviewers and dubbing studios work in Excel or Google Sheets. `CsvParser` and `CsvFormatter` read and write subtitles as CSV and TSV tables, with RFC 4180 quoting.
 

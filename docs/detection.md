@@ -59,5 +59,5 @@ Other content goes to the signatures of the text and binary formats. Detection c
 - **iTT**: an iTT file detects as `Format::Ttml`. Pass `Format::Itt` to keep the iTT format data.
 - **`.stl` files**: EBU STL is binary and starts with a code page and `STL25.01` or `STL30.01`. Spruce STL is text.
 - **Frame timecodes**: a CSV row such as `00:00:01:10,00:00:03:10,"Hello"` gives null, not Spruce STL or TMPlayer.
-- **No signature**: CSV and TSV. Pass `Format::Csv` or `Format::Tsv`, see [formats.md](formats.md#csv-and-tsv). VobSub needs its `.idx` file, see [ocr.md](ocr.md#vobsub).
+- **No signature**: CSV, TSV and Cavena 890. Pass `Format::Csv`, `Format::Tsv` or `Format::Cavena890`, see [formats.md](formats.md#csv-and-tsv). `load()` finds Cavena 890 by its `.890` extension. VobSub needs its `.idx` file, see [ocr.md](ocr.md#vobsub).
 - **Not detected**: chapters and cloud speech-to-text JSON look like other formats. `Format::detect()` returns null for them, and `isAutoDetected()` is false. Pass the format, for example `Subtitle::fromString($json, Format::Deepgram)`. `Format::tryFromPath()` finds only FFmpeg metadata, by its `.ffmeta` extension. The other formats share `.json` or `.txt` with formats that come first.

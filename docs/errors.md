@@ -67,6 +67,7 @@ try {
 - A subtitle number over 65535 in EBU STL.
 - Cue text that needs more than 241 TTI blocks of 112 bytes in EBU STL.
 - A subtitle number over 65535, or cue text of 65535 bytes or more, in PAC.
+- A line of more than 51 bytes in Cavena 890.
 - Text that is not UTF-8 in a JSON format.
 - Text that is not UTF-8 in TTML, iTT or SAMI output.
 - A stored TTML head that is not valid XML.

@@ -47,6 +47,7 @@ final class ReadGoldens
         "stl"                 => Format::EbuStl,
         "spruce-stl"          => Format::SpruceStl,
         "pac"                 => Format::Pac,
+        "cavena890"           => Format::Cavena890,
         "chapters/ffmetadata" => Format::FfMetadataChapters,
         "chapters/ogm"        => Format::OgmChapters,
         "chapters/podcast"    => Format::PodcastChapters,
