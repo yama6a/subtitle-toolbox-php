@@ -28,6 +28,8 @@ final class SyncCommand extends WriteCommand
 
     private ?float $mediaDuration = null;
 
+    private ?int $referenceTrack = null;
+
 
     public function name(): string
     {
@@ -63,6 +65,7 @@ final class SyncCommand extends WriteCommand
     {
         return [
             Option::value("reference", "FILE", "Subtitle in sync with the video, in any format that the tool reads."),
+            Option::value("reference-track", "NUMBER", "Subtitle track of an MKV, WebM or MP4 reference file. Needed when the file has 2 or more subtitle tracks."),
             Option::value("silence-log", "FILE", "Log of the FFmpeg silencedetect filter. The speech between the silences is the reference."),
             Option::value("media-duration", "SECONDS", "Duration of the video, for --silence-log."),
             Option::value("min-offset", "SECONDS", "Smallest offset to try. Default: -60."),
@@ -100,7 +103,11 @@ final class SyncCommand extends WriteCommand
         if ($arguments->has("silence-log") !== $arguments->has("media-duration")) {
             self::fail("Pass --media-duration with --silence-log.");
         }
-        $this->mediaDuration = $arguments->positiveSeconds("media-duration");
+        if ($arguments->has("reference-track") && !$arguments->has("reference")) {
+            self::fail("Pass --reference with --reference-track.");
+        }
+        $this->mediaDuration  = $arguments->positiveSeconds("media-duration");
+        $this->referenceTrack = $arguments->positiveInt("reference-track");
     }
 
 
@@ -108,7 +115,7 @@ final class SyncCommand extends WriteCommand
     {
         $log = $arguments->value("silence-log");
         if ($log === null) {
-            $this->reference = $this->loadSideSubtitle($arguments->value("reference"), $console);
+            $this->reference = $this->loadSideSubtitle($arguments->value("reference"), $console, $this->referenceTrack, "--reference-track");
 
             return;
         }

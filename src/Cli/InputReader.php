@@ -98,13 +98,13 @@ final class InputReader
 
 
     /**
-     * Reads a side file, such as the reference of sync, without --from and --track.
+     * Reads a side file, such as the reference of sync, without --from. $trackOption names the option that sets $track.
      */
-    public function readSideFile(string $path, Console $console): Subtitle
+    public function readSideFile(string $path, Console $console, ?int $track, string $trackOption): Subtitle
     {
         $this->lenientHint = false;
 
-        return $this->readOtherFile($path, $console);
+        return $this->readOtherFile($path, $console, track: $track, trackOption: $trackOption);
     }
 
 

@@ -308,10 +308,10 @@ abstract class FileCommand extends Command
      * Reads the subtitle of a side file, such as the reference of sync, and detects its format.
      * A file that is missing or does not parse stops the run.
      */
-    protected function loadSideSubtitle(string $path, Console $console): Subtitle
+    protected function loadSideSubtitle(string $path, Console $console, ?int $track, string $trackOption): Subtitle
     {
         try {
-            return $this->inputReader->readSideFile($path, $console);
+            return $this->inputReader->readSideFile($path, $console, $track, $trackOption);
         } catch (\Throwable $exception) {
             return SideFile::fail($path, self::throwableMessage($exception) . ($this->inputReader->needsLenientHint() ? "\n" . self::LENIENT_HINT : ""));
         }
