@@ -12,6 +12,7 @@ use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MccWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
+use SubtitleToolbox\Formatters\Options\SpruceStlWriteOptions;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\Formatters\SccFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
@@ -85,7 +86,7 @@ abstract class WriteCommand extends FileCommand
             Option::value("to", "FORMAT", $this->toDescription()),
             Option::value("output", "FILE", "Write the output of one input to this file in place of standard output. The file must not exist.", "o"),
             Option::value("output-dir", "DIR", "Write each output into this directory, with the base name of its input. Several inputs need it."),
-            Option::value("output-fps", "RATE", "Frame rate of MicroDVD, iTT and MCC output. Default: the frame rate of a MicroDVD, iTT or MCC input."),
+            Option::value("output-fps", "RATE", "Frame rate of MicroDVD, Spruce STL, iTT and MCC output. Default: the frame rate of a MicroDVD, Spruce STL, iTT or MCC input."),
             Option::value("line-ending", "lf|crlf", "Line ending of the output. Default: lf."),
             Option::flag("bom", "Start the output with a UTF-8 BOM."),
             Option::flag("no-bom", "Write no UTF-8 BOM. Default: the BOM rule of the output format."),
@@ -281,6 +282,7 @@ abstract class WriteCommand extends FileCommand
             $this->outputFps !== null && $outputFormat === Format::MicroDvd => new MicroDvdWriteOptions(frameRate: $this->outputFps),
             $this->outputFps !== null && $outputFormat === Format::Itt      => new IttWriteOptions(frameRate: $this->outputFps),
             $this->outputFps !== null && $outputFormat === Format::Mcc      => new MccWriteOptions(frameRate: $this->outputFps),
+            $this->outputFps !== null && $outputFormat === Format::SpruceStl => new SpruceStlWriteOptions(frameRate: $this->outputFps),
             $this->sccFit && $outputFormat === Format::Scc                  => new SccWriteOptions(fit: true),
             default                                                         => $this->commandFormatterOptions($outputFormat, $arguments),
         };

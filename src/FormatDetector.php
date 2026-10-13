@@ -14,6 +14,8 @@ final class FormatDetector
     // Two hour digits and a comma, so headerless WebVTT and SBV with 0:00:01,500 times do not match.
     private const SUBRIP_TIMING = '\d{2,}:\d{2}:\d{2},\d+[ \t]*-->';
 
+    private const SPRUCE_STL_TIMING = '\d{2}:[0-5]\d:[0-5]\d:\d{2}[ \t]*,[ \t]*\d{2}:[0-5]\d:[0-5]\d:\d{2}[ \t]*,';
+
     private const XML_PROLOG = '(?:\s|<\?.*?\?>|<!--.*?-->|<!DOCTYPE[^>]*>)*';
 
     /**
@@ -36,6 +38,8 @@ final class FormatDetector
                                    self::LRC_TIMESTAMP . '/ms',
         Format::Pgs->value      => '/\APG.{8}[\x14-\x17\x80]/s',
         Format::EbuStl->value   => '/\A\d{3}STL(?:25|30)\.01/',
+        // Without a $ or // line first, a quote after the times marks a headerless CSV row.
+        Format::SpruceStl->value => '/\A(?:(?:\$|\/\/)[^\n]*\n[ \t\n]*)+' . self::SPRUCE_STL_TIMING . '|\A' . self::SPRUCE_STL_TIMING . '(?![ \t]*\x22)/',
         Format::Scc->value      => '/\AScenarist_SCC V1\.0[ \t]*$/m',
         Format::Mcc->value      => '/\AFile Format=MacCaption_MCC V\d+\.\d+[ \t]*$/m',
         Format::YouTubeTimedText->value => '/\A' . self::XML_PROLOG . '<(?:timedtext|transcript)[\s>\/]/s',

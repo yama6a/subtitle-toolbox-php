@@ -27,7 +27,7 @@ Format::PlainText->canRead();                 // false
 Format::FfMetadataChapters->isAutoDetected(); // false
 ```
 
-- **Shared extensions**: when two formats share an extension, the earlier case owns it. So `tryFromPath()` returns `Format::MicroDvd` for `.sub`, `Format::Json` for `.json` and `Format::PlainText` for `.txt`.
+- **Shared extensions**: when two formats share an extension, the earlier case owns it. So `tryFromPath()` returns `Format::MicroDvd` for `.sub`, `Format::EbuStl` for `.stl`, `Format::Json` for `.json` and `Format::PlainText` for `.txt`.
 - **Parser and formatter classes**: the classes in `Parsers` and `Formatters` are public. `ReadOptions` holds the format-neutral read settings, for example `new ReadOptions(lenient: true)`. A class in `Parsers\Options` holds the settings of one format, for example `new MicroDvdReadOptions(frameRate: 23.976)`. See [read-options.md](read-options.md).
 - **Time limit**: the parsers reject a time of 100,000 hours or more in every form. Examples are `99999999999999999999:00:04.000`, a JSON time of `1e20` seconds, a MicroDVD frame number of 13 digits and a word timestamp. The limit also applies to a sum, such as a time plus the SubViewer `[DELAY]` or a TTML `begin` plus the `begin` of its `div`. Strict mode throws `ParsingException`, and lenient mode skips the cue with a warning. The AssemblyAI, Amazon Transcribe, Deepgram and Google parsers skip only the word when a word time is too large. The YouTube chapter parser skips such a line, and the other chapter parsers throw.
 
@@ -64,7 +64,7 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 - **`findFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV or MP4 track, it is the format of the codec, for example `Format::SubRip`.
 - **`findSourceEncoding()`**: the encoding that the load call read the text from, for example `Windows-1252`. See [encodings.md](encodings.md#order-of-the-checks).
 - **`save()`**: writes the format argument. Without it, `save()` writes the format of the extension. It throws `UnsupportedFormatException` for an unknown extension.
-- **Frame rate**: MicroDVD output takes the frame rate from `MicroDvdWriteOptions::$frameRate`. Without it, the frame rate comes from a MicroDVD input. iTT output takes it from `IttWriteOptions::$frameRate`. Without it, the frame rate comes from an iTT input. Without either, `toString()` and `save()` throw `InvalidArgumentException`. MCC output takes it from `MccWriteOptions::$frameRate`, else from an MCC input, else 29.97 fps.
+- **Frame rate**: MicroDVD output takes the frame rate from `MicroDvdWriteOptions::$frameRate`. Without it, the frame rate comes from a MicroDVD input. Spruce STL output takes it from `SpruceStlWriteOptions::$frameRate`, else from a Spruce STL input, else 25. iTT output takes it from `IttWriteOptions::$frameRate`. Without it, the frame rate comes from an iTT input. Without either, `toString()` and `save()` throw `InvalidArgumentException`. MCC output takes it from `MccWriteOptions::$frameRate`, else from an MCC input, else 29.97 fps.
 - **CSV and TSV**: TSV output has tabs. CSV output from a TSV input has commas. A `CsvWriteOptions::$delimiter` wins.
 
 ## Write options
@@ -103,6 +103,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWri
 | `PlainTextWriteOptions` | plain text | `joinLines`, `joinCues`, `paragraphGap`, `withTimes` |
 | `PodcastTranscriptWriteOptions` | Podcasting 2.0 transcript | `wordSegments`, `prettyPrint` |
 | `SccWriteOptions` | SCC | `dropFrame`, `fit` |
+| `SpruceStlWriteOptions` | Spruce STL | `frameRate` |
 | `SubViewerWriteOptions` | SubViewer | `version` |
 
 - **Line endings**: every formatter writes LF by default.
@@ -487,6 +488,39 @@ $report->changes[0]->message;                                                   
 - **Limits**: the formatter throws `UnwritableContentException` for content that SCC cannot hold. This is more than 4 lines, more than 32 characters per line, or a character outside the CEA-608 character sets. The message names 1 of 2 fixes for too many or too long lines.
   - Wrapping the cue text at 32 characters gives 4 lines or fewer. Call `wrapLines(32, 4)` first.
   - Wrapping the cue text at 32 characters gives more than 4 lines. Call `Resegmenter::apply()` with `ResegmentMode::SplitLong` and `new CueLimits(32, 4)`, then `wrapLines(32, 4)`.
+
+## Spruce STL
+Spruce STL is the text subtitle file of DVD Studio Pro and Spruce DVDMaestro, from the [DVD Studio Pro 4 User Manual](https://www.spectacle.co.uk/uploads/other%20media/Manual_DVD_Studio_Pro_4.pdf), pages 456 to 460. It shares the `.stl` extension with the binary EBU STL. Detection tells them apart, see [detection.md](detection.md).
+
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\SpruceStlWriteOptions;
+use SubtitleToolbox\Parsers\Options\SpruceStlReadOptions;
+use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
+
+$content  = "\$Italic = False\n00:00:03:24 , 00:00:06:29 , The ferry leaves|at ^Ihalf past eight^I.\n";
+$subtitle = Subtitle::fromString($content);                                   // detects Spruce STL, 30 fps
+$subtitle->getCues()[0]->getLines();                                          // ['The ferry leaves', 'at <i>half past eight</i>.']
+$subtitle = Subtitle::fromString($content, Format::SpruceStl, new ReadOptions(formats: [new SpruceStlReadOptions(frameRate: 30)]));
+$subtitle->toString(Format::SpruceStl, new WriteOptions(formats: [new SpruceStlWriteOptions(frameRate: 25)]));
+```
+
+| Input | Parser result |
+|:--- |:--- |
+| `00:02:17:10 , 00:02:20:10 , One\|Two` | 137.4 s to 140.4 s at 25 fps, the lines `One` and `Two` |
+| `00:00:07:05,00:00:09:15,Tickets are ^Bsold out^B.` | `Tickets are <b>sold out</b>.` |
+| `$VertAlign = Top`, then a subtitle | the subtitle and all later ones get `Alignment::TopCenter` |
+| `//Reel 2` | a comment before the next cue |
+
+- **Frame rate**: the file does not give it. `SpruceStlReadOptions::$frameRate` sets it. Without it, a frame number from 25 to 29 means 30 fps, as on NTSC DVDs. Otherwise the parser takes 25 fps, as on PAL DVDs. Lenient mode adds a `ParseWarning` for the guess. A frame number at or above the frame rate throws `ParsingException`, and lenient mode skips the subtitle.
+- **Commands**: a `$` line, such as `$FontSize = 42`, applies to all later subtitles. `$Bold`, `$Italic` and `$Underlined` set the style, and `$HorzAlign` and `$VertAlign` set the alignment. The parser reads the other commands, such as fonts and colors, but they do not change the cues.
+- **Style toggles**: `^B`, `^I` and `^U` switch bold, italics and underline on or off. Each subtitle starts with the style of the commands.
+- **Format data**: the `spruce-stl` data keeps `frameRate`, the lines before the first subtitle in `header`, the text between the fields in `separator`, such as ` , ` or `,`, and the text around `|` in `lineBreak`. Each cue keeps the commands before it in `commands`.
+- **Round trip**: an unchanged file comes out byte for byte, except that the formatter ends the last line with a line end. It drops empty lines after the first subtitle.
+- **Output**: the formatter writes `<b>`, `<i>` and `<u>` as toggles and strips all other tags. It writes `$HorzAlign` and `$VertAlign` before a cue whose alignment differs from the commands so far. A new file gets a header of 17 commands, as DVD Studio Pro can fail to import a file without them, ` , ` between the fields and 25 fps. `SpruceStlWriteOptions::$frameRate` wins over the stored frame rate.
+- **Images**: a subtitle such as `<<Graphic>>logo.tif` after a `$SetFilePathToken` command stays text.
 
 ## SubRip
 | Input | Parser result | Formatter output |

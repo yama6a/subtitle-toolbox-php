@@ -32,6 +32,7 @@ class BinaryFormatMatrixTest extends CliTestCase
         "scc"                => "scc/real/popon_broadcast_df.scc",
         "srt"                => "srt/real/own_styled.srt",
         "stl"                => "stl/real/bakery_teletext_25fps.stl",
+        "spruce-stl"         => "spruce-stl/real/bakery_with_header.stl",
         "subviewer"          => "subviewer/real/subviewer2_crlf.sub",
         "ttml"               => "ttml/real/bbc_ebu_tt_d.ttml",
         "tsv"                => "csv/real/sheets_export.tsv",

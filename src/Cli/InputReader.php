@@ -11,6 +11,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\SpruceStlReadOptions;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
@@ -228,7 +229,7 @@ final class InputReader
 
 
     /**
-     * Returns the read options of --input-fps for MicroDVD and CSV, of the word timestamps for the transcript formats and of --scc-roll-up for SCC.
+     * Returns the read options of --input-fps for MicroDVD, Spruce STL and CSV, of the word timestamps for the transcript formats and of --scc-roll-up for SCC.
      * Each parser uses only the object of its own class.
      *
      * @return list<FormatReadOptions>
@@ -238,6 +239,7 @@ final class InputReader
         return array_values(array_filter([
             $inputFps === null ? null : new MicroDvdReadOptions($inputFps),
             $inputFps === null ? null : new CsvReadOptions(frameRate: $inputFps),
+            $inputFps === null ? null : new SpruceStlReadOptions($inputFps),
             $wordTimestamps ? new TranscriptReadOptions(wordTimestamps: true) : null,
             $sccRollUp === null ? null : new SccReadOptions(rollUp: $sccRollUp),
         ]));

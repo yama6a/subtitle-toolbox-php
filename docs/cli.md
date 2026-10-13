@@ -116,8 +116,8 @@ php stbox.phar --version
 ## Frame rates
 | Option | Sets | Commands |
 |:--- |:--- |:--- |
-| `--input-fps RATE` | the frame rate of a MicroDVD input without a `{1}{1}<fps>` first line, and of CSV or TSV times in `hh:mm:ss:ff`, as `MicroDvdReadOptions::$frameRate` and `CsvReadOptions::$frameRate` | all that read a file |
-| `--output-fps RATE` | the frame rate of MicroDVD and iTT output, as `MicroDvdWriteOptions::$frameRate` and `IttWriteOptions::$frameRate` | all that write a file |
+| `--input-fps RATE` | the frame rate of a MicroDVD input without a `{1}{1}<fps>` first line, of Spruce STL timecodes, and of CSV or TSV times in `hh:mm:ss:ff`, as `MicroDvdReadOptions::$frameRate`, `SpruceStlReadOptions::$frameRate` and `CsvReadOptions::$frameRate` | all that read a file |
+| `--output-fps RATE` | the frame rate of MicroDVD, Spruce STL and iTT output, as `MicroDvdWriteOptions::$frameRate`, `SpruceStlWriteOptions::$frameRate` and `IttWriteOptions::$frameRate` | all that write a file |
 | `--video-fps RATE` | the frame rate of the video for the frame rules, see [Timing](#timing) and [Validate](#validate) | `convert`, `validate` |
 | `--fps RATE` | each of the 3 options above that the command has | all that read a file |
 
@@ -142,6 +142,7 @@ Every option with the value `SECONDS` takes a time, in every command. `--sync` t
 Run `stbox formats` for the list. For an extension that two formats share, see [Shared extensions](formats.md#the-format-enum).
 
 - **Output extension**: `--to` sets the output format, never the extension of `-o`. So `--to mpl2 -o film.txt` writes MPL2, and `--to txt -o film.txt` writes plain text. Without `--to`, the output has the format of the input. So pass `--to json` to convert Whisper JSON to the library JSON.
+- **`.stl`**: format detection reads binary EBU STL and text Spruce STL. Pass `--to spruce-stl` for Spruce STL output from another format.
 - **`.sub`**: MicroDVD. Pass `--from subviewer` for SubViewer. A directory skips a `.sub` file that has an `.idx` file next to it.
 - **VobSub**: pass the `.idx` file. The tool reads the `.sub` file next to it. Standard input does not work.
 - **`.json` and `.txt` input**: format detection finds 6 of these formats by their content. These are the library JSON, Whisper JSON, YouTube json3, Podcasting 2.0 transcripts, MPL2 and TMPlayer. Other `.json` and `.txt` input fails without `--from`.
@@ -429,7 +430,7 @@ OPENAI_BASE_URL=http://localhost:11434/v1 OPENAI_MODEL=llama3 vendor/bin/stbox t
 | `--api-key KEY` | `apiKey` of the engine options. Default: `DEEPL_API_KEY` for `deepl`, `GOOGLE_TRANSLATE_API_KEY` for `google`, `OPENAI_API_KEY` for `openai` |
 | `--source-language CODE` | the language of the input, for example `de`. Default: the engine detects it |
 | `--target-language CODE` | the language of the output, for example `en-US` for DeepL or `fr` for Google. Required |
-| `--fps`, `--input-fps`, `--output-fps` | `frameRate` of the MicroDVD, CSV and iTT read and write options, see [Frame rates](#frame-rates) |
+| `--fps`, `--input-fps`, `--output-fps` | `frameRate` of the MicroDVD, Spruce STL, CSV and iTT read and write options, see [Frame rates](#frame-rates) |
 
 - **Key**: the tool reads only the variable of the chosen engine. With `--engine deepl`, a set `GOOGLE_TRANSLATE_API_KEY` does not help. The key never appears in the output or in error messages.
 - **openai**: the tool reads the model from `OPENAI_MODEL`, which is required. It reads the base URL from `OPENAI_BASE_URL`, default `https://api.openai.com/v1`. The key is optional, because a local service such as Ollama needs none.

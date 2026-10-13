@@ -55,6 +55,7 @@ A class that the table lists for several formats applies to each of them. For ex
 | | | `keepSegments` | one cue per segment, also for a segment with one word. Podcasting 2.0 only |
 | `ChapterReadOptions` | YouTube, Podcasting 2.0, FFmpeg and OGM chapters | `mediaDuration` | seconds, 0 or more, where a last chapter without its own end ends. An FFmpeg `END` or a Podcasting 2.0 `endTime` wins. A last chapter that starts after it, or null, ends at its own start |
 | `MicroDvdReadOptions` | MicroDVD | `frameRate` | frames per second. It wins over a `{1}{1}<fps>` first line. Without either, strict mode throws and lenient mode uses 23.976 with a `ParseWarning` |
+| `SpruceStlReadOptions` | Spruce STL | `frameRate` | frames per second of the `hh:mm:ss:ff` timecodes. Without it, a frame number of 25 or more means 30 fps, else 25 fps, see [formats.md](formats.md#spruce-stl) |
 | `SamiReadOptions` | SAMI | `languageClass` | the SAMI class to read, such as `FRCC`. Null reads the first class of the STYLE block that a `<P>` uses |
 | `VobSubReadOptions` | VobSub | `idx` | the content of the `.idx` file. The parser reads the `.sub` content. `Subtitle::load()` fills it from the `.idx` file |
 | | | `track` | the track with this `index:` |

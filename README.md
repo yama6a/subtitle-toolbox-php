@@ -47,6 +47,7 @@ The command line tool also comes as a PHAR file and as two container images. The
 | [SAMI](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/dnacc/understanding-sami-1.0) | `Sami` | `sami` | `.smi`, `.sami` | ✅ | ✅ | one language class per parse |
 | [SBV](https://support.google.com/youtube/answer/2734698) | `Sbv` | `sbv` | `.sbv` | ✅ | ✅ | |
 | [SCC](https://www.nationalarchives.gov.uk/PRONOM/fmt/1274) | `Scc` | `scc` | `.scc` | ✅ | ✅ | CEA-608 closed captions |
+| [Spruce STL](https://www.spectacle.co.uk/uploads/other%20media/Manual_DVD_Studio_Pro_4.pdf) | `SpruceStl` | `spruce-stl` | `.stl` | ✅ | ✅ | DVD Studio Pro text subtitles |
 | [SubRip](https://en.wikipedia.org/wiki/SubRip) | `SubRip` | `srt` | `.srt` | ✅ | ✅ | |
 | [SubViewer](https://man.archlinux.org/man/mplayer.1.en) 1 and 2 | `SubViewer` | `subviewer` | `.sub` | ✅ | ✅ | |
 | [TMPlayer](https://pysubs2.readthedocs.io/en/latest/supported-formats.html) | `TmPlayer` | `tmplayer` | `.txt` | ✅ | ✅ | |

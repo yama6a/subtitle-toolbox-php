@@ -22,8 +22,8 @@ class ArrayConversionTest extends TestCase
     // Format::detect() does not detect cloud speech-to-text JSON, so these fixtures load with the format of their directory.
     private const CLOUD_SPEECH = ["assemblyai", "aws-transcribe", "deepgram", "google-speech"];
 
-    // No parser reads Spruce STL or headerless CSV yet. FormatDetectorTest uses these fixtures.
-    private const UNREADABLE = ["csv/real/headerless_frame_times.csv", "spruce-stl/real/bakery.stl", "spruce-stl/real/bakery_with_header.stl"];
+    // Detection finds no format for headerless CSV. FormatDetectorTest uses this fixture.
+    private const UNREADABLE = ["csv/real/headerless_frame_times.csv"];
 
 
     private function bakery(): Subtitle

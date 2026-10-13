@@ -57,6 +57,7 @@ class RubyFallbackTest extends TestCase
             "MicroDVD"            => [Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25)])],
             "MPL2"                => [Format::Mpl2, new WriteOptions()],
             "TMPlayer"            => [Format::TmPlayer, new WriteOptions()],
+            "Spruce STL"          => [Format::SpruceStl, new WriteOptions()],
             "SubViewer"           => [Format::SubViewer, new WriteOptions()],
             "CSV"                 => [Format::Csv, new WriteOptions()],
             "TSV"                 => [Format::Tsv, new WriteOptions()],

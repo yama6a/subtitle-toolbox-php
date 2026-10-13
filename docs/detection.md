@@ -41,18 +41,20 @@ Other content goes to the signatures of the text and binary formats. Detection c
 | 10 | `Lyrics` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
 | 11 | `Pgs` | the bytes `PG`, then a known segment type |
 | 12 | `EbuStl` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
-| 13 | `Scc` | `Scenarist_SCC V1.0` |
-| 14 | `Mcc` | `File Format=MacCaption_MCC V2.0` or `V1.0` |
-| 15 | `YouTubeTimedText` | a `<timedtext>` or `<transcript>` root |
-| 16 | `Mpl2` | `[12][45]` |
-| 17 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=`, but not an `hh:mm:ss:ff` frame timecode such as `00:00:01:10,` |
-| 18 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |
+| 13 | `SpruceStl` | `00:00:01:10 , 00:00:03:10 ,` after optional `$` command and `//` comment lines. Without such a line first, the text must not start with `"` |
+| 14 | `Scc` | `Scenarist_SCC V1.0` |
+| 15 | `Mcc` | `File Format=MacCaption_MCC V2.0` or `V1.0` |
+| 16 | `YouTubeTimedText` | a `<timedtext>` or `<transcript>` root |
+| 17 | `Mpl2` | `[12][45]` |
+| 18 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=`, but not an `hh:mm:ss:ff` frame timecode such as `00:00:01:10,` |
+| 19 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line but with cue numbers looks like SubRip, so it detects as SubRip.
 - **SubRip without cue numbers**: read such a file in lenient mode. Strict mode throws `ParsingException` for a missing cue number and for text before the first cue. A timing line with a dot, such as `00:00:01.000 -->`, needs a cue number in the first line.
 - **`.sub` files**: SBV has three digits after the dot, SubViewer 2 has two.
 - **MicroDVD**: detection does not find the frame rate. `fromString()` without a format throws `ParsingException` for a MicroDVD file without a `{1}{1}<fps>` first line. Then read it in lenient mode for 23.976 fps, or pass the frame rate: `Subtitle::fromString($content, Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 23.976)]))`.
 - **iTT**: an iTT file detects as `Format::Ttml`. Pass `Format::Itt` to keep the iTT format data.
-- **Frame timecodes**: Spruce STL and CSV files that start with an `hh:mm:ss:ff` timecode give null, not TMPlayer.
+- **`.stl` files**: EBU STL is binary and starts with a code page and `STL25.01` or `STL30.01`. Spruce STL is text.
+- **Frame timecodes**: a CSV row such as `00:00:01:10,00:00:03:10,"Hello"` gives null, not Spruce STL or TMPlayer.
 - **No signature**: CSV and TSV. Pass `Format::Csv` or `Format::Tsv`, see [formats.md](formats.md#csv-and-tsv). VobSub needs its `.idx` file, see [ocr.md](ocr.md#vobsub).
 - **Not detected**: chapters and cloud speech-to-text JSON look like other formats. `Format::detect()` returns null for them, and `isAutoDetected()` is false. Pass the format, for example `Subtitle::fromString($json, Format::Deepgram)`. `Format::tryFromPath()` finds only FFmpeg metadata, by its `.ffmeta` extension. The other formats share `.json` or `.txt` with formats that come first.

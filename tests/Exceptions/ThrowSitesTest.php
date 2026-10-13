@@ -77,6 +77,7 @@ use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SccParser;
+use SubtitleToolbox\Parsers\SpruceStlParser;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
@@ -582,6 +583,7 @@ class ThrowSitesTest extends TestCase
             "Parsers/SccParser.php: no time code"           => [fn () => (new SccParser())->parse(SccParser::HEADER . "\n\n942c\n", new ReadOptions()), ...$parsing],
             "Parsers/SccParser.php: invalid byte pair"      => [fn () => (new SccParser())->parse(SccParser::HEADER . "\n\n00:00:01:00\t94zz\n", new ReadOptions()),
                                                                 ...$parsing],
+            "Parsers/SpruceStlParser.php: frame number"    => [fn () => (new SpruceStlParser())->parse("00:00:01:30 , 00:00:02:00 , text", new ReadOptions()), ...$parsing],
             "Parsers/SubRipParser.php: no cue number"       => [fn () => (new SubRipParser())->parse("x\n00:00:01,000 --> 00:00:02,000\ntext", new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/SubRipParser.php: no timestamps"       => [fn () => (new SubRipParser())->parse("1\ntext\nmore", new ReadOptions()), ...$parsing],
