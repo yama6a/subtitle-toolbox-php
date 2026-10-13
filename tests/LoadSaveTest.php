@@ -342,6 +342,17 @@ class LoadSaveTest extends TestCase
     }
 
 
+    public function testSaveAndLoadUseTheYttExtensionAsYouTubeTimedText(): void
+    {
+        $subtitle = Subtitle::load(self::FILES . "cli/trip.srt", Format::SubRip);
+
+        $subtitle->save("$this->dir/video.ytt");
+
+        $this->assertSame($subtitle->toString(Format::YouTubeTimedText), file_get_contents("$this->dir/video.ytt"));
+        $this->assertSame(Format::YouTubeTimedText, Subtitle::load("$this->dir/video.ytt")->findFormat());
+    }
+
+
     public function testSaveTakesTheFormatArgumentOverTheExtension(): void
     {
         $subtitle = Subtitle::load(self::FILES . "cli/trip.srt", Format::SubRip);
