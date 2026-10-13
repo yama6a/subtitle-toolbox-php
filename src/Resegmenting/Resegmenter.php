@@ -8,6 +8,7 @@ use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\CueList;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\LineWrapper;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -106,13 +107,14 @@ final class Resegmenter
             return [$cue];
         }
 
-        $parts = [];
+        $sourceLines = $cue->getLines();
+        $parts       = [];
         foreach ([0, ...$split->breaks] as $partIndex => $first) {
             $parts[] = [$partIndex === 0 ? $cue : (clone $cue)->setIdentifier(null), $first, $split->breaks[$partIndex] ?? $split->pieces->count()];
         }
         foreach ($parts as [$part, $first, $after]) {
             $lines = explode("\n", $split->pieces->text($first, $after));
-            $part->setStart($split->times[$first])->setEnd($split->times[$after])->setLines(self::wrap($lines, $options));
+            $part->setStart($split->times[$first])->setEnd($split->times[$after])->setLines(self::wrap($lines, $sourceLines, $options));
         }
 
         return array_column($parts, 0);
@@ -177,15 +179,19 @@ final class Resegmenter
 
     /**
      * Wraps the lines as mergeShortCues() does, or as wrapLines() does when they do not fit.
+     * Each line gets its own right-to-left embedding when a line of the source cue holds the embedding of fixRightToLeft().
      *
      * @param list<string> $lines
+     * @param list<string> $sourceLines
      *
      * @return list<string>
      */
-    private static function wrap(array $lines, ResegmentOptions $options): array
+    private static function wrap(array $lines, array $sourceLines, ResegmentOptions $options): array
     {
-        return LineWrapper::wrapToFit($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLinesPerCue)
+        $wrapped = LineWrapper::wrapToFit($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLinesPerCue)
             ?? LineWrapper::wrap($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLinesPerCue);
+
+        return Markup::holdsRightToLeftEmbedding($sourceLines) ? array_map(Markup::embedRightToLeft(...), $wrapped) : $wrapped;
     }
 
 
@@ -266,7 +272,7 @@ final class Resegmenter
             ->setIdentifier($first->index === 0 ? $first->cue->findIdentifier() : null)
             ->setStart($first->start)
             ->setEnd(end($group)->end)
-            ->setLines(self::wrap(self::groupLines($group), $options));
+            ->setLines(self::wrap(self::groupLines($group), $first->cue->getLines(), $options));
 
         foreach ($group as $word) {
             if ($word->index === 0) {

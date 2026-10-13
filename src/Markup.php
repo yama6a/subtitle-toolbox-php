@@ -505,6 +505,44 @@ final class Markup
 
 
     /**
+     * Wraps a line with right-to-left letters in the embedding marks U+202B and U+202C, inside its leading and trailing tags, as fixRightToLeft() does.
+     *
+     * @internal
+     */
+    public static function embedRightToLeft(string $line): string
+    {
+        $tag  = self::TAG . '|\{\\\\[^{}]*\}';
+        $text = str_replace(["\u{202B}", "\u{202C}"], "", $line);
+        if (preg_match('/\{[^{}]*\\\\p[1-9]/', $text) === 1
+            || preg_match('/(?=\p{L})[\p{Arabic}\p{Hebrew}\p{Syriac}\p{Thaana}\p{Nko}]/u', self::visibleText($text)) !== 1
+            || preg_match("/^((?:$tag)*)(.*?)((?:$tag)*)\$/su", $text, $matches) !== 1) {
+            return $line;
+        }
+
+        return "$matches[1]\u{202B}$matches[2]\u{202C}$matches[3]";
+    }
+
+
+    /**
+     * Returns true when a line holds the embedding marks of fixRightToLeft().
+     *
+     * @param list<string> $lines
+     *
+     * @internal
+     */
+    public static function holdsRightToLeftEmbedding(array $lines): bool
+    {
+        foreach ($lines as $line) {
+            if (str_contains($line, "\u{202B}") && self::embedRightToLeft($line) === $line) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+    /**
      * Counts the characters a reader sees, the extended grapheme clusters of UAX #29, or bytes for invalid UTF-8 such as the Latin-1 bytes that MicroDVD keeps.
      * Invisible format characters and the soft hyphen count 0.
      *
