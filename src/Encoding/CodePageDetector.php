@@ -43,6 +43,8 @@ final class CodePageDetector
         "CP950"        => ["zh-Hant"],
     ];
 
+    private const MULTI_BYTE = ["CP949", "CP932", "EUC-JP", "GBK", "CP950"];
+
     // Han characters that are common in Simplified Chinese text, and their Traditional Chinese forms. The Traditional forms come
     // from STCharacters.txt and TWVariants.txt of OpenCC, Apache-2.0, see THIRD_PARTY_NOTICES.md.
     private const HAN_SIMPLIFIED = "的一是不了在人有我他这个们中来上大为和国地到以说时要就出会可也你对生能而子那得于着下自之年过发后作里用道行所然家种事成方" .
@@ -108,9 +110,13 @@ final class CodePageDetector
         "ja"      => self::HAN_SIMPLIFIED . self::HAN_TRADITIONAL,
     ];
 
-    private const HAN_LANGUAGES = ["zh-Hans", "zh-Hant", "ja"];
+    // Letters of these scripts that the alphabet of the language does not have are rare, not foreign, and add 0.
+    private const RARE_LETTERS = ["zh-Hans" => '/\p{Han}/u', "zh-Hant" => '/\p{Han}/u', "ja" => '/\p{Han}/u', "ko" => '/\p{Hangul}/u'];
 
-    /** Unicode ranges of the Arabic, Hebrew and Thai letters, vowel marks and tone marks, the Japanese kana and the Korean syllables. */
+    // The Korean alphabet is the 2,350 common syllables of KS X 1001, which EUC-KR encodes. Other syllables are rare.
+    private const KOREAN_SYLLABLES = [0xAC00, 0xD7A3];
+
+    /** Unicode ranges of the Arabic, Hebrew and Thai letters, vowel marks and tone marks, and the Japanese kana. */
     private const RANGES = [
         "ar" => [[0x0621, 0x063A], [0x0640, 0x0652], [0x0679, 0x0679], [0x067E, 0x067E], [0x0686, 0x0686], [0x0688, 0x0688],
                  [0x0691, 0x0691], [0x0698, 0x0698], [0x06A9, 0x06A9], [0x06AF, 0x06AF], [0x06BA, 0x06BA], [0x06BE, 0x06BE],
@@ -118,7 +124,6 @@ final class CodePageDetector
         "he" => [[0x05B0, 0x05C7], [0x05D0, 0x05EA]],
         "th" => [[0x0E01, 0x0E3A], [0x0E40, 0x0E5B]],
         "ja" => [[0x3005, 0x3005], [0x3041, 0x3096], [0x309D, 0x309E], [0x30A1, 0x30FA], [0x30FC, 0x30FE]],
-        "ko" => [[0xAC00, 0xD7A3]],
     ];
 
     private const PUNCTUATION = "\u{00A0}\u{2018}\u{2019}\u{201A}\u{201C}\u{201D}\u{201E}\u{2013}\u{2014}\u{2026}\u{00AB}\u{00BB}" .
@@ -142,7 +147,6 @@ final class CodePageDetector
     private const SCAN_BYTES = 16 * self::SAMPLE_BYTES;
 
     // Each non-ASCII letter or symbol adds this score when the language or the punctuation list has it, and the other score when not.
-    // A Han character that the list of a Chinese or Japanese candidate does not have adds 0.
     private const KNOWN_CHARACTER_SCORE   = 1;
     private const UNKNOWN_CHARACTER_SCORE = -2;
 
@@ -174,8 +178,13 @@ final class CodePageDetector
         }
 
         $scores = [];
+        $broken = [];
         foreach (array_keys(self::CANDIDATES) as $encoding) {
             $score = self::score($sample, $encoding);
+            if ($score === null && in_array($encoding, self::MULTI_BYTE, true)) {
+                $score             = self::score(self::decodableLines($sample, $encoding), $encoding);
+                $broken[$encoding] = true;
+            }
             if ($score !== null) {
                 $scores[$encoding] = $score;
             }
@@ -187,13 +196,24 @@ final class CodePageDetector
             if ($score <= 0) {
                 break;
             }
-            $converted = @iconv($encoding, "UTF-8", $str);
+            $converted = isset($broken[$encoding]) ? false : @iconv($encoding, "UTF-8", $str);
             if ($converted !== false) {
                 return [$encoding, $converted];
+            }
+            // A CJK file with a byte that its code page cannot decode, such as a cut last character, reads as garbage in any other code page.
+            if (in_array($encoding, self::MULTI_BYTE, true)) {
+                return null;
             }
         }
 
         return null;
+    }
+
+
+    /** Returns the lines of $sample that $encoding decodes without an error. */
+    private static function decodableLines(string $sample, string $encoding): string
+    {
+        return implode("\n", array_filter(explode("\n", $sample), fn (string $line): bool => @iconv($encoding, "UTF-8", $line) !== false));
     }
 
 
@@ -251,13 +271,13 @@ final class CodePageDetector
         $best = $letters === [] ? 0.0 : -INF;
         foreach (self::CANDIDATES[$encoding] as $code) {
             $alphabet = self::letters()[$code];
-            $han      = in_array($code, self::HAN_LANGUAGES, true);
+            $rare     = self::RARE_LETTERS[$code] ?? null;
             $score    = 0.0;
             foreach ($letters as $char => $count) {
                 $score += match (true) {
-                    isset($alphabet[$char])                        => self::KNOWN_CHARACTER_SCORE,
-                    $han && preg_match('/\p{Han}/u', $char) === 1 => 0,
-                    default                                        => self::UNKNOWN_CHARACTER_SCORE,
+                    isset($alphabet[$char])                          => self::KNOWN_CHARACTER_SCORE,
+                    $rare !== null && preg_match($rare, $char) === 1 => 0,
+                    default                                          => self::UNKNOWN_CHARACTER_SCORE,
                 } * $count;
             }
             $best = max($best, $score);
@@ -319,6 +339,13 @@ final class CodePageDetector
                     for ($codePoint = $first; $codePoint <= $last; $codePoint++) {
                         self::$letters[$code][mb_chr($codePoint, "UTF-8")] = true;
                     }
+                }
+            }
+            [$first, $last] = self::KOREAN_SYLLABLES;
+            for ($codePoint = $first; $codePoint <= $last; $codePoint++) {
+                $syllable = mb_chr($codePoint, "UTF-8");
+                if (@iconv("UTF-8", "EUC-KR", $syllable) !== false) {
+                    self::$letters["ko"][$syllable] = true;
                 }
             }
         }
