@@ -81,15 +81,39 @@ class EncodingTest extends TestCase
     }
 
 
-    public function testCp949SamiOnlyParsesWithTheSourceEncoding(): void
+    public function testCp949SamiIsDetected(): void
     {
-        $raw = file_get_contents(self::DIR . "korean-cp949.smi");
+        $raw      = file_get_contents(self::DIR . "korean-cp949.smi");
+        $subtitle = Subtitle::fromString($raw, Format::Sami);
 
-        $this->assertSame("기차 안내", Subtitle::fromString($raw, Format::Sami, new ReadOptions(encoding: "CP949"))->findMetadata(Subtitle::METADATA_TITLE));
-        $this->assertSame("똠방각하가 왔습니다.", Subtitle::fromString($raw, Format::Sami, new ReadOptions(encoding: "CP949"))->getCues()[1]->getText());
+        $this->assertSame("기차 안내", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("똠방각하가 왔습니다.", $subtitle->getCues()[1]->getText());
+        $this->assertSame("CP949", $subtitle->findSourceEncoding());
+        $this->assertEquals($subtitle, Subtitle::fromString($raw, Format::Sami, new ReadOptions(encoding: "CP949")));
+    }
 
-        $this->expectException(ParsingException::class);
-        Subtitle::fromString($raw, Format::Sami);
+
+    public function testKoreanCp949IsNotReadAsHebrewOrArabic(): void
+    {
+        $cues = [
+            "안녕하세요, 오늘 날씨가 정말 좋네요.\n\n2\n00:00:03,000 --> 00:00:04,000\n우리 공원에 산책하러 갈까요?",
+            "<i>노란</i> 글자",
+        ];
+        foreach ($cues as $text) {
+            $subtitle = Subtitle::fromString(iconv("UTF-8", "CP949", "1\n00:00:01,000 --> 00:00:02,000\n$text\n"), Format::SubRip);
+
+            $this->assertSame(explode("\n\n", $text)[0], $subtitle->getCues()[0]->getText());
+            $this->assertSame("CP949", $subtitle->findSourceEncoding());
+        }
+    }
+
+
+    public function testCp932KeepsTheBackslashesOfAss(): void
+    {
+        $subtitle = Subtitle::load(self::DIR . "japanese-cp932.ass", Format::Ass);
+
+        $this->assertSame(["<i>このバスは空港へ行きますか？</i>", "時刻表はソファの上です。"], $subtitle->getCues()[1]->getLines());
+        $this->assertSame("CP932", $subtitle->findSourceEncoding());
     }
 
 
@@ -103,9 +127,15 @@ class EncodingTest extends TestCase
             "Windows-1254" => ["turkish-windows-1254.srt", "Windows-1254", "Teşekkürler, şimdi eve gitmeliyim."],
             "Windows-1256" => ["arabic-windows-1256.srt", "Windows-1256", "شكرا جزيلا."],
             "Windows-874"  => ["thai-windows-874.srt", "Windows-874", "ขอบคุณมาก ฉันต้องกลับบ้านแล้ว"],
+            "TIS-620"      => ["thai-tis-620.srt", "Windows-874", "ฉันลืมกุญแจไว้ที่บ้านอีกแล้ว\nร้านกาแฟตรงหัวมุมเปิดแล้ว"],
+            "Windows-1257" => ["estonian-windows-1257.srt", "Windows-1257", "Unustasin jälle võtmed koju!\nNurgal olev kohvik on juba avatud."],
             "ISO-8859-2"   => ["polish-iso-8859-2.srt", "ISO-8859-2", "Dziękuję, muszę już iść."],
             "ISO-8859-6"   => ["arabic-iso-8859-6.srt", "ISO-8859-6", "شكرا، يجب أن أعود إلى البيت."],
             "KOI8-R"       => ["russian-koi8-r.srt", "KOI8-R", "Спасибо, мне пора домой."],
+            "GBK"          => ["chinese-gbk.srt", "GBK", "谢谢，我得回家了。"],
+            "CP950"        => ["chinese-big5.srt", "CP950", "謝謝，我得回家了。"],
+            "CP932"        => ["japanese-shift_jis.srt", "CP932", "駅まで歩きましょう。"],
+            "EUC-JP"       => ["japanese-euc-jp.srt", "EUC-JP", "ありがとう、もう帰らなきゃ。"],
         ];
     }
 
@@ -266,7 +296,7 @@ class EncodingTest extends TestCase
 
     public function testTextInAnotherEncodingFamilyKeepsItsBytes(): void
     {
-        $raw = file_get_contents(self::DIR . "japanese-shift_jis.srt");
+        $raw = iconv("UTF-8", "CP866", "1\r\n00:00:01,000 --> 00:00:02,000\r\nПривет, как дела?\r\n");
 
         $this->assertSame(Subtitle::fromString($raw, Format::SubRip)->getCues()[0]->getText(), explode("\r\n", $raw)[2]);
         $this->assertSame("UTF-8", Subtitle::fromString($raw, Format::SubRip)->findSourceEncoding());
