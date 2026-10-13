@@ -39,8 +39,8 @@ try {
 - `fromString()` or `load()` with a format that the library cannot read, such as `Format::PlainText`.
 - `toString()` or `save()` with a format that the library cannot write, such as `Format::VobSub`.
 - `save()` without a format and with an unknown extension, such as `out.unknown`.
-- An MKV, WebM or MP4 file in `load()` or `fromString()` with a format. Call `loadTrack()` instead.
-- An MKV, WebM or MP4 file without exactly 1 subtitle track in `load()` or `fromString()` without a format.
+- An MKV, WebM, MP4 or MPEG-TS file in `load()` or `fromString()` with a format. Call `loadTrack()` instead.
+- An MKV, WebM, MP4 or MPEG-TS file without exactly 1 subtitle track in `load()` or `fromString()` without a format.
 - Detection that finds no format. This throws the subclass `UnknownFormatException`.
 
 ## Invalid arguments

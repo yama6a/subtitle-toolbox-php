@@ -6,7 +6,7 @@
 | [transcripts.md](transcripts.md) | Whisper, cloud speech-to-text and YouTube JSON, Podcasting 2.0 transcripts, plain text |
 | [chapters.md](chapters.md) | chapter lists for YouTube, Podcasting 2.0, FFmpeg and OGM |
 | [ocr.md](ocr.md) | PGS and VobSub image cues, built-in OCR, other OCR engines |
-| [mkv.md](mkv.md) | subtitle tracks of MKV, WebM and MP4 files |
+| [mkv.md](mkv.md) | subtitle tracks of MKV, WebM, MP4 and MPEG-TS files |
 | [json.md](json.md) | the JSON and array shape of this library |
 | [subtitle.md](subtitle.md) | metadata, comments, alignment, format data, cue lookup, forced cues, statistics |
 | [markup.md](markup.md) | the inline tags of cue text and the `Markup` helpers |

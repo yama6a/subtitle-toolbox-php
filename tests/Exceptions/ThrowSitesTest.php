@@ -14,6 +14,8 @@ use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
 use SubtitleToolbox\Container\Mp4\Mp4FixtureWriter;
 use SubtitleToolbox\Container\Mp4\Mp4Reader;
+use SubtitleToolbox\Container\MpegTs\MpegTsReader;
+use SubtitleToolbox\Container\MpegTs\TeletextCharacters;
 use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\Dependency;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
@@ -335,6 +337,10 @@ class ThrowSitesTest extends TestCase
             "Container/Matroska/MatroskaReader.php: stream not seekable" => [fn () => MatroskaReader::open(fopen("php://output", "wb")), ...$invalid],
             "Container/Matroska/MatroskaReader.php: unknown track" => [fn () => self::mkv("")->extract(9), ...$invalid],
             "Container/Matroska/MatroskaReader.php: unsupported codec" => [fn () => self::mkv("", ["codecId" => "S_DVBSUB"])->extract(2), ...$parsing],
+            "Container/MpegTs/MpegTsReader.php: stream not seekable" => [fn () => MpegTsReader::open(fopen("php://output", "wb")), ...$invalid],
+            "Container/MpegTs/MpegTsReader.php: unknown track" => [fn () => MpegTsReader::open(self::FILES . "mpegts/one_page.ts")->extract(100), ...$invalid],
+            "Container/MpegTs/MpegTsReader.php: not MPEG-TS" => [fn () => MpegTsReader::open(self::stream(str_repeat("\0", 400))), ...$parsing],
+            "Container/MpegTs/TeletextCharacters.php: Arabic set" => [fn () => TeletextCharacters::g0(10, 7, 888), ...$parsing],
             "Container/Mp4/Mp4Reader.php: stream not seekable" => [fn () => Mp4Reader::open(fopen("php://output", "wb")), ...$invalid],
             "Container/Mp4/Mp4Reader.php: encrypted track" => [fn () => Mp4Reader::open(self::FILES . "mp4/text_tracks.mp4")->extract(5), ...$parsing],
             "Container/Mp4/Mp4Reader.php: unsupported codec" => [fn () => self::mp4(["entry" => Mp4FixtureWriter::box("wvtt", "")])->extract(1), ...$parsing],

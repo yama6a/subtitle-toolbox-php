@@ -6,7 +6,7 @@ The [main README](../README.md#supported-formats) lists every format with its ex
 - Speech-to-text JSON, YouTube timed text, podcast transcripts and plain text: [transcripts.md](transcripts.md)
 - Chapter lists: [chapters.md](chapters.md)
 - The JSON of this library: [json.md](json.md)
-- Subtitle tracks in MKV, WebM and MP4 files: [mkv.md](mkv.md)
+- Subtitle tracks in MKV, WebM, MP4 and MPEG-TS files: [mkv.md](mkv.md)
 
 ## The Format enum
 The enum `Format` names each format. Its value is the format name of the command line tool.
@@ -60,8 +60,8 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 - **Empty file in every format**: a text file with only white space or a BOM gives an empty subtitle in every format and mode, also WebVTT without `WEBVTT`.
 - **No cues**: a header without cues is valid, such as `WEBVTT` alone or LRC ID tags alone. Text that gives no cue throws `ParsingException` with its line, such as LRC lines without time tags. Lenient mode returns an empty subtitle with 1 warning.
 - **Chapters and cloud speech-to-text JSON**: they load only with `load()` and their format.
-- **MKV, WebM and MP4**: `load()` with a format throws for them. Without a format, it reads a file with exactly 1 subtitle track and throws with the track list for other files.
-- **`findFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV or MP4 track, it is the format of the codec, for example `Format::SubRip`.
+- **MKV, WebM, MP4 and MPEG-TS**: `load()` with a format throws for them. Without a format, it reads a file with exactly 1 subtitle track and throws with the track list for other files.
+- **`findFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV, MP4 or MPEG-TS track, it is the format of the codec, for example `Format::SubRip`.
 - **`findSourceEncoding()`**: the encoding that the load call read the text from, for example `Windows-1252`. See [encodings.md](encodings.md#order-of-the-checks).
 - **`save()`**: writes the format argument. Without it, `save()` writes the format of the extension. It throws `UnsupportedFormatException` for an unknown extension.
 - **Frame rate**: MicroDVD output takes the frame rate from `MicroDvdWriteOptions::$frameRate`. Without it, the frame rate comes from a MicroDVD input. Spruce STL output takes it from `SpruceStlWriteOptions::$frameRate`, else from a Spruce STL input, else 25. iTT output takes it from `IttWriteOptions::$frameRate`. Without it, the frame rate comes from an iTT input. Without either, `toString()` and `save()` throw `InvalidArgumentException`. MCC output takes it from `MccWriteOptions::$frameRate`, else from an MCC input, else 29.97 fps.

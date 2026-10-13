@@ -342,6 +342,23 @@ class BinaryInputTest extends CliTestCase
     }
 
 
+    public function testInfoAndConvertReadTheTeletextPagesOfAnMpegTsFile(): void
+    {
+        copy(self::FILES . "mpegts/teletext.ts", "$this->dir/recording.ts");
+
+        $this->assertSame(
+            [0, "recording.ts\n  Container: mpegts\n  Track 888: dvb_teletext, deu\n  Track 777: dvb_teletext, deu, \"hearing impaired\"\n" .
+                "  Track 801: dvb_teletext, eng\n  Track 802: dvb_teletext, pol\n  Track 301: dvb_teletext, eng\n", ""],
+            $this->runCli(["info", "recording.ts"])
+        );
+        $this->assertSame([0, "recording.ts -> out.srt\n", ""], $this->runCli(["convert", "recording.ts", "--to", "srt", "--track", "777", "-o", "out.srt"]));
+        $this->assertSame(Subtitle::loadTrack(self::FILES . "mpegts/teletext.ts", 777)->toString(Format::SubRip), $this->file("out.srt"));
+        [$code, , $stderr] = $this->runCli(["convert", "recording.ts", "--from", "srt", "--to", "vtt", "-o", "-"]);
+        $this->assertSame([3, "recording.ts: UnsupportedFormatException (Error #102): The input is an MPEG-TS file. Pass --track N.\n"],
+                          [$code, $stderr]);
+    }
+
+
     public static function containerGoldens(): array
     {
         return [
@@ -349,6 +366,7 @@ class BinaryInputTest extends CliTestCase
             "ffmpeg D_WEBVTT/SUBTITLES to WebVTT" => ["mkv/ffmpeg_webvtt.webm", 2, "vtt"],
             "ffmpeg mov_text to SubRip"           => ["mp4/ffmpeg_mov_text.mp4", 2, "srt"],
             "ffmpeg c608 to SubRip"               => ["mp4/ffmpeg_c608.mov", 1, "srt"],
+            "teletext page to SubRip"             => ["mpegts/teletext.ts", 888, "srt"],
         ];
     }
 
