@@ -335,7 +335,9 @@ class OutputOptionsTest extends TestCase
     {
         $twoLines = in_array($format, [Format::Csv, Format::Tsv], true) ? "<i>Bonjour</i> ça va ?" : "<i>Bonjour</i>\nça va ?";
 
+        // A new DCP file holds the time of the write in IssueDate, so two writes in different seconds would differ.
         return (new Subtitle())
+            ->setFormatData("dcp", ["header" => ["IssueDate" => "2026-10-12T00:00:00"]])
             ->setMetadata(Subtitle::METADATA_TITLE, "Café")
             ->addComment("Note", 1)
             ->addCue(new SubtitleCue(1.5, 4, $twoLines))

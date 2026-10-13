@@ -36,6 +36,9 @@ class NegativeCueTimesTest extends TestCase
         $options  = new WriteOptions(formats: $formatOptions === null ? [] : [$formatOptions]);
         $negative = (new Subtitle())->addCues([new SubtitleCue(-2.5, -1.5, "One"), new SubtitleCue(-0.5, 1, "Two")]);
         $zero     = (new Subtitle())->addCues([new SubtitleCue(0, 0, "One"), new SubtitleCue(0, 1, "Two")]);
+        // A new DCP file holds the time of the write in IssueDate, so two writes in different seconds would differ.
+        $negative->setFormatData("dcp", ["header" => ["IssueDate" => "2026-10-12T00:00:00"]]);
+        $zero->setFormatData("dcp", ["header" => ["IssueDate" => "2026-10-12T00:00:00"]]);
 
         $this->assertSame($zero->toString($format, $options), $negative->toString($format, $options));
     }
