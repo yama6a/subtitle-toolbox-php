@@ -229,7 +229,7 @@ final class Mcc
         }
 
         $offset = self::CDP_HEADER_SIZE;
-        if (ord($cdp[$offset]) === self::TIME_CODE_SECTION) {
+        if (($cdp[$offset] ?? "") === chr(self::TIME_CODE_SECTION)) {
             $offset += self::TIME_CODE_SECTION_SIZE;
         }
         $triplets = [];

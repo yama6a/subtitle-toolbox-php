@@ -105,6 +105,12 @@ class MccParserTest extends TestCase
     }
 
 
+    public function testReadsAPacketWithoutSections(): void
+    {
+        $this->assertSame([4, []], Mcc::readPacket("\x61\x01\x07\x96\x69\x07\x4F\x43\x00\x00", 1));
+    }
+
+
     public function testANullPairEndsALineOfTheCaptionData(): void
     {
         // RDC, PAC row 15, "AB", a null pair, then "CD": the null pair splits the paint-on data into 2 states.
