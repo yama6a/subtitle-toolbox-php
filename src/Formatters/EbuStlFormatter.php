@@ -32,7 +32,7 @@ final class EbuStlFormatter extends SubtitleFormatter
     // The values of a new GSI (General Subtitle Information) block.
     // EBU Tech 3264 section 4.2.5 fills unused bytes with spaces.
     private const DEFAULT_GSI = [
-        "CPN" => "850", "DSC" => "1", "CCT" => EbuStl::CCT_LATIN, "RN" => "00", "MNC" => "40", "MNR" => "23",
+        "CPN" => "850", "DSC" => "1", "RN" => "00", "MNC" => "40", "MNR" => "23",
         "TCS" => "1", "TCP" => "00000000", "TND" => "1", "DSN" => "1",
     ];
 
@@ -50,6 +50,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         $options ??= new WriteOptions();
         $fileData = $subtitle->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
         $gsi      = ($fileData["gsi"] ?? []) + self::DEFAULT_GSI;
+        $gsi["CCT"] ??= $this->characterCodeTable($subtitle);
         $fps  = $this->formatOptions($options)->frameRate ?? EbuStl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? self::DEFAULT_FRAME_RATE;
 
         if (!array_key_exists($gsi["CCT"], EbuStl::CHARACTER_CODE_TABLES)) {
@@ -342,6 +343,25 @@ final class EbuStlFormatter extends SubtitleFormatter
         $current = $current === false ? EbuStl::WHITE : $current;
 
         return $closed === null || $closed === false || $closed === $current ? "" : chr($current);
+    }
+
+
+    /**
+     * Picks the character code table that writes the fewest "?" for the cue and comment text.
+     * Table 00 wins a tie, so text that table 00 holds keeps it.
+     */
+    private function characterCodeTable(Subtitle $subtitle): string
+    {
+        $text   = str_replace(LineEnding::Lf->value, " ", implode(" ", [
+            ...array_map(fn (SubtitleCue $cue): string => $cue->getText(), $subtitle->getCues()),
+            ...array_column($subtitle->getComments(), "text"),
+        ]));
+        $misses = array_map(
+            fn (?array $table): int => substr_count($table === null ? Iso6937::encode($text) : CodePage::encode($text, $table), CodePage::REPLACEMENT),
+            EbuStl::CHARACTER_CODE_TABLES,
+        );
+
+        return (string) array_search(min($misses), $misses, true);
     }
 
 
