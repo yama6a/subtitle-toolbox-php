@@ -61,21 +61,65 @@ final class DcpParser extends SubtitleParser
             $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $language);
         }
 
-        $rate     = $interop ? self::INTEROP_TICKS : $this->timeCodeRate($root);
-        $fileData = ["dialect" => $interop ? "interop" : "smpte"];
-        if (!$interop) {
-            $fileData += ["namespace" => $root->namespaceURI ?? "", "timeCodeRate" => $rate];
-            $startTime = $this->childText($root, "StartTime");
-            if ($startTime !== null) {
-                $fileData["startTime"] = $startTime;
-            }
-        }
-        $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData);
+        $rate = $interop ? self::INTEROP_TICKS : $this->timeCodeRate($root);
+        $subtitle->setFormatData(self::FORMAT_DATA_KEY, $this->fileData($root, $interop, $rate));
 
         $cues = [];
         $this->readElement($root, [], $rate, $interop, $cues);
 
         return $subtitle->addCues($cues);
+    }
+
+
+    /**
+     * Returns the parts of the file around the subtitles that DcpFormatter writes back: the root, the header elements,
+     * the <LoadFont> elements and the attributes of the first <Font> around the subtitles.
+     *
+     * @return array<string, mixed>
+     */
+    private function fileData(DOMElement $root, bool $interop, float $rate): array
+    {
+        $data = ["dialect" => $interop ? "interop" : "smpte"];
+        if (!$interop) {
+            $data += ["namespace" => $root->namespaceURI ?? "", "prefix" => $root->prefix ?? "", "timeCodeRate" => (int) $rate];
+        }
+        $data["attributes"] = self::attributes($root);
+        if ($root->hasAttribute("xmlns:xs")) {
+            $data["attributes"]["xmlns:xs"] = $root->getAttribute("xmlns:xs");
+        }
+        $data += ["header" => [], "loadFonts" => []];
+
+        $list = $interop ? $root : ($this->findElement($root, "SubtitleList", false) ?? $root);
+        foreach ($root->childNodes as $child) {
+            if (!$child instanceof DOMElement || in_array($child->localName, ["Font", "Subtitle", "SubtitleList"], true)) {
+                continue;
+            }
+            if ($child->localName === "LoadFont") {
+                $data["loadFonts"][] = ["attributes" => self::attributes($child), "text" => $child->textContent];
+            } elseif ($this->findElement($child, "*", false) === null) {
+                $data["header"][$child->localName] = $child->textContent;
+            }
+        }
+        $font = $this->findElement($list, "Font", false);
+        if ($font !== null) {
+            $data["font"] = self::attributes($font);
+        }
+
+        return $data;
+    }
+
+
+    /**
+     * @return array<string, string>
+     */
+    private static function attributes(DOMElement $element): array
+    {
+        $attributes = [];
+        foreach ($element->attributes as $attribute) {
+            $attributes[$attribute->name] = $attribute->value;
+        }
+
+        return $attributes;
     }
 
 
@@ -131,12 +175,14 @@ final class DcpParser extends SubtitleParser
         }
 
         usort($lines, fn (array $a, array $b): int => $a["y"] <=> $b["y"]);
-        $text = array_values(array_filter(array_column($lines, "text"), fn (string $line): bool => $line !== ""));
-        if ($text === []) {
+        $lines = array_values(array_filter($lines, fn (array $line): bool => $line["text"] !== ""));
+        if ($lines === []) {
             return null;
         }
 
-        return (new SubtitleCue($start, $end, $text))->setAlignment($this->alignment($lines));
+        return (new SubtitleCue($start, $end, array_column($lines, "text")))
+            ->setAlignment(self::alignment(array_column($lines, "attributes")))
+            ->setFormatData(self::FORMAT_DATA_KEY, ["subtitle" => self::attributes($subtitle), "texts" => array_column($lines, "attributes")]);
     }
 
 
@@ -144,7 +190,7 @@ final class DcpParser extends SubtitleParser
      * Collects each <Text> element under $element as a line with its markup and its height on the screen, from 0 at the top to 100 at the bottom.
      *
      * @param array<string, string>                                           $font
-     * @param list<array{text: string, y: float, horizontal: string}> $lines
+     * @param list<array{text: string, y: float, attributes: array<string, string>}> $lines
      */
     private function collectTexts(DOMElement $element, array $font, array &$lines): void
     {
@@ -157,11 +203,8 @@ final class DcpParser extends SubtitleParser
             } elseif ($child->localName === "Text") {
                 $runs = [];
                 $this->collectRuns($child, $font, $runs);
-                $lines[] = [
-                    "text"       => trim(StyleRuns::toMarkup($runs, true)),
-                    "y"          => $this->screenY($child),
-                    "horizontal" => strtolower($this->position($child, "HAlign") ?? "center"),
-                ];
+                $attributes = self::attributes($child);
+                $lines[]    = ["text" => trim(StyleRuns::toMarkup($runs, true)), "y" => self::screenY($attributes), "attributes" => $attributes];
             }
         }
     }
@@ -236,11 +279,11 @@ final class DcpParser extends SubtitleParser
      * Returns the height of the line on the screen in percent, from 0 at the top to 100 at the bottom.
      * VPosition counts from the edge that VAlign names, or down from the middle for "center", the default.
      */
-    private function screenY(DOMElement $text): float
+    private static function screenY(array $attributes): float
     {
-        $position = (float) ($this->position($text, "VPosition") ?? 0);
+        $position = (float) (self::position($attributes, "vposition") ?? 0);
 
-        return match (strtolower($this->position($text, "VAlign") ?? "center")) {
+        return match (strtolower(self::position($attributes, "valign") ?? "center")) {
             "top"    => $position,
             "bottom" => 100 - $position,
             default  => 50 + $position,
@@ -249,14 +292,17 @@ final class DcpParser extends SubtitleParser
 
 
     /**
-     * Returns the alignment of the middle of the lines, by the third of the screen it is in, and of the first line's HAlign.
+     * Returns the alignment of the <Text> elements with these attributes, top line first: the third of the screen that
+     * holds the middle of the lines gives the row, and HAlign of the top line gives the column.
      *
-     * @param list<array{text: string, y: float, horizontal: string}> $lines
+     * @param non-empty-list<array<string, string>> $texts
+     *
+     * @internal
      */
-    private function alignment(array $lines): Alignment
+    public static function alignment(array $texts): Alignment
     {
-        $y          = array_sum(array_column($lines, "y")) / count($lines);
-        $horizontal = $lines[0]["horizontal"];
+        $y          = array_sum(array_map(self::screenY(...), $texts)) / count($texts);
+        $horizontal = strtolower(self::position($texts[0], "halign") ?? "center");
         $column     = $horizontal === "left" ? 0 : ($horizontal === "right" ? 2 : 1);
         $row        = $y < 100 / 3 ? 7 : ($y > 200 / 3 ? 1 : 4);
 
@@ -265,13 +311,15 @@ final class DcpParser extends SubtitleParser
 
 
     /**
-     * Returns the position attribute $name of a <Text> element. Interop writes VAlign, SMPTE writes Valign.
+     * Returns the position attribute $name, in lower case, of a <Text> element. Interop writes VAlign, SMPTE writes Valign.
+     *
+     * @param array<string, string> $attributes
      */
-    private function position(DOMElement $element, string $name): ?string
+    private static function position(array $attributes, string $name): ?string
     {
-        foreach ([$name, ucfirst(strtolower($name))] as $spelling) {
-            if ($element->hasAttribute($spelling)) {
-                return trim($element->getAttribute($spelling));
+        foreach ($attributes as $attribute => $value) {
+            if (strtolower($attribute) === $name) {
+                return trim($value);
             }
         }
 
@@ -328,7 +376,7 @@ final class DcpParser extends SubtitleParser
             if (!$child instanceof DOMElement) {
                 continue;
             }
-            if ($child->localName === $name) {
+            if ($child->localName === $name || $name === "*") {
                 return $child;
             }
             if ($deep && ($found = $this->findElement($child, $name)) !== null) {

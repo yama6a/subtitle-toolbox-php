@@ -33,6 +33,7 @@ final class WriteGoldens
         "lrc"            => Format::Lyrics,
         "spruce-stl"     => Format::SpruceStl,
         "qttext"         => Format::QuickTimeText,
+        "dcp"            => Format::Dcp,
         "html"           => Format::HtmlTranscript,
         "podcast"        => Format::PodcastTranscript,
         "whisper"        => Format::Whisper,
@@ -200,6 +201,11 @@ final class WriteGoldens
             $subtitle->setFormatData("mcc", $mcc);
         }
 
+        if ($outputFormat === Format::Dcp && $subtitle->findFormatData("dcp") === []) {
+            // A new DCP file holds the time of the write in IssueDate.
+            $subtitle->setFormatData("dcp", ["header" => ["IssueDate" => "2026-10-12T00:00:00"]]);
+        }
+
         return $subtitle->toString($outputFormat, $writeOptions);
     }
 
@@ -256,6 +262,7 @@ final class WriteGoldens
             "scc"     => [Format::Scc, new WriteOptions()],
             "ndf.scc" => [Format::Scc, new WriteOptions(formats: [new SccWriteOptions(dropFrame: false)])],
             "smi"     => [Format::Sami, new WriteOptions()],
+            "dcp.xml" => [Format::Dcp, new WriteOptions()],
             "25.stl"  => [Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 25)])],
             "30.stl"  => [Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 30)])],
         ];
