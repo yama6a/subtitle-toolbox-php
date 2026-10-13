@@ -182,6 +182,10 @@ class BinaryTimingTest extends CliTestCase
                                             "The minimum offset must not be greater than the maximum offset, got 10 and -10."],
             "sync --max-splits two"     => [["sync", "de.srt", "--reference", "en.srt", "--max-splits", "two"], "sync",
                                             "The option --max-splits needs a whole number from 0 to 10, got \"two\"."],
+            "--reference-track without --reference" => [["sync", "de.srt", "--silence-log", "silence.log", "--media-duration", "840", "--reference-track", "2"], "sync",
+                                                        "Pass --reference with --reference-track."],
+            "--reference-track x"       => [["sync", "de.srt", "--reference", "movie.mkv", "--reference-track", "x"], "sync",
+                                            "The option --reference-track needs a whole number of 1 or more, got \"x\"."],
             "--silence-log without duration" => [["sync", "de.srt", "--silence-log", "silence.log"], "sync", "Pass --media-duration with --silence-log."],
             "--media-duration alone"    => [["sync", "de.srt", "--media-duration", "840"], "sync", $sync],
             "--reference and --silence-log" => [["sync", "de.srt", "--reference", "trip.srt", "--silence-log", "silence.log", "--media-duration", "840"], "sync", $sync],
@@ -318,6 +322,23 @@ class BinaryTimingTest extends CliTestCase
         $this->assertStringEndsWith("de.srt: the score is below 0.5, so the files likely do not match.\n", $stderr);
 
         $this->assertSame([3, "", "Error: missing.srt: The file does not exist.\n"], $this->runCli(["sync", "de.srt", "--reference", "missing.srt"]));
+    }
+
+
+    public function testSyncToATrackOfTheReferenceFile(): void
+    {
+        copy(self::FILES . "mkv/mkvmerge.mkv", "$this->dir/movie.mkv");
+        copy(self::FILES . "mkv/pgs.mkv", "$this->dir/pgs.mkv");
+        $this->runCli(["convert", "movie.mkv", "--track", "2", "--to", "srt", "--shift", "2.5", "-o", "late.srt"]);
+        $this->runCli(["convert", "pgs.mkv", "--track", "4", "--to", "sup", "--shift", "2", "-o", "late.sup"]);
+
+        $this->assertSame([0, $this->runCli(["convert", "movie.mkv", "--track", "2", "--to", "srt", "-o", "-"])[1], "late.srt: scale 1, offset -2.5 s, score 1\n"],
+                          $this->runCli(["sync", "late.srt", "--reference", "movie.mkv", "--reference-track", "2", "-o", "-"]));
+        $this->assertSame([0, "late.sup -> synced.sup\n", "late.sup: scale 1, offset -2 s, score 1\n"],
+                          $this->runCli(["sync", "late.sup", "--reference", "pgs.mkv", "--reference-track", "4", "-o", "synced.sup"]));
+        $this->assertSame($this->runCli(["convert", "pgs.mkv", "--track", "4", "--to", "sup", "-o", "-"])[1], file_get_contents("$this->dir/synced.sup"));
+        $this->assertSame([3, "", "Error: movie.mkv: The file has no subtitle track with the number 9.\n"],
+                          $this->runCli(["sync", "late.srt", "--reference", "movie.mkv", "--reference-track", "9"]));
     }
 
 

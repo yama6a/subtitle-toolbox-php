@@ -191,7 +191,7 @@ class BinaryGeneralTest extends CliTestCase
             "new track"       => [["diff", "trip.srt", "movie.mkv"], "",
                                    "movie.mkv: " . sprintf($tracks, "Pass --new-track N with one of them:")],
             "reference track"  => [["sync", "trip.srt", "--reference", "movie.mkv"], "",
-                                   "Error: movie.mkv: " . sprintf($tracks, "Write one of them to a subtitle file with convert --track N first:")],
+                                   "Error: movie.mkv: " . sprintf($tracks, "Pass --reference-track N with one of them:")],
             "from"             => [["convert", "call.json", "--to", "srt", "-o", "-"], "",
                                    "call.json: " . sprintf($format, "Pass --from FORMAT. Chapters and cloud speech-to-text JSON always need it, " .
                                                                     "for example --from deepgram.")],

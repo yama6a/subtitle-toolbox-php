@@ -386,6 +386,7 @@ movie.de.srt: scale 1.04271, offset -2.3 s, score 0.89
 | Option | Sets |
 |:--- |:--- |
 | `--reference FILE` | the subtitle in sync with the video, in any format that the tool reads. A Whisper JSON transcript of the audio also works |
+| `--reference-track NUMBER` | the subtitle track of an MKV, WebM or MP4 reference file. Needed when the file has 2 or more subtitle tracks. A PGS or VobSub track works without OCR, because only the cue times count |
 | `--silence-log FILE`, `--media-duration SECONDS` | the speech in an FFmpeg `silencedetect` log as the reference, with [`SpeechReference`](sync.md#sync-to-speech). The value is a [time](#times) |
 | `--min-offset SECONDS`, `--max-offset SECONDS` | `minOffset` and `maxOffset`, see [sync.md](sync.md#sync-to-a-reference-subtitle) for their limits. Each value is a [time](#times) |
 | `--no-scale` | `searchScale: false` |
@@ -393,7 +394,7 @@ movie.de.srt: scale 1.04271, offset -2.3 s, score 0.89
 
 - **Score**: below 0.5, the tool also prints that the files likely do not match. The exit code stays 0.
 - **Splits**: for each part, the tool prints a line such as `movie.de.srt: from 414.32 s: offset 147.7 s`.
-- **Reference**: the tool detects the format of the reference. `--from` and `--track` apply only to the input.
+- **Reference**: the tool detects the format of the reference. `--from` and `--track` apply only to the input, and `--reference-track` only to the reference. For example, `sync movie.de.srt --reference movie.mkv --reference-track 4` syncs to track 4 of the video.
 
 ## Diff
 `diff` compares an old and a new file with [`SubtitleDiff`](compare.md) and prints `toText()`. The files can have different formats. The exit code is 1 when they differ, as with the Unix `diff` command. Equal files give no output. The first argument must name one file. A directory or a glob that matches more than one file fails with exit code 2.
