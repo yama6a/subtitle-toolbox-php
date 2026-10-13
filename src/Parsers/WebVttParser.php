@@ -180,6 +180,9 @@ final class WebVttParser extends SubtitleParser
                     break;
                 case preg_match("/^(NOTE|STYLE|REGION)/i", $firstLine) === 1:
                     // The spec parser ignores every block that is not a cue, so these blocks do not throw.
+                    if ($this->options->lenient && preg_match("/^(STYLE|REGION)$/", $firstLine) === 1) {
+                        $this->warn("Block #$index is a $firstLine block after a cue. The spec allows it only before the first cue, so the parser skipped it.", $lineNumber, $index, $rawLines, ParseWarningAction::Skipped);
+                    }
                     break;
                 default:
                     throw new ParsingException("Block #$index is not a WebVTT cue, comment, style or region. The line is " . self::quote($firstLine) . ".", $lineNumber);
@@ -275,7 +278,7 @@ final class WebVttParser extends SubtitleParser
      */
     private function isOtherBlock(array $block): bool
     {
-        return preg_match("/^(NOTE|STYLE|REGION)/i", trim($block[0])) === 1;
+        return preg_match("/^(NOTE|STYLE|REGION)/i", trim($block[0])) === 1 || preg_match("/^WEBVTT([ \t]|$)/", trim($block[0])) === 1;
     }
 
 

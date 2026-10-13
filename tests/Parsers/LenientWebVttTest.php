@@ -77,7 +77,7 @@ class LenientWebVttTest extends TestCase
 
         $this->assertEquals([[1, 2, "The ferry leaves."]], TestSubtitles::describe($subtitle));
         $this->assertSame("checked", $subtitle->getComments()[0]->text);
-        $this->assertCount(1, $subtitle->getParseWarnings());
+        $this->assertCount(2, $subtitle->getParseWarnings());
     }
 
 
@@ -86,5 +86,35 @@ class LenientWebVttTest extends TestCase
         $subtitle = (new WebVttParser())->parse(file_get_contents(self::DIR . "missing_empty_line.vtt"), new ReadOptions(lenient: true));
 
         $this->assertSame(["headerLines" => ["Kind: captions", "Language: en"]], $subtitle->findFormatData("vtt"));
+    }
+
+
+    public function testWebVttJoinedFilesSkipTheSecondHeaderAndTheStyleBlockWithWarnings(): void
+    {
+        $subtitle = (new WebVttParser())->parse(file_get_contents(self::DIR . "joined_files.vtt"), new ReadOptions(lenient: true));
+
+        $this->assertSame([["One"], ["Two"]], array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $subtitle->getCues()));
+        $warnings = $subtitle->getParseWarnings();
+        $this->assertSame([6, 9], array_map(fn ($warning): ?int => $warning->lineNumber, $warnings));
+        $this->assertSame(["WEBVTT", "Kind: captions"], $warnings[0]->block);
+        $this->assertSame(["STYLE", "::cue { color: red }"], $warnings[1]->block);
+    }
+
+
+    public function testWebVttJoinedFilesStillThrowInStrictMode(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("Block #2 is not a WebVTT cue, comment, style or region. The line is \"WEBVTT\".");
+        (new WebVttParser())->parse(file_get_contents(self::DIR . "joined_files.vtt"));
+    }
+
+
+    public function testWebVttStreamReaderSkipsTheSecondHeaderOfJoinedFiles(): void
+    {
+        $reader = new WebVttStreamReader(new ReadOptions(lenient: true));
+        $cues   = iterator_to_array($reader->read(self::DIR . "joined_files.vtt"), false);
+
+        $this->assertSame([["One"], ["Two"]], array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $cues));
+        $this->assertSame([6, 9], array_map(fn ($warning): ?int => $warning->lineNumber, $reader->getWarnings()));
     }
 }
