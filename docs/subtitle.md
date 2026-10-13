@@ -147,6 +147,9 @@ json_encode($stats->toArray());            // all numbers and the 10 most used w
 ```
 
 - **Characters**: the count leaves out tags and leading and trailing spaces. An entity such as `&amp;` and a UTF-8 letter of several bytes count as one character.
+  - **As readers see them**: a letter with its accent, vowel or tone marks counts as one character, as does an emoji sequence. So `نَسِيتُ` in Arabic with vowel marks counts 4, and `👨‍👩‍👧` counts 1. The library counts the extended grapheme clusters of [UAX #29](https://www.unicode.org/reports/tr29/), as Subtitle Edit does.
+  - **Invisible characters**: the bidi controls U+200E, U+200F, U+202A to U+202E and U+2066 to U+2069, the zero-width space U+200B, the BOM U+FEFF and the soft hyphen U+00AD count 0. So `fixRightToLeft()` changes no count.
+  - **Invalid UTF-8**: text that is not valid UTF-8, such as the Latin-1 bytes that MicroDVD keeps, counts its bytes.
 - **Words**: the text without tags, split at whitespace. A dialogue dash counts as a word. `mostUsedWords` lists every word, the most used first. It removes punctuation at the start and end of each word and compares in lower case.
 - **Cues without text**: an image cue counts in `cueCount`, the display time, the span and the gaps. The text numbers leave it out.
 - **Reading speed**: a cue with a duration of 0 has no characters per second and no words per minute.

@@ -57,6 +57,26 @@ class ValidationTest extends TestCase
     }
 
 
+    public function testCountsCharactersAsReadersSeeThem(): void
+    {
+        $subtitle = TestFiles::parse("statistics/own_combining_marks.srt", Format::SubRip);
+
+        $this->assertSame([
+            [0, ValidationRule::MaxCharactersPerLine, 32, 31],
+            [4, ValidationRule::MaxCharactersPerLine, 43, 31],
+        ], $this->toArrays($subtitle->validate(new ValidationRules(maxCharactersPerLine: 31))));
+    }
+
+
+    public function testFixRightToLeftKeepsTheCharacterCounts(): void
+    {
+        $rules = new ValidationRules(maxCharactersPerSecond: 15, maxCharactersPerLine: 10);
+
+        $this->assertSame($this->toArrays(TestFiles::parse("transforms/own_rtl.srt", Format::SubRip)->validate($rules)),
+                          $this->toArrays(TestFiles::parse("transforms/own_rtl_fixed.srt", Format::SubRip)->validate($rules)));
+    }
+
+
     public function testNetflixEnglishPresetOnRealSubRipFile(): void
     {
         $subtitle = TestFiles::parse("srt/real/language_subtitles_dots_tester.srt", Format::SubRip);

@@ -46,6 +46,15 @@ class SubtitleStatisticsTest extends TestCase
     }
 
 
+    public function testCountsCharactersAsReadersSeeThem(): void
+    {
+        $statistics = SubtitleStatistics::of(Subtitle::load(self::FILES . "/statistics/own_combining_marks.srt", Format::SubRip));
+
+        $this->assertSame(32 + 23 + 18 + 26 + 43, $statistics->characterCount);
+        $this->assertSame(["min" => 18.0, "average" => 28.4, "max" => 43.0], $statistics->charactersPerLine);
+    }
+
+
     // A copy of the line lengths after each cue takes about 20 s here.
     public function testOwnFileRepeatedFifteenThousandTimesUnderFiveSeconds(): void
     {
