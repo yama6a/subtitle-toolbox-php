@@ -46,7 +46,7 @@ The value of a `ValidationRule` case is the name of its field in `ValidationRule
 - **Number limits**: a limit must be 0 or more. NAN throws `InvalidArgumentException`. A maximum accepts `INF`, which checks nothing. A minimum must be finite.
 - **Characters**: the rules count characters as `SubtitleStatistics` does, see [Statistics](subtitle.md#statistics).
 - **Spaces**: the text rules check the text without tags, with entities decoded. A cue stores runs of spaces as one space. So two spaces come from tags, as in `you? <i> Home</i>`, or from non-breaking spaces.
-- **Dialogue dash**: a hyphen, an en dash or an em dash at the start of a line. A digit or another dash must not follow it. So `-20 degrees` has no dialogue dash.
+- **Dialogue dash**: a hyphen, an en dash or an em dash at the start of a line. A digit or another dash must not follow it. So `-20 degrees` has no dialogue dash. Bidi controls before the dash, such as the U+202B that `fixRightToLeft()` adds, do not hide it.
 - **Words**: text runs between white space, as `SubtitleStatistics` counts them. A lone dash is a word.
 - **Milliseconds**: cue times have millisecond precision. So a cue of 0.833 s meets a minimum duration of 5/6 s.
 

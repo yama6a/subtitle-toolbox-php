@@ -77,6 +77,23 @@ class ValidationTest extends TestCase
     }
 
 
+    public function testFindsDialogueDashesAfterBidiControls(): void
+    {
+        $rules = new ValidationRules(maxSpeakersPerCue: 1, dialogueDashStyle: DialogueDashStyle::HyphenSpace);
+
+        $this->assertSame([
+            [0, ValidationRule::DialogueDashStyle, 2, null],
+            [0, ValidationRule::MaxSpeakersPerCue, 2, 1],
+            [1, ValidationRule::DialogueDashStyle, 2, null],
+            [1, ValidationRule::MaxSpeakersPerCue, 2, 1],
+            [2, ValidationRule::DialogueDashStyle, 2, null],
+            [2, ValidationRule::MaxSpeakersPerCue, 2, 1],
+            [4, ValidationRule::DialogueDashStyle, 1, null],
+            [4, ValidationRule::MaxSpeakersPerCue, 2, 1],
+        ], $this->toArrays(TestFiles::parse("fixing/rtl-dialogue.srt", Format::SubRip)->validate($rules)));
+    }
+
+
     public function testNetflixEnglishPresetOnRealSubRipFile(): void
     {
         $subtitle = TestFiles::parse("srt/real/language_subtitles_dots_tester.srt", Format::SubRip);

@@ -252,7 +252,7 @@ CommonErrorFixer::apply($subtitle);                                            /
 | `missingSpaceAfterPunctuation` | `Stop.Now`, `Hi!How` | `Stop. Now`, `Hi! How`. Not in `1.5`, `www.example.com`, `e.g.` or `U.S.Army` |
 | `unbalancedTags` | `<i>Hello` | `<i>Hello</i>` |
 | `emptyTags` | `Hi <i></i>there` | `Hi there` |
-| `dialogueDashes` | `-Hi.` and `-Hello.` | `- Hi.` and `- Hello.`, or the style of `dialogueDashStyle` |
+| `dialogueDashes` | `-Hi.` and `-Hello.`, also after bidi controls such as the U+202B of `fixRightToLeft()` | `- Hi.` and `- Hello.`, or the style of `dialogueDashStyle`. The bidi controls stay in front |
 | `ellipsis` | `. . .` or `....` | `...` with `EllipsisStyle::ThreeDots`. U+2026 with `EllipsisStyle::Unicode`, which also replaces `...` |
 | `ocrLowercaseL` | `lt's`, `l'm`, `l'll`, `lT lS` | `It's`, `I'm`, `I'll`, `IT IS` |
 | `ocrPipe` | `\|t was`, `wi\|\|` | `It was`, `will` |

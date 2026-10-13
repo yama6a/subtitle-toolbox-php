@@ -141,7 +141,9 @@ final class CommonErrorFixer
 
     private static function dialogueDash(string $text, DialogueDashStyle $style): string
     {
-        return self::replace(DialogueDash::REGEX, $style->value, $text);
+        [$controls, $rest] = DialogueDash::splitLeadingBidiControls($text);
+
+        return $controls . self::replace(DialogueDash::REGEX, $style->value, $rest);
     }
 
 

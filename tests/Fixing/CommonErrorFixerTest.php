@@ -188,6 +188,7 @@ class CommonErrorFixerTest extends TestCase
             "PGS OCR, Spanish"       => ["fixing/ocr-es.ocr.srt", "es", null, "fixing/ocr-es.fixed.srt"],
             "PGS OCR, 1080p"         => ["fixing/text_1080p.ocr.srt", "en", null, "fixing/text_1080p.fixed.srt"],
             "VobSub OCR, user list"  => ["fixing/text-pal.ocr.srt", "en", $list, "fixing/text-pal.fixed.srt"],
+            "right-to-left marks"    => ["fixing/rtl-dialogue.srt", "he", null, "fixing/rtl-dialogue.fixed.srt"],
         ];
     }
 

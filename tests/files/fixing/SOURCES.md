@@ -25,3 +25,5 @@ php tests/files/fixing/generate.php
 | `ad-cues-test-set/*.srt` | Written for this repository: 50 SubRip files, 5 each in English, Spanish, German, French, Portuguese, Arabic, Hebrew, Chinese, Russian and Turkish. 1,760 cues. Ad and credit cues follow the shape of real download site cues in our own words. Dialogue holds web and e-mail addresses, credit phrases, repeated lines and dots that look like domains | MIT |
 | `ad-cues-test-set/labels.json` | The kind of each cue of the files in `ad-cues-test-set/`, for example `ad-url` or `dlg-url-edge` | MIT |
 | `latin1_unclosed_italic.srt` | Written for this repository in Windows-1252: one cue with an `<i>` tag without its end tag | MIT |
+| `rtl-dialogue.srt` | Written for this repository in the shape of a Hebrew and Arabic SubRip file after `fixRightToLeft()`: no BOM, LF, U+202B and U+202C around each line, `<i>` tags, dialogue dashes without a space, a minus sign at a line start and a line with U+200F before the dash | MIT |
+| `rtl-dialogue.fixed.srt` | `CommonErrorFixer` output for `rtl-dialogue.srt`, language `he` | MIT |

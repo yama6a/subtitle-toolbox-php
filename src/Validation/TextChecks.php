@@ -112,7 +112,7 @@ final class TextChecks
 
         return self::countLines(
             $visible,
-            fn (string $line): bool => self::startsWithDialogueDash($line) && preg_match($style, ltrim($line)) !== 1
+            fn (string $line): bool => self::startsWithDialogueDash($line) && preg_match($style, self::lineStart($line)) !== 1
         );
     }
 
@@ -143,7 +143,16 @@ final class TextChecks
 
     private static function startsWithDialogueDash(string $line): bool
     {
-        return preg_match(DialogueDash::REGEX, ltrim($line)) === 1;
+        return preg_match(DialogueDash::REGEX, self::lineStart($line)) === 1;
+    }
+
+
+    /**
+     * Returns the line without the spaces and bidi controls before its first character.
+     */
+    private static function lineStart(string $line): string
+    {
+        return ltrim(DialogueDash::splitLeadingBidiControls(ltrim($line))[1]);
     }
 
 
