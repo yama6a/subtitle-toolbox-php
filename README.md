@@ -91,6 +91,7 @@ The command line tool also comes as a PHAR file and as two container images. The
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
 | [MKV](https://www.rfc-editor.org/rfc/rfc9559) and [WebM](https://www.webmproject.org/docs/container/) tracks | | | `.mkv`, `.webm` | ✅ | ❌ | text, ASS, SSA, WebVTT, PGS and VobSub tracks |
 | [MP4 tracks](https://www.3gpp.org/dynareport/26245.htm) | | | `.mp4`, `.m4v`, `.mov` | ✅ | ❌ | `tx3g` (`mov_text`) tracks, `c608` and `c708` closed caption tracks |
+| [MPEG-TS teletext](https://www.etsi.org/deliver/etsi_en/300400_300499/300472/01.04.01_60/en_300472v010401p.pdf) | | | `.ts` | ✅ | ❌ | DVB teletext subtitle pages, see [ETS 300 706](https://www.etsi.org/deliver/etsi_i_ets/300700_300799/300706/01_60/ets_300706e01p.pdf) |
 
 ## Command line tool
 Composer installs `vendor/bin/stbox`. Optional parts are in brackets.
@@ -190,6 +191,7 @@ foreach (Subtitle::tracks('movie.mkv') as $track) {
     echo "$track->number: $track->codecId, $track->language, $track->name\n";   // 3: S_TEXT/UTF8, de, Deutsch (Forced)
 }
 $subtitle = Subtitle::loadTrack('movie.mkv', 3);
+$subtitle = Subtitle::loadTrack('recording.ts', 777);                          // teletext page 777 of a DVB recording
 ```
 
 ### OCR

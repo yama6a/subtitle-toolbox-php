@@ -1,0 +1,17 @@
+﻿1
+00:00:00,500 --> 00:00:03,000
+Der Zug fährt um acht Uhr.
+<font color="#ffff00">- Wir müssen uns beeilen!</font>
+
+2
+00:00:03,000 --> 00:00:05,000
+<font color="#00ffff">- Ja?</font> - Nein.
+<font color="#00ff00">Grüße aus der Straße.</font>
+
+3
+00:00:06,000 --> 00:00:10,000
+Es ist 20 Uhr.
+
+4
+00:00:11,000 --> 00:00:12,000
+Ende.

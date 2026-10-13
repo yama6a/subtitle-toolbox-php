@@ -102,7 +102,7 @@ abstract class FileCommand extends Command
             Option::value("fps", "RATE", $this->fpsDescription()),
             Option::flag("word-timestamps", "Keep the word times of speech-to-text JSON, YouTube timed text and Podcasting 2.0 transcript input."),
             Option::value("scc-roll-up", "MODE", "How SCC, MCC and MP4 c608 input reads roll-up captions: screen gives one cue per screen, lines gives one cue per row. Default: screen."),
-            Option::value("track", "NUMBER", "Subtitle track of an MKV, WebM or MP4 input. Needed when the file has 2 or more subtitle tracks. \"info\" lists them."),
+            Option::value("track", "NUMBER", "Subtitle track of an MKV, WebM, MP4 or MPEG-TS input. Needed when the file has 2 or more subtitle tracks. \"info\" lists them."),
         ];
         if ($this->takesManyInputs()) {
             $options[] = Option::flag("keep-going", "Go on with the next file after a file fails. Default: stop at the first failure.");
@@ -130,7 +130,7 @@ abstract class FileCommand extends Command
         return [
             Option::value($names["secondFrom"], "FORMAT", "Format of the $file file. Default: " .
                           ($this->secondFileInherits() ? "as for --$names[from]." : "the format detected from the content.")),
-            Option::value($names["secondTrack"], "NUMBER", "Subtitle track of an MKV, WebM or MP4 $file file. Needed when the file has 2 or more subtitle tracks."),
+            Option::value($names["secondTrack"], "NUMBER", "Subtitle track of an MKV, WebM, MP4 or MPEG-TS $file file. Needed when the file has 2 or more subtitle tracks."),
         ];
     }
 
@@ -286,7 +286,7 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns the subtitle and its format, or null when listTracks() handled an MKV, WebM or MP4 input.
+     * Returns the subtitle and its format, or null when listTracks() handled an MKV, WebM, MP4 or MPEG-TS input.
      *
      * @return array{Subtitle, Format}|null
      */
@@ -332,7 +332,7 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Handles the MKV, WebM or MP4 file at $path without --track. $input is the argument that named it.
+     * Handles the MKV, WebM, MP4 or MPEG-TS file at $path without --track. $input is the argument that named it.
      * Returns false to read its only subtitle track.
      */
     protected function listTracks(string $path, string $input, Console $console): bool

@@ -36,7 +36,7 @@ final class CliMessages
             ? "Write it to a subtitle file with convert --from FORMAT first. Chapters and cloud speech-to-text JSON always need --from, for example --from deepgram."
             : "Pass $from FORMAT. Chapters and cloud speech-to-text JSON always need it, for example $from deepgram.";
         $message    = preg_replace(
-            '/^(\w+ \(Error #\d+\): )?.+ is an (MKV or WebM|MP4) file\. Call loadTrack\(\) with a track number\.$/s',
+            '/^(\w+ \(Error #\d+\): )?.+ is an (MKV or WebM|MP4|MPEG-TS) file\. Call loadTrack\(\) with a track number\.$/s',
             '$1The input is an $2 file. ' . ($track === null ? "Write one track to a subtitle file with convert --track N first." : "Pass $track N."),
             $message
         ) ?? $message;

@@ -40,7 +40,7 @@ final class InfoCommand extends ReportCommand
     {
         return "Times are in seconds. Character counts leave out tags. " .
                "The gap is the start of a cue minus the latest end of the earlier cues. An overlap gives a negative gap. " .
-               "For an MKV, WebM or MP4 file, info lists the subtitle tracks. Pass --track for the statistics of one track.";
+               "For an MKV, WebM, MP4 or MPEG-TS file, info lists the subtitle tracks. Pass --track for the statistics of one track.";
     }
 
 

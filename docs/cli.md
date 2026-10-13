@@ -37,7 +37,7 @@ php stbox.phar --version
 | Command | Does |
 |:--- |:--- |
 | `convert` | writes each input in the format of `--to` or in its own format, and runs OCR, text, structure and timing edits on the way, see [Convert](#convert) |
-| `info` | prints the format, the cue count and statistics, as text or with `--json`. Lists the tracks of an MKV, WebM or MP4 file |
+| `info` | prints the format, the cue count and statistics, as text or with `--json`. Lists the tracks of an MKV, WebM, MP4 or MPEG-TS file |
 | `validate` | prints each broken rule, as text or with `--json`, see [Validate](#validate) |
 | `sync` | shifts and scales a subtitle to a reference subtitle or to the speech, see [Sync](#sync) |
 | `diff` | lists the added, removed and changed cues of two files, see [Diff](#diff) |
@@ -150,7 +150,7 @@ Run `stbox formats` for the list. For an extension that two formats share, see [
 - **CSV and TSV**: see [Load and save](formats.md#load-and-save) for the delimiter of the output.
 
 ## MKV and WebM
-Every command reads a subtitle track of an MKV, WebM or MP4 file with [`Subtitle::loadTrack()`](mkv.md). `--track` takes the track number that `info` lists.
+Every command reads a subtitle track of an MKV, WebM, MP4 or MPEG-TS file with [`Subtitle::loadTrack()`](mkv.md). `--track` takes the track number that `info` lists.
 
 ```sh
 vendor/bin/stbox info movie.mkv
@@ -166,13 +166,13 @@ movie.mkv
   Track 5: S_HDMV/PGS, eng
 ```
 
-- **Detection**: the tool knows an MKV, WebM or MP4 file by its first 8 bytes, not by its extension. Standard input works too.
-- **Memory**: the tool reads an MKV, WebM or MP4 file the same way as `MatroskaReader` and `Mp4Reader`, see [mkv.md](mkv.md). Standard input is different. The tool reads the whole input into memory first.
+- **Detection**: the tool knows an MKV, WebM, MP4 or MPEG-TS file by its first 377 bytes, not by its extension. Standard input works too.
+- **Memory**: the tool reads an MKV, WebM, MP4 or MPEG-TS file the same way as `MatroskaReader`, `Mp4Reader` and `MpegTsReader`, see [mkv.md](mkv.md). Standard input is different. The tool reads the whole input into memory first.
 - **Track**: a file with one subtitle track needs no `--track`. For a file with more, the tool fails and lists the tracks.
-- **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT, `S_HDMV/PGS` is PGS and `S_VOBSUB` is VobSub. An MP4 `tx3g` track is SubRip, a `c608` track is SCC and a `c708` track is MCC. Without `--to`, `convert` and `sync` keep this format. `convert movie.mkv --to srt --track 3 --output-dir out` writes `out/movie.srt`.
+- **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT, `S_HDMV/PGS` is PGS and `S_VOBSUB` is VobSub. An MP4 `tx3g` track is SubRip, a `c608` track is SCC and a `c708` track is MCC. An MPEG-TS teletext page is SubRip. Without `--to`, `convert` and `sync` keep this format. `convert movie.mkv --to srt --track 3 --output-dir out` writes `out/movie.srt`.
 - **Second file**: `diff` applies `--track` to both files. `--new-track` sets the track of the new file, for example `diff old.mkv new.mkv --track 3 --new-track 8`. `dual` takes `--primary-track` and `--secondary-track`.
-- **Info**: without `--track`, `info` lists the tracks of a file whose extension names no subtitle format, such as `.mkv`, `.webm` and `.mp4`. The JSON object has `file`, `container` and `tracks`. Each track has `number`, `codecId`, `language`, `name`, `default` and `forced`. With `--track`, `info` prints the statistics of the track.
-- **Directories**: a directory argument skips MKV, WebM and MP4 files. Pass them by name or with a glob.
+- **Info**: without `--track`, `info` lists the tracks of a file whose extension names no subtitle format, such as `.mkv`, `.webm`, `.mp4` and `.ts`. The JSON object has `file`, `container` and `tracks`. Each track has `number`, `codecId`, `language`, `name`, `default` and `forced`. With `--track`, `info` prints the statistics of the track.
+- **Directories**: a directory argument skips MKV, WebM, MP4 and MPEG-TS files. Pass them by name or with a glob.
 - **Errors**: `S_DVBSUB` tracks, encrypted tracks and tracks with bzlib or LZO compression fail, see [mkv.md](mkv.md).
 
 ## Convert
@@ -329,7 +329,7 @@ vendor/bin/stbox convert movie.srt --to srt -o movie.timed.srt --video-fps 24 --
 | Command | Object |
 |:--- |:--- |
 | `info` | `file`, `format`, `encoding`, `metadata`, `statistics`, `imageCues` and `warnings`. `statistics` is `SubtitleStatistics::toArray()`, with `gaps` and a `mostUsedWords` list of `{"word", "count"}`. A statistic without data is null, for example `gaps` of a file with 1 cue. The text output prints `-`. `encoding` is `Subtitle::findSourceEncoding()`, for example `Windows-1252`, and null for a binary format |
-| `info` of an MKV, WebM or MP4 file without `--track` | `file`, `container` with the value `matroska` or `mp4`, and `tracks` |
+| `info` of an MKV, WebM, MP4 or MPEG-TS file without `--track` | `file`, `container` with the value `matroska`, `mp4` or `mpegts`, and `tracks` |
 | `validate` | `file`, `format`, `valid`, `violations` and `warnings`. A violation has `cueIndex`, `rule`, `value`, `infinite` and `limit` |
 | `diff` | `oldFile`, `newFile`, `equal`, `differences`, `oldWarnings` and `newWarnings`. A difference has `kind`, `oldIndex`, `newIndex`, `old` and `new`. A cue has `start`, `end`, `lines` and `forced` |
 
@@ -387,7 +387,7 @@ movie.de.srt: scale 1.04271, offset -2.3 s, score 0.89
 | Option | Sets |
 |:--- |:--- |
 | `--reference FILE` | the subtitle in sync with the video, in any format that the tool reads. A Whisper JSON transcript of the audio also works |
-| `--reference-track NUMBER` | the subtitle track of an MKV, WebM or MP4 reference file. Needed when the file has 2 or more subtitle tracks. A PGS or VobSub track works without OCR, because only the cue times count |
+| `--reference-track NUMBER` | the subtitle track of an MKV, WebM, MP4 or MPEG-TS reference file. Needed when the file has 2 or more subtitle tracks. A PGS or VobSub track works without OCR, because only the cue times count |
 | `--silence-log FILE`, `--media-duration SECONDS` | the speech in an FFmpeg `silencedetect` log as the reference, with [`SpeechReference`](sync.md#sync-to-speech). The value is a [time](#times) |
 | `--min-offset SECONDS`, `--max-offset SECONDS` | `minOffset` and `maxOffset`, see [sync.md](sync.md#sync-to-a-reference-subtitle) for their limits. Each value is a [time](#times) |
 | `--no-scale` | `searchScale: false` |

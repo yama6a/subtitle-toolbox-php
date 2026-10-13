@@ -11,4 +11,5 @@ enum ContainerFormat: string
 {
     case Matroska = "matroska";
     case Mp4      = "mp4";
+    case MpegTs   = "mpegts";
 }

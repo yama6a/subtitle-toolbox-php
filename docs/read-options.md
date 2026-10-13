@@ -25,7 +25,7 @@ $table = Subtitle::fromString(file_get_contents('lines.csv'), Format::Csv,
 | `formats` | `[]` | per-format classes, at most one object per class, see below |
 
 - **Checks**: the constructor throws `InvalidArgumentException` for an unknown encoding, a negative `lastCueDuration`, 2 objects of one class in `formats` and an object in `formats` that is not a per-format read class. The per-format classes throw it for a frame rate of 0 or less, a negative `track` and an empty `language` or `languageClass`.
-- **Last cue**: every format ends a last cue without an end `lastCueDuration` after its start. These readers use it: TMPlayer, SubViewer 1, LRC and SAMI. CSV and TSV rows without an end time use it. So do HTML and Podcasting 2.0 transcripts, and SCC captions that no command erases. PGS display sets, MKV text blocks without a duration and VobSub subtitles without a stop command use it too. A VobSub subtitle without a stop command also ends where the next starts.
+- **Last cue**: every format ends a last cue without an end `lastCueDuration` after its start. These readers use it: TMPlayer, SubViewer 1, LRC and SAMI. CSV and TSV rows without an end time use it. So do HTML and Podcasting 2.0 transcripts, and SCC captions that no command erases. PGS display sets, MKV text blocks without a duration, VobSub subtitles without a stop command and a last MPEG-TS teletext page without a later PTS use it too. A VobSub subtitle without a stop command also ends where the next starts.
 - **Warnings**: `Subtitle::getParseWarnings()` returns the warnings of a lenient read. A subtitle that no parser read has none.
 
 ## Per-format classes

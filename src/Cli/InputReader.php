@@ -80,7 +80,7 @@ final class InputReader
 
 
     /**
-     * Reads the input path, or standard input for "-". Returns null when $listTracks handled an MKV, WebM or MP4 input.
+     * Reads the input path, or standard input for "-". Returns null when $listTracks handled an MKV, WebM, MP4 or MPEG-TS input.
      *
      * @param \Closure(string, string): bool $listTracks gets the path of the file and the input argument, see FileCommand::listTracks()
      */
@@ -171,7 +171,7 @@ final class InputReader
 
 
     /**
-     * Returns null when $listTracks handled an MKV, WebM or MP4 file.
+     * Returns null when $listTracks handled an MKV, WebM, MP4 or MPEG-TS file.
      *
      * @param \Closure(string, string): bool $listTracks
      */

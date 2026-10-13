@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Container;
 
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Mp4\Mp4Reader;
+use SubtitleToolbox\Container\MpegTs\MpegTsReader;
 
 /**
  * Knows a video container by its first bytes and opens the reader for it.
@@ -15,7 +16,7 @@ use SubtitleToolbox\Container\Mp4\Mp4Reader;
 final class Containers
 {
     /** The number of bytes that detect() needs. */
-    public const HEAD_LENGTH = 8;
+    public const HEAD_LENGTH = 2 * MpegTsReader::PACKET_SIZE + 1;
 
 
     public static function detect(string $head): ?ContainerFormat
@@ -23,6 +24,7 @@ final class Containers
         return match (true) {
             str_starts_with($head, MatroskaReader::EBML_MAGIC) => ContainerFormat::Matroska,
             substr($head, 4, 4) === Mp4Reader::FTYP           => ContainerFormat::Mp4,
+            MpegTsReader::isTransportStream($head)             => ContainerFormat::MpegTs,
             default                                            => null,
         };
     }
@@ -55,7 +57,11 @@ final class Containers
             $head = is_file($file) ? (string) @file_get_contents($file, false, null, 0, self::HEAD_LENGTH) : "";
         }
 
-        return self::detect($head) === ContainerFormat::Mp4 ? Mp4Reader::open($file) : MatroskaReader::open($file);
+        return match (self::detect($head)) {
+            ContainerFormat::Mp4    => Mp4Reader::open($file),
+            ContainerFormat::MpegTs => MpegTsReader::open($file),
+            default                 => MatroskaReader::open($file),
+        };
     }
 
 
@@ -67,6 +73,7 @@ final class Containers
         return match ($container) {
             ContainerFormat::Matroska => "MKV or WebM",
             ContainerFormat::Mp4      => "MP4",
+            ContainerFormat::MpegTs   => "MPEG-TS",
         };
     }
 }

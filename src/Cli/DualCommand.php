@@ -96,7 +96,7 @@ final class DualCommand extends WriteCommand
         foreach (parent::inputOptions() as $option) {
             $options[] = match ($option->name) {
                 "from"  => Option::value("primary-from", "FORMAT", "Format of the primary file. Default: the format detected from the content. When detection finds no format, the file extension sets it."),
-                "track" => Option::value("primary-track", "NUMBER", "Subtitle track of an MKV, WebM or MP4 primary file. Needed when the file has several."),
+                "track" => Option::value("primary-track", "NUMBER", "Subtitle track of an MKV, WebM, MP4 or MPEG-TS primary file. Needed when the file has several."),
                 default => $option,
             };
         }
