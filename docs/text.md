@@ -260,6 +260,7 @@ CommonErrorFixer::apply($subtitle);                                            /
 | `unneededPeriods` | `Really?.`, `Stop!.` | `Really?`, `Stop!`. `What?...` and `Really?…` stay. Off by default |
 | `musicNotes` | `# Happy birthday #`, `* la la *` | `♪ Happy birthday ♪`, `♪ la la ♪`. Off by default |
 | `sentenceStartCase` | `I'm home.` and then `where are you?` | `Where are you?`. Off by default |
+| `adCues` | a cue `Downloaded from YTS.MX` | no cue. Off by default |
 
 - **Defaults**: every fix is on, except `replaceList` and the fixes marked "Off by default". The CLI turns these on with `--errors-enable`. The fixes run in the order of `CommonErrorRule::cases()`. The value of a case is the name of its option. The report holds one `AppliedFix` in `fixes` for each rule that changed a cue.
 - **Text runs**: the fixes see text runs, as `replaceText()` does. Only `unbalancedTags`, `emptyTags` and `dialogueOnOneLine` change tags. `unbalancedTags` closes a tag at the end of the last line of its cue. It removes a closing tag without an opening tag.
@@ -269,8 +270,9 @@ CommonErrorFixer::apply($subtitle);                                            /
 - **Dialogue on one line**: `dialogueOnOneLine` splits a cue at a dash after `.`, `?`, `!` or `...` and a space. It changes a cue of 1 line, or of 2 lines with exactly one such dash. A cue already in 2 dash lines stays. A cue with 2 or more such dashes stays, and so does `A well-known - and loved - song.`. Tags close at the end of the first line and open again on the second line. The new lines get the dash of `dialogueDashStyle`.
 - **Music notes**: `musicNotes` changes a `#` or `*` only at the start or the end of a line. Tags, spaces and a dialogue dash may stand between the sign and the line edge. A space or the line edge must follow a sign at the start and come before a sign at the end. So `Room #5`, `*sigh*`, `C# code` and `#1 fan` stay.
 - **Sentence start**: `sentenceStartCase` writes the first letter of a cue in upper case when the cue before it ends with `.`, `?` or `!`. Closing quotes and brackets may follow, as in `"Stop!"`. The first cue also starts a sentence. A cue after `...`, U+2026 or `,` continues the sentence and stays. Inside a cue, a line after such a sentence end gets the same fix. Dashes, quotes, `♪` and tags before the letter stay. A word with a capital letter after its first letter stays, such as `iPhone` and `eBay`. Turkish and Azerbaijani write `i` as `İ`.
+- **Ad cues**: `adCues` removes each cue that names OpenSubtitles, osdb.link, Addic7ed, YIFY, YTS, Subscene or podnapisi.net, anywhere in the file. A name counts as a whole word in any case, so `www.OpenSubtitles.org` and `YTS.MX` count. It runs first, so other rules report no fix on a removed cue. It never removes a cue for a web address, an e-mail address, a credit such as `Subtitles by Ana` or its position. A cue with an ad line and a dialogue line goes as a whole. For other credits, use `removeCuesWhere()` or `--replace-regex`.
 - **Image cues**: run the fixes after [OCR](ocr.md). Cues without text lines stay unchanged.
-- **Empty cues**: the fixer removes a cue that the replace list empties. `cueIndex` is the index before the removal.
+- **Empty cues**: the fixer removes a cue that `adCues` removes or the replace list empties. `cueIndex` is the index before the removal.
 - **Limits**: a fix sees one text run, so it does not find `l<i>t's</i>`. A 0 that stands for another letter, such as `B0ro` for `Büro`, becomes `o`.
 
 ### OCR replace lists

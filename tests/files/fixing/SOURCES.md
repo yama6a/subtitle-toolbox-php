@@ -20,4 +20,8 @@ php tests/files/fixing/generate.php
 | `text-pal.fixed.srt` | `CommonErrorFixer` output for `text-pal.ocr.srt`, language `en`, with `user_OCRFixReplaceList.xml` | MIT |
 | `optional-rules.srt` | Written for this repository: 4 cues with the errors of the `CommonErrorFixer` rules that are off by default | MIT |
 | `optional-rules.fixed.srt` | `CommonErrorFixer` output for `optional-rules.srt`, language `en`, with every rule that is off by default turned on | MIT |
+| `ad-cues.srt` | Written for this repository in the shape of a downloaded SubRip file: 9 cues with site ads in English, Spanish and German, and credits, web and e-mail addresses in dialogue | MIT |
+| `ad-cues.fixed.srt` | `stbox convert ad-cues.srt --to srt --errors-fix --language en --errors-enable adCues` output | MIT |
+| `ad-cues-test-set/*.srt` | Written for this repository: 50 SubRip files, 5 each in English, Spanish, German, French, Portuguese, Arabic, Hebrew, Chinese, Russian and Turkish. 1,760 cues. Ad and credit cues follow the shape of real download site cues in our own words. Dialogue holds web and e-mail addresses, credit phrases, repeated lines and dots that look like domains | MIT |
+| `ad-cues-test-set/labels.json` | The kind of each cue of the files in `ad-cues-test-set/`, for example `ad-url` or `dlg-url-edge` | MIT |
 | `latin1_unclosed_italic.srt` | Written for this repository in Windows-1252: one cue with an `<i>` tag without its end tag | MIT |

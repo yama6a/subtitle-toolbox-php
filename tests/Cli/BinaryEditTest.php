@@ -346,7 +346,7 @@ class BinaryEditTest extends CliTestCase
     public function testErrorsEnableTurnsOnRulesThatAreOffByDefault(): void
     {
         copy(self::FILES . "fixing/optional-rules.srt", "$this->dir/optional.srt");
-        $names  = ["doubleApostrophes", "loneLowercaseI", "unneededPeriods", "dialogueOnOneLine", "musicNotes", "sentenceStartCase"];
+        $names  = ["adCues", "doubleApostrophes", "loneLowercaseI", "unneededPeriods", "dialogueOnOneLine", "musicNotes", "sentenceStartCase"];
         $enable = implode(",", $names);
 
         $this->assertSame([0, file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt"), ""],
@@ -359,6 +359,25 @@ class BinaryEditTest extends CliTestCase
                           $this->runCli(["convert", "optional.srt", "--to", "srt", "-o", "-", "--errors-fix", "--errors-enable", "$enable,dialogOnOneLine"]));
         $this->assertSame(self::usageError("convert", "Pass --errors-fix with --errors-enable."),
                           $this->runCli(["convert", "optional.srt", "--to", "srt", "-o", "-", "--errors-enable", $enable]));
+    }
+
+
+    public function testErrorsEnableAdCuesListsEachRemovedCue(): void
+    {
+        copy(self::FILES . "fixing/ad-cues.srt", "$this->dir/ads.srt");
+
+        [$code, $stdout, $stderr] = $this->runCli(["convert", "ads.srt", "--to", "srt", "-o", "-", "--errors-fix", "--language", "en", "--errors-enable", "adCues",
+                                                      "--errors-list-fixes"]);
+
+        $this->assertSame(0, $code);
+        $this->assertStringEqualsFile(self::FILES . "fixing/ad-cues.fixed.srt", $stdout);
+        $this->assertSame(
+            "ads.srt: cue 1: adCues: \"Support us and become a VIP member\\nto hide every advert at www.OpenSubtitles.org\" -> \"\"\n" .
+            "ads.srt: cue 6: adCues: \"Sincronizado y corregido por nubegris\\nwww.addic7ed.com\" -> \"\"\n" .
+            "ads.srt: cue 7: missingSpaceAfterPunctuation: \"We landed late.It was cold.\" -> \"We landed late. It was cold.\"\n" .
+            "ads.srt: cue 8: adCues: \"Heruntergeladen von YTS.MX\" -> \"\"\n",
+            $stderr
+        );
     }
 
 

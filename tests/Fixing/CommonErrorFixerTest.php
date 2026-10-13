@@ -220,7 +220,7 @@ class CommonErrorFixerTest extends TestCase
 
         CommonErrorFixer::apply($subtitle, $options);
 
-        $this->assertSame(["doubleApostrophes", "loneLowercaseI", "unneededPeriods", "dialogueOnOneLine", "musicNotes", "sentenceStartCase"], array_values($optional));
+        $this->assertSame(["adCues", "doubleApostrophes", "loneLowercaseI", "unneededPeriods", "dialogueOnOneLine", "musicNotes", "sentenceStartCase"], array_values($optional));
         $this->assertStringEqualsFile(self::FILES . "fixing/optional-rules.fixed.srt", $subtitle->toString(Format::SubRip));
         $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromString(file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt")),
                                                       $options)->fixes);
@@ -388,6 +388,49 @@ class CommonErrorFixerTest extends TestCase
     {
         $this->assertSame(["-Hi.", "-Hello."], self::fixLines(["- Hi.", "-  Hello."], new CommonErrorOptions(dialogueDashStyle: DialogueDashStyle::Hyphen))[0]);
         $this->assertSame(["\u{2013} Hi."], self::fixLines(["-Hi."], new CommonErrorOptions(dialogueDashStyle: DialogueDashStyle::EnDashSpace))[0]);
+    }
+
+
+    public function testAdCuesRemovesCuesThatNameADownloadSite(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "fixing/ad-cues.srt"));
+
+        $fixes = CommonErrorFixer::apply($subtitle, new CommonErrorOptions("en", ...self::ALL_OFF, adCues: true))->fixes;
+
+        $this->assertSame([[0, "adCues", ""], [5, "adCues", ""], [7, "adCues", ""]],
+                          array_map(fn (AppliedFix $fix): array => [$fix->cueIndex, $fix->rule->value, $fix->after], $fixes));
+        $this->assertSame(["Subtitles by Marta Lindqvist", "The ferry leaves at seven.", "Send the photos to ellen.marsh@gmail.com.",
+                           "Translated by whom? It's full of mistakes.", "We landed late.It was cold.", "Write this down: www.dunmore-rentals.com."],
+                          array_values(array_map(fn (SubtitleCue $cue): string => $cue->getText(), $subtitle->getCues())));
+    }
+
+
+    public function testAdCuesIsOffByDefault(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "fixing/ad-cues.srt"));
+
+        CommonErrorFixer::apply($subtitle, new CommonErrorOptions("en"));
+
+        $this->assertCount(9, $subtitle);
+    }
+
+
+    // 50 files in 10 languages with 120 ad and credit cues and 1,640 other cues. labels.json names the kind of each cue.
+    public function testAdCuesRemovesTheSiteAdsOfTheTestSetAndNoOtherCue(): void
+    {
+        $dir     = self::FILES . "fixing/ad-cues-test-set/";
+        $removed = [];
+        foreach (json_decode(file_get_contents($dir . "labels.json"), true) as $file => $labels) {
+            $subtitle = Subtitle::fromString(file_get_contents($dir . $file));
+            $this->assertCount(count($labels), $subtitle);
+            foreach (CommonErrorFixer::preview($subtitle, new CommonErrorOptions(adCues: true))->fixes as $fix) {
+                if ($fix->rule === CommonErrorRule::AdCues) {
+                    $removed[$labels[$fix->cueIndex]] = ($removed[$labels[$fix->cueIndex]] ?? 0) + 1;
+                }
+            }
+        }
+
+        $this->assertSame(["ad-url" => 54, "ad-site" => 8], $removed);
     }
 
 

@@ -22,6 +22,8 @@ final class CommonErrorFixer
     private const WORD_ENDS    = '(?![\p{L}\p{N}\'\x{2019}])';
     private const SPACES       = '[ \t\x{00A0}]';
     private const SENTENCE_END = '/(?:(?<!\.)\.|[?!])[\p{Pe}\p{Pf}"\']*$/u';
+    // Download sites that insert ad cues. "podnapisi" alone is Slovenian for "subtitles", and "open subtitles" is an English phrase.
+    private const AD_SITES = '/(?<![\p{L}\p{N}])(?:opensubtitles|open-subtitles|osdb|addic7ed|yify|yts|subscene|podnapisi\.net)(?!\p{L})/iu';
     private const L_CONSONANTS = [
         "en" => "bcdfghjkmnpqrstvwxz",
         "de" => "bcdfghjkmnpqrstvwxz",
@@ -103,6 +105,7 @@ final class CommonErrorFixer
         $language = $context->language;
 
         return match ($rule) {
+            CommonErrorRule::AdCues          => preg_match(self::AD_SITES, Markup::visibleText(implode("\n", $lines))) === 1 ? [] : $lines,
             CommonErrorRule::ReplaceList     => OcrReplaceListFixer::replaceList($lines, $options->replaceList, $context->continues),
             CommonErrorRule::UnbalancedTags  => self::unbalancedTags($lines),
             CommonErrorRule::EmptyTags       => array_map(fn (string $line): string =>
