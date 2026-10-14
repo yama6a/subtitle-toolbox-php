@@ -57,6 +57,8 @@ Run the tests with `composer test`. Each pull request carries one label that set
 | CCExtractor | GPL-2.0 | behaviour only |
 | subparse (Rust) | MPL-2.0 (file-level copyleft) | behaviour only |
 | rsubs-lib | MIT | adapt with credit |
+| xqq/libaribcaption | MIT, ISC-style notice in the source files (checked @ 37dde0f) | adapt with credit |
+| aribb24 | LGPL-3.0 | behaviour only |
 | aspasia | 0BSD | adapt (credit appreciated) |
 | chardetng (used by aspasia) | Apache-2.0 OR MIT, (c) Mozilla Foundation (checked @ 4a53a99) | adapt with credit under MIT |
 | alass | GPL-3.0 | behaviour only |
