@@ -155,7 +155,8 @@ final class AribDrcs
                 $bits    = strlen(decbin($depth - 1));
                 $pixels  = substr($unit, $offset + 4, intdiv($width * $height * $bits + 7, 8));
                 $offset += 4 + strlen($pixels);
-                $key     = $twoByte ? AribCharacters::DRCS_0 << 16 | ($characterCode & 0x7F7F)
+                // The UTF-8 coding sends the codes of DRCS-0 as the private use characters U+EC00 to U+F8FF.
+                $key     = $twoByte ? AribCharacters::DRCS_0 << 16 | ($characterCode >= 0xEC00 && $characterCode <= 0xF8FF ? $characterCode : $characterCode & 0x7F7F)
                     : (AribCharacters::DRCS | 0x40 | ($characterCode >> 8 & 0x0F)) << 16 | ($characterCode & 0x7F);
                 $glyphs[$key] = ["hash" => md5($pixels), "size" => "{$width}x$height", "character" => self::character($pixels, $width, $height, $depth)];
             }

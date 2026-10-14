@@ -35,8 +35,8 @@ final class AribCharacters
 
     private const TWO_BYTE_SETS = [self::KANJI, self::JIS_X0213_PLANE_1, self::JIS_X0213_PLANE_2, self::ADDITIONAL_SYMBOLS, self::DRCS_0];
 
-    private const KANA_SYMBOLS           = "ー\u{3002}\u{300C}\u{300D}\u{3001}\u{30FB}";
-    private const JIS_X0201_FULL_WIDTH   = "\u{3002}\u{300C}\u{300D}\u{3001}\u{30FB}ヲァィゥェォャュョッーアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン\u{309B}\u{309C}";
+    private const KANA_SYMBOLS         = "ー\u{3002}\u{300C}\u{300D}\u{3001}\u{30FB}";
+    private const JIS_X0201_FULL_WIDTH = "\u{3002}\u{300C}\u{300D}\u{3001}\u{30FB}ヲァィゥェォャュョッーアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン\u{309B}\u{309C}";
 
     // Middle size characters take half the width. These Japanese symbols have a half width form, as libaribcaption writes them.
     private const HALF_WIDTH = [
