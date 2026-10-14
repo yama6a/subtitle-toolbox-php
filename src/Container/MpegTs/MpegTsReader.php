@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Container\MpegTs;
 use Generator;
 use SubtitleToolbox\Container\ContainerFormat;
 use SubtitleToolbox\Container\ContainerReader;
+use SubtitleToolbox\Container\DvbSubtitleDecoder;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
@@ -17,10 +18,10 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
 /**
- * Reads the teletext subtitle pages of MPEG transport streams, such as DVB recordings. It reads the file once from the start
- * and keeps only the packets of the teletext stream.
+ * Reads the teletext subtitle pages and the DVB subtitle streams of MPEG transport streams, such as DVB recordings.
+ * It reads the file once from the start and keeps only the packets of the subtitle stream.
  *
- * Packets, PAT, PMT and PES: ISO/IEC 13818-1. Teletext descriptor: ETSI EN 300 468.
+ * Packets, PAT, PMT and PES: ISO/IEC 13818-1. Teletext and subtitling descriptors: ETSI EN 300 468.
  */
 final class MpegTsReader implements ContainerReader
 {
@@ -29,6 +30,8 @@ final class MpegTsReader implements ContainerReader
     public const SYNC_BYTE = "\x47";
 
     public const CODEC_TELETEXT = "dvb_teletext";
+
+    public const CODEC_DVB_SUBTITLE = "dvb_subtitle";
 
     // A file with the PAT or a PMT more than 32 MB into it is not a recording that starts at a packet.
     private const TABLE_SCAN_BYTES = 32 << 20;
@@ -48,6 +51,11 @@ final class MpegTsReader implements ContainerReader
     private const SUBTITLE_PAGE         = 0x02;
     private const HEARING_IMPAIRED_PAGE = 0x05;
 
+    private const SUBTITLING_DESCRIPTOR = 0x59;
+
+    // The subtitling types of DVB subtitles for the hard of hearing, from "no monitor aspect ratio" to "plano-stereoscopic HD".
+    private const HEARING_IMPAIRED_SUBTITLES = [0x20, 0x21, 0x22, 0x23, 0x24, 0x25];
+
     private const CLOCK_RATE = 90000;
     private const PTS_RANGE  = 1 << 33;
 
@@ -59,7 +67,7 @@ final class MpegTsReader implements ContainerReader
     /** @var array<int, SubtitleTrack> */
     private array $tracks = [];
 
-    /** @var array<int, array{pid: int, page: int, streams: list<int>}> */
+    /** @var array<int, array{pid: int, page: int, ancillaryPage: ?int, streams: list<int>}> */
     private array $pages = [];
 
 
@@ -127,15 +135,43 @@ final class MpegTsReader implements ContainerReader
 
 
     /**
-     * Reads the teletext page with the track number $trackNumber. Each state of the page that shows text becomes a cue.
+     * Reads the teletext page or the DVB subtitle stream with the track number $trackNumber. Each state of a teletext page that
+     * shows text becomes a text cue. Each display set of DVB subtitles that shows pixels becomes an image cue.
      * Times count from the first PTS of the program.
      */
     public function extract(int $trackNumber, ?ReadOptions $options = null): Subtitle
     {
-        $track   = $this->subtitleTrack($trackNumber);
-        $page    = $this->pages[$trackNumber];
-        $decoder = new TeletextDecoder($page["page"], $trackNumber % 1000, TeletextCharacters::languageGroup($track->language));
+        $options ??= new ReadOptions();
+        $track     = $this->subtitleTrack($trackNumber);
+        $page      = $this->pages[$trackNumber];
+        if ($track->codecId === self::CODEC_DVB_SUBTITLE) {
+            $decoder = new DvbSubtitleDecoder($page["page"], $page["ancillaryPage"]);
+            [$zero]  = $this->readPes($page, fn (string $data, int $pts) => $decoder->add($data, $pts / self::CLOCK_RATE));
+            $cues    = $decoder->finish($options->lastCueDuration, $zero / self::CLOCK_RATE);
+        } else {
+            $decoder       = new TeletextDecoder($page["page"], $trackNumber % 1000, TeletextCharacters::languageGroup($track->language));
+            [$zero, $last] = $this->readPes($page, $decoder->add(...));
+            $cues          = $this->teletextCues($decoder->finish(), $zero, $last, $options);
+        }
 
+        $subtitle = (new Subtitle())->addCues($cues);
+        $subtitle->setFormat($track->format);
+        $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $track->language);
+
+        return $subtitle;
+    }
+
+
+    /**
+     * Passes the data and the PTS of each PES packet of the page stream to $add. Returns the first PTS of the program and the
+     * last PTS of the stream. A PTS after the wrap of the 33-bit clock keeps counting.
+     *
+     * @param array{pid: int, streams: list<int>} $page
+     * @param callable(string, int): void $add
+     * @return array{int, int}
+     */
+    private function readPes(array $page, callable $add): array
+    {
         $first   = [];
         $lastPts = null;
         foreach ($this->pesPackets($page["pid"], $page["streams"]) as [$pid, $pts, $data]) {
@@ -143,14 +179,24 @@ final class MpegTsReader implements ContainerReader
             $lastPts   = $pts ?? $lastPts;
             $first[$pid] ??= $pts;
             if ($pid === $page["pid"] && $pts !== null) {
-                $decoder->add($data, $pts);
+                $add($data, $pts);
             }
         }
 
-        $zero   = $first === [] ? 0 : min(array_filter($first, fn (?int $pts): bool => $pts !== null) ?: [0]);
-        $last   = $lastPts ?? $zero;
+        $zero = $first === [] ? 0 : min(array_filter($first, fn (?int $pts): bool => $pts !== null) ?: [0]);
+
+        return [$zero, $lastPts ?? $zero];
+    }
+
+
+    /**
+     * @param list<array{int, list<string>}> $pageStates the PTS and the lines of each state of the page
+     * @return list<SubtitleCue>
+     */
+    private function teletextCues(array $pageStates, int $zero, int $last, ReadOptions $options): array
+    {
         $states = [];
-        foreach ($decoder->finish() as $state) {
+        foreach ($pageStates as $state) {
             if ($states === [] || $states[array_key_last($states)][1] !== $state[1]) {
                 $states[] = $state;
             }
@@ -159,16 +205,12 @@ final class MpegTsReader implements ContainerReader
         $cues = [];
         foreach ($states as $index => [$start, $lines]) {
             if ($lines !== []) {
-                $end    = $states[$index + 1][0] ?? ($last > $start ? $last : $start + (int) (($options ?? new ReadOptions())->lastCueDuration * self::CLOCK_RATE));
+                $end    = $states[$index + 1][0] ?? ($last > $start ? $last : $start + (int) ($options->lastCueDuration * self::CLOCK_RATE));
                 $cues[] = new SubtitleCue(max(0, $start - $zero) / self::CLOCK_RATE, max(0, $end - $zero) / self::CLOCK_RATE, $lines);
             }
         }
 
-        $subtitle = (new Subtitle())->addCues($cues);
-        $subtitle->setFormat(Format::SubRip);
-        $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $track->language);
-
-        return $subtitle;
+        return $cues;
     }
 
 
@@ -180,7 +222,7 @@ final class MpegTsReader implements ContainerReader
 
 
     /**
-     * Reads the PAT and the PMT of each program, and lists each teletext subtitle page as a track.
+     * Reads the PAT and the PMT of each program. It lists each teletext subtitle page as a track, then each DVB subtitle service.
      */
     private function readTables(): void
     {
@@ -210,6 +252,9 @@ final class MpegTsReader implements ContainerReader
 
         foreach ($streams as $program) {
             $this->addPages($program);
+        }
+        foreach ($streams as $program) {
+            $this->addDvbSubtitles($program);
         }
     }
 
@@ -253,8 +298,48 @@ final class MpegTsReader implements ContainerReader
                         false,
                         false,
                     );
-                    $this->pages[$number]  = ["pid" => $pid, "page" => $magazine << 8 | $pageByte, "streams" => $pids];
+                    $this->pages[$number]  = ["pid" => $pid, "page" => $magazine << 8 | $pageByte, "ancillaryPage" => null, "streams" => $pids];
                 }
+            }
+        }
+    }
+
+
+    /**
+     * Lists each entry of the subtitling descriptors as a track. An entry is a subtitle service with its language and its pages.
+     * Decision: the first entry of a stream has the PID as its number, for example 2050. A PID from 100 to 899 can be the
+     * number of a teletext page, which keeps its number. A clash, and each later entry of the same stream, gives the PID times
+     * 1,000 plus the index of the entry, as a clash of teletext pages does.
+     *
+     * @param list<array{pid: int, type: int, descriptors: string}> $program
+     */
+    private function addDvbSubtitles(array $program): void
+    {
+        $pids = array_column($program, "pid");
+        foreach ($program as ["pid" => $pid, "type" => $type, "descriptors" => $descriptors]) {
+            if ($type !== self::STREAM_TYPE_PES_PRIVATE_DATA) {
+                continue;
+            }
+            $entries = str_split(implode("", iterator_to_array(self::descriptors($descriptors, [self::SUBTITLING_DESCRIPTOR]), false)), 8);
+            foreach ($entries as $index => $entry) {
+                $number = $index === 0 && !isset($this->tracks[$pid]) ? $pid : $pid * 1000 + $index;
+                if (strlen($entry) < 8 || isset($this->tracks[$number])) {
+                    continue;
+                }
+
+                ["type" => $subtitlingType, "page" => $page, "ancillary" => $ancillary] = unpack("Ctype/npage/nancillary", $entry, 3);
+                $language              = strtolower(substr($entry, 0, 3));
+                $this->tracks[$number] = new SubtitleTrack(
+                    ContainerFormat::MpegTs,
+                    $number,
+                    self::CODEC_DVB_SUBTITLE,
+                    Format::Pgs,
+                    preg_match('/^[a-z]{3}$/', $language) === 1 ? $language : "und",
+                    in_array($subtitlingType, self::HEARING_IMPAIRED_SUBTITLES, true) ? "hearing impaired" : null,
+                    false,
+                    false,
+                );
+                $this->pages[$number]  = ["pid" => $pid, "page" => $page, "ancillaryPage" => $ancillary, "streams" => $pids];
             }
         }
     }

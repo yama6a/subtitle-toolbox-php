@@ -91,7 +91,7 @@ class MatroskaReaderTest extends TestCase
                 [ContainerFormat::Matroska, 4, "S_TEXT/ASS", Format::Ass, "eng", "English", true, false],
                 [ContainerFormat::Matroska, 5, "S_TEXT/WEBVTT", Format::WebVtt, "fre", "Français", false, false],
                 [ContainerFormat::Matroska, 6, "S_TEXT/SSA", Format::Ass, "spa", null, false, false],
-                [ContainerFormat::Matroska, 7, "S_DVBSUB", null, "ita", null, false, false],
+                [ContainerFormat::Matroska, 7, "S_DVBSUB", Format::Pgs, "ita", null, false, false],
                 [ContainerFormat::Matroska, 8, "S_TEXT/UTF8", Format::SubRip, "eng", null, false, false],
             ],
             array_map(fn (SubtitleTrack $t): array => [$t->container, $t->number, $t->codecId, $t->format, $t->language, $t->name, $t->default, $t->forced],
@@ -510,12 +510,22 @@ class MatroskaReaderTest extends TestCase
                 "number" => 2, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_TEXT/UTF8",
             ]));
         }
-        $file   = MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, $tracks . $clusters);
+        $file = MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, $tracks . $clusters);
+
+        return MatroskaReader::open(self::stream(substr($file, 0, strlen($file) - $cut)))->extract(2);
+    }
+
+
+    /**
+     * @return resource
+     */
+    private static function stream(string $bytes)
+    {
         $stream = fopen("php://memory", "w+b");
-        fwrite($stream, substr($file, 0, strlen($file) - $cut));
+        fwrite($stream, $bytes);
         rewind($stream);
 
-        return MatroskaReader::open($stream)->extract(2);
+        return $stream;
     }
 
 
@@ -572,9 +582,9 @@ class MatroskaReaderTest extends TestCase
     public function testThrowsForAnUnsupportedCodec(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Track 7 has the codec S_DVBSUB.");
+        $this->expectExceptionMessage("Track 2 has the codec S_ARIBSUB.");
 
-        MatroskaReader::open(self::DIR . "text_tracks.mkv")->extract(7);
+        self::brokenFile("", ["codecId" => "S_ARIBSUB"]);
     }
 
 
@@ -590,8 +600,13 @@ class MatroskaReaderTest extends TestCase
     {
         $mkv = MatroskaReader::open(self::DIR . "text_tracks.mkv");
 
-        $this->assertSame([Format::SubRip, Format::Ass, Format::WebVtt, Format::Ass, null],
+        $this->assertSame([Format::SubRip, Format::Ass, Format::WebVtt, Format::Ass, Format::Pgs],
                           array_map($mkv->trackFormat(...), [3, 4, 5, 6, 7]));
+        $tracks = MkvFixtureWriter::element(MkvFixtureWriter::TRACKS, MkvFixtureWriter::trackEntry(
+            ["number" => 2, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_ARIBSUB"],
+        ));
+        $this->assertNull(MatroskaReader::open(self::stream(MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, $tracks)))
+            ->trackFormat(2));
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The file has no subtitle track with the number 1.");
 
