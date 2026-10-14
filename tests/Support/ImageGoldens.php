@@ -12,18 +12,20 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 /**
- * Lists the pixel goldens of the PGS and VobSub fixtures and renders a parse result as a golden file.
+ * Lists the pixel goldens of the PGS, VobSub and DVB subtitle fixtures and renders a parse result as a golden file.
  * A pixel golden is a JSON list with the times, the position, the size and the SHA-256 of the RGBA bytes of each cue.
  * The hash does not depend on the PNG encoder. A PNG of the first cue lies next to it, for a reviewer to look at.
  */
 final class ImageGoldens
 {
+    private const DVB_SUBTITLE_TRACKS = ["mpegts/dvb_subtitles.ts" => [257, 258], "mkv/dvbsub.mkv" => [2, 3]];
+
     private const JSON_FLAGS = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR;
 
 
     /**
-     * Returns one case per golden: the fixture under tests/files, the VobSub track or null for PGS, and the golden
-     * path without its extension.
+     * Returns one case per golden: the fixture under tests/files, the VobSub or container track or null for PGS, and the
+     * golden path without its extension.
      *
      * @return array<string, array{string, ?int, string}>
      */
@@ -41,6 +43,12 @@ final class ImageGoldens
             }
         }
 
+        foreach (self::DVB_SUBTITLE_TRACKS as $fixture => $tracks) {
+            foreach ($tracks as $track) {
+                $cases["$fixture $track"] = [$fixture, $track, dirname($fixture) . "/expected/" . basename($fixture) . ".$track"];
+            }
+        }
+
         return $cases;
     }
 
@@ -54,7 +62,7 @@ final class ImageGoldens
     {
         $cases = [];
         foreach (self::cases() as $key => [$fixture, $track, $golden]) {
-            if ($track !== null) {
+            if (str_ends_with($fixture, ".idx")) {
                 $cases[$key] = [$fixture, $track, "$golden.to.sup"];
             }
         }
@@ -67,6 +75,9 @@ final class ImageGoldens
     {
         if ($track === null) {
             return TestFiles::parse($fixture, Format::Pgs);
+        }
+        if (isset(self::DVB_SUBTITLE_TRACKS[$fixture])) {
+            return Subtitle::loadTrack(TestFiles::DIR . $fixture, $track);
         }
 
         return TestFiles::parse(substr($fixture, 0, -4) . ".sub", Format::VobSub,
