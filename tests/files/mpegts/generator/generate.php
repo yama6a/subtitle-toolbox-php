@@ -7,8 +7,11 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Container\MpegTs;
 
 require_once __DIR__ . "/TsFixtures.php";
+require_once __DIR__ . "/AribFixtures.php";
 
-foreach (TsFixtures::FILES as $file => $method) {
-    file_put_contents(dirname(__DIR__) . "/$file", TsFixtures::$method());
-    echo "Wrote $file\n";
+foreach ([TsFixtures::class => TsFixtures::FILES, AribFixtures::class => AribFixtures::FILES] as $class => $files) {
+    foreach ($files as $file => $method) {
+        file_put_contents(dirname(__DIR__) . "/$file", $class::$method());
+        echo "Wrote $file\n";
+    }
 }
