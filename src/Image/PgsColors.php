@@ -17,7 +17,7 @@ final class PgsColors
 
     // Kr and Kb of the YCbCr matrices in ITU-R BT.709 and BT.601.
     private const MATRIX_BT709 = [0.2126, 0.0722];
-    private const MATRIX_BT601 = [0.299, 0.114];
+    public const MATRIX_BT601  = [0.299, 0.114];
 
     // The limited range of 8-bit video: luma from 16 to 235, chroma from 16 to 240 around 128.
     private const LUMA_MIN      = 16;

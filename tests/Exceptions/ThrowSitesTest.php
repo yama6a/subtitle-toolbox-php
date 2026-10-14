@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\FileFailure;
+use SubtitleToolbox\Container\DvbSubtitleDecoder;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
 use SubtitleToolbox\Container\Mp4\Mp4FixtureWriter;
@@ -330,13 +331,15 @@ class ThrowSitesTest extends TestCase
             "ArrayReader.php: comments no list"             => [fn () => self::fromArray(["comments" => 5]), ...$parsing],
             "Cli/Command.php: unknown option"               => [fn () => Arguments::parse(["--nope"], []), ...$invalid],
             "Cli/Command.php: file failure"                 => [fn () => Command::failFile("Cannot read x."), \RuntimeException::class, FileFailure::class],
+            "Container/DvbSubtitleDecoder.php: region too large" => [fn () => (new DvbSubtitleDecoder())->add("\x0F\x11\0\1\0\x0A\0\0" . pack("nn", 8000, 1) . "\x0C\0\0\0", 0.0),
+                                                                     ...$parsing],
             "Container/Matroska/EbmlReader.php: invalid element header" => [fn () => MatroskaReader::open(self::stream("\0\0\0\0")), ...$parsing],
             "Container/Matroska/EbmlReader.php: cut off element data" => [fn () => self::mkv("", ["codecPrivate" => "abc"], "c"), ...$parsing],
             "Container/Matroska/EbmlReader.php: unsigned integer of 2^63" => [fn () => self::mkv(MkvFixtureWriter::cluster(0, [
                                                                 MkvFixtureWriter::blockGroup(2, 0, "x", PHP_INT_MIN)]))->extract(2), ...$parsing],
             "Container/Matroska/MatroskaReader.php: stream not seekable" => [fn () => MatroskaReader::open(fopen("php://output", "wb")), ...$invalid],
             "Container/Matroska/MatroskaReader.php: unknown track" => [fn () => self::mkv("")->extract(9), ...$invalid],
-            "Container/Matroska/MatroskaReader.php: unsupported codec" => [fn () => self::mkv("", ["codecId" => "S_DVBSUB"])->extract(2), ...$parsing],
+            "Container/Matroska/MatroskaReader.php: unsupported codec" => [fn () => self::mkv("", ["codecId" => "S_ARIBSUB"])->extract(2), ...$parsing],
             "Container/MpegTs/MpegTsReader.php: stream not seekable" => [fn () => MpegTsReader::open(fopen("php://output", "wb")), ...$invalid],
             "Container/MpegTs/MpegTsReader.php: unknown track" => [fn () => MpegTsReader::open(self::FILES . "mpegts/one_page.ts")->extract(100), ...$invalid],
             "Container/MpegTs/MpegTsReader.php: not MPEG-TS" => [fn () => MpegTsReader::open(self::stream(str_repeat("\0", 400))), ...$parsing],
@@ -478,6 +481,11 @@ class ThrowSitesTest extends TestCase
             "Image/CueImage.php: no png"                    => [fn () => CueImage::fromCue((new SubtitleCue(1, 2))
                 ->setFormatData(CueImage::FORMAT_DATA_KEY, ["x" => 0, "y" => 0, "width" => 1, "height" => 1,
                                                             "screenWidth" => 1, "screenHeight" => 1])), ...$invalid],
+            "Image/IndexedImages.php: parts too large"      => [fn () => (new PgsParser())->parse(
+                self::pgsSegment(0x16, "\x1F\x40\x04\x38\x10\0\1\x80\0\0\2" . "\0\0\0\0\0\0\0\0" . "\0\1\0\0" . pack("nn", 8000, 0)) .
+                self::pgsSegment(0x14, "\0\0\1\x10\x80\x80\xFF") .
+                self::pgsSegment(0x15, "\0\0\0\xC0\0\0\5\0\1\0\1\1") . self::pgsSegment(0x15, "\0\1\0\xC0\0\0\5\0\1\0\1\1") .
+                self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
             "Image/PngEncoder.php: width 0"                 => [fn () => PngEncoder::encode(0, 1, []), ...$invalid],
             "Image/PngEncoder.php: pixel count"             => [fn () => PngEncoder::encode(1, 1, []), ...$invalid],
             "Image/PaletteReducer.php: 257 colors"          => [fn () => PaletteReducer::reduce([0], 257), ...$invalid],

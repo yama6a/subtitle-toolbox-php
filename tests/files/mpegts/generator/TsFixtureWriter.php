@@ -64,6 +64,31 @@ final class TsFixtureWriter
 
 
     /**
+     * A subtitling descriptor of ETSI EN 300 468. Each entry is [language, subtitling type, composition page, ancillary page].
+     *
+     * @param list<array{string, int, int, int}> $services
+     */
+    public static function subtitlingDescriptor(array $services): string
+    {
+        $entries = "";
+        foreach ($services as [$language, $type, $page, $ancillaryPage]) {
+            $entries .= $language . pack("Cnn", $type, $page, $ancillaryPage);
+        }
+
+        return chr(0x59) . chr(strlen($entries)) . $entries;
+    }
+
+
+    /**
+     * Adds a DVB subtitle PES packet with the segments of ETSI EN 300 743.
+     */
+    public function subtitlePes(int $pid, int $pts, string $segments): void
+    {
+        $this->packets($pid, self::pes(0xBD, $pts, "\x20\x00" . $segments . "\xFF", 5), null);
+    }
+
+
+    /**
      * Adds a PES packet with a PTS and a PCR in its first TS packet.
      */
     public function videoPes(int $pid, int $pts): void

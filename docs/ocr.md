@@ -1,6 +1,6 @@
 # Image subtitles and OCR
 
-Blu-ray discs store subtitles as PGS bitmaps, DVDs as VobSub bitmaps. The library reads both as image cues. OCR (optical character recognition) turns the bitmaps into text, so you can write a text format.
+Blu-ray discs store subtitles as PGS bitmaps, DVDs as VobSub bitmaps, and DVB broadcasts as DVB subtitles. The library reads all three as image cues. OCR (optical character recognition) turns the bitmaps into text, so you can write a text format.
 
 ## Image cues
 An **image cue** is a cue with a PNG image in the format data key `image`. It has no text lines until an OCR engine reads it.
@@ -28,7 +28,7 @@ $subtitle->toString(Format::SubRip, new WriteOptions(skipImageCues: true));   //
 - **Confidence**: `(new OcrRunner($engine))->run($subtitle, 'eng')` does the same as `recognizeText()`. It returns an `OcrReport` whose `texts` hold the `RecognizedText` of each cue by cue index.
 - **Forced flag**: `CueImage::applyTo()` sets the forced flag of the cue from the `forced` field of the image. OCR keeps the flag.
 - **PNG**: `PngEncoder::encode($width, $height, $pixels)` makes a PNG from a list of `0xRRGGBBAA` integers. It needs no ext-gd. It compresses with ext-zlib when it is loaded. Otherwise it writes larger, uncompressed PNG files. `PngDecoder::decode($png)` returns the width, the height and the pixels of a PNG without interlacing. It needs ext-zlib.
-- **Size limit**: an image is at most 7,680 pixels wide or high. It has at most 8,294,400 pixels, the pixels of a 3840x2160 frame. A larger PGS object or VobSub bitmap throws `ParsingException`. `new CueImage()` and `PngDecoder::decode()` throw `InvalidArgumentException`. The limits are `CueImage::MAX_SIDE` and `CueImage::MAX_PIXELS`. `PgsParser` and `PgsFormatter` read and write a full 3840x2160 object in about 35 MB of PHP memory. A VobSub bitmap or an RGBA PNG of that size needs about 330 MB, so raise `memory_limit` for such files.
+- **Size limit**: an image is at most 7,680 pixels wide or high. It has at most 8,294,400 pixels, the pixels of a 3840x2160 frame. A larger PGS object, VobSub bitmap or DVB subtitle region throws `ParsingException`. `new CueImage()` and `PngDecoder::decode()` throw `InvalidArgumentException`. The limits are `CueImage::MAX_SIDE` and `CueImage::MAX_PIXELS`. `PgsParser` and `PgsFormatter` read and write a full 3840x2160 object in about 35 MB of PHP memory. A VobSub bitmap or an RGBA PNG of that size needs about 330 MB, so raise `memory_limit` for such files.
 - **Text errors**: [common error fixes](text.md#fixing-common-errors) correct OCR errors such as `lt's` for `It's`.
 
 ## PGS
@@ -82,6 +82,15 @@ $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);  // "de", from the id line
 - **MKV**: `Subtitle::loadTrack()` reads an `S_VOBSUB` track of an MKV file the same way, see [mkv.md](mkv.md).
 - **Limits**: the parser reads one image per subpicture. Color and contrast changes after the start command do not apply. The parser ignores the `org`, `scale`, `align`, `fadein/out` and `time offset` player settings.
 - **No formatter**: convert VobSub to PGS with `PgsFormatter`, or to text after OCR.
+
+## DVB subtitles
+DVB recordings in `.ts` files and MKV `S_DVBSUB` tracks hold bitmap subtitles of the DVB standard. `Subtitle::loadTrack()` reads them as image cues with the format `Format::Pgs`. So OCR, `PgsFormatter` and the text formats work on them as on PGS cues. See [mkv.md](mkv.md#dvb-subtitles) for the tracks, the times and the colors.
+
+```php
+$subtitle = Subtitle::loadTrack('recording.ts', 2050);                  // the DVB subtitle stream with PID 2050
+$subtitle->recognizeText(OcrEngineChooser::create(), OcrLanguage::German);
+$subtitle->save('recording.srt');
+```
 
 ## Choosing an engine
 `OcrEngineChooser` picks the engine in one place. It uses Tesseract when the `tesseract` program runs. Otherwise it uses php-glyph-ocr when the package is installed. When neither engine is installed, it throws `InvalidArgumentException` that names both engines.

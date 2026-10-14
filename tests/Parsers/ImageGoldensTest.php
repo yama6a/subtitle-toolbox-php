@@ -64,11 +64,13 @@ class ImageGoldensTest extends TestCase
     public function testEveryGoldenFileHasAFixture(): void
     {
         $expected = [];
-        foreach (ImageGoldens::cases() as [, $track, $golden]) {
-            array_push($expected, "$golden.json", "$golden.png", ...($track === null ? [] : ["$golden.to.sup"]));
+        foreach (ImageGoldens::cases() as [$fixture, , $golden]) {
+            array_push($expected, "$golden.json", "$golden.png", ...(str_ends_with($fixture, ".idx") ? ["$golden.to.sup"] : []));
         }
-        $files = array_map(fn (string $path): string => substr($path, strlen(TestFiles::DIR)),
-                           [...glob(TestFiles::DIR . "pgs/expected/*"), ...glob(TestFiles::DIR . "vobsub/expected/*")]);
+        $files = array_map(fn (string $path): string => substr($path, strlen(TestFiles::DIR)), [
+            ...glob(TestFiles::DIR . "pgs/expected/*"), ...glob(TestFiles::DIR . "vobsub/expected/*"),
+            ...glob(TestFiles::DIR . "mpegts/expected/*.{json,png}", GLOB_BRACE), ...glob(TestFiles::DIR . "mkv/expected/*.{json,png}", GLOB_BRACE),
+        ]);
 
         $this->assertEqualsCanonicalizing($expected, $files);
     }

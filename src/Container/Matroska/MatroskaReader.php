@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Container\Matroska;
 use Generator;
 use SubtitleToolbox\Container\ContainerFormat;
 use SubtitleToolbox\Container\ContainerReader;
+use SubtitleToolbox\Container\DvbSubtitleDecoder;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Dependency;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -37,9 +38,10 @@ final class MatroskaReader implements ContainerReader
     public const CODEC_WEBVTT = "S_TEXT/WEBVTT";
     public const CODEC_PGS    = "S_HDMV/PGS";
     public const CODEC_VOBSUB = "S_VOBSUB";
+    public const CODEC_DVBSUB = "S_DVBSUB";
 
     public const CODECS = [self::CODEC_SUBRIP, self::CODEC_ASS, self::CODEC_SSA, self::CODEC_WEBVTT, self::CODEC_PGS, self::CODEC_VOBSUB,
-                           self::CODEC_WEBM_SUBTITLES, self::CODEC_WEBM_CAPTIONS, self::CODEC_WEBM_DESCRIPTIONS];
+                           self::CODEC_DVBSUB, self::CODEC_WEBM_SUBTITLES, self::CODEC_WEBM_CAPTIONS, self::CODEC_WEBM_DESCRIPTIONS];
 
     /** The first 4 bytes of every Matroska and WebM file. */
     public const EBML_MAGIC = "\x1A\x45\xDF\xA3";
@@ -69,6 +71,7 @@ final class MatroskaReader implements ContainerReader
         self::CODEC_WEBM_DESCRIPTIONS => Format::WebVtt,
         self::CODEC_PGS    => Format::Pgs,
         self::CODEC_VOBSUB => Format::VobSub,
+        self::CODEC_DVBSUB => Format::Pgs,
     ];
 
     private const ID_EBML             = 0x1A45DFA3;
@@ -254,12 +257,13 @@ final class MatroskaReader implements ContainerReader
             $blocks = $this->timedBlocks($blocks, $trackData, $options->lastCueDuration);
         }
 
-        $subtitle = match ($format) {
-            Format::Pgs    => (new PgsParser())->parse(TrackFileBuilder::pgsStream($blocks, $this->timestampScale), $options),
-            Format::WebVtt => (new WebVttParser())->parse(TrackFileBuilder::webVttFile($track, $codecPrivate, $blocks), $options),
-            Format::SubRip => (new SubRipParser())->parse(TrackFileBuilder::subRipFile($blocks), $options),
-            Format::Ass    => (new AssParser())->parse(TrackFileBuilder::assFile($track, $codecPrivate, $blocks), $options),
-            Format::VobSub => (new VobSubParser())->parseBlocks($codecPrivate, array_map(
+        $subtitle = match (true) {
+            $track->codecId === self::CODEC_DVBSUB => $this->dvbSubtitle($codecPrivate, $blocks, $options),
+            $format === Format::Pgs                => (new PgsParser())->parse(TrackFileBuilder::pgsStream($blocks, $this->timestampScale), $options),
+            $format === Format::WebVtt             => (new WebVttParser())->parse(TrackFileBuilder::webVttFile($track, $codecPrivate, $blocks), $options),
+            $format === Format::SubRip             => (new SubRipParser())->parse(TrackFileBuilder::subRipFile($blocks), $options),
+            $format === Format::Ass                => (new AssParser())->parse(TrackFileBuilder::assFile($track, $codecPrivate, $blocks), $options),
+            default                                => (new VobSubParser())->parseBlocks($codecPrivate, array_map(
                 fn (array $block): array => ["start" => $block["startMs"] / 1000, "end" => $block["endMs"] / 1000, "data" => $block["data"]],
                 $blocks,
             ), $options),
@@ -274,6 +278,24 @@ final class MatroskaReader implements ContainerReader
         }
 
         return $subtitle;
+    }
+
+
+    /**
+     * Reads the blocks of an S_DVBSUB track. CodecPrivate holds the composition page and the ancillary page of the subtitles.
+     *
+     * @param list<array{start: int, duration: ?int, data: string, additional: ?string}> $blocks
+     */
+    private function dvbSubtitle(string $codecPrivate, array $blocks, ReadOptions $options): Subtitle
+    {
+        [$composition, $ancillary] = strlen($codecPrivate) >= 4 ? array_values(unpack("n2", $codecPrivate)) : [null, null];
+        $decoder                   = new DvbSubtitleDecoder($composition, $ancillary);
+        foreach ($blocks as $block) {
+            $start = $block["start"] * $this->timestampScale / 1e9;
+            $decoder->add($block["data"], $start, $block["duration"] === null ? null : $start + $block["duration"] * $this->timestampScale / 1e9);
+        }
+
+        return (new Subtitle())->addCues($decoder->finish($options->lastCueDuration));
     }
 
 

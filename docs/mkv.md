@@ -1,6 +1,6 @@
 # MKV, WebM, MP4 and MPEG-TS subtitle tracks
 
-Media servers and subtitle managers get MKV files with embedded subtitles. The library reads the subtitle tracks of MKV, WebM and MP4 files and the teletext subtitles of MPEG-TS recordings in PHP, without `ffmpeg` or `mkvextract`. This page covers MKV and WebM first. The [MP4](#mp4) section covers MP4 and MOV, the [MPEG-TS teletext](#mpeg-ts-teletext) section DVB recordings. It reads only. In the command line tool, `info movie.mkv` lists the tracks and `convert movie.mkv --to srt -o out.srt --track 3` reads one. See [cli](cli.md).
+Media servers and subtitle managers get MKV files with embedded subtitles. The library reads the subtitle tracks of MKV, WebM and MP4 files and the teletext and DVB subtitles of MPEG-TS recordings in PHP, without `ffmpeg` or `mkvextract`. This page covers MKV and WebM first. The [MP4](#mp4) section covers MP4 and MOV, the [MPEG-TS teletext](#mpeg-ts-teletext) section DVB recordings, and the [DVB subtitles](#dvb-subtitles) section the bitmap subtitles of DVB recordings in MPEG-TS and MKV files. It reads only. In the command line tool, `info movie.mkv` lists the tracks and `convert movie.mkv --to srt -o out.srt --track 3` reads one. See [cli](cli.md).
 
 ```php
 use SubtitleToolbox\Subtitle;
@@ -22,6 +22,7 @@ Subtitle::load('/media/one-track.webm');                       // reads the only
 | `D_WEBVTT/SUBTITLES`, `D_WEBVTT/CAPTIONS`, `D_WEBVTT/DESCRIPTIONS` | a WebVTT subtitle with cue settings and identifiers, as ffmpeg writes WebVTT into WebM. `D_WEBVTT/METADATA` holds no text to display, and the reader does not extract it |
 | `S_HDMV/PGS` | image cues from `PgsParser`, see [ocr.md](ocr.md#pgs) |
 | `S_VOBSUB` | image cues from `VobSubParser`, as the `.idx` and `.sub` pair gives them. `CodecPrivate` holds the `.idx` header |
+| `S_DVBSUB` | image cues, see [DVB subtitles](#dvb-subtitles) |
 
 - **Tracks**: `Subtitle::tracks()` lists only tracks of type subtitle. It returns `SubtitleTrack` objects from the namespace `SubtitleToolbox\Container`. It reads MKV, WebM, MP4, MOV and MPEG-TS files.
 
@@ -45,8 +46,8 @@ Subtitle::load('/media/one-track.webm');                       // reads the only
 - **Live recordings**: the reader accepts a file with elements of unknown size, as live recordings write them.
 - **Memory**: the reader skips video and audio data, so memory grows with the subtitle track, not with the file. In the tests, a 64 MB file with 64 cues needs less than 4 MB.
 - **Speed**: in a file from mkvmerge, the reader reads only the blocks that the `Cues` element lists for the track. It does so only when their number equals the `NUMBER_OF_FRAMES` tag that mkvmerge writes for the track. For a 2-hour, 1.3 GB film with 2,000 cues, `loadTrack()` then takes 0.24 s instead of 1.1 s, and 3.2 s instead of 6.8 s from disk. In other files, and when the numbers differ, the reader walks the whole file for each `loadTrack()` call.
-- **Errors**: `loadTrack()`, `MatroskaReader::extract()` and `MatroskaReader::trackFormat()` throw `InvalidArgumentException` for a number that is not a subtitle track. `trackFormat()` returns null for a codec that the reader does not extract, such as `S_DVBSUB`. `loadTrack()` and `extract()` throw `ParsingException` in these cases:
-  - Another codec, such as `S_DVBSUB`.
+- **Errors**: `loadTrack()`, `MatroskaReader::extract()` and `MatroskaReader::trackFormat()` throw `InvalidArgumentException` for a number that is not a subtitle track. `trackFormat()` returns null for a codec that the reader does not extract, such as `S_ARIBSUB`. `loadTrack()` and `extract()` throw `ParsingException` in these cases:
+  - Another codec, such as `S_ARIBSUB`.
   - A `S_VOBSUB` track without a `size` or `palette` line in `CodecPrivate`.
   - Laced subtitle blocks.
   - A block that starts or ends at 100,000 hours or more, the [time limit](formats.md) of the parsers.
@@ -106,7 +107,7 @@ Subtitle::loadTrack('/media/recording.ts', 777)->save('recording.srt');
 | `default` | false |
 | `forced` | false |
 
-- **Tracks**: `tracks()` lists the pages of the teletext descriptors in the PMT with the teletext type "subtitle page" or "subtitle page for hearing impaired people". It does not list DVB bitmap subtitles (`dvb_subtitle`).
+- **Tracks**: `tracks()` lists the pages of the teletext descriptors in the PMT with the teletext type "subtitle page" or "subtitle page for hearing impaired people". It lists DVB bitmap subtitles after the pages, see [DVB subtitles](#dvb-subtitles).
 - **Cues**: each state of the page that shows text becomes a cue. A state starts at the PTS of the page header and lasts until the next page header that changes the text. A header with the erase flag clears the page. A header without it keeps the rows, and the rows that follow replace single rows. The same text sent again continues the cue. The last cue ends at the last PTS of the teletext stream, or lasts [`ReadOptions::$lastCueDuration`](read-options.md) when no later PTS exists.
 - **Times**: cue times count from the first PTS of the program, as ffmpeg counts them. A recording longer than the PTS cycle of 26.5 hours keeps counting.
 - **Text**: a subtitle page shows only the text in its boxes. Each row with text becomes a line. The reader turns red, green, yellow, blue, magenta, cyan and black text into `<font color>` tags, for example `<font color="#ffff00">` for yellow. It ignores double height, flashing, background colors and mosaic graphics.
@@ -116,3 +117,32 @@ Subtitle::loadTrack('/media/recording.ts', 777)->save('recording.srt');
 - **Memory**: the reader reads the file once from the start and keeps only the teletext packets of the page. In the tests, a 378 MB file with 10 minutes of 5 Mbit/s video takes 0.4 s and needs less than 3 MB.
 - **Errors**: `extract()` throws `ParsingException` for a page in the Arabic or Hebrew set. `open()` throws it for a file that is not MPEG-TS.
 - **Spec**: ISO/IEC 13818-1 for the packets, the PAT, the PMT and the PES packets. [ETSI EN 300 468](https://www.etsi.org/deliver/etsi_en/300400_300499/300468/01.17.01_60/en_300468v011701p.pdf) for the teletext descriptor, [ETSI EN 300 472](https://www.etsi.org/deliver/etsi_en/300400_300499/300472/01.04.01_60/en_300472v010401p.pdf) for teletext in PES packets and [ETS 300 706](https://www.etsi.org/deliver/etsi_i_ets/300700_300799/300706/01_60/ets_300706e01p.pdf) for teletext.
+
+## DVB subtitles
+
+Many DVB broadcasts in Europe send subtitles as bitmaps (`dvb_subtitle`), instead of teletext or next to it. Recordings keep them in `.ts` files, and mkvmerge and ffmpeg copy them into MKV `S_DVBSUB` tracks. The same calls read them as image cues, as PGS and VobSub tracks are read. OCR then turns them into text, see [ocr.md](ocr.md).
+
+```php
+foreach (Subtitle::tracks('/media/recording.ts') as $track) {
+    echo "$track->number $track->codecId $track->language", PHP_EOL;   // 777 dvb_teletext deu, then 2050 dvb_subtitle deu
+}
+Subtitle::loadTrack('/media/recording.ts', 2050)->recognizeText(OcrEngineChooser::create(), OcrLanguage::German)->save('recording.srt');
+```
+
+| Property | MPEG-TS value |
+|:--- |:--- |
+| `number` | the PID of the stream, for example `2050` for PID 0x802. When a teletext page has that number, or for the second and later service of the same stream, it is the PID times 1,000 plus the index of the service, for example `2050001` |
+| `codecId` | `dvb_subtitle` |
+| `format` | `Format::Pgs`, so `convert` without `--to` writes a `.sup` file |
+| `language` | the language of the service in the subtitling descriptor, for example `deu` |
+| `name` | `hearing impaired` for the subtitling types 0x20 to 0x25, else null |
+| `default`, `forced` | false |
+
+- **Tracks**: `tracks()` lists each service of the subtitling descriptor (tag 0x59) in the PMT. A **service** is one entry of the descriptor: a language with its composition page and ancillary page. Teletext pages keep their numbers.
+- **MKV**: an `S_DVBSUB` track has the format `Format::Pgs`. The first 4 bytes of `CodecPrivate` hold the composition page and the ancillary page. Without them, the reader reads the segments of every page. A block with a duration ends its cue at the latest at the end of the block.
+- **Cues**: each display set that shows pixels gives one cue. It ends at the next display set that shows other pixels or none, or at the page time-out. A display set that repeats the same image, such as an acquisition point, continues the cue. A last cue without a page time-out lasts [`ReadOptions::$lastCueDuration`](read-options.md). Times count from the first PTS of the program, as for teletext.
+- **Image**: the reader draws the objects into their regions and places the regions on the display of the display definition segment, or on 720x576 without one. One PNG covers all regions with visible pixels, on a transparent background, as for [PGS](ocr.md#pgs). A region without visible pixels drops out, so a page of transparent regions ends the cue.
+- **Colors**: the CLUT entries hold Y, Cr and Cb codes of ITU-R BT.601. The reader converts them to RGB with the math of the PGS parser. A CLUT entry with Y 0 is transparent. Regions without a CLUT definition use the default CLUTs of the spec.
+- **Pixels**: the reader reads 2-bit, 4-bit and 8-bit pixel code strings, the map tables between them and the non-modifying color. It ends a pixel code string at the end of the region row too. ffmpeg 7.0 ends its 8-bit strings with 1 zero byte instead of 2, and its own decoder reads them the same way. Objects coded as character strings show nothing.
+- **Errors**: `extract()` throws `ParsingException` for a region or a set of regions larger than the [size limit](ocr.md#image-cues) of images. The reader skips damaged and unknown segments.
+- **Spec**: [ETSI EN 300 743](https://www.etsi.org/deliver/etsi_en/300700_300799/300743/01.06.01_60/en_300743v010601p.pdf) for the segments, [ETSI EN 300 468](https://www.etsi.org/deliver/etsi_en/300400_300499/300468/01.17.01_60/en_300468v011701p.pdf) for the subtitling descriptor, [Matroska subtitles](https://www.matroska.org/technical/subtitles.html) for `S_DVBSUB`.

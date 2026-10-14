@@ -12,7 +12,7 @@ Upgrading from 3.x? See the [4.0 upgrade guide](docs/upgrade-4.0.md).
 ## Install
 ```sh
 composer require yama6a/subtitle-toolbox-php
-# Optional, for OCR of PGS and VobSub image subtitles:
+# Optional, for OCR of PGS, VobSub and DVB image subtitles:
 composer require yama6a/php-glyph-ocr:^0.3   # php-glyph-ocr, the pure PHP OCR engine
 apt install tesseract-ocr                    # or Tesseract on Debian and Ubuntu, for more than 100 languages
 ```
@@ -89,8 +89,9 @@ The command line tool also comes as a PHAR file and as two container images. The
 
 | Format | Case | Name | Extensions | Read | Write | Notes |
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
-| [MKV](https://www.rfc-editor.org/rfc/rfc9559) and [WebM](https://www.webmproject.org/docs/container/) tracks | | | `.mkv`, `.webm` | ✅ | ❌ | text, ASS, SSA, WebVTT, PGS and VobSub tracks |
+| [MKV](https://www.rfc-editor.org/rfc/rfc9559) and [WebM](https://www.webmproject.org/docs/container/) tracks | | | `.mkv`, `.webm` | ✅ | ❌ | text, ASS, SSA, WebVTT, PGS, VobSub and DVB subtitle tracks |
 | [MP4 tracks](https://www.3gpp.org/dynareport/26245.htm) | | | `.mp4`, `.m4v`, `.mov` | ✅ | ❌ | `tx3g` (`mov_text`) tracks, `c608` and `c708` closed caption tracks |
+| [MPEG-TS DVB subtitles](https://www.etsi.org/deliver/etsi_en/300700_300799/300743/01.06.01_60/en_300743v010601p.pdf) | | | `.ts` | ✅ | ❌ | DVB bitmap subtitles as image cues |
 | [MPEG-TS teletext](https://www.etsi.org/deliver/etsi_en/300400_300499/300472/01.04.01_60/en_300472v010401p.pdf) | | | `.ts` | ✅ | ❌ | DVB teletext subtitle pages, see [ETS 300 706](https://www.etsi.org/deliver/etsi_i_ets/300700_300799/300706/01_60/ets_300706e01p.pdf) |
 
 ## Command line tool
@@ -192,6 +193,7 @@ foreach (Subtitle::tracks('movie.mkv') as $track) {
 }
 $subtitle = Subtitle::loadTrack('movie.mkv', 3);
 $subtitle = Subtitle::loadTrack('recording.ts', 777);                          // teletext page 777 of a DVB recording
+$subtitle = Subtitle::loadTrack('recording.ts', 2050);                         // DVB bitmap subtitles with PID 2050, as image cues
 ```
 
 ### OCR
@@ -240,7 +242,7 @@ echo "offset $report->offset s, scale $report->scale, score $report->score\n";
 Every exception implements `SubtitleToolboxException`. See [errors.md](docs/errors.md).
 
 ## OCR
-OCR turns the bitmaps of PGS and VobSub subtitles into text. The library uses Tesseract when it is installed. Otherwise it uses php-glyph-ocr. When neither engine is installed, the call throws `InvalidArgumentException` that names both engines. Tesseract reads more than 100 languages. php-glyph-ocr reads only Latin-script fonts. See [ocr.md](docs/ocr.md) for the install commands and a comparison of the engines.
+OCR turns the bitmaps of PGS, VobSub and DVB subtitles into text. The library uses Tesseract when it is installed. Otherwise it uses php-glyph-ocr. When neither engine is installed, the call throws `InvalidArgumentException` that names both engines. Tesseract reads more than 100 languages. php-glyph-ocr reads only Latin-script fonts. See [ocr.md](docs/ocr.md) for the install commands and a comparison of the engines.
 
 ## Compatibility
 See [compatibility.md](docs/compatibility.md) for the parts that semantic versioning covers and for what a minor or patch release can change.

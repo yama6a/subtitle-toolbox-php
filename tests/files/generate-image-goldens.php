@@ -19,7 +19,7 @@ foreach (ImageGoldens::cases() as [$fixture, $track, $golden]) {
     $subtitle = ImageGoldens::parse($fixture, $track);
     file_put_contents(TestFiles::DIR . "$golden.json", ImageGoldens::render($subtitle));
     file_put_contents(TestFiles::DIR . "$golden.png", CueImage::fromCue($subtitle->getCues()[0])->png);
-    if ($track !== null) {
+    if (str_ends_with($fixture, ".idx")) {
         file_put_contents(TestFiles::DIR . "$golden.to.sup", $subtitle->toString(Format::Pgs));
     }
 }
