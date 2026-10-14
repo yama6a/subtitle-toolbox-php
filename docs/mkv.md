@@ -1,6 +1,6 @@
 # MKV, WebM, MP4 and MPEG-TS subtitle tracks
 
-Media servers and subtitle managers get MKV files with embedded subtitles. The library reads the subtitle tracks of MKV, WebM and MP4 files and the teletext and DVB subtitles of MPEG-TS recordings in PHP, without `ffmpeg` or `mkvextract`. This page covers MKV and WebM first. The [MP4](#mp4) section covers MP4 and MOV, the [MPEG-TS teletext](#mpeg-ts-teletext) section DVB recordings, and the [DVB subtitles](#dvb-subtitles) section the bitmap subtitles of DVB recordings in MPEG-TS and MKV files. It reads only. In the command line tool, `info movie.mkv` lists the tracks and `convert movie.mkv --to srt -o out.srt --track 3` reads one. See [cli](cli.md).
+Media servers and subtitle managers get MKV files with embedded subtitles. The library reads the subtitle tracks of MKV, WebM and MP4 files and the teletext and DVB subtitles of MPEG-TS recordings and the ARIB captions of Japanese and Brazilian recordings in PHP, without `ffmpeg` or `mkvextract`. This page covers MKV and WebM first. The [MP4](#mp4) section covers MP4 and MOV, the [MPEG-TS teletext](#mpeg-ts-teletext) section DVB recordings, the [DVB subtitles](#dvb-subtitles) section the bitmap subtitles of DVB recordings in MPEG-TS and MKV files, and the [ARIB captions](#arib-captions) section ISDB recordings. It reads only. In the command line tool, `info movie.mkv` lists the tracks and `convert movie.mkv --to srt -o out.srt --track 3` reads one. See [cli](cli.md).
 
 ```php
 use SubtitleToolbox\Subtitle;
@@ -113,7 +113,7 @@ Subtitle::loadTrack('/media/recording.ts', 777)->save('recording.srt');
 - **Text**: a subtitle page shows only the text in its boxes. Each row with text becomes a line. The reader turns red, green, yellow, blue, magenta, cyan and black text into `<font color>` tags, for example `<font color="#ffff00">` for yellow. It ignores double height, flashing, background colors and mosaic graphics.
 - **Character sets**: the reader reads the Latin set with its 13 national option subsets, the 3 Cyrillic sets and the Greek set. Packet X/28/0 or M/29/0 picks the group of sets. Without them, the reader takes the group of the language: `pol` gives Polish, `tur` Turkish, `rus`, `ukr` and `bul` Cyrillic, and `gre` Greek, for example. Other languages give Western Europe. The page header picks the set in the group. The reader does not read packet X/26, which some broadcasters use for single accented letters.
 - **Transmission errors**: Hamming 8/4 and Hamming 24/18 correct 1 bit error. The reader skips a packet whose address or page header has 2 bit errors, and shows a character with a parity error as a space.
-- **Detection**: `load()` and `fromString()` without a format know an MPEG-TS file by the sync byte `0x47` at the start of its first 3 packets of 188 bytes. Blu-ray M2TS files with packets of 192 bytes are not read.
+- **Detection**: `load()` and `fromString()` without a format know an MPEG-TS file by the sync byte `0x47` at the start of its first 3 packets of 188 bytes. They know an M2TS file of Blu-ray discs and Japanese recorders by the sync byte after the 4-byte time stamp of its first 3 packets of 192 bytes. The reader reads both.
 - **Memory**: the reader reads the file once from the start and keeps only the teletext packets of the page. In the tests, a 378 MB file with 10 minutes of 5 Mbit/s video takes 0.4 s and needs less than 3 MB.
 - **Errors**: `extract()` throws `ParsingException` for a page in the Arabic or Hebrew set. `open()` throws it for a file that is not MPEG-TS.
 - **Spec**: ISO/IEC 13818-1 for the packets, the PAT, the PMT and the PES packets. [ETSI EN 300 468](https://www.etsi.org/deliver/etsi_en/300400_300499/300468/01.17.01_60/en_300468v011701p.pdf) for the teletext descriptor, [ETSI EN 300 472](https://www.etsi.org/deliver/etsi_en/300400_300499/300472/01.04.01_60/en_300472v010401p.pdf) for teletext in PES packets and [ETS 300 706](https://www.etsi.org/deliver/etsi_i_ets/300700_300799/300706/01_60/ets_300706e01p.pdf) for teletext.
@@ -146,3 +146,33 @@ Subtitle::loadTrack('/media/recording.ts', 2050)->recognizeText(OcrEngineChooser
 - **Pixels**: the reader reads 2-bit, 4-bit and 8-bit pixel code strings, the map tables between them and the non-modifying color. It ends a pixel code string at the end of the region row too. ffmpeg 7.0 ends its 8-bit strings with 1 zero byte instead of 2, and its own decoder reads them the same way. Objects coded as character strings show nothing.
 - **Errors**: `extract()` throws `ParsingException` for a region or a set of regions larger than the [size limit](ocr.md#image-cues) of images. The reader skips damaged and unknown segments.
 - **Spec**: [ETSI EN 300 743](https://www.etsi.org/deliver/etsi_en/300700_300799/300743/01.06.01_60/en_300743v010601p.pdf) for the segments, [ETSI EN 300 468](https://www.etsi.org/deliver/etsi_en/300400_300499/300468/01.17.01_60/en_300468v011701p.pdf) for the subtitling descriptor, [Matroska subtitles](https://www.matroska.org/technical/subtitles.html) for `S_DVBSUB`.
+
+## ARIB captions
+
+Japanese digital TV (ISDB-T, ISDB-S) sends captions as ARIB STD-B24 text. Brazil and most of Latin America (ISDB-Tb) use the variant of ABNT NBR 15606-1 with Latin letters. Recordings keep them in `.ts` files, and Japanese recorders in `.m2ts` files. The same calls read them as text cues.
+
+```php
+Subtitle::loadTrack('/media/recording.m2ts', 304)->save('recording.srt');
+```
+
+| Property | MPEG-TS value |
+|:--- |:--- |
+| `number` | the PID of the stream, for example `304` for PID 0x130. When a teletext page or a DVB subtitle stream has that number, it is the PID times 1,000, for example `304000` |
+| `codecId` | `arib_caption`, the ffmpeg codec name |
+| `format` | `Format::SubRip` |
+| `language` | the first language of the caption management data in the first 32 MB of the file, for example `jpn` or `por`, else `und` |
+| `name` | null |
+| `default`, `forced` | false |
+
+- **Tracks**: `tracks()` lists each stream of type 0x06 with a component tag from 0x30 to 0x37 and the data component ID 0x0008, as ffmpeg does. It does not list superimposed text (component tags 0x38 to 0x3F) or the captions of one-seg mobile TV (profile C).
+- **Languages**: a stream can hold 2 languages. The reader reads the first one, as ffmpeg does.
+- **Cues**: each state of the caption screen with text becomes a cue. A caption statement shows at its PTS. CS (clear screen) clears it. A TIME control waits, so a statement with TIME 2 s and then CS ends its text 2 s after its PTS. The last cue ends at the last PTS of the stream, or lasts [`ReadOptions::$lastCueDuration`](read-options.md). Times count from the first PTS of the program, as for teletext. The reader shows a statement at its PTS also in the real time mode, and ignores its STM time, as libaribcaption does.
+- **Text**: each row of the screen becomes a line, from top to bottom. A gap of half a character or more inside a row becomes a space. Spaces at the start and end of a row drop. The reader turns colors other than white into `<font color>` tags, for example `<font color="#ffff00">` for yellow.
+- **Character sets**: the reader reads the 8-unit code with the sets of STD-B24: kanji, hiragana, katakana, alphanumerics, JIS X 0201 katakana, the additional kanji and symbols of rows 85 to 94 and the 16 default macros. iconv reads the kanji as EUC-JP. The JIS X 0213 sets need an iconv with EUC-JISX0213, such as glibc and GNU libiconv. Without it, their characters outside JIS X 0208 become U+FFFD. A stream with Portuguese or Spanish in the management data uses the Latin sets of ABNT NBR 15606-1. A stream with the UCS coding uses UTF-8, as in the Philippines.
+- **Middle size**: Japanese captions write Latin letters and digits at middle size, half as wide as kanji. As in ffmpeg, the reader writes them as ASCII, `OK`, and the Japanese punctuation as its half-width form, such as `｡`. At normal size, they stay full width, `ＯＫ`.
+- **Furigana**: furigana are small characters above a row that give the reading of the kanji below them. The reader writes them as ruby: `<ruby>今日<rt>きょう</rt></ruby>`. WebVTT keeps ruby. SubRip and the other formats write `今日 (きょう)`, see [formats.md](formats.md). Small characters without a row below them become their own line.
+- **Gaiji**: a stream can send characters as bitmaps (DRCS). The reader finds the character of 326 known bitmaps by their MD5 hash, as libaribcaption does, for example `｟` and `凜`. It writes another bitmap as U+3013 (`〓`) and adds a `ParseWarning` with the time, the size and the MD5 hash of the bitmap.
+- **Position**: the middle of the text on the caption plane gives the alignment: the left, middle or right third, and the top, middle or bottom third. Text in the top left corner gives `Alignment::TopLeft`.
+- **Ignored**: underline, bold, italic, flashing, background colors, outlines, built-in sounds, mosaic characters and vertical writing. The reader reads vertical text as rows.
+- **Errors**: the reader skips a data group or a data unit that ends early and ends a statement at a control function that ends early. It does not check the CRC.
+- **Spec**: [ARIB STD-B24](https://www.arib.or.jp/english/std_tr/broadcasting/std-b24.html) for the captions, [ARIB TR-B14](https://www.arib.or.jp/english/std_tr/broadcasting/tr-b14.html) for their use in broadcasts, ABNT NBR 15606-1 for the Latin variant.

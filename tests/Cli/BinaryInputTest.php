@@ -367,6 +367,7 @@ class BinaryInputTest extends CliTestCase
             "ffmpeg mov_text to SubRip"           => ["mp4/ffmpeg_mov_text.mp4", 2, "srt"],
             "ffmpeg c608 to SubRip"               => ["mp4/ffmpeg_c608.mov", 1, "srt"],
             "teletext page to SubRip"             => ["mpegts/teletext.ts", 888, "srt"],
+            "ARIB captions of M2TS to SubRip"     => ["mpegts/arib_brazilian.m2ts", 304, "srt"],
         ];
     }
 
@@ -385,6 +386,19 @@ class BinaryInputTest extends CliTestCase
 
         $this->assertSame([0, file_get_contents($expected), ""],
                           $this->runBinary(["convert", self::FILES . $file, "--track", (string) $track, "--to", $to, "-o", "-"]));
+    }
+
+
+    public function testConvertWritesARIBFuriganaAsWebVttRubyAndWarnsForAnUnknownGlyph(): void
+    {
+        $file = self::FILES . "mpegts/arib_japanese.ts";
+
+        $this->assertSame(
+            [0, file_get_contents(self::FILES . "mpegts/expected/arib_japanese.ts.304.to.vtt"),
+             "$file: At 4.500 s: The glyph of the character 0x24 of the set DRCS-1 (16x18 dots, MD5 f64e457dc1977177e8feb98f9944313e) has no "
+             . "known character. The reader wrote U+3013 for it. (repaired)\n"],
+            $this->runBinary(["convert", $file, "--track", "304", "--to", "vtt", "-o", "-"]),
+        );
     }
 
 

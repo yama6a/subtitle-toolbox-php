@@ -117,6 +117,30 @@ final class TsFixtureWriter
 
 
     /**
+     * Adds a PES packet of private stream 1 with a PTS, such as an ARIB caption PES packet.
+     */
+    public function privatePes(int $pid, int $pts, string $data): void
+    {
+        $this->packets($pid, self::pes(0xBD, $pts, $data, 5), null);
+    }
+
+
+    /**
+     * Returns the bytes as an M2TS file of Blu-ray and Japanese recorders: each packet gets a 4-byte arrival time stamp
+     * of a 27 MHz clock in front of it.
+     */
+    public static function m2ts(string $transportStream): string
+    {
+        $file = "";
+        foreach (str_split($transportStream, 188) as $index => $packet) {
+            $file .= pack("N", $index * 2700 & 0x3FFFFFFF) . $packet;
+        }
+
+        return $file;
+    }
+
+
+    /**
      * A page header packet X/0. $page is the page number such as 888. $national holds C12 to C14 with C12 as bit 0.
      */
     public static function header(int $page, bool $erase, int $national = 0, bool $subtitle = true, bool $serial = false): string

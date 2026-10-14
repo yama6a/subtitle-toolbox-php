@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Container\MpegTs;
 
 use Generator;
+use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Container\ContainerFormat;
 use SubtitleToolbox\Container\ContainerReader;
 use SubtitleToolbox\Container\DvbSubtitleDecoder;
@@ -12,26 +13,35 @@ use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Streaming\Streams;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
 /**
- * Reads the teletext subtitle pages and the DVB subtitle streams of MPEG transport streams, such as DVB recordings.
- * It reads the file once from the start and keeps only the packets of the subtitle stream.
+ * Reads the teletext subtitle pages and the DVB subtitle streams of MPEG transport streams, such as DVB recordings, and the
+ * ARIB captions of ISDB recordings. It reads the file once from the start and keeps only the packets of the subtitle stream.
+ * It reads M2TS files with 192-byte packets too.
  *
- * Packets, PAT, PMT and PES: ISO/IEC 13818-1. Teletext and subtitling descriptors: ETSI EN 300 468.
+ * Packets, PAT, PMT and PES: ISO/IEC 13818-1. Teletext and subtitling descriptors: ETSI EN 300 468. Caption streams:
+ * ARIB STD-B10 and ARIB TR-B14.
  */
 final class MpegTsReader implements ContainerReader
 {
     public const PACKET_SIZE = 188;
+
+    // An M2TS packet has a 4-byte arrival time stamp before the transport stream packet.
+    public const M2TS_PACKET_SIZE = 192;
 
     public const SYNC_BYTE = "\x47";
 
     public const CODEC_TELETEXT = "dvb_teletext";
 
     public const CODEC_DVB_SUBTITLE = "dvb_subtitle";
+
+    public const CODEC_ARIB_CAPTION = "arib_caption";
 
     // A file with the PAT or a PMT more than 32 MB into it is not a recording that starts at a packet.
     private const TABLE_SCAN_BYTES = 32 << 20;
@@ -56,6 +66,13 @@ final class MpegTsReader implements ContainerReader
     // The subtitling types of DVB subtitles for the hard of hearing, from "no monitor aspect ratio" to "plano-stereoscopic HD".
     private const HEARING_IMPAIRED_SUBTITLES = [0x20, 0x21, 0x22, 0x23, 0x24, 0x25];
 
+    // The stream identifier descriptor, and the data component descriptor with the data component ID of captions. The component
+    // tags 0x30 to 0x37 are the caption streams of ARIB TR-B14 profile A.
+    private const STREAM_IDENTIFIER_DESCRIPTOR = 0x52;
+    private const DATA_COMPONENT_DESCRIPTOR    = 0xFD;
+    private const CAPTION_DATA_COMPONENT       = 0x0008;
+    private const CAPTION_COMPONENT_TAGS       = [0x30, 0x37];
+
     private const CLOCK_RATE = 90000;
     private const PTS_RANGE  = 1 << 33;
 
@@ -63,6 +80,8 @@ final class MpegTsReader implements ContainerReader
     private $stream;
 
     private bool $ownsStream;
+
+    private int $packetSize = self::PACKET_SIZE;
 
     /** @var array<int, SubtitleTrack> */
     private array $tracks = [];
@@ -107,12 +126,26 @@ final class MpegTsReader implements ContainerReader
 
 
     /**
-     * Returns true for content with the sync byte at the start of its first 3 packets.
+     * Returns true for content with the sync byte at the start of its first 3 packets of 188 bytes, or after the time stamp
+     * of its first 3 packets of 192 bytes.
      */
     public static function isTransportStream(string $head): bool
     {
-        return strlen($head) > 2 * self::PACKET_SIZE && $head[0] === self::SYNC_BYTE && $head[self::PACKET_SIZE] === self::SYNC_BYTE
-               && $head[2 * self::PACKET_SIZE] === self::SYNC_BYTE;
+        return self::packetSize($head) !== null;
+    }
+
+
+    private static function packetSize(string $head): ?int
+    {
+        foreach ([self::PACKET_SIZE, self::M2TS_PACKET_SIZE] as $size) {
+            $sync = $size - self::PACKET_SIZE;
+            if (strlen($head) > 2 * $size + $sync && $head[$sync] === self::SYNC_BYTE && $head[$size + $sync] === self::SYNC_BYTE
+                && $head[2 * $size + $sync] === self::SYNC_BYTE) {
+                return $size;
+            }
+        }
+
+        return null;
     }
 
 
@@ -135,26 +168,35 @@ final class MpegTsReader implements ContainerReader
 
 
     /**
-     * Reads the teletext page or the DVB subtitle stream with the track number $trackNumber. Each state of a teletext page that
-     * shows text becomes a text cue. Each display set of DVB subtitles that shows pixels becomes an image cue.
-     * Times count from the first PTS of the program.
+     * Reads the teletext page, the DVB subtitle stream or the ARIB caption stream with the track number $trackNumber. Each state
+     * of a teletext page or of the caption screen that shows text becomes a text cue. Each display set of DVB subtitles that
+     * shows pixels becomes an image cue. Times count from the first PTS of the program.
      */
     public function extract(int $trackNumber, ?ReadOptions $options = null): Subtitle
     {
         $options ??= new ReadOptions();
         $track     = $this->subtitleTrack($trackNumber);
         $page      = $this->pages[$trackNumber];
-        if ($track->codecId === self::CODEC_DVB_SUBTITLE) {
+        $warnings  = [];
+        if ($track->codecId === self::CODEC_ARIB_CAPTION) {
+            $decoder       = new AribCaptionDecoder($track->language);
+            [$zero, $last] = $this->readPes($page, $decoder->add(...));
+            $cues          = $this->textCues($decoder->finish(), $zero, $last, $options);
+            foreach ($decoder->warnings() as [$time, $message]) {
+                $seconds    = number_format(max(0, $time - $zero) / self::CLOCK_RATE, 3, ".", "");
+                $warnings[] = new ParseWarning("At $seconds s: $message", null, null, [], ParseWarningAction::Repaired);
+            }
+        } elseif ($track->codecId === self::CODEC_DVB_SUBTITLE) {
             $decoder = new DvbSubtitleDecoder($page["page"], $page["ancillaryPage"]);
             [$zero]  = $this->readPes($page, fn (string $data, int $pts) => $decoder->add($data, $pts / self::CLOCK_RATE));
             $cues    = $decoder->finish($options->lastCueDuration, $zero / self::CLOCK_RATE);
         } else {
             $decoder       = new TeletextDecoder($page["page"], $trackNumber % 1000, TeletextCharacters::languageGroup($track->language));
             [$zero, $last] = $this->readPes($page, $decoder->add(...));
-            $cues          = $this->teletextCues($decoder->finish(), $zero, $last, $options);
+            $cues          = $this->textCues($decoder->finish(), $zero, $last, $options);
         }
 
-        $subtitle = (new Subtitle())->addCues($cues);
+        $subtitle = (new Subtitle())->addCues($cues)->setParseWarnings($warnings);
         $subtitle->setFormat($track->format);
         $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $track->language);
 
@@ -190,23 +232,26 @@ final class MpegTsReader implements ContainerReader
 
 
     /**
-     * @param list<array{int, list<string>}> $pageStates the PTS and the lines of each state of the page
+     * @param list<array{0: int, 1: list<string>, 2?: Alignment}> $screenStates the PTS, the lines and the alignment of each state
+     *                                                                          of the teletext page or the caption screen
      * @return list<SubtitleCue>
      */
-    private function teletextCues(array $pageStates, int $zero, int $last, ReadOptions $options): array
+    private function textCues(array $screenStates, int $zero, int $last, ReadOptions $options): array
     {
         $states = [];
-        foreach ($pageStates as $state) {
-            if ($states === [] || $states[array_key_last($states)][1] !== $state[1]) {
+        foreach ($screenStates as $state) {
+            if ($states === [] || array_slice($states[array_key_last($states)], 1) !== array_slice($state, 1)) {
                 $states[] = $state;
             }
         }
 
         $cues = [];
-        foreach ($states as $index => [$start, $lines]) {
+        foreach ($states as $index => $state) {
+            [$start, $lines] = $state;
             if ($lines !== []) {
                 $end    = $states[$index + 1][0] ?? ($last > $start ? $last : $start + (int) ($options->lastCueDuration * self::CLOCK_RATE));
-                $cues[] = new SubtitleCue(max(0, $start - $zero) / self::CLOCK_RATE, max(0, $end - $zero) / self::CLOCK_RATE, $lines);
+                $cue    = new SubtitleCue(max(0, $start - $zero) / self::CLOCK_RATE, max(0, $end - $zero) / self::CLOCK_RATE, $lines);
+                $cues[] = isset($state[2]) ? $cue->setAlignment($state[2]) : $cue;
             }
         }
 
@@ -222,14 +267,14 @@ final class MpegTsReader implements ContainerReader
 
 
     /**
-     * Reads the PAT and the PMT of each program. It lists each teletext subtitle page as a track, then each DVB subtitle service.
+     * Reads the PAT and the PMT of each program. It lists each teletext subtitle page as a track, then each DVB subtitle service,
+     * then each ARIB caption stream.
      */
     private function readTables(): void
     {
         fseek($this->stream, 0);
-        if (!self::isTransportStream((string) fread($this->stream, 2 * self::PACKET_SIZE + 1))) {
-            throw new ParsingException("The file is not an MPEG-TS file.");
-        }
+        $this->packetSize = self::packetSize((string) fread($this->stream, 2 * self::M2TS_PACKET_SIZE + 5))
+                            ?? throw new ParsingException("The file is not an MPEG-TS file.");
 
         $wanted   = [self::PAT_PID => true];
         $sections = [];
@@ -256,6 +301,7 @@ final class MpegTsReader implements ContainerReader
         foreach ($streams as $program) {
             $this->addDvbSubtitles($program);
         }
+        $this->addAribCaptions($streams);
     }
 
 
@@ -346,6 +392,77 @@ final class MpegTsReader implements ContainerReader
 
 
     /**
+     * Lists each ARIB caption stream as a track. Its number is its PID, as for DVB subtitles, or the PID times 1,000 when a
+     * teletext page or a DVB subtitle stream has the number. The language comes from the first caption management data
+     * in the first 32 MB of the file.
+     *
+     * @param array<int, list<array{pid: int, type: int, descriptors: string}>> $programs
+     */
+    private function addAribCaptions(array $programs): void
+    {
+        $captions = [];
+        foreach ($programs as $program) {
+            foreach ($program as ["pid" => $pid, "type" => $type, "descriptors" => $descriptors]) {
+                $tag       = ord((implode("", iterator_to_array(self::descriptors($descriptors, [self::STREAM_IDENTIFIER_DESCRIPTOR]), false)) . "\0")[0]);
+                $component = implode("", iterator_to_array(self::descriptors($descriptors, [self::DATA_COMPONENT_DESCRIPTOR]), false));
+                if ($type === self::STREAM_TYPE_PES_PRIVATE_DATA && $tag >= self::CAPTION_COMPONENT_TAGS[0] && $tag <= self::CAPTION_COMPONENT_TAGS[1]
+                    && strlen($component) >= 2 && unpack("n", $component)[1] === self::CAPTION_DATA_COMPONENT) {
+                    $captions[$pid] = array_column($program, "pid");
+                }
+            }
+        }
+
+        $languages = $captions === [] ? [] : $this->captionLanguages(array_keys($captions));
+        foreach ($captions as $pid => $pids) {
+            $number                = isset($this->tracks[$pid]) ? $pid * 1000 : $pid;
+            $this->tracks[$number] = new SubtitleTrack(
+                ContainerFormat::MpegTs,
+                $number,
+                self::CODEC_ARIB_CAPTION,
+                Format::SubRip,
+                $languages[$pid] ?? "und",
+                null,
+                false,
+                false,
+            );
+            $this->pages[$number]  = ["pid" => $pid, "page" => 0, "ancillaryPage" => null, "streams" => $pids];
+        }
+    }
+
+
+    /**
+     * Returns the language of the first caption management data of each PID in the first 32 MB of the file.
+     *
+     * @param list<int> $pids
+     * @return array<int, string>
+     */
+    private function captionLanguages(array $pids): array
+    {
+        $wanted    = array_fill_keys($pids, true);
+        $pes       = [];
+        $languages = [];
+        foreach ($this->payloads($wanted, self::TABLE_SCAN_BYTES) as [$pid, $start, $payload]) {
+            if ($start && isset($pes[$pid])) {
+                $language = AribCaptionDecoder::language(self::pesHeader($pes[$pid])[1]);
+                if ($language !== null && preg_match('/^[a-z]{3}$/', $language) === 1) {
+                    $languages[$pid] = $language;
+                    unset($wanted[$pid], $pes[$pid]);
+                    if ($wanted === []) {
+                        break;
+                    }
+                    continue;
+                }
+            }
+            if ($start || isset($pes[$pid])) {
+                $pes[$pid] = $start ? $payload : $pes[$pid] . $payload;
+            }
+        }
+
+        return $languages;
+    }
+
+
+    /**
      * Yields the PID, the PTS or null, and the data of each PES packet of $pid. Of the other $streams, it yields only the first PES header.
      *
      * @param list<int> $streams
@@ -400,6 +517,7 @@ final class MpegTsReader implements ContainerReader
     /**
      * Yields the PID, the payload unit start flag and the payload of each packet of a PID in $wanted, from the start of the file.
      * The caller may remove PIDs from $wanted. A byte other than the sync byte at a packet start skips to the next sync byte.
+     * An M2TS packet holds the transport stream packet after its 4-byte time stamp.
      *
      * @param array<int, true> $wanted
      * @return Generator<int, array{int, bool, string}>
@@ -409,28 +527,30 @@ final class MpegTsReader implements ContainerReader
         fseek($this->stream, 0);
         $chunk = "";
         $read  = 0;
+        $sync  = $this->packetSize - self::PACKET_SIZE;
         while ($read < $maxBytes && ($data = fread($this->stream, self::CHUNK_SIZE)) !== false && $data !== "") {
             $read  += strlen($data);
             $chunk .= $data;
             $length = strlen($chunk);
             $offset = 0;
-            while ($offset + self::PACKET_SIZE <= $length) {
-                if ($chunk[$offset] !== self::SYNC_BYTE) {
-                    $next   = strpos($chunk, self::SYNC_BYTE, $offset + 1);
-                    $offset = $next === false ? $length : $next;
+            while ($offset + $this->packetSize <= $length) {
+                if ($chunk[$offset + $sync] !== self::SYNC_BYTE) {
+                    $next   = strpos($chunk, self::SYNC_BYTE, $offset + $sync + 1);
+                    $offset = $next === false ? $length : $next - $sync;
                     continue;
                 }
 
-                $flags = ord($chunk[$offset + 1]);
-                $pid   = ($flags & 0x1F) << 8 | ord($chunk[$offset + 2]);
+                $packet = $offset + $sync;
+                $flags  = ord($chunk[$packet + 1]);
+                $pid    = ($flags & 0x1F) << 8 | ord($chunk[$packet + 2]);
                 if (isset($wanted[$pid]) && ($flags & 0x80) === 0) {
-                    $control = ord($chunk[$offset + 3]) >> 4 & 0x03;
-                    $at      = 4 + (($control & 0x02) !== 0 ? 1 + ord($chunk[$offset + 4]) : 0);
+                    $control = ord($chunk[$packet + 3]) >> 4 & 0x03;
+                    $at      = 4 + (($control & 0x02) !== 0 ? 1 + ord($chunk[$packet + 4]) : 0);
                     if (($control & 0x01) !== 0 && $at < self::PACKET_SIZE) {
-                        yield [$pid, ($flags & 0x40) !== 0, substr($chunk, $offset + $at, self::PACKET_SIZE - $at)];
+                        yield [$pid, ($flags & 0x40) !== 0, substr($chunk, $packet + $at, self::PACKET_SIZE - $at)];
                     }
                 }
-                $offset += self::PACKET_SIZE;
+                $offset += $this->packetSize;
             }
             $chunk = substr($chunk, $offset);
         }
