@@ -478,6 +478,11 @@ class ThrowSitesTest extends TestCase
             "Image/CueImage.php: no png"                    => [fn () => CueImage::fromCue((new SubtitleCue(1, 2))
                 ->setFormatData(CueImage::FORMAT_DATA_KEY, ["x" => 0, "y" => 0, "width" => 1, "height" => 1,
                                                             "screenWidth" => 1, "screenHeight" => 1])), ...$invalid],
+            "Image/IndexedImages.php: parts too large"      => [fn () => (new PgsParser())->parse(
+                self::pgsSegment(0x16, "\x1F\x40\x04\x38\x10\0\1\x80\0\0\2" . "\0\0\0\0\0\0\0\0" . "\0\1\0\0" . pack("nn", 8000, 0)) .
+                self::pgsSegment(0x14, "\0\0\1\x10\x80\x80\xFF") .
+                self::pgsSegment(0x15, "\0\0\0\xC0\0\0\5\0\1\0\1\1") . self::pgsSegment(0x15, "\0\1\0\xC0\0\0\5\0\1\0\1\1") .
+                self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
             "Image/PngEncoder.php: width 0"                 => [fn () => PngEncoder::encode(0, 1, []), ...$invalid],
             "Image/PngEncoder.php: pixel count"             => [fn () => PngEncoder::encode(1, 1, []), ...$invalid],
             "Image/PaletteReducer.php: 257 colors"          => [fn () => PaletteReducer::reduce([0], 257), ...$invalid],
