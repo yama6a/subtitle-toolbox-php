@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Container\ContainerFormat;
+use SubtitleToolbox\Container\MpegTs\MpegTsReader;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
@@ -287,6 +288,18 @@ class MatroskaReaderTest extends TestCase
 
         $this->assertSame($expected, array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getAllFormatData()],
                                                $mkv->extract(4)->getCues()));
+    }
+
+
+    public function testExtractsDvbSubtitlesAsTheMpegTsReaderReadsTheSourceFile(): void
+    {
+        $mkv = MatroskaReader::open(self::DIR . "dvbsub.mkv");
+        $ts  = MpegTsReader::open(self::DIR . "../mpegts/dvb_subtitles.ts");
+
+        $this->assertSame([[2, "S_DVBSUB", Format::Pgs, "de"], [3, "S_DVBSUB", Format::Pgs, "en"]],
+                          array_map(fn (SubtitleTrack $t): array => [$t->number, $t->codecId, $t->format, $t->language], $mkv->getSubtitleTracks()));
+        $this->assertEquals($ts->extract(257)->getCues(), $mkv->extract(2)->getCues());
+        $this->assertSame(Format::Pgs, $mkv->extract(3)->findFormat());
     }
 
 

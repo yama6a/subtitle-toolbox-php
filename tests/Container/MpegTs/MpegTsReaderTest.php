@@ -11,6 +11,9 @@ use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Image\PngDecoder;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -140,6 +143,57 @@ class MpegTsReaderTest extends TestCase
     }
 
 
+    public function testListsTheDvbSubtitleServicesOfTheSubtitlingDescriptor(): void
+    {
+        $this->assertSame(
+            [[257, "dvb_subtitle", Format::Pgs, "deu", null], [258, "dvb_subtitle", Format::Pgs, "eng", "hearing impaired"]],
+            array_map(fn (SubtitleTrack $t): array => [$t->number, $t->codecId, $t->format, $t->language, $t->name],
+                      MpegTsReader::open(self::DIR . "dvb_subtitles.ts")->getSubtitleTracks()),
+        );
+    }
+
+
+    /**
+     * ffmpeg encodes the PGS and VobSub fixtures in dvb_subtitles.ts. Its PGS decoder ignores cropping, so the PGS cues from
+     * the fifth on differ, and its VobSub decoder crops transparent borders and moves some times.
+     */
+    public function testDecodesThePixelsAndTimesOfTheSourceSubtitles(): void
+    {
+        $reader = MpegTsReader::open(self::DIR . "dvb_subtitles.ts");
+        $pgs    = Subtitle::fromString(file_get_contents(self::DIR . "../pgs/shapes_1080p.sup"), Format::Pgs)->getCues();
+        $vobsub = Subtitle::fromString(file_get_contents(self::DIR . "../vobsub/two-tracks-pal.sub"), Format::VobSub, new ReadOptions(
+            formats: [new VobSubReadOptions(file_get_contents(self::DIR . "../vobsub/two-tracks-pal.idx"))],
+        ))->getCues();
+
+        foreach (array_slice($reader->extract(257)->getCues(), 0, 4) as $index => $cue) {
+            $this->assertSame([$pgs[$index]->getStart(), $pgs[$index]->getEnd()], [$cue->getStart(), $cue->getEnd()]);
+            $this->assertSame([], self::pixelDifferences(CueImage::fromCue($pgs[$index]), CueImage::fromCue($cue)), "cue $index");
+        }
+        foreach ($reader->extract(258)->getCues() as $index => $cue) {
+            $this->assertSame([], self::pixelDifferences(CueImage::fromCue($vobsub[$index]), CueImage::fromCue($cue)), "cue $index");
+        }
+    }
+
+
+    public function testNumbersADvbSubtitleServiceByItsPidWithoutTakingTheNumberOfATeletextPage(): void
+    {
+        $writer = new TsFixtureWriter();
+        $writer->tables(1, TsFixtures::PMT_PID, self::PID, [
+            [150, 0x06, TsFixtureWriter::subtitlingDescriptor([["deu", 0x10, 1, 1], ["eng", 0x24, 2, 2]])],
+            [self::PID, 0x06, TsFixtureWriter::teletextDescriptor([["deu", TsFixtureWriter::SUBTITLE_PAGE, 150]])],
+            [0x0801, 0x06, TsFixtureWriter::subtitlingDescriptor([["fra", 0x14, 1, 1]])],
+        ]);
+        $region = "\x0F\x11\0\2\0\x10" . pack("CCnnCCCCnnn", 0, 0x0F, 2, 1, 0x68, 0, 0, 0, 1, 0, 0);
+        $writer->subtitlePes(150, 90000, "\x0F\x10\0\2\0\x08\0\x0B\0\xFF\0\0\0\0" . $region . "\x0F\x13\0\2\0\x0D\0\1\0\0\5\0\0\x11\x11\x00\x00\xF0");
+        $reader = MpegTsReader::open(self::stream($writer->bytes()));
+
+        $this->assertSame([[150, "deu", null], [150000, "deu", null], [150001, "eng", "hearing impaired"], [2049, "fra", null]],
+                          array_map(fn (SubtitleTrack $t): array => [$t->number, $t->language, $t->name], $reader->getSubtitleTracks()));
+        $this->assertSame([[0.0, 5.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $reader->extract(150001)->getCues()));
+        $this->assertSame([], $reader->extract(150000)->getCues());
+    }
+
+
     public function testSkipsBytesBetweenPacketsToTheNextSyncByte(): void
     {
         $file = TsFixtures::onePage();
@@ -198,6 +252,35 @@ class MpegTsReaderTest extends TestCase
         $writer->tables(1, TsFixtures::PMT_PID, self::PID, [[self::PID, 0x06, TsFixtureWriter::teletextDescriptor($pages)]]);
 
         return $writer;
+    }
+
+
+    /**
+     * Returns the screen positions where the images differ by more than 1 in a channel. Transparent pixels match any color.
+     *
+     * @return list<string>
+     */
+    private static function pixelDifferences(CueImage $expected, CueImage $actual): array
+    {
+        $screen = [];
+        foreach ([$expected, $actual] as $side => $image) {
+            foreach (PngDecoder::decode($image->png)["pixels"] as $index => $pixel) {
+                $screen[($image->y + intdiv($index, $image->width)) . "," . ($image->x + $index % $image->width)][$side] = $pixel;
+            }
+        }
+
+        $differences = [];
+        foreach ($screen as $position => $pixels) {
+            [$first, $second] = [$pixels[0] ?? 0, $pixels[1] ?? 0];
+            foreach ([24, 16, 8, 0] as $shift) {
+                if (($first & 0xFF) + ($second & 0xFF) > 0 && abs(($first >> $shift & 0xFF) - ($second >> $shift & 0xFF)) > 1) {
+                    $differences[] = $position;
+                    break;
+                }
+            }
+        }
+
+        return $differences;
     }
 
 
