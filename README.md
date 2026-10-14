@@ -91,6 +91,7 @@ The command line tool also comes as a PHAR file and as two container images. The
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
 | [MKV](https://www.rfc-editor.org/rfc/rfc9559) and [WebM](https://www.webmproject.org/docs/container/) tracks | | | `.mkv`, `.webm` | ✅ | ❌ | text, ASS, SSA, WebVTT, PGS, VobSub and DVB subtitle tracks |
 | [MP4 tracks](https://www.3gpp.org/dynareport/26245.htm) | | | `.mp4`, `.m4v`, `.mov` | ✅ | ❌ | `tx3g` (`mov_text`) tracks, `c608` and `c708` closed caption tracks |
+| [MPEG-TS ARIB captions](https://www.arib.or.jp/english/std_tr/broadcasting/std-b24.html) | | | `.ts`, `.m2ts` | ✅ | ❌ | Japanese ISDB and Brazilian ISDB-Tb captions with furigana and gaiji |
 | [MPEG-TS DVB subtitles](https://www.etsi.org/deliver/etsi_en/300700_300799/300743/01.06.01_60/en_300743v010601p.pdf) | | | `.ts` | ✅ | ❌ | DVB bitmap subtitles as image cues |
 | [MPEG-TS teletext](https://www.etsi.org/deliver/etsi_en/300400_300499/300472/01.04.01_60/en_300472v010401p.pdf) | | | `.ts` | ✅ | ❌ | DVB teletext subtitle pages, see [ETS 300 706](https://www.etsi.org/deliver/etsi_i_ets/300700_300799/300706/01_60/ets_300706e01p.pdf) |
 

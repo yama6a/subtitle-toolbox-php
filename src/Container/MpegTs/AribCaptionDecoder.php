@@ -122,8 +122,9 @@ final class AribCaptionDecoder
             return;
         }
         $id   = ord($data[$start]) >> 2;
-        $body = substr($data, $start + 5, unpack("n", $data, $start + 3)[1]);
-        if ($body === "") {
+        $size = unpack("n", $data, $start + 3)[1];
+        $body = substr($data, $start + 5, $size);
+        if ($body === "" || strlen($body) < $size) {
             return;
         }
 
@@ -247,6 +248,9 @@ final class AribCaptionDecoder
             $parameter = ord($units[$offset + 1]);
             $size      = self::uint24($units, $offset + 2);
             $unit      = substr($units, $offset + 5, $size);
+            if (strlen($unit) < $size) {
+                return;
+            }
             if ($parameter === 0x20) {
                 $this->text($unit);
             } elseif ($parameter === 0x30 || $parameter === 0x31) {

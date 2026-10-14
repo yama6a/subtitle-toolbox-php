@@ -176,6 +176,17 @@ class AribCaptionDecoderTest extends TestCase
     }
 
 
+    public function testSkipsADataGroupOrADataUnitThatEndsEarly(): void
+    {
+        $text      = W::text(W::CS . W::setup() . W::position(6, 7) . W::kanji("字"));
+        $shortUnit = W::statement(substr_replace($text, "\xFF", 4, 1));
+
+        $decoder   = self::decode([[0.0, substr(W::statement($text), 0, -4)], [1.0, $shortUnit]]);
+
+        $this->assertSame([[]], array_values(array_unique(array_column($decoder->finish(), 1), SORT_REGULAR)));
+    }
+
+
     /**
      * @param list<array{float, string}> $packets
      */

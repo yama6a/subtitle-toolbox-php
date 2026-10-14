@@ -16,7 +16,7 @@ use SubtitleToolbox\Container\MpegTs\MpegTsReader;
 final class Containers
 {
     /** The number of bytes that detect() needs. */
-    public const HEAD_LENGTH = 2 * MpegTsReader::PACKET_SIZE + 1;
+    public const HEAD_LENGTH = 2 * MpegTsReader::M2TS_PACKET_SIZE + 5;
 
 
     public static function detect(string $head): ?ContainerFormat

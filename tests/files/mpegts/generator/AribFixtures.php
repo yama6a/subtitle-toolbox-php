@@ -91,7 +91,7 @@ final class AribFixtures
         // with the additional_arib_caption_info byte of ARIB TR-B14.
         $descriptors = "\x52\x01\x30" . "\xFD\x03\x00\x08\x3D";
         $writer      = new TsFixtureWriter();
-        $writer->tables(1, self::PMT_PID, self::VIDEO_PID, [[self::VIDEO_PID, 0x1B, ""], [self::CAPTION_PID, 0x06, $descriptors]]);
+        $writer->tables(1, self::PMT_PID, self::VIDEO_PID, [[self::VIDEO_PID, 0x02, ""], [self::CAPTION_PID, 0x06, $descriptors]]);
         $writer->videoPes(self::VIDEO_PID, self::pts(0.0));
 
         return $writer;
