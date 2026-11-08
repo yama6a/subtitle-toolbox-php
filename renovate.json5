@@ -14,5 +14,13 @@
       matchUpdateTypes: ["lockFileMaintenance"],
       labels: ["skip-release"],
     },
+    {
+      // PHPUnit 12 needs PHP 8.3 and PHPUnit 13 needs PHP 8.4.1, but composer.json still allows PHP 8.2.
+      // When PHP 8.2 support goes (December 2026), raise this to "<13". When PHP 8.3 support goes
+      // (December 2027), delete this rule.
+      description: "hold PHPUnit at 11 while PHP 8.2 is supported",
+      matchPackageNames: ["phpunit/phpunit"],
+      allowedVersions: "<12",
+    },
   ],
 }
