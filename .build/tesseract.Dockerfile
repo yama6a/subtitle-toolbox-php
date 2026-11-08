@@ -1,9 +1,9 @@
 # The image of .build/Dockerfile plus Tesseract with the fast models of every language, released with a -tesseract tag suffix.
-FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:93684051146ec037620855feb77f278090bde45ddc030801cd3f2a7685bc4deb AS build
+FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:d1fbbe78850d1eb9aa8f7da652ec5db61eb4c9377c8215cf5e23f3b528ed4f2b AS build
 ARG VERSION=dev
 
 RUN apk add --no-cache bash unzip
-COPY --from=public.ecr.aws/docker/library/composer:2@sha256:af98f42dfff7c68ba8d53c2164fd9fde1087b7d449514baa38c418b1f6bc4bac /usr/bin/composer /usr/local/bin/composer
+COPY --from=public.ecr.aws/docker/library/composer:2@sha256:8de2184c6de224f4689e8f80ed5f5edaf0030b6b8b7839a22a2bcb6722ac87d0 /usr/bin/composer /usr/local/bin/composer
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN wget -qO /usr/local/bin/box https://github.com/box-project/box/releases/download/4.7.0/box.phar \
     && echo "3d390eeaec33288098fe83f8a54c60cc575cb6be295f38ff4482b4b4f26f8d52  /usr/local/bin/box" | sha256sum -c - \
@@ -16,7 +16,7 @@ RUN .build/build-phar.sh "$VERSION" /stbox.phar
 
 # Alpine packages the standard models of 67 languages only. The fast models of all languages take 338 MB, the
 # standard models 1,014 MB, and both read the test files without errors. The commit pins the content.
-FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:93684051146ec037620855feb77f278090bde45ddc030801cd3f2a7685bc4deb AS tessdata
+FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:d1fbbe78850d1eb9aa8f7da652ec5db61eb4c9377c8215cf5e23f3b528ed4f2b AS tessdata
 ARG TESSDATA_COMMIT=87416418657359cb625c412a48b6e1d6d41c29bd
 RUN apk add --no-cache git
 WORKDIR /tessdata
@@ -27,7 +27,7 @@ RUN git init -q . \
     && git checkout -q FETCH_HEAD \
     && rm -rf .git
 
-FROM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:93684051146ec037620855feb77f278090bde45ddc030801cd3f2a7685bc4deb
+FROM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:d1fbbe78850d1eb9aa8f7da652ec5db61eb4c9377c8215cf5e23f3b528ed4f2b
 RUN apk add --no-cache tesseract-ocr
 COPY --from=tessdata /tessdata/ /usr/share/tessdata/
 COPY --from=build /stbox.phar /usr/local/bin/stbox.phar
