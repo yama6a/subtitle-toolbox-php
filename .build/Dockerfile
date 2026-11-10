@@ -1,5 +1,5 @@
 # The PHAR holds only PHP files, so it is built once on the builder's native arch for every target platform.
-FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:d1fbbe78850d1eb9aa8f7da652ec5db61eb4c9377c8215cf5e23f3b528ed4f2b AS build
+FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:1ff5b45922ab30f418447c6089dbe2eba5f01e0b2742863d0327ac349305d70f AS build
 ARG VERSION=dev
 
 RUN apk add --no-cache bash unzip
@@ -14,7 +14,7 @@ COPY . .
 ENV COMPOSER_ALLOW_SUPERUSER=1
 RUN .build/build-phar.sh "$VERSION" /stbox.phar
 
-FROM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:d1fbbe78850d1eb9aa8f7da652ec5db61eb4c9377c8215cf5e23f3b528ed4f2b
+FROM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:1ff5b45922ab30f418447c6089dbe2eba5f01e0b2742863d0327ac349305d70f
 COPY --from=build /stbox.phar /usr/local/bin/stbox.phar
 # OCR of a 1,500-cue PGS file peaks at about 139 MB, above the 128 MB default.
 RUN echo "memory_limit=512M" > "$PHP_INI_DIR/conf.d/stbox.ini"
