@@ -1,5 +1,5 @@
 # The image of .build/Dockerfile plus Tesseract with the fast models of every language, released with a -tesseract tag suffix.
-FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:d1fbbe78850d1eb9aa8f7da652ec5db61eb4c9377c8215cf5e23f3b528ed4f2b AS build
+FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:1ff5b45922ab30f418447c6089dbe2eba5f01e0b2742863d0327ac349305d70f AS build
 ARG VERSION=dev
 
 RUN apk add --no-cache bash unzip
@@ -16,7 +16,7 @@ RUN .build/build-phar.sh "$VERSION" /stbox.phar
 
 # Alpine packages the standard models of 67 languages only. The fast models of all languages take 338 MB, the
 # standard models 1,014 MB, and both read the test files without errors. The commit pins the content.
-FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:d1fbbe78850d1eb9aa8f7da652ec5db61eb4c9377c8215cf5e23f3b528ed4f2b AS tessdata
+FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:1ff5b45922ab30f418447c6089dbe2eba5f01e0b2742863d0327ac349305d70f AS tessdata
 ARG TESSDATA_COMMIT=87416418657359cb625c412a48b6e1d6d41c29bd
 RUN apk add --no-cache git
 WORKDIR /tessdata
@@ -27,7 +27,7 @@ RUN git init -q . \
     && git checkout -q FETCH_HEAD \
     && rm -rf .git
 
-FROM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:d1fbbe78850d1eb9aa8f7da652ec5db61eb4c9377c8215cf5e23f3b528ed4f2b
+FROM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:1ff5b45922ab30f418447c6089dbe2eba5f01e0b2742863d0327ac349305d70f
 RUN apk add --no-cache tesseract-ocr
 COPY --from=tessdata /tessdata/ /usr/share/tessdata/
 COPY --from=build /stbox.phar /usr/local/bin/stbox.phar
