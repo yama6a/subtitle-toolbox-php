@@ -3,7 +3,7 @@ FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/php:8.5-cli-alpine@
 ARG VERSION=dev
 
 RUN apk add --no-cache bash unzip
-COPY --from=public.ecr.aws/docker/library/composer:2@sha256:8de2184c6de224f4689e8f80ed5f5edaf0030b6b8b7839a22a2bcb6722ac87d0 /usr/bin/composer /usr/local/bin/composer
+COPY --from=public.ecr.aws/docker/library/composer:2@sha256:ca11f643d7791ebdd90a34fc20caf11380d434007ae539a9ea75cd9212e13dca /usr/bin/composer /usr/local/bin/composer
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN wget -qO /usr/local/bin/box https://github.com/box-project/box/releases/download/4.7.0/box.phar \
     && echo "3d390eeaec33288098fe83f8a54c60cc575cb6be295f38ff4482b4b4f26f8d52  /usr/local/bin/box" | sha256sum -c - \
