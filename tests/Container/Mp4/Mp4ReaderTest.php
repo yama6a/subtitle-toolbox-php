@@ -181,6 +181,13 @@ class Mp4ReaderTest extends TestCase
     }
 
 
+    public function testEscapesTheTextOfASample(): void
+    {
+        $this->assertSame(["&lt;laughs&gt; Tom &amp; Ann", "&amp;amp;"],
+                          self::oneTrack([], Mp4FixtureWriter::textSample("<laughs> Tom & Ann\n&amp;"))->extract(1)->getCues()[0]->getLines());
+    }
+
+
     public function testThrowsForAnEncryptedTrack(): void
     {
         $this->expectException(ParsingException::class);
@@ -401,6 +408,10 @@ class Mp4ReaderTest extends TestCase
             "a font style without bold, italic or underline"      => [
                 Mp4FixtureWriter::textSample("left right", self::styl([[0, 4, 0x08]])),
                 ["left right"],
+            ],
+            "markup characters in a styled run"                   => [
+                Mp4FixtureWriter::textSample("<laughs> Tom & Ann", self::styl([[0, 8, 2], [13, 14, 1]])),
+                ["<i>&lt;laughs&gt;</i> Tom <b>&amp;</b> Ann"],
             ],
             "a damaged box before the styl box"                   => [
                 Mp4FixtureWriter::textSample("left right", pack("N", 3) . "hlit" . self::styl([[0, 4, 1]])),

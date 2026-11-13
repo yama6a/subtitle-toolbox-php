@@ -14,6 +14,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatOptionsList;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Mcc;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\ReadOptions;
@@ -682,13 +683,14 @@ final class Mp4Reader implements ContainerReader
 
 
     /**
-     * Wraps each style run of $text in <b>, <i> and <u> tags. The start and end count characters, and the end is exclusive.
+     * Escapes $text and wraps each style run in <b>, <i> and <u> tags. The start and end count characters of the plain
+     * text, and the end is exclusive, so the reader escapes each character after the split.
      *
      * @param list<array{int, int, int}> $styles
      */
     private static function addStyleTags(string $text, array $styles): string
     {
-        $characters = preg_split("//u", $text, -1, PREG_SPLIT_NO_EMPTY);
+        $characters = array_map(Markup::escapeText(...), preg_split("//u", $text, -1, PREG_SPLIT_NO_EMPTY));
         $covered    = 0;
         usort($styles, fn (array $a, array $b): int => $a[0] <=> $b[0]);
         foreach ($styles as [$start, $end, $flags]) {
