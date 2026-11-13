@@ -77,7 +77,8 @@ final class TesseractOcrEngine implements OcrEngine
             unlink($file);
         }
         if ($code !== 0) {
-            throw new OcrException("Tesseract exits with code $code for the cue image at {$image->x}, {$image->y}: " . trim($error));
+            $problem = $code === null ? "Cannot start Tesseract" : "Tesseract exits with code $code";
+            throw new OcrException("$problem for the cue image at {$image->x}, {$image->y}: " . trim($error));
         }
 
         return self::fromTsv($output);
@@ -197,13 +198,14 @@ final class TesseractOcrEngine implements OcrEngine
 
     /**
      * @param list<string> $command
-     * @return array{int, string, string} the exit code, standard output and standard error
+     * @return array{?int, string, string} the exit code, standard output and standard error.
+     *         When the process cannot start, the exit code is null and the error is the reason from proc_open().
      */
     private static function run(array $command): array
     {
         $process = @proc_open($command, [1 => ["pipe", "w"], 2 => ["pipe", "w"]], $pipes);
         if ($process === false) {
-            return [-1, "", ""];
+            return [null, "", preg_replace('/^proc_open\(\): /', "", error_get_last()["message"] ?? "proc_open() failed.")];
         }
         $output = (string)stream_get_contents($pipes[1]);
         $error  = (string)stream_get_contents($pipes[2]);

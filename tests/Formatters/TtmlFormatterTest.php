@@ -163,6 +163,30 @@ class TtmlFormatterTest extends TestCase
     }
 
 
+    public function testIdentifierWithATrailingLineFeedIsNotWritten(): void
+    {
+        $subtitle = (new Subtitle())->addCue((new SubtitleCue(1, 2, "Hello"))->setIdentifier("c1\n"));
+        $output   = $subtitle->toString(Format::Ttml);
+
+        $this->assertStringContainsString("<p begin=\"00:00:01.000\" end=\"00:00:02.000\" region=\"bottomCenter\">Hello</p>", $output);
+        $this->assertNull(Subtitle::fromString($output, Format::Ttml)->getCues()[0]->findIdentifier());
+    }
+
+
+    public function testTabLineFeedAndCarriageReturnInAnAttributeRoundTrip(): void
+    {
+        $subtitle = Subtitle::fromString(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:x=\"urn:x\" xml:lang=\"en\">"
+            . "<body x:note=\"a&#10;b&#9;c&#13;d\"><div><p begin=\"1s\" end=\"2s\">Hello</p></div></body></tt>",
+            Format::Ttml
+        );
+        $output = $subtitle->toString(Format::Ttml);
+
+        $this->assertStringContainsString("<body x:note=\"a&#10;b&#9;c&#13;d\">", $output);
+        $this->assertSame(["x:note" => "a\nb\tc\rd"], Subtitle::fromString($output, Format::Ttml)->findFormatData(Format::Ttml->value)["body"]);
+    }
+
+
     public function testAllXmlTagsAreStrippedAwayIfOptionIsSet(): void
     {
         $subtitle = Subtitle::fromString(self::TWO_PARAGRAPHS, Format::Ttml);

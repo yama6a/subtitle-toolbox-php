@@ -172,4 +172,32 @@ class QuickTimeTextParserTest extends TestCase
         $this->expectExceptionMessage("The timestamp \"[00:00:01.45]\" counts 45 units, but the time scale is 30 per second.");
         Subtitle::fromString($content, Format::QuickTimeText);
     }
+
+
+    public function testChecksTheSumOfRelativeTimestampsAgainstTheLimit(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The time \"99999:00:00.000\" is not below 100000 hours. (line 4)");
+
+        Subtitle::fromString("{QTtext}{timeStamps:relative}\n[99999:00:00.000]\nOne\n[99999:00:00.000]\nTwo\n[00:00:01.000]\n", Format::QuickTimeText);
+    }
+
+
+    public function testReadsALongFractionWithoutATimeScaleAsADecimalFraction(): void
+    {
+        $content = "{QTtext}\n[00:00:00.9999999999999999999]\nOne\n[00:00:05.000]\n";
+
+        $this->assertSame(1.0, Subtitle::fromString($content, Format::QuickTimeText)->getCues()[0]->getStart());
+    }
+
+
+    public function testLenientModeSkipsTheTextOfASkippedTimestamp(): void
+    {
+        $content  = "{QTtext}\n[00:00:01.00]\nOne\n[100000:00:00.00]\nStray\n[00:00:03.00]\n";
+        $subtitle = Subtitle::fromString($content, Format::QuickTimeText, new ReadOptions(lenient: true));
+
+        $this->assertEquals([new SubtitleCue(1, 3, "One")], $subtitle->getCues());
+        $this->assertSame(ParseWarningAction::Skipped, $subtitle->getParseWarnings()[0]->action);
+        $this->assertSame(4, $subtitle->getParseWarnings()[0]->lineNumber);
+    }
 }

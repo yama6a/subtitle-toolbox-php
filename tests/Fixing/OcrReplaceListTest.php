@@ -57,6 +57,16 @@ class OcrReplaceListTest extends TestCase
     }
 
 
+    public function testReadsRawIso88591BytesWithAMatchingDeclaration(): void
+    {
+        $xml = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<ReplaceList><WholeWords><Word from='caf\u{e8}' to='caf\u{e9}' /></WholeWords></ReplaceList>";
+
+        $list = OcrReplaceList::fromSubtitleEditXml(mb_convert_encoding($xml, "ISO-8859-1", "UTF-8"));
+
+        $this->assertSame(["caf\u{e8}" => "caf\u{e9}"], $list->wholeWords);
+    }
+
+
     public function testRejectsInvalidXmlWithTheLineNumber(): void
     {
         $this->expectException(ParsingException::class);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Comment;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Formatters\Options\SpruceStlWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\LineEnding;
@@ -45,19 +46,25 @@ final class SpruceStlFormatter extends SubtitleFormatter
 
     private const DEFAULT_SEPARATOR = " , ";
 
+    // The frame number of a cue line has 2 digits.
+    private const MAX_FRAME_RATE = 100;
+
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
         $fileData  = $subtitle->findFormatData(SpruceStlParser::FORMAT_DATA_KEY) ?? [];
         $frameRate = (new FrameRate($this->formatOptions($options)->frameRate ?? $fileData["frameRate"] ?? self::DEFAULT_FRAME_RATE))->getFramesPerSecond();
+        if ($frameRate > self::MAX_FRAME_RATE) {
+            throw new UnwritableContentException("Spruce STL writes a frame number of 2 digits, so the frame rate must be at most " . self::MAX_FRAME_RATE . " fps, got $frameRate.");
+        }
         $separator = preg_match('/^[ \t]*,[ \t]*$/D', $fileData["separator"] ?? "") === 1 ? $fileData["separator"] : self::DEFAULT_SEPARATOR;
         $lineBreak = preg_match('/^[ \t]*\|[ \t]*$/D', $fileData["lineBreak"] ?? "") === 1 ? $fileData["lineBreak"] : "|";
         $header    = $fileData["header"] ?? self::DEFAULT_HEADER;
 
         $state  = SpruceStl::DEFAULT_STATE;
         $output = "";
-        foreach ($header as $line) {
+        foreach ($this->storedLines($header, true) as $line) {
             $state   = SpruceStl::apply($state, $line);
             $output .= $line . LineEnding::Lf->value;
         }
@@ -65,7 +72,7 @@ final class SpruceStlFormatter extends SubtitleFormatter
         $comments = $this->commentsByCue($subtitle);
         foreach ($subtitle->getCues() as $index => $cue) {
             $output .= $this->formatComments($comments[$index] ?? []);
-            foreach ($cue->findFormatData(SpruceStlParser::FORMAT_DATA_KEY)["commands"] ?? [] as $command) {
+            foreach ($this->storedLines($cue->findFormatData(SpruceStlParser::FORMAT_DATA_KEY)["commands"] ?? [], false) as $command) {
                 $state   = SpruceStl::apply($state, $command);
                 $output .= $command . LineEnding::Lf->value;
             }
@@ -75,8 +82,34 @@ final class SpruceStlFormatter extends SubtitleFormatter
                        $this->formatText($cue, $state, $lineBreak) . LineEnding::Lf->value;
         }
         $output .= $this->formatComments($comments[count($subtitle)] ?? []);
+        foreach ($this->storedLines($fileData["trailer"] ?? [], false) as $command) {
+            $output .= $command . LineEnding::Lf->value;
+        }
 
         return $this->applyOutputOptions($output, $options);
+    }
+
+
+    /**
+     * Returns the stored lines that the parser reads back, with each CR and LF written as a space.
+     * A header may also hold blank lines and "//" comments. Any other line would fail the read.
+     *
+     * @param list<string> $lines
+     *
+     * @return list<string>
+     */
+    private function storedLines(array $lines, bool $header): array
+    {
+        $kept = [];
+        foreach ($lines as $line) {
+            $line    = str_replace(["\r", "\n"], " ", $line);
+            $trimmed = trim($line);
+            if (str_starts_with($trimmed, "$") || ($header && ($trimmed === "" || str_starts_with($trimmed, "//")))) {
+                $kept[] = $line;
+            }
+        }
+
+        return $kept;
     }
 
 
@@ -148,7 +181,8 @@ final class SpruceStlFormatter extends SubtitleFormatter
                     }
                     continue;
                 }
-                $token = Markup::decodeEntities($token);
+                $token = str_replace("|", "\u{00A6}", Markup::decodeEntities($token));
+                $token = preg_replace('/\^(?=[BIU])/', "^\u{2060}", $token);
                 if (trim($token) === "") {
                     $text .= $token;
                     continue;
@@ -158,6 +192,9 @@ final class SpruceStlFormatter extends SubtitleFormatter
                         $current[$flag] = !$current[$flag];
                         $text          .= $toggle;
                     }
+                }
+                if (str_ends_with($text, "^") && preg_match('/^[BIU]/', $token) === 1) {
+                    $token = "\u{2060}" . $token;
                 }
                 $text .= $token;
             }

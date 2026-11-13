@@ -9,6 +9,7 @@ use SubtitleToolbox\MarkupColors;
 use SubtitleToolbox\Parsers\DcpParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
 /**
@@ -145,8 +146,8 @@ final class DcpFormatter extends SubtitleFormatter
     private function subtitle(SubtitleCue $cue, int $number, string $prefix, bool $interop, float $rate, array $font, int $depth): string
     {
         $stored     = $cue->findFormatData(DcpParser::FORMAT_DATA_KEY) ?? [];
-        $attributes = ($stored["subtitle"] ?? ["SpotNumber" => "", "TimeIn" => "", "TimeOut" => ""]
-            + ($interop ? ["FadeUpTime" => "20", "FadeDownTime" => "20"] : ["FadeUpTime" => "00:00:00:00", "FadeDownTime" => "00:00:00:00"]));
+        $attributes = ($stored["subtitle"] ?? ["SpotNumber" => "", "TimeIn" => "", "TimeOut" => ""])
+            + ($interop ? ["FadeUpTime" => "20", "FadeDownTime" => "20"] : ["FadeUpTime" => "00:00:00:00", "FadeDownTime" => "00:00:00:00"]);
         $attributes["SpotNumber"] = (string) $number;
         $attributes["TimeIn"]     = $this->time(max(0.0, $cue->getStart()), $rate, $interop);
         $attributes["TimeOut"]    = $this->time(max(0.0, $cue->getEnd()), $rate, $interop);
@@ -226,9 +227,9 @@ final class DcpFormatter extends SubtitleFormatter
             if ($text === "") {
                 continue;
             }
-            $color      = end($colors) ?: null;
+            $color      = end($colors) ?: "#FFFFFF";
             $attributes = [];
-            if ($color !== null && strtolower(substr($color, 1)) !== $base["color"]) {
+            if (strtolower(substr($color, 1)) !== $base["color"]) {
                 $attributes["Color"] = "FF" . strtoupper(substr($color, 1));
             }
             if (($style["i"] > 0) !== $base["i"]) {
@@ -271,7 +272,7 @@ final class DcpFormatter extends SubtitleFormatter
      */
     private function time(float $seconds, float $rate, bool $interop): string
     {
-        $units = (int) round($seconds * $rate);
+        $units = Timecode::unitsBelowLimit($seconds, (int) $rate);
         $whole = intdiv($units, (int) $rate);
         $width = $interop || $rate > 100 ? 3 : 2;
 

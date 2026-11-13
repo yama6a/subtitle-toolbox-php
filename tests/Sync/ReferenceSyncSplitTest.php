@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Sync;
 
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -48,6 +49,24 @@ class ReferenceSyncSplitTest extends TestCase
         $this->assertSame($segments[0]->offset, $result->offset);
         $this->assertGreaterThan(0.8, $result->score);
         $this->assertNotSame($before, TestSubtitles::times($target));
+    }
+
+
+    public function testApplyWithSplitsBeyondTheTimeLimitThrowsAndKeepsTheTimes(): void
+    {
+        $reference = $this->load("own_reference_en_tv_break.srt");
+        $target    = $this->load("own_target_de_25fps.srt");
+        $target->addCue(new SubtitleCue(359999000, 359999001, "Late cue"));
+        $before    = TestSubtitles::times($target);
+
+        try {
+            ReferenceSync::apply($target, new ReferenceSyncOptions($reference, -180, 180, maxSplits: 2));
+            $this->fail("No exception.");
+        } catch (InvalidArgumentException $exception) {
+            $this->assertSame("The retimed cue 60 would end at 375374481.40871 s. Cue times must be below 100000 hours.",
+                              $exception->getMessage());
+        }
+        $this->assertSame($before, TestSubtitles::times($target));
     }
 
 

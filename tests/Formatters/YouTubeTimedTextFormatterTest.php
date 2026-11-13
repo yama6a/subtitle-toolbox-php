@@ -82,6 +82,14 @@ class YouTubeTimedTextFormatterTest extends TestCase
     }
 
 
+    public function testAnAmpersandInAStyledCueIsEscapedOnce(): void
+    {
+        $subtitle = Subtitle::fromString("1\n00:00:01,000 --> 00:00:03,000\nTom & <i>Jerry</i>\n", Format::SubRip);
+
+        $this->assertStringContainsString("Tom &amp; <s p=\"1\">Jerry</s>", $subtitle->toString(Format::YouTubeTimedText));
+    }
+
+
     public function testAMovedCueKeepsItsDurationAndAChangedEndGetsANewOne(): void
     {
         $subtitle = self::read("missing-d.en.srv2");
