@@ -250,4 +250,23 @@ class YouTubeTimedTextFormatterTest extends TestCase
             Subtitle::fromString($source, Format::YouTubeTimedText)->toString(Format::YouTubeTimedText)
         );
     }
+
+
+    public function testALastCueWithoutADurationKeepsItWhateverLastCueDurationTheReadUsed(): void
+    {
+        $source   = '<transcript><text start="1" dur="2">a</text><text start="8">b</text></transcript>';
+        $subtitle = Subtitle::fromString($source, Format::YouTubeTimedText, new ReadOptions(lastCueDuration: 2.0));
+
+        $this->assertSame('<?xml version="1.0" encoding="utf-8" ?>' . $source, $subtitle->toString(Format::YouTubeTimedText));
+    }
+
+
+    public function testACueWithoutADurationGetsOneWhenItsEndChanges(): void
+    {
+        $source   = '<transcript><text start="1" dur="2">a</text><text start="8">b</text></transcript>';
+        $subtitle = Subtitle::fromString($source, Format::YouTubeTimedText, new ReadOptions(lastCueDuration: 2.0));
+        $subtitle->getCues()[1]->setEnd(11.0);
+
+        $this->assertStringContainsString('<text start="8" dur="3">b</text>', $subtitle->toString(Format::YouTubeTimedText));
+    }
 }
