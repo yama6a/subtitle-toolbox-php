@@ -176,3 +176,4 @@ Subtitle::loadTrack('/media/recording.m2ts', 304)->save('recording.srt');
 - **Ignored**: underline, bold, italic, flashing, background colors, outlines, built-in sounds, mosaic characters and vertical writing. The reader reads vertical text as rows.
 - **Errors**: the reader skips a data group or a data unit that ends early and ends a statement at a control function that ends early. It does not check the CRC.
 - **Spec**: [ARIB STD-B24](https://www.arib.or.jp/english/std_tr/broadcasting/std-b24.html) for the captions, [ARIB TR-B14](https://www.arib.or.jp/english/std_tr/broadcasting/tr-b14.html) for their use in broadcasts, ABNT NBR 15606-1 for the Latin variant.
+- **Limits**: a number of a control sequence (CSI) stops at 1,048,576. A repeat to the end of the row (RPC 0) writes at most 1,024 cells. A row of the widest writing format holds 96 cells, so a damaged stream cannot fill the memory.
