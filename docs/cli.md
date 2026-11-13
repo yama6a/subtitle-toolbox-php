@@ -58,14 +58,16 @@ php stbox.phar --version
 | 1 | a result: `validate` found a broken rule, or `diff` found a difference | `diff old.srt new.srt` for 2 files that differ |
 | 2 | a usage error, before the tool reads a file | an unknown option, a directory without subtitle files, an output that exists, a number too large for a float such as `--shift 1e999`, `--ass-karaoke-tag` with `--to srt`, an unknown `--ass-style` field, `validate --video-fps` without `--preset netflix-en`. `--ocr` without an installed OCR engine or without the data of the `--ocr-language`, see [OCR](#ocr). `translate` without `ext-curl` or without an API key, see [Translate](#translate) |
 | 3 | a file could not be read or written | a missing input, a file that does not parse, an output that cannot be created, content that the output format cannot hold such as 5 lines in SCC, a side file that is missing or does not parse, a translation service that answers with an error |
+| 130 | `SIGINT` or `SIGTERM` stopped the run, see the Signals item above | Ctrl+C during a batch |
 
 - **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 3. An error outside a file, such as an output that cannot be created, prints `Error: MESSAGE` and exits with code 3. A PHP error outside a file also prints its class.
 - **Side files**: a side file is a file that an option names besides the inputs. These options take a side file: `--reference`, `--silence-log`, `--mask-words`, `--errors-replace-list`, `--snap-shot-changes` and `--ocr-database`. The tool reads each side file once, after the checks of the arguments. So `convert a.srt b.srt --to vtt --mask-words missing.txt` fails with exit code 2, because 2 inputs need `--output-dir`. A side file that is missing or does not parse stops the run before the first input, also with `--keep-going`. The tool prints `Error: PATH: MESSAGE`, for example `Error: words.txt: The file does not exist.`, and exits with code 3.
+- **Signals**: with `ext-pcntl`, `SIGINT` and `SIGTERM` stop a batch. The tool finishes the file in progress and starts no other input. It then prints `Stopped by a signal.` and the batch summary on standard error, and exits with code 130. Without `ext-pcntl`, a signal ends the process at once.
 - **Stable parts**: see [compatibility.md](compatibility.md) for the parts of the tool that semantic versioning covers.
 - **Messages**: where a library message names a PHP method or option, the tool names the CLI option. For example "Call loadTrack() with one of them" becomes "Pass --track N with one of them".
 
 ## Input and output
-- **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension. The tool counts the inputs after it expands directories and globs.
+- **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension. A `.txt` file counts when its content is a readable subtitle format, for example MPL2. Plain text and chapter lists stay out. Every word after `--` is a file, also `--help` and `-h`. So `convert -- --help` fails with `--help: The file does not exist.` and exit code 3. The tool counts the inputs after it expands directories and globs.
 - **Positional files**: only inputs with the same role, so their order does not matter. A file with another role takes an option, for example `sync --reference FILE` and `dual --primary FILE --secondary FILE`. `diff OLD NEW` keeps 2 positional files, as `diff` and `git diff` do.
 - **Input format**: `--from`. Without it, the tool detects the format from the content. When that fails, it uses the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta-chapters`. The tool reads like `Subtitle::load()` without a format, see [formats.md](formats.md#load-and-save).
 - **Output**: never positional. `convert`, `sync`, `translate` and `dual` write one input to standard output, or to the file of `-o FILE` (`--output FILE`). Several inputs need `--output-dir DIR`. `hls` always needs `--output-dir`.
@@ -92,6 +94,7 @@ php stbox.phar --version
 | `-o` ends with a slash, or its last part is `.` or `..` | `-o out/`, `-o out/.`, `-o ..` |
 | `-o` names a directory | `-o out` with an existing directory `out`. Pass `--output-dir out` |
 | `--output-dir` names a file, also for `hls` | `--output-dir movie.srt` |
+| `--output-dir` is empty. `hls` prints `Pass --output-dir DIR.` | `--output-dir ""` |
 
 - **Read files**: a read file is a file that the command reads. The inputs, the `.sub` file of a VobSub input and each side file are read files. A file passed twice, such as `movie.srt ./movie.srt`, counts once.
 - **Output paths**: the tool resolves `..` in an output path before it checks the path or creates a directory. `-o new/../keep.vtt` writes `keep.vtt` and creates no directory `new`. With an existing `keep.vtt`, it fails with exit code 2.
@@ -111,6 +114,7 @@ php stbox.phar --version
 - **MKV and WebM**: `--track` picks a subtitle track, see [MKV and WebM](#mkv-and-webm).
 - **Image cues**: `--skip-image-cues` leaves out image cues without text in place of failing.
 - **WebVTT output**: WebVTT has classes for 8 text colors only. The tool drops other colors and prints each one on standard error, for example `movie.srt: Cue #3 at 4 s: dropped the color "#123456", because WebVTT has classes for 8 colors only.` See [WebVTT](formats.md#webvtt).
+- **EBU STL output**: the output holds `?` for a character that the character code table lacks. The command prints one line on standard error for each. An example is `show.srt: Cue 1: the character table has no "Ж", so the file holds "?".` The exit code stays 0. See [EBU STL](formats.md#ebu-stl).
 - **SCC output**: `--scc-fit` wraps lines, replaces characters, and delays or drops captions that SCC cannot hold, in place of failing. It prints each change on standard error. See [SCC](formats.md#scc).
 
 ## Frame rates

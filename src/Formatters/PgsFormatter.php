@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PaletteReducer;
@@ -62,7 +63,9 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
 
             $start   = $this->pts($cue, $cue->getStart());
             $output .= $this->endShownCues($context, $shown, $start);
-            $shown[] = ["cue" => $cue, "image" => CueImage::fromCue($cue), "end" => $this->pts($cue, $cue->getEnd())];
+            // A cue that ends before it starts clears at its start, so the time stamps of the file do not go back.
+            $end     = $this->pts($cue, max($cue->getStart(), $cue->getEnd()));
+            $shown[] = ["cue" => $cue, "image" => CueImage::fromCue($cue), "end" => $end];
             if (count($shown) > self::MAX_SHOWN) {
                 array_shift($shown);
             }
@@ -144,7 +147,11 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
         $images = [];
         foreach ($shown as ["cue" => $cue, "image" => $image]) {
             $this->checkImage($cue, $image);
-            $images[] = $decoded = PngDecoder::decodeIndexed($image->png) ?? PngDecoder::decode($image->png);
+            try {
+                $images[] = $decoded = PngDecoder::decodeIndexed($image->png) ?? PngDecoder::decode($image->png);
+            } catch (InvalidArgumentException $exception) {
+                throw new UnwritableContentException($this->cueError($cue, lcfirst(rtrim($exception->getMessage(), "."))), $exception);
+            }
             $this->checkPngSize($cue, $image, $decoded["width"], $decoded["height"]);
         }
 

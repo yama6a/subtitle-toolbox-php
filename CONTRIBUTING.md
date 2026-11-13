@@ -46,7 +46,7 @@ Run the tests with `composer test`. Each pull request carries one label that set
 | androidx/media (Media3) | Apache-2.0 | adapt with credit + keep NOTICE, state changes |
 | JDaren/subtitleConverter | MIT (per README) | adapt with credit |
 | noophq/subtitle | LGPL-3.0 | behaviour only |
-| Subtitle Edit (libse/seconv) | MIT only at commit 58fad713d9c2b322784bc2fa52148e078dbc8759 and later (older releases GPL-3.0) | adapt with credit, only from MIT-licensed commits, pin the commit |
+| Subtitle Edit (libse/seconv) | MIT at every commit from `771236c5` (2026-02-28) on, where the `LICENSE` file is MIT (older commits have a GPL-3.0 `LICENSE.txt`) | adapt with credit, check the `LICENSE` file at the commit you use, pin the commit |
 | AlexPoint/SubtitlesParser | MIT | adapt with credit |
 | kitsumed/SubtitlesParserV2 | LGPL-3.0 | behaviour only |
 | Aegisub | BSD-3/ISC per file header (some files differ) | adapt with credit only if the file header is BSD/ISC; otherwise behaviour only |

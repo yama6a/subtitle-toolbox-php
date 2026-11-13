@@ -33,6 +33,8 @@ abstract class FileCommand extends Command
     // The second file of diff and dual while it loads. A failure then names it instead of the input.
     private ?string $failureLabel = null;
 
+    private bool $stopRequested = false;
+
 
     /**
      * @param (\Closure(string): void)|null $beforeCreate a test hook that runs before each output file is created, see OutputFiles
@@ -161,10 +163,13 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Fails when $directory, the value of --output-dir, names a file.
+     * Fails when $directory, the value of --output-dir, is empty or names a file.
      */
     public static function checkOutputDirectory(?string $directory): void
     {
+        if ($directory === "") {
+            self::fail("The --output-dir is empty. Pass a directory.");
+        }
         $real = $directory === null ? null : self::realTarget($directory);
         if ($real !== null && OutputFiles::exists($real) && !is_dir($real)) {
             self::fail("The --output-dir $directory is a file. Pass a directory.");
@@ -242,7 +247,38 @@ abstract class FileCommand extends Command
         $this->checkInputs($inputs, $arguments);
         $this->loadSideFiles($arguments, $console);
 
+        $restore = $this->listenForSignals();
+        try {
+            $this->processInputs($inputs, $arguments, $console);
+        } finally {
+            $restore();
+        }
+
+        $this->finish($console);
+        $skipped = count($inputs) - $this->succeeded - $this->failed;
+        if ($this->stopRequested) {
+            $console->err("Stopped by a signal.\n");
+        } elseif ($skipped > 0) {
+            $console->err("Stopped at the first failure. Pass --keep-going to process the other files.\n");
+        }
+        $summary = count($inputs) > 1 ? $this->batchSummary(count($inputs), $skipped) : null;
+        if ($summary !== null) {
+            $this->stopRequested ? $console->err("$summary\n") : $this->report($console, "$summary\n");
+        }
+
+        return $this->stopRequested ? Application::EXIT_SIGNAL : $this->exitCode();
+    }
+
+
+    /**
+     * @param list<string> $inputs
+     */
+    private function processInputs(array $inputs, Arguments $arguments, Console $console): void
+    {
         foreach ($inputs as $input) {
+            if ($this->stopRequested) {
+                break;
+            }
             $this->failureLabel = null;
             try {
                 $read = $this->read($input, $arguments, $console);
@@ -264,19 +300,37 @@ abstract class FileCommand extends Command
                 }
             }
         }
-
-        $this->finish($console);
-        $skipped = count($inputs) - $this->succeeded - $this->failed;
-        if ($skipped > 0) {
-            $console->err("Stopped at the first failure. Pass --keep-going to process the other files.\n");
-        }
-        $summary = count($inputs) > 1 ? $this->batchSummary(count($inputs), $skipped) : null;
-        if ($summary !== null) {
-            $this->report($console, "$summary\n");
-        }
-
-        return $this->exitCode();
     }
+
+
+    /**
+     * Makes SIGINT and SIGTERM stop the run before the next input. Without ext-pcntl, a signal ends the process as before.
+     * Returns the function that puts the old signal handling back.
+     *
+     * @return \Closure(): void
+     */
+    private function listenForSignals(): \Closure
+    {
+        $this->stopRequested = false;
+        if (!function_exists("pcntl_signal")) {
+            return static function (): void {
+            };
+        }
+        $async = pcntl_async_signals(true);
+        $stop  = function (): void {
+            $this->stopRequested = true;
+        };
+        pcntl_signal(SIGINT, $stop);
+        pcntl_signal(SIGTERM, $stop);
+
+        return static function () use ($async): void {
+            pcntl_signal(SIGINT, SIG_DFL);
+            pcntl_signal(SIGTERM, SIG_DFL);
+            pcntl_async_signals($async);
+        };
+    }
+
+
 
 
     protected static function label(string $input): string

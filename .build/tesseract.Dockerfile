@@ -16,13 +16,14 @@ RUN .build/build-phar.sh "$VERSION" /stbox.phar
 
 # Alpine packages the standard models of 67 languages only. The fast models of all languages take 338 MB, the
 # standard models 1,014 MB, and both read the test files without errors. The commit pins the content.
+# The Apache-2.0 LICENSE of tessdata_fast comes with the models, as the licence asks.
 FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:1ff5b45922ab30f418447c6089dbe2eba5f01e0b2742863d0327ac349305d70f AS tessdata
 ARG TESSDATA_COMMIT=87416418657359cb625c412a48b6e1d6d41c29bd
 RUN apk add --no-cache git
 WORKDIR /tessdata
 RUN git init -q . \
     && git remote add origin https://github.com/tesseract-ocr/tessdata_fast.git \
-    && git sparse-checkout set --no-cone '/*.traineddata' \
+    && git sparse-checkout set --no-cone '/*.traineddata' '/LICENSE' \
     && git fetch -q --depth 1 --filter=blob:none origin "$TESSDATA_COMMIT" \
     && git checkout -q FETCH_HEAD \
     && rm -rf .git
@@ -31,6 +32,7 @@ FROM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:1ff5b45922ab30f4184
 RUN apk add --no-cache tesseract-ocr
 COPY --from=tessdata /tessdata/ /usr/share/tessdata/
 COPY --from=build /stbox.phar /usr/local/bin/stbox.phar
+COPY --from=build /src/LICENSE /src/THIRD_PARTY_NOTICES.md /usr/share/doc/stbox/
 # OCR of a 1,500-cue PGS file peaks at about 139 MB, above the 128 MB default.
 RUN echo "memory_limit=512M" > "$PHP_INI_DIR/conf.d/stbox.ini"
 WORKDIR /work

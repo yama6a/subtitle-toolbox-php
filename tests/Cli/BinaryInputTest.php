@@ -58,6 +58,57 @@ class BinaryInputTest extends CliTestCase
     }
 
 
+    public function testADirectoryKeepsATxtFileWhoseContentIsASubtitleFormat(): void
+    {
+        mkdir("$this->dir/in");
+        file_put_contents("$this->dir/in/lines.txt", "[0][20] Hello\n[30][50] World\n");
+        copy(self::FIXTURES . "notes.txt", "$this->dir/in/notes.txt");
+
+        [$code, $stdout, $stderr] = $this->runCli(["convert", "in", "--to", "srt", "--output-dir", "out"]);
+
+        $this->assertSame([0, "in/lines.txt -> out/lines.srt\n", ""], [$code, $stdout, $stderr]);
+    }
+
+
+    public function testWordsAfterTwoDashesAreFiles(): void
+    {
+        $this->assertSame([3, "", "--help: The file does not exist.\n"], $this->runCli(["convert", "--to", "vtt", "--", "--help"]));
+        $this->assertSame([3, "", "-h: The file does not exist.\n"], $this->runCli(["convert", "--to", "vtt", "--", "-h"]));
+    }
+
+
+    public function testAnEmptyOutputDirIsAUsageError(): void
+    {
+        $this->assertSame(self::usageError("convert", "The --output-dir is empty. Pass a directory."), $this->runCli(["convert", "trip.srt", "--to", "vtt", "--output-dir", ""]));
+        $this->assertSame(self::usageError("hls", "Pass --output-dir DIR."), $this->runCli(["hls", "trip.srt", "--output-dir", ""]));
+        $this->assertSame([], array_diff(scandir($this->dir), [".", ".."], array_map("basename", glob(self::FIXTURES . "*"))));
+    }
+
+
+    public function testASignalStopsTheBatchBeforeTheNextInput(): void
+    {
+        if (!function_exists("pcntl_signal")) {
+            $this->markTestSkipped("The pcntl extension is missing.");
+        }
+        $process = proc_open(
+            [PHP_BINARY, self::BIN, "info", "-", "trip.srt"],
+            [0 => ["pipe", "r"], 1 => ["pipe", "w"], 2 => ["pipe", "w"]],
+            $pipes,
+            $this->dir
+        );
+        usleep(1_500_000);
+        posix_kill(proc_get_status($process)["pid"], SIGINT);
+        usleep(200_000);
+        fwrite($pipes[0], $this->file("trip.srt"));
+        fclose($pipes[0]);
+        stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        $code   = proc_close($process);
+
+        $this->assertSame([130, "Stopped by a signal.\n2 files: 1 succeeded, 0 failed, 1 skipped.\n"], [$code, $stderr]);
+    }
+
+
     public function testDashReadsStandardInputAndWritesStandardOutput(): void
     {
         [$code, $stdout, $stderr] = $this->runCli(["convert", "-", "--to", "vtt"], file_get_contents(self::FIXTURES . "trip.srt"));

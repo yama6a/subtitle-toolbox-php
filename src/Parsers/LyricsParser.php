@@ -205,7 +205,7 @@ final class LyricsParser extends SubtitleParser
 
             $next = $timeline[$index + 1] ?? null;
             if ($next === null) {
-                $entry["cue"]->setEnd($entry["time"] + $this->options->lastCueDuration);
+                $entry["cue"]->setEnd(Timecode::lastCueEnd($entry["time"], $this->options->lastCueDuration));
                 continue;
             }
 
