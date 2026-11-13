@@ -24,6 +24,9 @@ final class Cea708Encoder
     // A service block holds at most 31 bytes.
     private const MAX_BLOCK = 31;
 
+    // The longest command, DF0 with its 6 parameters. A block of fewer bytes never holds it.
+    private const LONGEST_COMMAND = 7;
+
     // A 16:9 window holds 42 columns. The window definition holds at most 16 rows and 64 columns.
     private const COLUMNS     = 42;
     private const MAX_ROWS    = 16;
@@ -52,7 +55,7 @@ final class Cea708Encoder
 
     /**
      * Returns the service blocks of service 1 by frame. $frameOf turns seconds into a frame number.
-     * A block holds whole commands and at most $capacity bytes.
+     * A block holds whole commands and at most $capacity bytes. A capacity below 7 bytes counts as 7, so that every command fits.
      *
      * @param callable(float): int $frameOf
      * @return array<int, string>
@@ -60,7 +63,7 @@ final class Cea708Encoder
     public function blocks(Subtitle $subtitle, callable $frameOf, int $capacity): array
     {
         $this->frames   = [];
-        $this->capacity = min($capacity, self::MAX_BLOCK);
+        $this->capacity = max(self::LONGEST_COMMAND, min($capacity, self::MAX_BLOCK));
         $previous       = null;
         $lastShow       = PHP_INT_MIN;
         $index          = 0;
