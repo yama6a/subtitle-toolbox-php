@@ -655,7 +655,7 @@ final class TtmlParser extends SubtitleParser
     {
         $lines       = [];
         $lineRuns    = [];
-        $openAgent   = null;
+        $voice       = ["agent" => null, "seenText" => false, "partial" => false];
         foreach ([...$runs, TtmlRun::lineBreak()] as $run) {
             if (!$run->isLineBreak()) {
                 $lineRuns[] = $run;
@@ -678,8 +678,12 @@ final class TtmlParser extends SubtitleParser
                 }
             }
 
-            $lines[]  = $this->runsToMarkup($lineRuns, $openAgent);
+            $lines[]  = $this->runsToMarkup($lineRuns, $voice);
             $lineRuns = [];
+        }
+        if ($voice["agent"] !== null && $voice["partial"]) {
+            $last         = array_key_last(array_filter($lines, static fn (string $line): bool => $line !== ""));
+            $lines[$last] .= "</v>";
         }
 
         return $lines;
@@ -687,11 +691,13 @@ final class TtmlParser extends SubtitleParser
 
 
     /**
-     * A speaker tag stays open across lines, as in WebVTT.
+     * A speaker tag stays open across lines, as in WebVTT. $voice holds the open agent, whether text was seen, and
+     * whether the open voice starts after text, so that it does not cover all the text and the caller must close it.
      *
-     * @param list<TtmlRun> $runs
+     * @param list<TtmlRun>                                        $runs
+     * @param array{agent: ?string, seenText: bool, partial: bool} $voice
      */
-    private function runsToMarkup(array $runs, ?string &$openAgent): string
+    private function runsToMarkup(array $runs, array &$voice): string
     {
         $markup    = "";
         $agentRuns = [];
@@ -701,11 +707,14 @@ final class TtmlParser extends SubtitleParser
                 $agentRuns = [];
                 continue;
             }
-            if (trim($run->text) !== "" && $run->agent !== $openAgent) {
-                $markup   .= StyleRuns::toMarkup($agentRuns) . ($openAgent === null ? "" : "</v>")
-                    . ($run->agent === null ? "" : Markup::voiceTag($run->agent));
-                $agentRuns = [];
-                $openAgent = $run->agent;
+            if (trim($run->text) !== "") {
+                if ($run->agent !== $voice["agent"]) {
+                    $markup   .= StyleRuns::toMarkup($agentRuns) . ($voice["agent"] === null ? "" : "</v>")
+                        . ($run->agent === null ? "" : Markup::voiceTag($run->agent));
+                    $agentRuns = [];
+                    $voice     = ["agent" => $run->agent, "seenText" => true, "partial" => $voice["seenText"]];
+                }
+                $voice["seenText"] = true;
             }
             $agentRuns[] = [$run->text, $run->style];
         }

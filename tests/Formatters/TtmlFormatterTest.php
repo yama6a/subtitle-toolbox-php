@@ -156,7 +156,7 @@ class TtmlFormatterTest extends TestCase
         $reparsed = Subtitle::fromString($subtitle->toString(Format::Ttml), Format::Ttml);
         $cues     = $reparsed->getCues();
 
-        $this->assertSame("<v Ann>one </v><v Ben>two\n<b>bold <i>open</i></b>", $cues[0]->getText());
+        $this->assertSame("<v Ann>one </v><v Ben>two\n<b>bold <i>open</i></b></v>", $cues[0]->getText());
         $this->assertSame(Alignment::MiddleLeft, $cues[0]->getAlignment());
         $this->assertSame("<i>mis</i><b><i>nested</i>tags</b> &lt;3 <font color=\"#ffff00\">class</font> word", $cues[1]->getText());
         $this->assertSame(Alignment::BottomCenter, $cues[1]->getAlignment());
