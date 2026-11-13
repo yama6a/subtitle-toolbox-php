@@ -148,7 +148,7 @@ final class TtmlParser extends SubtitleParser
 
     /**
      * Replaces the HTML named entities that XML does not define with character references.
-     * The parser never loads a DTD, so no file can define these entities itself.
+     * The parser never loads an external DTD, so no external file can define these entities. An entity of the internal DTD that has the same name still wins.
      *
      * @return array{string, ?string} the new XML, and the first entity that was replaced
      */
@@ -580,6 +580,8 @@ final class TtmlParser extends SubtitleParser
         foreach ($node->childNodes as $child) {
             if ($child->nodeType === XML_TEXT_NODE || $child->nodeType === XML_CDATA_SECTION_NODE) {
                 self::addTextRuns($runs, $child->nodeValue, $style, $agent, $preserveSpace);
+            } elseif ($child->nodeType === XML_ENTITY_REF_NODE) {
+                self::addTextRuns($runs, $child->textContent, $style, $agent, $preserveSpace);
             } elseif ($this->isTtElement($child, "br")) {
                 $runs[] = TtmlRun::lineBreak();
             } elseif ($this->isTtElement($child, "span")) {

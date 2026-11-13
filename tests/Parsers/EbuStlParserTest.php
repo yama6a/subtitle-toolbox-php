@@ -10,6 +10,7 @@ use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
@@ -140,6 +141,34 @@ class EbuStlParserTest extends TestCase
         $cue = (new EbuStlParser())->parse($gsi . self::tti(1, "Text"), new ReadOptions(formats: [new EbuStlReadOptions(subtractStartOfProgramme: true)]))->getCues()[0];
 
         $this->assertSame([0.0, 0.4], [$cue->getStart(), $cue->getEnd()]);
+    }
+
+
+    public static function reversedTimes(): array
+    {
+        return [
+            "5 s to 2 s"  => ["\0\0\x05\0", "\0\0\x02\0", [[2.0, 5.0]], ParseWarningAction::Repaired, "The cue ends at 2 s, before it starts at 5 s."],
+            "50 s to 2 s" => ["\0\0\x32\0", "\0\0\x02\0", [], ParseWarningAction::Skipped, "The cue ends at 2 s, before it starts at 50 s."],
+        ];
+    }
+
+
+    #[DataProvider("reversedTimes")]
+    public function testCueThatEndsBeforeItStartsThrowsInStrictModeAndRepairsOrSkipsInLenientMode(string $in, string $out, array $times, ParseWarningAction $action, string $message): void
+    {
+        $content = self::gsi() . self::tti(1, "Text");
+        $content = substr_replace(substr_replace($content, $in, 1024 + 5, 4), $out, 1024 + 9, 4);
+        try {
+            (new EbuStlParser())->parse($content, new ReadOptions());
+            $this->fail("No exception");
+        } catch (ParsingException $exception) {
+            $this->assertStringContainsString($message, $exception->getMessage());
+        }
+
+        $subtitle = (new EbuStlParser())->parse($content, new ReadOptions(lenient: true));
+
+        $this->assertSame($times, array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertSame($action, $subtitle->getParseWarnings()[0]->action);
     }
 
 

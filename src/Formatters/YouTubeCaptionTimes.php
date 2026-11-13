@@ -51,6 +51,9 @@ final class YouTubeCaptionTimes
             $start    = max(0.0, $cue->getStart());
             $source   = $this->seconds($data[$this->startKey] ?? null);
             $duration = $source === null ? null : $this->seconds($data[$this->durationKey] ?? null);
+            if ($duration === null && $source !== null && !$this->asString) {
+                $duration = 0.0;
+            }
             $window   = $this->windowKey === null ? null : $data[$this->windowKey] ?? null;
             $timed[]  = [$start, $source === null ? max($start, $cue->getEnd()) : ($duration === null ? null : $start + $duration), $window];
         }

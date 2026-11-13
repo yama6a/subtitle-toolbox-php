@@ -65,11 +65,11 @@ final class AssemblyAiFormatter extends SubtitleFormatter
             $sameStart && $sameEnd,
             $sameText,
             fn (mixed $word): array => [self::wordText($word), self::seconds($word["start"] ?? null), self::seconds($word["end"] ?? null)],
-            fn (string $text, float $wordStart, float $wordEnd): array => [
+            fn (string $text, float $wordStart, float $wordEnd, mixed $from): array => [
                 "text"       => $text,
                 "start"      => self::milliseconds($wordStart),
                 "end"        => self::milliseconds($wordEnd),
-                "confidence" => TranscriptWords::NEW_WORD_CONFIDENCE,
+                "confidence" => $from["confidence"] ?? TranscriptWords::NEW_WORD_CONFIDENCE,
                 "speaker"    => $speaker,
             ],
         ) ?? [];

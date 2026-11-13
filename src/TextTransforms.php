@@ -57,8 +57,14 @@ trait TextTransforms
                 throw new InvalidArgumentException("The regular expression \"$search\" is not valid: " . preg_last_error_msg() . ".");
             }
 
-            return $this->textTransformsMapRuns(fn (string $text): string =>
-                preg_replace($pattern, $replace, $text) ?? $text);
+            return $this->textTransformsMapRuns(function (string $text) use ($pattern, $replace, $search): string {
+                $result = preg_replace($pattern, $replace, $text);
+                if ($result === null) {
+                    throw new InvalidArgumentException("The regular expression \"$search\" failed: " . preg_last_error_msg() . ".");
+                }
+
+                return $result;
+            });
         }
 
         if ($caseSensitive) {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use DOMElement;
+use DOMText;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
@@ -328,6 +329,9 @@ final class YouTubeTimedTextParser extends SubtitleParser
         $segments = [];
         $extras   = [];
         foreach ($paragraph->childNodes as $node) {
+            if (!$node instanceof DOMText && !$node instanceof DOMElement) {
+                continue;
+            }
             $span       = $node instanceof DOMElement ? $node : null;
             $offset     = $span?->hasAttribute("t") ? $this->time($span, "t") / 1000 : null;
             if ($offset !== null) {

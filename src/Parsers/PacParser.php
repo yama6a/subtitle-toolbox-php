@@ -178,6 +178,14 @@ final class PacParser extends SubtitleParser
             return null;
         }
 
+        try {
+            [$start, $end] = $this->orderedTimes($start, $end, null, $index, [bin2hex($record)]);
+        } catch (ParsingException $exception) {
+            $this->fail($exception, null, $index, [bin2hex($record)]);
+
+            return null;
+        }
+
         $text = [];
         foreach ($lines as $line) {
             [$decoded] = $codePage->decodeLine($line["runs"]);

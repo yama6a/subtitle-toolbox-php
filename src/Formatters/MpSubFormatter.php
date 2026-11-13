@@ -36,14 +36,14 @@ final class MpSubFormatter extends SubtitleFormatter
             }
 
             $output .= LineEnding::Lf->value;
-            $start   = max(0.0, $cue->getStart());
-            $end     = max(0.0, $cue->getEnd());
+            $start   = min(max(0.0, $cue->getStart()), Timecode::LAST_TIME);
+            $end     = min(max(0.0, $cue->getEnd()), Timecode::LAST_TIME);
             if ($frameRate === null) {
                 $wait     = Timecode::totalMilliseconds($start - $previousEnd) / 1000;
                 $duration = Timecode::totalMilliseconds($end - $start) / 1000;
             } else {
-                $wait     = $frameRate->secondsToFrames($start) - $frameRate->secondsToFrames($previousEnd);
-                $duration = $frameRate->secondsToFrames($end) - $frameRate->secondsToFrames($start);
+                $wait     = $frameRate->framesBelowLimit($start) - $frameRate->framesBelowLimit($previousEnd);
+                $duration = $frameRate->framesBelowLimit($end) - $frameRate->framesBelowLimit($start);
             }
             $output .= "$wait $duration" . LineEnding::Lf->value;
             $output .= implode(LineEnding::Lf->value, $lines) . LineEnding::Lf->value;
@@ -73,7 +73,10 @@ final class MpSubFormatter extends SubtitleFormatter
 
         $header = "";
         foreach ($headers as $key => $value) {
-            $header .= "$key=$value" . LineEnding::Lf->value;
+            // The parser reads only KEY=value lines with ASCII capitals as the key.
+            if (preg_match("/^[A-Z]+$/D", (string) $key) === 1) {
+                $header .= "$key=" . strtr((string) $value, ["\r" => " ", "\n" => " "]) . LineEnding::Lf->value;
+            }
         }
 
         return $header;

@@ -85,7 +85,7 @@ final class DeepgramFormatter extends SubtitleFormatter
             $sameStart && $sameEnd,
             $sameText,
             fn (mixed $word): array => [self::wordText($word), self::seconds($word["start"] ?? null), self::seconds($word["end"] ?? null)],
-            fn (string $text, float $wordStart, float $wordEnd): array => self::newWord($text, $wordStart, $wordEnd, $speaker),
+            fn (string $text, float $wordStart, float $wordEnd, mixed $from): array => self::newWord($text, $wordStart, $wordEnd, $speaker, $from),
         ) ?? [];
         if ($speaker !== null && $speaker !== ($cueData["speaker"] ?? null)) {
             $words = array_map(fn (mixed $word): mixed => is_array($word) ? array_replace($word, ["speaker" => $speaker]) : $word, $words);
@@ -162,11 +162,11 @@ final class DeepgramFormatter extends SubtitleFormatter
     }
 
 
-    private static function newWord(string $text, float $start, float $end, int|string|null $speaker): array
+    private static function newWord(string $text, float $start, float $end, int|string|null $speaker, mixed $from): array
     {
         $word = trim(mb_strtolower($text, "UTF-8"), " \t\n\r\0\x0B.,?!;:\"'()[]");
 
-        return ["word" => $word === "" ? $text : $word, "start" => $start, "end" => $end, "confidence" => TranscriptWords::NEW_WORD_CONFIDENCE]
+        return ["word" => $word === "" ? $text : $word, "start" => $start, "end" => $end, "confidence" => $from["confidence"] ?? TranscriptWords::NEW_WORD_CONFIDENCE]
             + ($speaker === null ? [] : ["speaker" => $speaker])
             + ["punctuated_word" => $text];
     }

@@ -537,12 +537,33 @@ final class LineWrapper
 
     /**
      * Joins 2 lines with a space, or without one when a CJK character ends the first line and starts the second.
+     * A "<" of the first line that is no tag becomes "&lt;" when the join would make it a tag with a ">" of the second line.
      */
     private static function joinLine(string $text, string $line): string
     {
         $cjk               = '[' . self::CJK . ']';
         $joinsWithoutSpace = preg_match("/$cjk\$/u", Markup::visibleText($text)) === 1 && preg_match("/^$cjk/u", Markup::visibleText($line)) === 1;
 
-        return $text . ($joinsWithoutSpace ? "" : " ") . $line;
+        $separator = $joinsWithoutSpace ? "" : " ";
+        $joined    = $text . $separator . $line;
+        if (self::tagCount($joined) === self::tagCount($text) + self::tagCount($line)) {
+            return $joined;
+        }
+
+        $tokens = Markup::splitTags($text);
+        foreach ($tokens as $index => $token) {
+            $tokens[$index] = $index % 2 === 0 ? str_replace("<", "&lt;", $token) : $token;
+        }
+
+        return implode("", $tokens) . $separator . $line;
+    }
+
+
+    /**
+     * Counts the tags in $text.
+     */
+    private static function tagCount(string $text): int
+    {
+        return intdiv(count(Markup::splitTags($text)) - 1, 2);
     }
 }

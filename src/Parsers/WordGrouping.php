@@ -260,7 +260,7 @@ trait WordGrouping
         }
 
         $markup  = $this->formatOptions()->wordTimestamps
-            ? Markup::insertWordTimestamps($text, array_map(fn (array $word): array => [$word["text"], $word["start"]], $words))
+            ? Markup::insertWordTimestamps($text, self::inTimeOrder(array_map(fn (array $word): array => [$word["text"], $word["start"]], $words)))
             : Markup::escapeText($text);
         $speaker = trim($speaker ?? "");
         if ($this->formatOptions()->speakerVoices && $speaker !== "") {
@@ -268,6 +268,32 @@ trait WordGrouping
         }
 
         return (new SubtitleCue($start, $end, $markup))->setFormatData(static::formatDataKey(), $formatData);
+    }
+
+
+    /**
+     * Returns the words with the start set to null for each word that starts before the word with a start before it.
+     * The text of such a word then follows the word before it, so the timestamps of a cue never go back in time.
+     *
+     * @param list<array{string, ?float}> $words
+     *
+     * @return list<array{string, ?float}>
+     */
+    private static function inTimeOrder(array $words): array
+    {
+        $latest = null;
+        foreach ($words as &$word) {
+            if ($word[1] === null) {
+                continue;
+            }
+            if ($latest !== null && $word[1] < $latest) {
+                $word[1] = null;
+                continue;
+            }
+            $latest = $word[1];
+        }
+
+        return $words;
     }
 
 

@@ -229,4 +229,12 @@ class YouTubeTimedTextParserTest extends TestCase
 
         (new YouTubeTimedTextParser())->parse('{"events":{"0":{"tStartMs":0,"dDurationMs":1000,"segs":[{"utf8":"a"}]}}}', new ReadOptions());
     }
+
+
+    public function testASrv3CommentAndProcessingInstructionGiveNoText(): void
+    {
+        $source = '<timedtext format="3"><body><p t="0" d="1000">hi<!-- secret --><?x data?></p></body></timedtext>';
+
+        $this->assertSame("hi", (new YouTubeTimedTextParser())->parse($source, new ReadOptions())->getCues()[0]->getText());
+    }
 }
