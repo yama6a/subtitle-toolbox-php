@@ -156,6 +156,40 @@ class FixesTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    /**
+     * @return array<string, array{\Closure(Subtitle): mixed, string}>
+     */
+    public static function fixesBeyondTheTimeLimit(): array
+    {
+        return [
+            "#1086 extendShortCues()"   => [fn (Subtitle $s) => $s->extendShortCues(720000000),
+                                            "The retimed cue 2 would end at 720000005 s. Cue times must be below 100000 hours."],
+            "#1086 addLeadInOut()"      => [fn (Subtitle $s) => $s->addLeadInOut(0, 720000000),
+                                            "The retimed cue 2 would end at 720000006 s. Cue times must be below 100000 hours."],
+            "end on 100000 hours once rounded" => [fn (Subtitle $s) => $s->addLeadInOut(0, 359999993.9996),
+                                            "The retimed cue 2 would end at 359999999.9996 s. Cue times must be below 100000 hours."],
+        ];
+    }
+
+
+    /**
+     * The first cue ends before the limit after either fix, so a fix that changes cues before it checks them would move it.
+     */
+    #[DataProvider("fixesBeyondTheTimeLimit")]
+    public function testFixBeyondTheTimeLimitThrowsAndKeepsTheTimes(\Closure $fix, string $message): void
+    {
+        $subtitle = TestSubtitles::fromTimes([[1, 2], [5, 6]]);
+
+        try {
+            $fix($subtitle);
+            $this->fail("No exception.");
+        } catch (InvalidArgumentException $exception) {
+            $this->assertSame($message, $exception->getMessage());
+        }
+        $this->assertSame([[1.0, 2.0], [5.0, 6.0]], TestSubtitles::times($subtitle));
+    }
+
+
     public function testAddLeadInOutOnSpeechToTextTiming(): void
     {
         $subtitle = Subtitle::fromString((string)file_get_contents(__DIR__ . "/files/fixes/own_asr_tight_timing.srt"), Format::SubRip);
