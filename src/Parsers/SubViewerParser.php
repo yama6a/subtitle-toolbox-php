@@ -155,7 +155,7 @@ final class SubViewerParser extends SubtitleParser
         foreach ($entries as $index => $entry) {
             $cue = $entry["cue"];
             if (!$entry["endedByTimeLine"]) {
-                $cue->setEnd(isset($entries[$index + 1]) ? $entries[$index + 1]["cue"]->getStart() : $cue->getStart() + $this->options->lastCueDuration);
+                $cue->setEnd(isset($entries[$index + 1]) ? $entries[$index + 1]["cue"]->getStart() : Timecode::lastCueEnd($cue->getStart(), $this->options->lastCueDuration));
                 $checked[] = $cue;
                 continue;
             }

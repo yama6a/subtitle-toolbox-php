@@ -59,7 +59,7 @@ final class TmPlayerParser extends SubtitleParser
                 continue;
             }
 
-            $end = isset($entries[$index + 1]) ? $entries[$index + 1]["time"] : $entry["time"] + $this->options->lastCueDuration;
+            $end = isset($entries[$index + 1]) ? $entries[$index + 1]["time"] : Timecode::lastCueEnd($entry["time"], $this->options->lastCueDuration);
             $parsedCues[] = new SubtitleCue($entry["time"], $end, $entry["lines"]);
         }
 
