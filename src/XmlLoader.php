@@ -74,10 +74,15 @@ final class XmlLoader
      * Subtitle::fromString() converts the input to UTF-8 but keeps the XML declaration, such as encoding="ISO-8859-1".
      * libxml would then decode the UTF-8 bytes a second time, or reject them for a UTF-16 declaration.
      * Some tools also declare UTF-16 for UTF-8 files.
+     * Content that is not valid UTF-8 keeps its declaration, so libxml decodes the raw bytes of a direct parser call.
      * Raw UTF-16 bytes hold zero bytes, so the pattern leaves them alone.
      */
     private static function declareUtf8(string $xml): string
     {
+        if (!StringHelpers::isValidUtf8($xml)) {
+            return $xml;
+        }
+
         return preg_replace(
             '/\A(\xEF\xBB\xBF)?(<\?xml\s[^>]*?\bencoding\s*=\s*)(["\'])[^"\']*\3/i',
             '${1}${2}${3}UTF-8${3}',
