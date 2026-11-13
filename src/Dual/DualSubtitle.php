@@ -177,6 +177,6 @@ final class DualSubtitle
             $lines    = array_map(fn (string $line): string => $openTag . $line . $closeTag, $lines);
         }
 
-        return (new SubtitleCue($cue->getStart(), $cue->getEnd(), $lines))->setAlignment($cue->getAlignment());
+        return (new SubtitleCue($cue->getStart(), $cue->getEnd(), $lines))->setAlignment($cue->getAlignment())->setPosition($cue->findPosition());
     }
 }

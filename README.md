@@ -9,6 +9,8 @@ Upgrading from 2.x? The package has a new name. See the [upgrade guide](docs/upg
 
 Upgrading from 3.x? See the [4.0 upgrade guide](docs/upgrade-4.0.md).
 
+Upgrading from 5.x? See the [6.0 upgrade guide](docs/upgrade-6.0.md).
+
 ## Install
 ```sh
 composer require yama6a/subtitle-toolbox-php
@@ -19,7 +21,7 @@ apt install tesseract-ocr                    # or Tesseract on Debian and Ubuntu
 
 The core package needs neither OCR engine. See [ocr.md](docs/ocr.md) for the install commands of other systems and languages.
 
-The library needs PHP 8.2 or later with `ext-dom`, `ext-iconv` and `ext-mbstring`. These extensions are optional:
+The library needs PHP 8.3 or later with `ext-dom`, `ext-iconv` and `ext-mbstring`. These extensions are optional:
 
 - `ext-zlib` for PGS output and compressed MKV tracks
 - `ext-curl` for the translation engines
