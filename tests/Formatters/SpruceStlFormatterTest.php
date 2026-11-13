@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\SpruceStlWriteOptions;
 use SubtitleToolbox\Subtitle;
@@ -102,5 +103,54 @@ class SpruceStlFormatterTest extends TestCase
         $this->expectExceptionMessage("The Spruce STL frame rate must be greater than 0, got 0.");
 
         new SpruceStlWriteOptions(frameRate: 0);
+    }
+
+
+    public function testWritesABarAndATextToggleAsText(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["Rock | Pop", "^Bold ^Italic ^Under"]));
+        $output   = $subtitle->toString(Format::SpruceStl);
+
+        $this->assertStringContainsString("Rock \u{00A6} Pop|^\u{2060}Bold ^\u{2060}Italic ^\u{2060}Under\n", $output);
+        $this->assertSame(
+            ["Rock \u{00A6} Pop", "^\u{2060}Bold ^\u{2060}Italic ^\u{2060}Under"],
+            Subtitle::fromString($output, Format::SpruceStl)->getCues()[0]->getLines()
+        );
+    }
+
+
+    public function testWritesALineFeedInAStoredLineAsASpace(): void
+    {
+        $subtitle = (new Subtitle())
+            ->setFormatData("spruce-stl", ["header" => ["\$A = 1\nstray line"], "trailer" => ["\$B = 2\r\$C = 3"]])
+            ->addCue(new SubtitleCue(1, 2, ["One"]));
+        $output   = $subtitle->toString(Format::SpruceStl);
+
+        $this->assertSame("\$A = 1 stray line\n00:00:01:00 , 00:00:02:00 , One\n\$B = 2 \$C = 3\n", $output);
+        Subtitle::fromString($output, Format::SpruceStl);
+    }
+
+
+    public function testSkipsStoredLinesThatAreNoCommands(): void
+    {
+        $cue      = (new SubtitleCue(1, 2, ["One"]))->setFormatData("spruce-stl", ["commands" => ["stray", "\$A = 1"]]);
+        $subtitle = (new Subtitle())
+            ->setFormatData("spruce-stl", ["header" => ["Hello", "", "//note", "\$H = 1"], "trailer" => ["stray", "\$T = 1"]])
+            ->addCue($cue);
+        $output   = $subtitle->toString(Format::SpruceStl);
+
+        $this->assertSame("\n//note\n\$H = 1\n\$A = 1\n00:00:01:00 , 00:00:02:00 , One\n\$T = 1\n", $output);
+        Subtitle::fromString($output, Format::SpruceStl);
+    }
+
+
+    public function testAFrameRateAbove100FailsTheWrite(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.99, 3, ["One"]));
+
+        $this->expectException(UnwritableContentException::class);
+        $this->expectExceptionMessage("Spruce STL writes a frame number of 2 digits, so the frame rate must be at most 100 fps, got 120.");
+
+        $subtitle->toString(Format::SpruceStl, new WriteOptions(formats: [new SpruceStlWriteOptions(frameRate: 120)]));
     }
 }

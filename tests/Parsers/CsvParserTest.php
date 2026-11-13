@@ -487,4 +487,34 @@ class CsvParserTest extends TestCase
     {
         $this->assertSame(1.123, Subtitle::fromString("start,text\n00:00:01.12349999999999999,a\n", Format::Csv)->getCues()[0]->getStart());
     }
+
+
+    public function testAStartPlusADurationStopsAtTheLastValidTime(): void
+    {
+        $subtitle = Subtitle::fromString("start,duration,text\n99999:59:59,2,a\n", Format::Csv);
+
+        $this->assertSame(359999999.999, $subtitle->getCues()[0]->getEnd());
+        Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
+    }
+
+
+    public function testTheMissingColumnErrorNamesTheLineOfTheHeaderRow(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage('The table has no column "text" for text. (line 3)');
+
+        Subtitle::fromString("\n\nstart,end\n1,2\n", Format::Csv);
+    }
+
+
+    public function testAColumnIndexOf1000WithoutAHeaderRowIsAMissingColumn(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage('The table has no column "1000" for start.');
+
+        Subtitle::fromString("a,1,2\n", Format::Csv, new ReadOptions(
+            lenient: true,
+            formats: [new CsvReadOptions(new CsvColumns(start: 1000, text: 0, header: false))],
+        ));
+    }
 }

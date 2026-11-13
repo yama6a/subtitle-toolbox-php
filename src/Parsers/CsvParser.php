@@ -52,7 +52,7 @@ final class CsvParser extends SubtitleParser
 
         $headerRecord = $this->columns->header && $records !== [] ? array_shift($records) : null;
         $header       = $headerRecord["cells"] ?? null;
-        $roles        = $this->resolveRoles($header);
+        $roles        = $this->resolveRoles($header, $headerRecord["line"] ?? 1);
         $this->warnSynonymColumns($header, $roles, $headerRecord["line"] ?? null, $delimiter);
 
         $subtitle       = new Subtitle();
@@ -109,7 +109,7 @@ final class CsvParser extends SubtitleParser
         $start = self::parseTime($roleCell(CsvColumnRole::Start), $frameRate, $milliseconds, $lineNumber);
         $end   = match (true) {
             $roleCell(CsvColumnRole::End) !== ""      => self::parseTime($roleCell(CsvColumnRole::End), $frameRate, $milliseconds, $lineNumber),
-            $roleCell(CsvColumnRole::Duration) !== "" => $start + self::parseTime($roleCell(CsvColumnRole::Duration), $frameRate, $milliseconds, $lineNumber),
+            $roleCell(CsvColumnRole::Duration) !== "" => Timecode::lastCueEnd($start, self::parseTime($roleCell(CsvColumnRole::Duration), $frameRate, $milliseconds, $lineNumber)),
             default                  => null,
         };
 
@@ -241,7 +241,7 @@ final class CsvParser extends SubtitleParser
     {
         foreach ($records as $index => ["cells" => $cells]) {
             try {
-                $this->resolveRoles($cells);
+                $this->resolveRoles($cells, 1);
             } catch (ParsingException) {
                 continue;
             }
@@ -353,11 +353,12 @@ final class CsvParser extends SubtitleParser
     /**
      * Returns the 0-based column index of each role that the table has.
      *
-     * @param list<string>|null $header
+     * @param list<string>|null $header     the header row, or null for a table without one
+     * @param int               $headerLine the line of the header row, 1 without one
      *
      * @return array<string, int>
      */
-    private function resolveRoles(?array $header): array
+    private function resolveRoles(?array $header, int $headerLine): array
     {
         $names    = array_map(fn (string $name): string => strtolower(trim($name)), $header ?? []);
         $roles    = [];
@@ -372,10 +373,10 @@ final class CsvParser extends SubtitleParser
             if ($index === false && $synonyms) {
                 $index = self::findSynonymColumn($role, $header ?? []);
             }
-            if ($index !== false && ($header === null || $index < count($header))) {
+            if ($index !== false && $index < ($header === null ? FormatDataSchema::CSV_MAX_COLUMNS : count($header))) {
                 $roles[$role] = $index;
             } elseif ($column !== null || $role === CsvColumnRole::Start->value || $role === CsvColumnRole::Text->value) {
-                throw new ParsingException("The table has no column \"" . ($column ?? $role) . "\" for $role.", 1);
+                throw new ParsingException("The table has no column \"" . ($column ?? $role) . "\" for $role.", $headerLine);
             }
         }
 
