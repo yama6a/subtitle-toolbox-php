@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
@@ -91,6 +92,15 @@ class PacFormatterTest extends TestCase
         $output = (new Subtitle())->addCue(new SubtitleCue(700 * 3600, 700 * 3600 + 1, ["Late"]))->toString(Format::Pac);
 
         $this->assertSame([654 * 100, 654 * 100], array_values(unpack("v2", substr($output, 24, 2) . substr($output, 28, 2))));
+    }
+
+
+    public function testUnknownStoredCodePageThrowsALibraryException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The field formatData.pac.codePage must be one of");
+
+        (new Subtitle())->addCue(new SubtitleCue(1.0, 2.0, "Hi"))->setFormatData("pac", ["codePage" => "klingon"]);
     }
 
 

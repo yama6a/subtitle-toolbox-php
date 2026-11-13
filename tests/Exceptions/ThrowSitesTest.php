@@ -450,8 +450,8 @@ class ThrowSitesTest extends TestCase
             }, ...$unwritable],
             "Parsers/Cavena890Variant.php: line of 52 bytes" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 52)))
                 ->toString(Format::Cavena890), ...$unwritable],
-            "Formatters/PacFormatter.php: subtitle number 65536" => [fn () => self::subtitle()->setFormatData("pac", ["firstNumber" => 65536])
-                ->toString(Format::Pac), ...$unwritable],
+            "Formatters/PacFormatter.php: subtitle number 65536" => [fn () => TestSubtitles::fromCues([[1, 2, ["One"]], [3, 4, ["Two"]]])
+                ->setFormatData("pac", ["firstNumber" => 65535])->toString(Format::Pac), ...$unwritable],
             "Formatters/PacFormatter.php: text too long" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 70000)))
                 ->toString(Format::Pac), ...$unwritable],
             "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->toString(Format::Pgs), ...$unwritable],
