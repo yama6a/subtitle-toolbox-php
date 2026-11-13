@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Application;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatRegistry;
@@ -434,6 +435,31 @@ class PgsFormatterTest extends TestCase
     }
 
 
+    public function testAPngThatDoesNotDecodeKeepsTheDecodeErrorAsThePreviousException(): void
+    {
+        $subtitle = (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage("GIF89a", 0, 0, 2, 2, 720, 576), new SubtitleCue(1, 2)));
+
+        try {
+            $subtitle->toString(Format::Pgs);
+            $this->fail("No exception");
+        } catch (UnwritableContentException $exception) {
+            $this->assertInstanceOf(InvalidArgumentException::class, $exception->getPrevious());
+        }
+    }
+
+
+    public function testACueThatEndsBeforeItStartsClearsAtItsStart(): void
+    {
+        $subtitle = (new Subtitle())->addCue(self::imageCue(3.0, 1.0, 1, 1, [0xFFFFFFFF]));
+
+        $times = array_unique(array_column(self::segments($subtitle->toString(Format::Pgs)), 0));
+
+        $this->assertSame([270000], $times);
+        $this->assertSame([[3.0, 3.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()],
+                                                  self::pgsRoundTrip($subtitle)->getCues()));
+    }
+
+
     /**
      * @return array<string, array{SubtitleCue, string}>
      */
@@ -446,6 +472,8 @@ class PgsFormatterTest extends TestCase
             "size"         => [TestSubtitles::imageCue(new CueImage($image->png, 0, 0, 3, 2, 720, 576), new SubtitleCue(1, 2)), "the PNG has 2x2 pixels"],
             "negative x"   => [TestSubtitles::imageCue(new CueImage($image->png, -1, 0, 2, 2, 720, 576), new SubtitleCue(1, 2)), "from 0 to 65535"],
             "negative time" => [TestSubtitles::imageCue($image, new SubtitleCue(-0.5, 2)), "ticks of 90 kHz"],
+            "no PNG"       => [TestSubtitles::imageCue(new CueImage("GIF89a", 0, 0, 2, 2, 720, 576), new SubtitleCue(1, 2)),
+                               "Cannot write cue 1 to 2 as PGS: cannot decode the PNG: the data does not start with the PNG signature."],
         ];
     }
 

@@ -24,11 +24,13 @@ $english->save('movie.en.srt');
 
 - **Sentences**: a cue joins the next cue when it does not end a sentence. A sentence ends with `.`, `?`, `!`, the ellipsis U+2026 or a CJK end mark such as U+3002. Cue 1 `The train to Basel leaves` and cue 2 `from platform 4.` go out as one text. The runner splits the translation back in proportion to the characters of the cues, at a space. In Chinese, Japanese and Thai text it splits between two characters.
 - **Lines**: a cue that goes out alone keeps its line breaks when the engine keeps them. `DeepLEngine` sends `split_sentences: "nonewlines"`, so DeepL translates the 2 lines of a cue as one sentence. Cues that go out as one text come back with one line each. Call `wrapLines()` to break long lines again.
-- **Tags**: the runner replaces tags with numbered placeholders, for example `<i>Run!</i>` becomes `<x1>Run!</x1>`, and a word timestamp becomes `<x2/>`. It restores the tags after the translation. A tag can span two cues of one sentence. It then closes at the end of the first cue and opens again in the next.
-- **Dropped placeholder**: the engine can drop, add or break a placeholder. The runner then removes all tags of the text and adds a `TranslationWarning` for each cue.
+- **Tags**: the runner replaces tags with numbered placeholders, for example `<i>Run!</i>` becomes `<x1>Run!</x1>`, and a speaker tag such as `<v Fred>` becomes `<x2/>`. It restores the tags after the translation. A tag can span two cues of one sentence. It then closes at the end of the first cue and opens again in the next.
+- **Word timestamps**: the runner removes the word timestamps, such as `<00:00:01.500>`, from each cue that it sends. The source word times do not fit the translated words. A cue that the runner does not send keeps them.
+- **Dropped placeholder**: the engine can drop, add or break a placeholder. The runner then removes all tags of the text and adds a `TranslationWarning` for each cue. Text that stays after the removal is plain text. For the answer `<x<x1/>1>Hallo` of a cue without tags, the line is `&lt;x1&gt;Hallo`.
 - **Not sent**: cues with only numbers, punctuation, symbols such as the music note U+266A, or no text keep their text.
 - **Requests**: each engine call gets whole texts up to `maxCharactersPerRequest` characters. A longer text goes out alone.
-- **Engine errors**: `translate()` throws `InvalidArgumentException` when the engine does not return one string per text. Exceptions of the engine pass through. The subtitle changes only after the last engine call succeeds.
+- **Target language**: `translate()` throws `InvalidArgumentException` with the message `The target language is missing.` before the engine call, when `$targetLanguage` is empty after `trim()`.
+- **Engine errors**: `translate()` throws `TranslationException` when the engine does not return one string per text. Exceptions of the engine pass through. The subtitle changes only after the last engine call succeeds.
 
 ## Engines
 The library ships 3 engines. All send plain HTTP requests through the PHP extension curl. No vendor SDK is needed.
@@ -72,7 +74,7 @@ $french->save('movie.fr.srt');
   - An HTTP error, such as 403 for a wrong key, 429 for too many requests or 456 for a used-up DeepL quota.
   - A request that gets no response.
   - An answer that the engine cannot read.
-- **Retries**: the engines send a request again after HTTP 429, 500, 502, 503 or 504. They wait 1, 2 and 4 seconds before the 3 retries. The 4th failed answer throws `TranslationException`. The waits are fixed, because `HttpClient::post()` returns no headers such as `Retry-After`. A request that gets no response does not get a retry.
+- **Retries**: the engines send a request again after HTTP 429, 500, 502, 503 or 504. They wait 1, 2 and 4 seconds before the 3 retries. The 4th failed answer throws `TranslationException`. When an answer has a `Retry-After` header, the retry waits that long, up to 60 seconds. The header holds seconds or an HTTP date, and a date counts from the `Date` header of the same answer. An invalid or missing header leaves the wait at 1, 2 or 4 seconds. A client that returns no header lines gets the fixed waits. A request that gets no response does not get a retry.
 - **No curl**: without `ext-curl` and without an `httpClient`, the engine constructor throws `InvalidArgumentException` with a message that names the extension. Check `extension_loaded('curl')` before you create an engine. Composer lists `ext-curl` under `suggest` only, because the rest of the library runs without it.
 - **Google v3**: the engine uses v2. v3 needs an OAuth access token and a project ID in place of an API key.
 
@@ -101,7 +103,7 @@ $ollama = new OpenAiCompatibleEngine(new OpenAiCompatibleOptions('http://localho
 - **Quality**: a model can change the meaning or drop a placeholder. A dropped placeholder gives a `TranslationWarning`, as with the other engines.
 
 ## Your own HTTP client
-Implement `HttpClient` to send the requests with another HTTP library, or to log them. Its method `post()` returns the status code and the body of the response:
+Implement `HttpClient` to send the requests with another HTTP library, or to log them. Its method `post()` returns the status code and the body of the response. It may add a third element, the list of the header lines of the response, so that the retries can follow `Retry-After`:
 
 ```php
 use SubtitleToolbox\Exceptions\TranslationException;
@@ -122,6 +124,8 @@ final class StreamHttpClient implements HttpClient
 }
 ```
 
+- **Header lines**: return them as `list<string>`, for example `[429, $body, ['Retry-After: 30']]`. A client that returns 2 elements works.
+- **Answer size**: `CurlHttpClient` stops reading at 1 MiB plus 16 bytes for each byte of the request body, and throws `TranslationException` with the message `The answer from HOST has more than N bytes.` Your own client needs its own limit.
 - **Error statuses**: return them as they are, for example `[403, $body]`. The engine turns them into `TranslationException`.
 - **No response**: throw `TranslationException`, or another exception that your code catches.
 

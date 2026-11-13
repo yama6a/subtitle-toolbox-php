@@ -56,7 +56,7 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 
 - **`load()` with a format**: reads the file in that format and never guesses. For VobSub, pass the `.idx` or the `.sub` file. The other file must lie next to it. A path without extension, such as `d/movie`, is the `.sub` file, and `d/movie.idx` must exist. Otherwise `load()` throws `InvalidArgumentException`.
 - **`load()` without a format**: tries only formats whose `isAutoDetected()` is true. It reads the format that [detection](detection.md) finds in the content. An iTT file with the `.itt` extension reads as iTT, not TTML.
-- **Extension fallback**: when detection finds nothing, `load()` takes the format of the extension, for example `.tsv`. It skips an extension that a format without detection also uses, such as `.json` and `.txt`. Then it throws `UnknownFormatException`.
+- **Extension fallback**: when detection finds nothing, `load()` takes the format of the extension, for example `.tsv`. It skips an extension that a format without detection also uses, such as `.json` and `.txt`. Then it throws `UnknownFormatException`. A binary format found by its extension, such as Cavena 890 by `.890`, gets the bytes of the file. `ReadOptions::$encoding` does not convert them.
 - **Control characters**: the text parsers drop Ctrl-Z characters at the end of a file, as DOS editors write them. They remove the other C0 control characters except tab and the line endings, and DEL. Lenient mode warns once per file for a removed character. A NUL throws `ParsingException` with its line in strict mode, because it marks UTF-16 or UTF-32 read with the wrong encoding. Lenient mode removes it with the same warning. The WebVTT parsers replace NUL with U+FFFD in both modes, as the WebVTT spec says. Format characters such as U+200E and U+200D stay.
 - **Empty files**: `load()` reads a file that is empty, or holds only a BOM and whitespace, as an empty subtitle in the format of its extension. The extension fallback rules apply. `fromString()` has no extension, so it throws `UnknownFormatException` for empty content.
 - **Empty file in every format**: a text file with only white space or a BOM gives an empty subtitle in every format and mode, also WebVTT without `WEBVTT`.
@@ -190,7 +190,7 @@ $subtitle->toString(Format::Cavena890);
 - **Alignment**: the alignment byte 50h is left and 52h is right. Everything else is bottom center.
 - **Format data**: the subtitle keeps `variant`, the `header` bytes and `shortEnd`, which is true when the last block lacks its last 4 bytes, as Subtitle Edit writes it. Each cue keeps its text and its original blocks.
 - **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text keeps its blocks, also after retiming. New text keeps the table of the file and gets `?` for a character outside it. The formatter writes the number of blocks in the 3 count fields of the header.
-- **New files**: Latin with the English language code, the header of Subtitle Edit and subtitle numbers 16, 32, 48 and so on.
+- **New files**: Latin with the English language code, the header of Subtitle Edit and subtitle numbers 16, 32, 48 and so on up to 65520, then 65521 to 65535. So each cue gets its own number, and a new file holds up to 4110 cues. More cues throw `UnwritableContentException`.
 
 ## CSV and TSV
 Translators, reviewers and dubbing studios work in Excel or Google Sheets. `CsvParser` and `CsvFormatter` read and write subtitles as CSV and TSV tables, with RFC 4180 quoting.
@@ -293,6 +293,7 @@ EBU STL is the binary exchange format of European broadcasters, from [EBU Tech 3
 
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
 use SubtitleToolbox\ReadOptions;
@@ -304,13 +305,14 @@ $subtitle = Subtitle::fromString(file_get_contents('news.stl'), Format::EbuStl,
     new ReadOptions(formats: [new EbuStlReadOptions(subtractStartOfProgramme: true)])); // cue times minus the start of programme
 $subtitle->findFormatData('stl')['gsi']['TCP'];                                   // '10000000'
 $subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 30)]));  // 25 or 30
+(new EbuStlFormatter())->formatWithReport($subtitle)->replacedCharacters[0]->message;             // Cue 1: the character table has no "Ж", so the file holds "?".
 ```
 
-- **Times**: the disk format code `STL25.01` or `STL30.01` sets the frame rate. By default, the parser keeps the time codes of the file.
+- **Times**: the disk format code `STL25.01` or `STL30.01` sets the frame rate. By default, the parser keeps the time codes of the file. The formatter reads the TCP field at the frame rate of the stored disk format code, as the parser does, also when `EbuStlWriteOptions::$frameRate` writes another rate.
 - **Start of programme**: `EbuStlReadOptions(subtractStartOfProgramme: true)` subtracts the TCP time code, for example `10:00:00:00`. A time before it becomes 0. The formatter adds TCP again.
-- **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). These tables hold Latin, Cyrillic, Arabic, Greek and Hebrew letters. The formatter writes `?` for a character outside the table, for example the em dash and the guillemets in table 01.
+- **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). These tables hold Latin, Cyrillic, Arabic, Greek and Hebrew letters. The formatter writes `?` for a character outside the table, for example the em dash and the guillemets in table 01. `EbuStlFormatter::formatWithReport()` returns the output and an `EbuStlReplacedCharacter` for each such character. Its `location` is `Cue 1`, `Comment before cue 1` or `GSI field OPT`. The CLI prints one line on standard error for each, and the exit code stays 0.
 - **Styles**: italics, underline and the 8 teletext colors become `<i>`, `<u>` and `<font color>`, and back. White gives no tag. The formatter drops other colors. A teletext row resets the styles, so the formatter repeats a style that spans rows at the start of each row. For example, `<i>` around 2 lines makes both rows italic.
-- **Blocks**: the parser joins the TTI blocks of one subtitle and skips user data blocks. A subtitle with the comment flag becomes a comment. The formatter splits text over the 112 bytes of one TTI text field into extension blocks.
+- **Blocks**: the parser joins the TTI blocks of one subtitle and skips user data blocks. A subtitle with the comment flag becomes a comment. The formatter writes new blocks for a comment whose stored block list is empty. The formatter splits text over the 112 bytes of one TTI text field into extension blocks.
 - **Alignment**: the justification code gives the column. The vertical position gives the row: the top, middle or bottom third of the rows.
 - **Metadata**: the title is the OPT field. The language is the LC field, for example `09` is `en`.
 - **Format data**: the subtitle keeps the GSI fields by name in `gsi`, for example `DSC` and `TCP`. Each cue keeps its subtitle group, cumulative status, vertical position, justification code and original blocks.
@@ -318,7 +320,7 @@ $subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOp
 - **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text keeps its text field bytes, also after retiming.
 - **New files**: a subtitle from another format gets these GSI values. The creation date is today.
   - Code page 850, 25 fps and level-1 teletext.
-  - The character table that holds the most characters of the text. Table 00 wins a tie. So a Russian text gets table 01.
+  - The character table that holds the most characters of the text. Table 00 wins a tie. So a Russian text gets table 01. The count uses the visible text, without tags and with decoded entities.
   - 40 characters per row and 23 rows.
   - Subtitle numbers from 1.
 
@@ -523,8 +525,8 @@ $subtitle->toString(Format::Pac);
 - **Alignment**: the alignment byte of the first line gives the column. The vertical position gives the row: 0 to 4 is the top, 5 to 8 the middle, 9 to 11 the bottom. The formatter writes row 1 for the top, row 6 for the middle and the bottom row 11 minus the extra lines for the bottom.
 - **Right to left**: Subtitle Edit stores the Latin letters and digits of Arabic and Hebrew lines in display order. The parser and the formatter turn them around.
 - **Story record**: a first record with `STORY:` holds the programme data and is no cue. The format data keeps it in `header`.
-- **Format data**: the subtitle keeps `codePage`, `frameRate`, the number of the first subtitle in `firstNumber`, and the bytes before the first and after the last subtitle in `header` and `footer`. Each cue keeps its vertical position, the alignment byte, its text and the original text bytes.
-- **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text and alignment keeps its text bytes, also after retiming. New text keeps the code page of the file and gets `?` for a character outside it.
+- **Format data**: the subtitle keeps `codePage`, `frameRate`, the number of the first subtitle in `firstNumber`, and the bytes before the first and after the last subtitle in `header` and `footer`. Each cue keeps its vertical position, the alignment byte, its text and the original text bytes. A stored `header` that does not start with 01h and 19 zero bytes counts as missing, so the formatter writes the default header.
+- **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text and alignment keeps its text bytes, also after retiming. New text keeps the code page of the file and gets `?` for a character outside it. In the Chinese and Korean code pages, a character whose double-byte code holds the byte FEh also gets `?`, because FEh starts a new line. For example, `全` is A5FEh in CP950.
 - **New files**: Latin when Latin holds all the text, else PAC Unicode. 25 fps, subtitle numbers from 0, and the end block of Subtitle Edit.
 - **Limits**: the parser does not read colors, and it reads lines that Screen marks for a second code page with the code page of the file.
 

@@ -417,6 +417,19 @@ class BinaryOutputTest extends CliTestCase
     }
 
 
+    public function testEbuStlOutputPrintsEachReplacedCharacterOnStandardError(): void
+    {
+        file_put_contents("$this->dir/show.srt", "1\n00:00:01,000 --> 00:00:02,000\nA \u{2014} \u{0416} \u{00AB} x\n");
+
+        [$code, $stdout, $stderr] = $this->runCli(["convert", "show.srt", "--to", "stl", "-o", "show.stl"]);
+
+        $this->assertSame(0, $code);
+        $this->assertSame("show.srt -> show.stl\n", $stdout);
+        $this->assertSame("show.srt: Cue 1: the character table has no \"\u{2014}\", so the file holds \"?\".\n" .
+                          "show.srt: Cue 1: the character table has no \"\u{0416}\", so the file holds \"?\".\n", $stderr);
+    }
+
+
     public function testBatchStopsAtTheFirstFailureWithoutKeepGoing(): void
     {
         [$code, $stdout, $stderr] = $this->runCli(["convert", "broken.srt", "trip.srt", "shop.vtt", "--to", "srt", "--output-dir", "out"]);

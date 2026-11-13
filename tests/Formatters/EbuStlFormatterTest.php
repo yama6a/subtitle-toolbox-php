@@ -11,6 +11,8 @@ use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\Parsers\EbuStl;
+use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -301,5 +303,75 @@ class EbuStlFormatterTest extends TestCase
 
         $this->assertSame("01", EbuStl::readGsi(substr($stl, 0, 1024))["CCT"]);
         $this->assertSame("? Поезд ?Стрела? уходит.", Subtitle::fromString($stl)->getCues()[0]->getText());
+    }
+
+
+    public function testReportsEachCharacterThatTheOutputHoldsAsAQuestionMark(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 2, "A \u{2014} \u{0416} \u{00AB} x"))
+            ->addCue(new SubtitleCue(3, 4, "Is it ok?"))
+            ->addComment("Note \u{2014}", 1)
+            ->setMetadata(Subtitle::METADATA_TITLE, "Harbour \u{2014}");
+
+        $report = (new EbuStlFormatter())->formatWithReport($subtitle);
+
+        $this->assertSame($subtitle->toString(Format::EbuStl), $report->content);
+        $this->assertSame(
+            [
+                ["\u{2014}", "Cue 1", "Cue 1: the character table has no \"\u{2014}\", so the file holds \"?\"."],
+                ["\u{0416}", "Cue 1", "Cue 1: the character table has no \"\u{0416}\", so the file holds \"?\"."],
+                ["\u{2014}", "Comment before cue 2", "Comment before cue 2: the character table has no \"\u{2014}\", so the file holds \"?\"."],
+                ["\u{2014}", "GSI field OPT", "GSI field OPT: the code page of the GSI block has no \"\u{2014}\", so the file holds \"?\"."],
+            ],
+            array_map(fn (EbuStlReplacedCharacter $replaced): array => [$replaced->character, $replaced->location, $replaced->message], $report->replacedCharacters)
+        );
+    }
+
+
+    public function testReportsNothingForTextThatTheTableHolds(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "Caf\u{00E9} ?"));
+
+        $this->assertSame([], (new EbuStlFormatter())->formatWithReport($subtitle)->replacedCharacters);
+    }
+
+
+    public function testReadsTheStartOfProgrammeAtTheFrameRateOfTheStoredDiskFormatCode(): void
+    {
+        $subtitle = Subtitle::fromString("1\n10:00:01,000 --> 10:00:02,000\nHi\n", Format::SubRip);
+        $stl      = $subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 25)]));
+        $stl      = substr_replace($stl, "10000012", 256, 8);
+        $read     = Subtitle::fromString($stl, Format::EbuStl, new ReadOptions(formats: [new EbuStlReadOptions(subtractStartOfProgramme: true)]));
+
+        $written = $read->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 30)]));
+
+        $this->assertSame([10, 0, 1, 0], array_values(unpack("C4", substr(self::ttiBlocks($written)[0], EbuStl::TTI_TCI, 4))));
+    }
+
+
+    public function testCountsTheVisibleTextWhenItPicksTheCharacterCodeTable(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 2, "&eacute;&eacute;&eacute; <font color=\"#ff0000\">x</font>"))
+            ->addCue(new SubtitleCue(3, 4, "\u{0416}"));
+
+        $stl = $subtitle->toString(Format::EbuStl);
+
+        $this->assertSame("00", EbuStl::readGsi(substr($stl, 0, 1024))["CCT"]);
+    }
+
+
+    public function testWritesNewBlocksForAStoredCommentWithoutBlocks(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "Hi"))->addComment("Note", 0);
+        $subtitle->setFormatData("stl", ["gsi" => ["CPN" => "850"], "comments" => [["text" => "Note", "blocks" => []]]]);
+
+        $stl = $subtitle->toString(Format::EbuStl);
+
+        $this->assertSame(1024 + 2 * 128, strlen($stl));
+        $this->assertSame(1, unpack("v", self::ttiBlocks($stl)[0], 1)[1]);
+        $this->assertSame(2, unpack("v", self::ttiBlocks($stl)[1], 1)[1]);
+        $this->assertSame(["Note"], array_column(Subtitle::fromString($stl)->getComments(), "text"));
     }
 }

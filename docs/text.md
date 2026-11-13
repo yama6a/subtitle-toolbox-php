@@ -294,5 +294,6 @@ CommonErrorFixer::apply($subtitle);                                            /
 | `RegularExpressions` | a .NET pattern, run with PCRE on each text run. `^` and `$` match at the tags around the run |
 
 - **Rules**: the sections work as in `OcrFixReplaceList2.cs` of Subtitle Edit at commit [`e1b8546`](https://github.com/SubtitleEdit/subtitleedit/blob/e1b854665b40bf6e04271c2ec64084947060e632/src/libuilogic/Ocr/FixEngine/OcrFixReplaceList2.cs).
-- **Skipped**: `PartialWords` and `RegularExpressionsIfSpelledCorrectly` need a spell checker. `Removed...` sections change the list that Subtitle Edit ships. A regular expression that PCRE rejects, or a replacement with a named group such as `${name}`, is skipped.
+- **Skipped**: `PartialWords` and `RegularExpressionsIfSpelledCorrectly` need a spell checker. `Removed...` sections change the list that Subtitle Edit ships. A regular expression that PCRE rejects is skipped.
+- **Replacements**: `$1`, `${1}`, `$&`, `$$`, `` $` ``, `$'`, `$+`, `$_` and `${name}` of a named group work as in .NET. `${name}` without such a group is literal text.
 - **Errors**: XML that does not parse throws `ParsingException` with the line number. An invalid PCRE pattern in the constructor throws `InvalidArgumentException`.

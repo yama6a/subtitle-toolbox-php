@@ -443,6 +443,7 @@ class CueEditingTest extends TestCase
             "other alignment"   => [(new SubtitleCue(1, 3, "Hello"))->setAlignment(Alignment::TopCenter)],
             "forced"            => [(new SubtitleCue(1, 3, "Hello"))->setForced(true)],
             "other format data" => [(new SubtitleCue(1, 3, "Hello"))->setFormatData(Format::WebVtt->value, ["line" => "0"])],
+            "a position"        => [(new SubtitleCue(1, 3, "Hello"))->setPosition(new CuePosition(50, 95))],
         ];
     }
 
@@ -547,6 +548,38 @@ class CueEditingTest extends TestCase
     }
 
 
+    /**
+     * @return array<string, array{?CuePosition, ?CuePosition, int}>
+     */
+    public static function sameTimeCuesWithPositions(): array
+    {
+        return [
+            "one without a position" => [null, new CuePosition(50, 95), 2],
+            "other positions"        => [new CuePosition(50, 95), new CuePosition(50, 80), 2],
+            "same position"          => [new CuePosition(50, 95), new CuePosition(50, 95), 1],
+            "no positions"           => [null, null, 1],
+        ];
+    }
+
+
+    #[DataProvider("sameTimeCuesWithPositions")]
+    public function testMergeSameTimeCuesJoinsOnlyCuesWithTheSamePosition(?CuePosition $first, ?CuePosition $second, int $count): void
+    {
+        $subtitle = TestSubtitles::fromCues([(new SubtitleCue(1, 3, "A"))->setPosition($first), (new SubtitleCue(1, 3, "B"))->setPosition($second)]);
+
+        $this->assertCount($count, $subtitle->mergeSameTimeCues()->getCues());
+    }
+
+
+    #[DataProvider("sameTimeCuesWithPositions")]
+    public function testRemoveDuplicateCuesJoinsOnlyCuesWithTheSamePosition(?CuePosition $first, ?CuePosition $second, int $count): void
+    {
+        $subtitle = TestSubtitles::fromCues([(new SubtitleCue(1, 3, "A"))->setPosition($first), (new SubtitleCue(1, 3, "A"))->setPosition($second)]);
+
+        $this->assertCount($count, $subtitle->removeDuplicateCues()->getCues());
+    }
+
+
     public function testMergeSameTimeCuesRealAssFile(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "own_same_time_speakers.ass"), Format::Ass);
@@ -583,6 +616,24 @@ class CueEditingTest extends TestCase
 
         $this->assertSame($images, array_map(fn (SubtitleCue $cue): string => Image\CueImage::fromCue($cue)->png,
                                              $subtitle->mergeSameTimeCues()->getCues()));
+    }
+
+
+    public function testRemoveDuplicateCuesIgnoresTheOrderOfTheFormatData(): void
+    {
+        $a = (new SubtitleCue(1, 2, "Hello"))
+            ->setFormatData("vtt", ["line" => "5"])
+            ->setFormatData("ass", ["text" => "Hello", "lines" => ["Hello"]]);
+        $b = (new SubtitleCue(1, 2, "Hello"))
+            ->setFormatData("ass", ["lines" => ["Hello"], "text" => "Hello"])
+            ->setFormatData("vtt", ["line" => "5"]);
+
+        $subtitle = new Subtitle();
+        $subtitle->addCue($a);
+        $subtitle->addCue($b);
+        $subtitle->removeDuplicateCues();
+
+        $this->assertCount(1, $subtitle->getCues());
     }
 
 

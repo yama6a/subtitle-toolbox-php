@@ -82,9 +82,21 @@ final class CueList
      */
     public static function checkTimeLimit(array $cues, callable $map): void
     {
-        foreach ($cues as $index => $cue) {
-            $end = $map(max($cue->getStart(), $cue->getEnd()));
-            if (!($end < Timecode::MAX_HOURS * 3600)) {
+        self::checkEnds(array_map(fn (SubtitleCue $cue): float => $map(max($cue->getStart(), $cue->getEnd())), $cues));
+    }
+
+
+    /**
+     * Throws when a new end reaches MAX_HOURS once rounded to milliseconds. An edit that computes each end on its own
+     * calls it with all new ends before it changes a cue, so that the subtitle keeps its times when it throws.
+     *
+     * @param array<int, float> $ends the new end of each cue that moves, by the index of the cue
+     * @throws InvalidArgumentException
+     */
+    public static function checkEnds(array $ends): void
+    {
+        foreach ($ends as $index => $end) {
+            if (!Timecode::isBelowLimit($end)) {
                 throw new InvalidArgumentException(
                     "The retimed cue " . ($index + 1) . " would end at $end s. Cue times must be below " . Timecode::MAX_HOURS . " hours."
                 );
@@ -282,13 +294,28 @@ final class CueList
 
 
     /**
-     * Returns true when $first and $second have the same alignment, the same forced flag and the same <v> speakers.
+     * Returns true when $first and $second have the same alignment and position, forced flag and <v> speakers.
      */
     public static function canJoin(SubtitleCue $first, SubtitleCue $second): bool
     {
-        return $first->getAlignment() === $second->getAlignment()
+        return self::samePlace($first, $second)
             && $first->isForced() === $second->isForced()
             && self::speakers($first) === self::speakers($second);
+    }
+
+
+    /**
+     * Returns true when $first and $second have the same alignment and the same position, or both have no position.
+     */
+    public static function samePlace(SubtitleCue $first, SubtitleCue $second): bool
+    {
+        $position      = $first->findPosition();
+        $otherPosition = $second->findPosition();
+
+        return $first->getAlignment() === $second->getAlignment()
+            && ($position === null || $otherPosition === null
+                ? $position === $otherPosition
+                : $position->x === $otherPosition->x && $position->y === $otherPosition->y);
     }
 
 

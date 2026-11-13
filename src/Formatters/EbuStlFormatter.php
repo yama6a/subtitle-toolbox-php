@@ -44,14 +44,32 @@ final class EbuStlFormatter extends SubtitleFormatter
     private const TCF_WITHOUT_CUES      = "00000000";
     private const UNKNOWN_LANGUAGE      = "00";
 
+    /** @var list<EbuStlReplacedCharacter> */
+    private array $replacedCharacters = [];
+
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
-        $options ??= new WriteOptions();
+        return $this->formatWithReport($subtitle, $options)->content;
+    }
+
+
+    /**
+     * Writes the subtitle as format() does, and returns the output with each character that the output holds as "?".
+     * That is a character that the character code table of the cues and comments, or the code page of the GSI block, lacks.
+     *
+     * @throws InvalidArgumentException as format() does.
+     * @throws UnwritableContentException as format() does.
+     */
+    public function formatWithReport(Subtitle $subtitle, ?WriteOptions $options = null): EbuStlWriteReport
+    {
+        $options  ??= new WriteOptions();
+        $this->replacedCharacters = [];
         $fileData = $subtitle->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
         $gsi      = ($fileData["gsi"] ?? []) + self::DEFAULT_GSI;
         $gsi["CCT"] ??= $this->characterCodeTable($subtitle);
-        $fps  = $this->formatOptions($options)->frameRate ?? EbuStl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? self::DEFAULT_FRAME_RATE;
+        $storedFps = EbuStl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? null;
+        $fps       = $this->formatOptions($options)->frameRate ?? $storedFps ?? self::DEFAULT_FRAME_RATE;
 
         if (!array_key_exists($gsi["CCT"], EbuStl::CHARACTER_CODE_TABLES)) {
             throw new InvalidArgumentException("The character code table \"{$gsi["CCT"]}\" is not 00, 01, 02, 03 or 04.");
@@ -61,7 +79,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         $frameRate  = new FrameRate($fps);
         $context    = new EbuStlContext(
             frameRate: $frameRate,
-            offset: empty($fileData["startOfProgrammeSubtracted"]) ? 0.0 : EbuStl::timeCodeToSeconds($gsi["TCP"], $frameRate),
+            offset: empty($fileData["startOfProgrammeSubtracted"]) ? 0.0 : EbuStl::timeCodeToSeconds($gsi["TCP"], new FrameRate($storedFps ?? $fps)),
             characterCodeTable: $gsi["CCT"],
             maxRow: EbuStl::maxRow($gsi),
             teletext: in_array($gsi["DSC"], EbuStl::TELETEXT_DISPLAY_CODES, true),
@@ -83,7 +101,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             $number++;
         }
 
-        return $this->formatGsi($subtitle, $gsi, $fileData, $sets) . $blocks;
+        return new EbuStlWriteReport($this->formatGsi($subtitle, $gsi, $fileData, $sets) . $blocks, $this->replacedCharacters);
     }
 
 
@@ -98,11 +116,12 @@ final class EbuStlFormatter extends SubtitleFormatter
         foreach ([...array_keys($cues), count($cues)] as $index) {
             foreach ($comments[$index] ?? [] as $comment) {
                 $timeCode = $this->timeCode($context, isset($cues[$index]) ? $cues[$index]->getStart() : ($cues === [] ? 0 : end($cues)->getEnd()));
-                $sets[]   = ["blocks" => $this->commentBlocks($context, $comment->text, $storedComments, $timeCode), "comment" => true];
+                $location = "Comment before cue " . (min($index, count($cues)) + 1);
+                $sets[]   = ["blocks" => $this->commentBlocks($context, $comment->text, $storedComments, $timeCode, $location), "comment" => true];
             }
 
             if (isset($cues[$index])) {
-                $sets[] = ["blocks" => $this->cueBlocks($context, $cues[$index]), "comment" => false];
+                $sets[] = ["blocks" => $this->cueBlocks($context, $cues[$index], $index), "comment" => false];
             }
         }
 
@@ -115,17 +134,17 @@ final class EbuStlFormatter extends SubtitleFormatter
      *
      * @return list<string>
      */
-    private function commentBlocks(EbuStlContext $context, string $text, array &$storedComments, string $timeCode): array
+    private function commentBlocks(EbuStlContext $context, string $text, array &$storedComments, string $timeCode, string $location): array
     {
         foreach ($storedComments as $index => $stored) {
-            if ($stored["text"] === $text) {
+            if ($stored["text"] === $text && $stored["blocks"] !== []) {
                 unset($storedComments[$index]);
 
                 return array_map("hex2bin", $stored["blocks"]);
             }
         }
 
-        $bytes    = implode(chr(EbuStl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode(LineEnding::Lf->value, $text)));
+        $bytes    = implode(chr(EbuStl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line, $location), explode(LineEnding::Lf->value, $text)));
         $position = $this->position($context, Alignment::BottomCenter, count(explode(LineEnding::Lf->value, $text)));
 
         return $this->textBlocks($context, $bytes, $this->header(0, 0, $timeCode, $timeCode, $position, isComment: true));
@@ -137,7 +156,7 @@ final class EbuStlFormatter extends SubtitleFormatter
      *
      * @return list<string>
      */
-    private function cueBlocks(EbuStlContext $context, SubtitleCue $cue): array
+    private function cueBlocks(EbuStlContext $context, SubtitleCue $cue, int $index): array
     {
         $cueData     = $cue->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
         $alignment   = $cue->getAlignment();
@@ -158,7 +177,7 @@ final class EbuStlFormatter extends SubtitleFormatter
 
         $userData = array_filter($blocks, fn (string $block): bool => ord($block[EbuStl::TTI_EBN]) === EbuStl::USER_DATA_BLOCK);
 
-        return [...$this->patchHeaders(array_values($userData), $header), ...$this->textBlocks($context, $this->encodeText($context, $cue), $header)];
+        return [...$this->patchHeaders(array_values($userData), $header), ...$this->textBlocks($context, $this->encodeText($context, $cue, "Cue " . ($index + 1)), $header)];
     }
 
 
@@ -288,7 +307,7 @@ final class EbuStlFormatter extends SubtitleFormatter
      * Converts the core markup of the cue lines to text field codes, EBU Tech 3264 appendix 2.
      * Italics and underline take 80h to 83h. The eight colors take the teletext alpha color codes.
      */
-    private function encodeText(EbuStlContext $context, SubtitleCue $cue): string
+    private function encodeText(EbuStlContext $context, SubtitleCue $cue, string $location): string
     {
         $rows = [];
         foreach (Markup::carryOpenTags(array_map(Markup::rubyAsText(...), $cue->getLines())) as $line) {
@@ -298,7 +317,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             $colors = [];
             foreach (Markup::splitTags(MarkupColors::webVttColorsToFont($line)) as $index => $token) {
                 if ($index % 2 === 0) {
-                    $bytes .= $this->encodeCharacters($context, Markup::decodeEntities($token));
+                    $bytes .= $this->encodeCharacters($context, Markup::decodeEntities($token), $location);
                     continue;
                 }
 
@@ -348,28 +367,83 @@ final class EbuStlFormatter extends SubtitleFormatter
 
     /**
      * Picks the character code table that writes the fewest "?" for the cue and comment text.
+     * The count uses the text as the writer encodes it: a cue without tags and with decoded entities, a comment as it is.
      * Table 00 wins a tie, so text that table 00 holds keeps it.
      */
     private function characterCodeTable(Subtitle $subtitle): string
     {
         $text   = str_replace(LineEnding::Lf->value, " ", implode(" ", [
-            ...array_map(fn (SubtitleCue $cue): string => $cue->getText(), $subtitle->getCues()),
+            ...array_map($this->visibleText(...), $subtitle->getCues()),
             ...array_column($subtitle->getComments(), "text"),
         ]));
-        $misses = array_map(
-            fn (?array $table): int => substr_count($table === null ? Iso6937::encode($text) : CodePage::encode($text, $table), CodePage::REPLACEMENT),
-            EbuStl::CHARACTER_CODE_TABLES,
-        );
+        $misses = array_map(fn (?array $table): int => substr_count(self::encode($text, $table), CodePage::REPLACEMENT), EbuStl::CHARACTER_CODE_TABLES);
 
         return (string) array_search(min($misses), $misses, true);
     }
 
 
-    private function encodeCharacters(EbuStlContext $context, string $text): string
+    /**
+     * Returns the lines of the cue as the writer encodes them, joined with LF: no tags, entities decoded.
+     */
+    private function visibleText(SubtitleCue $cue): string
+    {
+        $lines = [];
+        foreach (array_map(Markup::rubyAsText(...), $cue->getLines()) as $line) {
+            $text = "";
+            foreach (Markup::splitTags($line) as $index => $token) {
+                $text .= $index % 2 === 0 ? Markup::decodeEntities($token) : "";
+            }
+            $lines[] = $text;
+        }
+
+        return implode(LineEnding::Lf->value, $lines);
+    }
+
+
+    /**
+     * @param array<int, string>|null $table a table of CodePage, or null for ISO 6937
+     */
+    private static function encode(string $text, ?array $table): string
+    {
+        return $table === null ? Iso6937::encode($text) : CodePage::encode($text, $table);
+    }
+
+
+    private function encodeCharacters(EbuStlContext $context, string $text, string $location): string
     {
         $table = EbuStl::CHARACTER_CODE_TABLES[$context->characterCodeTable];
+        $this->recordReplacedCharacters($text, $table, $location, "the character table");
 
-        return $table === null ? Iso6937::encode($text) : CodePage::encode($text, $table);
+        return self::encode($text, $table);
+    }
+
+
+    /**
+     * Adds an EbuStlReplacedCharacter for each character of $text that the table encodes as "?".
+     * A "?" in the text is not a replacement.
+     *
+     * @param array<int, string>|null $table
+     */
+    private function recordReplacedCharacters(string $text, ?array $table, string $location, string $tableName): void
+    {
+        if (substr_count(self::encode($text, $table), CodePage::REPLACEMENT) === substr_count($text, CodePage::REPLACEMENT)) {
+            return;
+        }
+
+        $seen     = "";
+        $previous = 0;
+        foreach (Markup::characters($text) as $character) {
+            $seen   .= $character;
+            $replaced = substr_count(self::encode($seen, $table), CodePage::REPLACEMENT) - substr_count($seen, CodePage::REPLACEMENT);
+            if ($replaced > $previous) {
+                $this->replacedCharacters[] = new EbuStlReplacedCharacter(
+                    $character,
+                    $location,
+                    "$location: $tableName has no \"$character\", so the file holds \"" . CodePage::REPLACEMENT . "\".",
+                );
+            }
+            $previous = max($previous, $replaced);
+        }
     }
 
 
@@ -416,7 +490,9 @@ final class EbuStlFormatter extends SubtitleFormatter
         $codePage = EbuStl::GSI_CODE_PAGES[$gsi["CPN"]] ?? CodePage::CP_850;
         $block    = "";
         foreach (EbuStl::GSI_FIELDS as $field => [, $length]) {
-            $block .= substr(str_pad(CodePage::encode($gsi[$field] ?? "", $codePage), $length), 0, $length);
+            $value  = $gsi[$field] ?? "";
+            $this->recordReplacedCharacters($value, $codePage, "GSI field $field", "the code page of the GSI block");
+            $block .= substr(str_pad(CodePage::encode($value, $codePage), $length), 0, $length);
         }
 
         return $block;

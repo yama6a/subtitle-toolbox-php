@@ -78,11 +78,11 @@ final class SubtitleDiff
         $differences = [];
         foreach ($diff->align() as [$i, $j]) {
             if ($j === null) {
-                $differences[] = new CueDifference(CueDifferenceKind::Removed, $oldIndexes[$i], null, $oldCues[$i], null);
+                $differences[] = new CueDifference(CueDifferenceKind::Removed, $oldIndexes[$i], null, clone $oldCues[$i], null);
                 continue;
             }
             if ($i === null) {
-                $differences[] = new CueDifference(CueDifferenceKind::Added, null, $newIndexes[$j], null, $newCues[$j]);
+                $differences[] = new CueDifference(CueDifferenceKind::Added, null, $newIndexes[$j], null, clone $newCues[$j]);
                 continue;
             }
 
@@ -95,7 +95,7 @@ final class SubtitleDiff
                 default                        => null,
             };
             if ($kind !== null) {
-                $differences[] = new CueDifference($kind, $oldIndexes[$i], $newIndexes[$j], $oldCues[$i], $newCues[$j]);
+                $differences[] = new CueDifference($kind, $oldIndexes[$i], $newIndexes[$j], clone $oldCues[$i], clone $newCues[$j]);
             }
         }
 
