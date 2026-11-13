@@ -27,6 +27,7 @@ jobs:
   php:
     uses: yama6a/gha/.github/workflows/php-ci.yaml@v2
     with:
+      php-versions: '["8.3", "8.4", "8.5"]'
       extensions: curl # the translate engines need it, so CurlHttpClientTest and the translate tests run
 
   phar:
@@ -36,7 +37,7 @@ jobs:
       # The floor version, so the PHAR is known to run where the library does.
       - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
-          php-version: "8.2"
+          php-version: "8.3"
           coverage: none
           tools: composer, box:4.7.0
       - run: .build/build-phar.sh 0.0.0-ci

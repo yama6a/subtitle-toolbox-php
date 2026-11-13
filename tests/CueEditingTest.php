@@ -584,4 +584,19 @@ class CueEditingTest extends TestCase
         $this->assertSame($images, array_map(fn (SubtitleCue $cue): string => Image\CueImage::fromCue($cue)->png,
                                              $subtitle->mergeSameTimeCues()->getCues()));
     }
+
+
+    public function testSplitAndJoinKeepThePosition(): void
+    {
+        $subtitle = TestSubtitles::fromCues([[0, 6, "First sentence.\nSecond sentence."]]);
+        $subtitle->getCues()[0]->setPosition(new CuePosition(45, 95));
+
+        $subtitle->splitCue(0, 3, 1);
+
+        $this->assertEquals([new CuePosition(45, 95), new CuePosition(45, 95)], array_map(fn (SubtitleCue $cue): ?CuePosition => $cue->findPosition(), $subtitle->getCues()));
+
+        $subtitle->joinCues(0, 1);
+
+        $this->assertEquals(new CuePosition(45, 95), $subtitle->getCues()[0]->findPosition());
+    }
 }

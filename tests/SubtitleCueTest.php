@@ -232,4 +232,25 @@ class SubtitleCueTest extends TestCase
 
         $this->assertSame([0.0, 3.0, ["One <00:00:00.000>two <00:00:02.000>three"]], [$cue->getStart(), $cue->getEnd(), $cue->getLines()]);
     }
+
+
+    public function testSetAlignmentClearsThePosition(): void
+    {
+        $cue = (new SubtitleCue())->setAlignment(Alignment::TopCenter)->setPosition(new CuePosition(50, 5));
+        $this->assertEquals(new CuePosition(50, 5), $cue->findPosition());
+
+        $cue->setAlignment(Alignment::TopCenter);
+
+        $this->assertNull($cue->findPosition());
+        $this->assertSame(Alignment::TopCenter, $cue->getAlignment());
+    }
+
+
+    public function testCloneKeepsThePosition(): void
+    {
+        $cue = (new SubtitleCue(1, 2, "One"))->setPosition(new CuePosition(45, 95));
+
+        $this->assertEquals(new CuePosition(45, 95), (clone $cue)->findPosition());
+        $this->assertNull((new SubtitleCue())->findPosition());
+    }
 }
