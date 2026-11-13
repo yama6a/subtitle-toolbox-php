@@ -267,7 +267,11 @@ trait WordGrouping
             $markup = Markup::voiceTag($speaker) . $markup;
         }
 
-        return (new SubtitleCue($start, $end, $markup))->setFormatData(static::formatDataKey(), $formatData);
+        $cue = (new SubtitleCue($start, $end, $markup))->setFormatData(static::formatDataKey(), $formatData);
+
+        return $this->formatOptions()->wordTimestamps
+            ? WordTimes::store($cue, array_map(fn (array $word): array => [$word["start"], $word["end"]], $words))
+            : $cue;
     }
 
 

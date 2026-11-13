@@ -33,6 +33,7 @@ use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Parsers\WordTimes;
 
 /**
  * FormatDataSchema checks the types of the format data fields that the formatters read.
@@ -280,6 +281,9 @@ final class FormatDataSchema
             "size"     => "string",
             "align"    => "string",
             "region"   => "string",
+        ],
+        WordTimes::FORMAT_DATA_KEY                => [
+            "times" => ["list", ["object", ["!start" => "number", "end" => "number"]]],
         ],
     ];
 

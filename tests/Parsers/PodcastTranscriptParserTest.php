@@ -68,6 +68,18 @@ class PodcastTranscriptParserTest extends TestCase
     }
 
 
+    public function testKeepsTheTimesOfTheJoinedWordsWithWordTimestamps(): void
+    {
+        $json   = self::words([["Anna", 0, 0.4, "Hello"], ["Anna", 0.5, 0.9, "there."], ["Anna", 1, 2, "Bye."]]);
+        $parser = new PodcastTranscriptParser();
+        $cues   = $parser->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]))->getCues();
+
+        $this->assertSame([["times" => [["start" => 0.0, "end" => 0.4], ["start" => 0.5, "end" => 0.9]]], []],
+                          [$cues[0]->findFormatData("words"), $cues[1]->findFormatData("words")]);
+        $this->assertSame([], $parser->parse($json, new ReadOptions())->getCues()[0]->findFormatData("words"));
+    }
+
+
     public function testNeverJoinsASegmentOfSeveralWords(): void
     {
         $json = '{"segments": [{"startTime": 0, "endTime": 2, "body": "Where are"}, {"startTime": 2, "endTime": 3, "body": "you"},' .

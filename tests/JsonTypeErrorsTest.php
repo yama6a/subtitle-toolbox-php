@@ -226,6 +226,8 @@ class JsonTypeErrorsTest extends TestCase
             "FFmetadata time base"      => [["ffmeta-chapters" => ["timeBase" => "0/1000"]], "The field cues[0].formatData.ffmeta-chapters.timeBase must be a time base such as \"1/1000\"."],
             "image size string"         => [["image" => ["width" => "2"]], "The field cues[0].formatData.image.width must be an integer."],
             "WebVTT setting number"     => [["vtt" => ["line" => 0]], "The field cues[0].formatData.vtt.line must be a string."],
+            "word time without start"   => [["words" => ["times" => [["end" => 1]]]], "The field cues[0].formatData.words.times[0].start is missing."],
+            "word end string"           => [["words" => ["times" => [["start" => 1, "end" => "2"]]]], "The field cues[0].formatData.words.times[0].end must be a finite number."],
             "PAC vertical position"     => [["pac" => ["verticalPosition" => 256]], "The field cues[0].formatData.pac.verticalPosition must be an integer from 0 to 255."],
             "PAC alignment string"      => [["pac" => ["alignment" => "2"]], "The field cues[0].formatData.pac.alignment must be an integer from 0 to 255."],
             "PAC text number"           => [["pac" => ["text" => 5]], "The field cues[0].formatData.pac.text must be a string."],
