@@ -243,8 +243,13 @@ final class TtmlHead
     }
 
 
+    /**
+     * Writes TAB, LF and CR as character references, because an XML reader turns each raw one in an attribute value into a space.
+     */
     public static function attribute(string $name, string $value): string
     {
-        return " $name=\"" . htmlspecialchars(XmlOutput::text($value), ENT_XML1 | ENT_COMPAT, "UTF-8") . "\"";
+        $escaped = htmlspecialchars(XmlOutput::text($value), ENT_XML1 | ENT_COMPAT, "UTF-8");
+
+        return " $name=\"" . str_replace(["\t", "\n", "\r"], ["&#9;", "&#10;", "&#13;"], $escaped) . "\"";
     }
 }

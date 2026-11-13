@@ -17,6 +17,13 @@ use SubtitleToolbox\SubtitleCue;
 
 class StartAfterEndTest extends TestCase
 {
+    private const TTML = "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div>\n<p begin=\"%s\" end=\"00:00:02.000\">Hello</p>\n"
+                         . "<p begin=\"00:00:10.000\" end=\"00:00:12.000\">World</p>\n</div></body></tt>";
+
+    private const ITT = "<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:ttp=\"http://www.w3.org/ns/ttml#parameter\" ttp:timeBase=\"smpte\" ttp:frameRate=\"25\">\n"
+                        . "<body><div><p begin=\"00:00:05:00\" end=\"00:00:02:00\">Hello</p>\n"
+                        . "<p begin=\"00:00:10:00\" end=\"00:00:12:00\">World</p></div></body></tt>";
+
     private const SUBVIEWER_1 = "[INFORMATION]\n[TITLE]Harbour walk\n[END INFORMATION]\n" . SubViewerParser::START_SCRIPT . "\n";
 
     /**
@@ -50,6 +57,12 @@ class StartAfterEndTest extends TestCase
             "SubViewer 2"               => [Format::SubViewer, "[INFORMATION]\n[END INFORMATION]\n00:00:05.00,00:00:02.00\nHello\n\n00:00:10.00,00:00:12.00\nWorld\n", 3,
                                             [[2.0, 5.0], $good], $swap],
             "SubViewer 1"               => [Format::SubViewer, self::SUBVIEWER_1 . "[00:00:05]\nHello\n[00:00:02]\n[00:00:10]\nWorld\n[00:00:12]\n", 5,
+                                            [[2.0, 5.0], $good], $swap],
+            "TTML"                      => [Format::Ttml, sprintf(self::TTML, "00:00:05.000"), 2,
+                                            [[2.0, 5.0], $good], $swap],
+            "TTML over 30 s"            => [Format::Ttml, sprintf(self::TTML, "00:01:05.000"), 2,
+                                            [$good], $drop],
+            "iTT"                       => [Format::Itt, self::ITT, 2,
                                             [[2.0, 5.0], $good], $swap],
             "MPL2"                      => [Format::Mpl2, "[50][20]Hello\n[100][120]World\n", 1,
                                             [[2.0, 5.0], $good], $swap],
@@ -127,6 +140,14 @@ class StartAfterEndTest extends TestCase
         $this->assertSame($action, $warnings[0]->action);
         $this->assertSame($line, $warnings[0]->lineNumber);
         $this->assertStringContainsString("before it starts at", $warnings[0]->message);
+    }
+
+
+    public function testTheTtmlMessageNamesBothTimes(): void
+    {
+        $this->expectExceptionMessage("The cue ends at 2 s, before it starts at 5 s. (line 2)");
+
+        Subtitle::fromString(sprintf(self::TTML, "00:00:05.000"), Format::Ttml);
     }
 
 
