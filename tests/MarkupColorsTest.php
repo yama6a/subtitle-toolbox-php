@@ -54,6 +54,9 @@ class MarkupColorsTest extends TestCase
         $this->assertSame("#ff0000", MarkupColors::colorHexWithAlpha("#ff0000zz"));
         $this->assertSame("#ff0000", MarkupColors::colorHexWithAlpha("red"));
         $this->assertNull(MarkupColors::colorHexWithAlpha("rgba(255,0,0,1.5)"));
+        $this->assertNull(MarkupColors::colorHexWithAlpha("rgba(1,2,3,256)"));
+        $this->assertNull(MarkupColors::colorHexWithAlpha("rgba(1,2,3,9223372036854775808)"));
+        $this->assertNull(MarkupColors::colorHexWithAlpha("rgba(1,2,3,99999999999999999999999999999999)"));
     }
 
 
