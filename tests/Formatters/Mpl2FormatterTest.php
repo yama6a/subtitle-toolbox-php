@@ -61,4 +61,16 @@ class Mpl2FormatterTest extends TestCase
         $this->assertSame("[3599999999][3599999999]x\n", $output);
         $this->assertSame(359999999.9, Subtitle::fromString($output, Format::Mpl2)->getCues()[0]->getEnd());
     }
+
+
+    public function testALineFeedAndABarInsideALineReadBackAsOneLineEach(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 2, ["a\nb", "Rock | Pop"]))
+            ->addCue(new SubtitleCue(3, 4, ["|"]));
+        $output = $subtitle->toString(Format::Mpl2);
+
+        $this->assertSame("[10][20]a|b|Rock \u{00A6} Pop\n[30][40]\u{00A6}\n", $output);
+        $this->assertSame(["a", "b", "Rock \u{00A6} Pop"], Subtitle::fromString($output, Format::Mpl2)->getCues()[0]->getLines());
+    }
 }

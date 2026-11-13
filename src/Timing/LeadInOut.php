@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Timing;
 
+use SubtitleToolbox\CueList;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\SortedSearch;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -15,6 +17,7 @@ final class LeadInOut
 {
     /**
      * @param list<SubtitleCue> $cues in start order
+     * @throws InvalidArgumentException when a cue would end at Timecode::MAX_HOURS or later.
      */
     public static function apply(array $cues, float $leadIn, float $leadOut, float $minGap): void
     {
@@ -22,6 +25,7 @@ final class LeadInOut
         $ends   = array_map(fn (SubtitleCue $cue): float => $cue->getEnd(), $cues);
         [$startInside, $endInside] = self::insideOtherCues($starts, $ends);
 
+        $movedEnds = [];
         foreach ($cues as $i => $cue) {
             if ($leadOut <= 0 || $endInside[$i]) {
                 continue;
@@ -35,8 +39,12 @@ final class LeadInOut
                 $end = min($end, $starts[$next] - $minGap);
             }
             if (Timecode::roundToMilliseconds($end) > $ends[$i]) {
-                $cue->setEnd($end);
+                $movedEnds[$i] = $end;
             }
+        }
+        CueList::checkEnds($movedEnds);
+        foreach ($movedEnds as $i => $end) {
+            $cues[$i]->setEnd($end);
         }
 
         $newEnds = array_map(fn (SubtitleCue $cue): float => $cue->getEnd(), $cues);

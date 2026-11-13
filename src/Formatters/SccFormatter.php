@@ -224,6 +224,8 @@ final class SccFormatter extends SubtitleFormatter
 
     /**
      * Replaces the characters that CEA-608 lacks, then wraps the lines again when they break the limits of SCC.
+     * It decodes the entities of each text run first, as Cea608Encoder::styledCharacters() does, so &hellip; becomes "...".
+     * It escapes a run with a replacement again.
      *
      * @param list<string> $lines
      *
@@ -238,15 +240,19 @@ final class SccFormatter extends SubtitleFormatter
                 if ($partIndex % 2 === 1) {
                     continue;
                 }
-                $characters = Markup::characters($part);
+                $characters  = Markup::characters(Markup::decodeEntities($part));
+                $runReplaced = false;
                 foreach ($characters as $characterIndex => $character) {
                     $replacement = Cea608::encodeCharacter($character) === null ? Cea608::transliterate($character) : null;
                     if ($replacement !== null) {
                         $characters[$characterIndex] = $replacement;
                         $replaced[$character]        = "\"$character\" with \"$replacement\"";
+                        $runReplaced                 = true;
                     }
                 }
-                $parts[$partIndex] = implode("", $characters);
+                if ($runReplaced) {
+                    $parts[$partIndex] = Markup::escapeText(implode("", $characters));
+                }
             }
             $lines[$lineIndex] = implode("", $parts);
         }
@@ -384,7 +390,7 @@ final class SccFormatter extends SubtitleFormatter
 
     private function secondsToFrame(float $seconds): int
     {
-        return (new FrameRate(self::FRAMES_PER_SECOND))->secondsToFrames(max(0.0, $seconds));
+        return (new FrameRate(self::FRAMES_PER_SECOND))->framesBelowLimit($seconds);
     }
 
 

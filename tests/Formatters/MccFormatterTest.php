@@ -136,6 +136,49 @@ class MccFormatterTest extends TestCase
     }
 
 
+    public function testReplacesACharacterWrittenAsAnEntity(): void
+    {
+        $output = (new Subtitle())->addCue(new SubtitleCue(1, 3, "Wait&hellip; what?"))->toString(Format::Mcc);
+
+        $this->assertSame(["Wait... what?"], Subtitle::fromString($output, options: new ReadOptions(formats: [new MccReadOptions(service: null)]))->getCues()[0]->getLines());
+    }
+
+
+    public function testATimeCodeOf100000HoursReadsBack(): void
+    {
+        $output = (new Subtitle())->addCue(new SubtitleCue(359999990, 359999995, "last"))->toString(Format::Mcc);
+
+        $this->assertStringContainsString("\n100000:05:49:20\t", $output);
+        $cue = Subtitle::fromString($output)->getCues()[0];
+        $this->assertSame([359999990.0, 359999995.0, ["last"]], [round($cue->getStart()), round($cue->getEnd()), $cue->getLines()]);
+    }
+
+
+    public static function unreadableFieldNames(): array
+    {
+        return [
+            "hyphen"     => ["X-Encoder"],
+            "digit"      => ["Encoder2"],
+            "underscore" => ["Creation_Date"],
+            "empty"      => [""],
+            "number"     => ["7"],
+        ];
+    }
+
+
+    #[DataProvider("unreadableFieldNames")]
+    public function testLeavesOutAStoredHeaderFieldThatTheParserCannotRead(string $name): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "HELLO"));
+        $subtitle->setFormatData("mcc", ["header" => [$name => "v2", "Encoder Name" => "v3"]]);
+
+        $output = $subtitle->toString(Format::Mcc);
+
+        $this->assertStringNotContainsString("=v2\n", $output);
+        $this->assertSame("v3", Subtitle::fromString($output)->findFormatData("mcc")["header"]["Encoder Name"]);
+    }
+
+
     public function testWritesOnlyTheHeaderForASubtitleWithoutCues(): void
     {
         $this->assertStringEndsWith("Time Code Rate=30DF\n\n", (new Subtitle())->toString(Format::Mcc));
