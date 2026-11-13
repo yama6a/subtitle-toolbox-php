@@ -10,6 +10,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
+use SubtitleToolbox\ReadOptions;
 
 class SubRipFormatterTest extends TestCase
 {
@@ -151,5 +152,33 @@ class SubRipFormatterTest extends TestCase
 
         $this->assertSame(["caf\xE9 &amp; <i>cr\xE8me</i>"], $subtitle->getCues()[0]->getLines());
         $this->assertSame($raw, $subtitle->toString(Format::SubRip));
+    }
+
+
+    public function testATimeFrom1000HoursIsWrittenAsTheLastTimeTheParserReads(): void
+    {
+        $subtitle = Subtitle::fromString("WEBVTT\n\n00:00:01.000 --> 1000:00:00.000\nx\n", Format::WebVtt);
+
+        $output = $subtitle->toString(Format::SubRip);
+
+        $this->assertStringContainsString("00:00:01,000 --> 999:59:59,999\n", $output);
+        $this->assertSame(3599999.999, Subtitle::fromString($output, Format::SubRip)->getCues()[0]->getEnd());
+    }
+
+
+    public function testATextLineInTheShapeOfATimingLineReadsBackAsText(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 2, ["x", "00:00:03,500 --> 00:00:03,800"]))
+            ->addCue(new SubtitleCue(3, 4, ["10:30 -> 11:00"]))
+            ->addCue(new SubtitleCue(5, 6, ["c"]));
+        $output = $subtitle->toString(Format::SubRip);
+
+        foreach ([new ReadOptions(), new ReadOptions(lenient: true)] as $options) {
+            $cues = Subtitle::fromString($output, Format::SubRip, $options)->getCues();
+            $this->assertCount(3, $cues);
+            $this->assertSame([5.0, 6.0], [$cues[2]->getStart(), $cues[2]->getEnd()]);
+            $this->assertSame("\u{2060}10:30 -&gt; 11:00", $cues[1]->getText());
+        }
     }
 }

@@ -152,4 +152,13 @@ class SamiFormatterTest extends TestCase
         );
     }
 
+
+    public function testALineFeedInsideALineBecomesABreak(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["a\nb"]));
+        $output   = $subtitle->toString(Format::Sami);
+
+        $this->assertStringContainsString("a<br>b", $output);
+        $this->assertSame(["a", "b"], Subtitle::fromString($output, Format::Sami)->getCues()[0]->getLines());
+    }
 }

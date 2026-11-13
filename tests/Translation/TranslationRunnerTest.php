@@ -8,6 +8,7 @@ use Closure;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\TranslationException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Http\FakeHttpClient;
 use SubtitleToolbox\Image\CueImage;
@@ -218,14 +219,34 @@ class TranslationRunnerTest extends TestCase
     }
 
 
-    public function testWordTimestampsAndSpeakerTagsBecomeSinglePlaceholders(): void
+    public function testSpeakerTagsBecomePlaceholdersAndWordTimestampsAreNotSent(): void
     {
         $engine = new FakeTranslationEngine();
 
         (new TranslationRunner($engine))->translate($translated = TestSubtitles::fromTexts(["<v Fred>Hi <00:00:01.500>there."], start: 1, step: 2), "en", "de");
 
-        $this->assertSame("<x1/>Hi <x2/>there.", $engine->calls[0]["texts"][0]);
-        $this->assertSame(["<v Fred>HI <00:00:01.500>THERE."], $translated->getCues()[0]->getLines());
+        $this->assertSame("<x1/>Hi there.", $engine->calls[0]["texts"][0]);
+        $this->assertSame(["<v Fred>HI THERE."], $translated->getCues()[0]->getLines());
+    }
+
+
+    public function testWordTimestampsGoAlsoFromCuesOfOneSentence(): void
+    {
+        $engine = new FakeTranslationEngine();
+
+        (new TranslationRunner($engine))->translate(TestSubtitles::fromTexts(["Hi <00:00:01.500>there", "<00:00:02.000>friend."], start: 1, step: 2), "en", "de");
+
+        $this->assertSame("Hi there friend.", $engine->calls[0]["texts"][0]);
+    }
+
+
+    public function testACueThatIsNotSentKeepsItsWordTimestamps(): void
+    {
+        $engine = new FakeTranslationEngine();
+
+        (new TranslationRunner($engine))->translate($translated = TestSubtitles::fromTexts(["<00:00:01.000>1984"], start: 1, step: 2), "en", "de");
+
+        $this->assertSame(["<00:00:01.000>1984"], $translated->getCues()[0]->getLines());
     }
 
 
@@ -330,12 +351,38 @@ class TranslationRunnerTest extends TestCase
     }
 
 
-    public function testAWrongNumberOfTranslationsThrows(): void
+    public function testAWrongNumberOfTranslationsThrowsTranslationException(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(TranslationException::class);
         $this->expectExceptionMessage("The translation engine must return one string per text, got 1 values for 2 texts.");
 
         (new TranslationRunner(self::fixedEngine(["One."])))->translate(TestSubtitles::fromTexts(["One.", "Two."], start: 1, step: 2), "en", "de");
+    }
+
+
+    public function testAnEmptyTargetLanguageThrowsBeforeTheEngineCall(): void
+    {
+        $engine = new FakeTranslationEngine();
+
+        try {
+            (new TranslationRunner($engine))->translate(TestSubtitles::fromTexts(["One."], start: 1, step: 2), "en", " ");
+            $this->fail("No exception");
+        } catch (InvalidArgumentException $exception) {
+            $this->assertSame("The target language is missing.", $exception->getMessage());
+        }
+        $this->assertSame([], $engine->calls);
+    }
+
+
+    public function testAPlaceholderThatFormsAfterRemovalIsPlainText(): void
+    {
+        $runner = new TranslationRunner(self::fixedEngine(["<x<x1/>1>Hallo"]));
+
+        $report = $runner->translate($translated = TestSubtitles::fromTexts(["Hi there."], start: 1, step: 2), "en", "de");
+
+        $this->assertSame([["&lt;x1&gt;Hallo"]], self::lines($translated));
+        $this->assertSame(["The engine dropped or changed a placeholder tag. The cue has no tags."],
+                          array_map(fn (TranslationWarning $warning): string => $warning->message, $report->warnings));
     }
 
 

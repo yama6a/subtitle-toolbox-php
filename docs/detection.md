@@ -41,7 +41,7 @@ Other content goes to the signatures of the text and binary formats. Detection c
 | 10 | `Sbv` | `0:00:01.500,0:00:04.000` |
 | 11 | `SubViewer` | `******** START SCRIPT ********`, `[INFORMATION]` or `00:00:01.50,00:00:04.00` |
 | 12 | `Lyrics` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
-| 13 | `Pgs` | the bytes `PG`, then a known segment type |
+| 13 | `Pgs` | the bytes `PG` at byte 0, then a known segment type at byte 10. This check reads the raw bytes, without the BOM, blank line and line end changes of the text checks |
 | 14 | `EbuStl` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
 | 15 | `Pac` | the byte 01h, 20 zero bytes, a subtitle number of 2 bytes and a byte from 60h to 67h |
 | 16 | `SpruceStl` | `00:00:01:10 , 00:00:03:10 ,` after optional `$` command and `//` comment lines. Without such a line first, the text must not start with `"` |

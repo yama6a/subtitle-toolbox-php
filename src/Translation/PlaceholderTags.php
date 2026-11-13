@@ -14,7 +14,7 @@ use SubtitleToolbox\Markup;
  */
 final class PlaceholderTags
 {
-    private const TAG_REGEX               = '/((?=<\/?[a-zA-Z])' . Markup::TAG . '|<' . Markup::WORD_TIMESTAMP . '>)/';
+    private const TAG_REGEX               = '/((?=<\/?[a-zA-Z])' . Markup::TAG . ')/';
     private const PLACEHOLDER_REGEX       = '/(<\/?x\d+\/?>)/';
     private const LOOSE_PLACEHOLDER_REGEX = '/<\s*\/?\s*x\s*\d+\s*\/?\s*>/i';
 

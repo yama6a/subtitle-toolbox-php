@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Hls;
 
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Subtitle;
@@ -20,6 +21,11 @@ final class HlsWebVttJoiner
      */
     public static function join(iterable $segments, ?int $streamStartPts = null): Subtitle
     {
+        if ($streamStartPts !== null && ($streamStartPts < 0 || $streamStartPts >= TimestampMap::MPEGTS_WRAP)) {
+            throw new InvalidArgumentException("The stream start must be a 33-bit timestamp from 0 to " .
+                                                (TimestampMap::MPEGTS_WRAP - 1) . ", got $streamStartPts.");
+        }
+
         $joined   = new Subtitle();
         $fileData = null;
         $seen     = [];

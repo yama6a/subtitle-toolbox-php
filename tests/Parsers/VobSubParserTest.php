@@ -295,6 +295,70 @@ class VobSubParserTest extends TestCase
     }
 
 
+    /**
+     * A 2x2 unit with a start command at $startDate and a stop command at $stopDate, in units of 1024 / 90000 s.
+     */
+    private function unitWithStop(int $startDate, int $stopDate): string
+    {
+        return "\x00\x24\x00\x06\x90\x90" .
+               pack("nn", $startDate, 0x1E) . "\x03\x00\x10\x04\x00\xF0\x05\x06\x40\x65\x0C\x80\xC9\x06\x00\x04\x00\x05\x01\xFF" .
+               pack("nn", $stopDate, 0x1E) . "\x02\xFF";
+    }
+
+
+    public function testTimesStayBelowTheLimitAfterTheDelaysOfTheUnit(): void
+    {
+        // Start delay 45 units (0.512 s) and stop delay 264 units (3.003 s).
+        $unit              = $this->unitWithStop(45, 264);
+        [$sub, $fileposes] = $this->makeSub([$unit]);
+        $idx               = self::IDX_HEADER . "id: en, index: 0\n" . sprintf("timestamp: 99999:59:59:999, filepos: %09x\n", $fileposes[0]);
+
+        $cue = (new VobSubParser())->parse($sub, new ReadOptions(formats: [new VobSubReadOptions($idx)]))->getCues()[0];
+
+        $this->assertSame(359999999.999, $cue->getStart());
+        $this->assertSame(359999999.999, $cue->getEnd());
+    }
+
+
+    public function testACueWithoutStopStaysBelowTheLimit(): void
+    {
+        $unit              = substr_replace(self::SMALL_UNIT, pack("n", 45), 6, 2);
+        [$sub, $fileposes] = $this->makeSub([$unit]);
+        $idx               = self::IDX_HEADER . "id: en, index: 0\n" . sprintf("timestamp: 99999:59:59:999, filepos: %09x\n", $fileposes[0]);
+
+        $cue = (new VobSubParser())->parse($sub, new ReadOptions(formats: [new VobSubReadOptions($idx)]))->getCues()[0];
+
+        $this->assertSame(359999999.999, $cue->getEnd());
+    }
+
+
+    public function testACueNeverEndsBeforeItStarts(): void
+    {
+        // The first sequence has date 100 and the start command, the second has date 0 and the stop command.
+        $unit              = $this->unitWithStop(100, 0);
+        [$sub, $fileposes] = $this->makeSub([$unit]);
+        $idx               = self::IDX_HEADER . "id: en, index: 0\n" . sprintf("timestamp: 00:00:01:000, filepos: %09x\n", $fileposes[0]);
+
+        $cue = (new VobSubParser())->parse($sub, new ReadOptions(formats: [new VobSubReadOptions($idx)]))->getCues()[0];
+
+        $this->assertEqualsWithDelta(2.138, $cue->getStart(), 0.001);
+        $this->assertSame($cue->getStart(), $cue->getEnd());
+    }
+
+
+    public function testRejectsATimeOfMinus100000HoursOrLess(): void
+    {
+        [$sub, $fileposes] = $this->makeSub([self::SMALL_UNIT]);
+        $idx               = self::IDX_HEADER . "id: en, index: 0\ndelay: -99999:00:00:000\n" .
+                             sprintf("timestamp: -99999:00:00:000, filepos: %09x\n", $fileposes[0]);
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("is not above -100000 hours");
+
+        (new VobSubParser())->parse($sub, new ReadOptions(formats: [new VobSubReadOptions($idx)]));
+    }
+
+
     public function testSkipsPacketsOfOtherTracks(): void
     {
         [$other]           = $this->makeSub([self::SMALL_UNIT], 1);
