@@ -70,7 +70,7 @@ final class QuickTimeTextParser extends SubtitleParser
             if ($sample["lines"] === []) {
                 continue;
             }
-            $end = $samples[$index + 1]["time"] ?? Timecode::roundToMilliseconds($sample["time"] + $this->options->lastCueDuration);
+            $end = $samples[$index + 1]["time"] ?? Timecode::roundToMilliseconds(Timecode::lastCueEnd($sample["time"], $this->options->lastCueDuration));
             try {
                 [$start, $end] = $this->orderedTimes($sample["time"], $end, $sample["line"], null, $sample["lines"]);
             } catch (ParsingException $exception) {

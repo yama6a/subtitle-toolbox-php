@@ -282,4 +282,146 @@ class TimecodeTest extends TestCase
 
         Timecode::parse($timecode, $framesPerSecond === null ? null : new FrameRate($framesPerSecond));
     }
+
+
+    /**
+     * @return array<string, array{float, float}>
+     */
+    public static function halfMilliseconds(): array
+    {
+        return [
+            "2.675 + 1.0005, the MPSub sum of issue #1103" => [2.675 + 1.0005, 3.676],
+            "(29.72 + 21.58) / 24, the MPSub frames of #1103" => [(29.72 + 21.58) / 24, 2.138],
+            "a negative half rounds away from zero"         => [-(2.675 + 1.0005), -3.676],
+            "a whole millisecond stays"                     => [1.001, 1.001],
+            "the last millisecond below the limit stays"    => [359999999.999, 359999999.999],
+            "below a half rounds down"                      => [0.0004999, 0.0],
+        ];
+    }
+
+
+    #[DataProvider("halfMilliseconds")]
+    public function testRoundToMillisecondsRoundsADecimalHalfAwayFromZero(float $seconds, float $expected): void
+    {
+        $this->assertSame($expected, Timecode::roundToMilliseconds($seconds));
+        $this->assertSame((int) round($expected * 1000), Timecode::totalMilliseconds($seconds));
+    }
+
+
+    /**
+     * The binary products of the first 2 times are just below a half: 100.49999999999999 and 102.49999999999999.
+     *
+     * @return array<string, array{float, list<int>}>
+     */
+    public static function halfCentiseconds(): array
+    {
+        return [
+            "1.005 s" => [1.005, [0, 0, 1, 1]],
+            "1.025 s" => [1.025, [0, 0, 1, 3]],
+            "2.015 s" => [2.015, [0, 0, 2, 2]],
+            "0.125 s" => [0.125, [0, 0, 0, 13]],
+        ];
+    }
+
+
+    #[DataProvider("halfCentiseconds")]
+    public function testCentisecondsRoundAHalfCentisecondUp(float $seconds, array $expected): void
+    {
+        $this->assertSame($expected, Timecode::centiseconds($seconds));
+    }
+
+
+    public function testCentisecondsStopAtTheLastCentisecondBelowTheLimit(): void
+    {
+        $this->assertSame([99999, 59, 59, 99], Timecode::centiseconds(359999999.999));
+        $this->assertSame([99999, 59, 59, 99], Timecode::centiseconds(359999999.995));
+    }
+
+
+    /**
+     * @return array<string, array{float, int, int}>
+     */
+    public static function unitsBelowLimit(): array
+    {
+        return [
+            "centiseconds just below the limit" => [359999999.999, 100, 35999999999],
+            "deciseconds just below the limit"  => [359999999.999, 10, 3599999999],
+            "seconds half a second below"       => [359999999.5, 1, 359999999],
+            "milliseconds far past the limit"   => [1e20, 1000, 359999999999],
+            "a negative time"                   => [-1.5, 100, 0],
+            "a half centisecond"                => [1.005, 100, 101],
+            "a half second"                     => [0.5, 1, 1],
+            "below a half second"               => [0.499, 1, 0],
+            "a time scale of 600"               => [1.001, 600, 601],
+            "a half unit of a time scale of 8"  => [0.0625, 8, 1],
+            "a time scale of 90000"             => [359999999.999, 90000, 32399999999910],
+        ];
+    }
+
+
+    #[DataProvider("unitsBelowLimit")]
+    public function testUnitsBelowLimitRoundFromMillisecondsAndStopBelowTheLimit(float $seconds, int $unitsPerSecond, int $expected): void
+    {
+        $this->assertSame($expected, Timecode::unitsBelowLimit($seconds, $unitsPerSecond));
+    }
+
+
+    public function testLastCueEndStopsAtTheLastMillisecondBelowTheLimit(): void
+    {
+        $this->assertSame(15.0, Timecode::lastCueEnd(10, 5));
+        $this->assertSame(359999999.999, Timecode::lastCueEnd(359999999, 5));
+        $this->assertSame(359999999.999, Timecode::lastCueEnd(359999999.999, 5));
+        $this->assertSame(359999999.999, Timecode::lastCueEnd(0, 400000 * 3600));
+    }
+
+
+    /**
+     * @return array<string, array{string, float}>
+     */
+    public static function longFractions(): array
+    {
+        return [
+            "17 digits below a half millisecond, issue #1099" => ["12349999999999999", 1.123],
+            "17 digits on a half millisecond"                 => ["12350000000000000", 1.124],
+            "19 digits that round up to the next second"      => ["9995000000000000000", 2.0],
+            "16 digits keep the float of the decimal value"   => ["1234999999999999", 1.1234999999999999],
+        ];
+    }
+
+
+    #[DataProvider("longFractions")]
+    public function testToSecondsRoundsAFractionOfMoreThan16DigitsOnItsDigits(string $fraction, float $expected): void
+    {
+        $this->assertSame($expected, Timecode::toSeconds(0, 0, 1, $fraction));
+    }
+
+
+    /**
+     * @return array<string, array{float}>
+     */
+    public static function nonDropFrameRates(): array
+    {
+        return ["30 fps" => [30.0], "29.6 fps" => [29.6], "60 fps" => [60.0], "59.5 fps" => [59.5], "29.96 fps" => [29.96]];
+    }
+
+
+    #[DataProvider("nonDropFrameRates")]
+    public function testDropFrameRejectsARateThatIsNot2997Or5994(float $framesPerSecond): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Drop-frame time code needs 29.97 or 59.94 fps, got $framesPerSecond.");
+
+        Timecode::frameNumber(1800, new FrameRate($framesPerSecond), true);
+    }
+
+
+    public function testDropFrameAcceptsTheExactAndTheRoundedNtscRates(): void
+    {
+        foreach ([30000 / 1001, 29.97] as $framesPerSecond) {
+            $this->assertSame([0, 1, 0, 2], Timecode::frameNumber(1800, new FrameRate($framesPerSecond), true));
+        }
+        foreach ([60000 / 1001, 59.94] as $framesPerSecond) {
+            $this->assertSame([0, 1, 0, 4], Timecode::frameNumber(3600, new FrameRate($framesPerSecond), true));
+        }
+    }
 }

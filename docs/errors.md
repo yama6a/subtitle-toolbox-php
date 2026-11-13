@@ -69,6 +69,7 @@ try {
 - A subtitle number over 65535, or cue text of 65535 bytes or more, in PAC.
 - A line of more than 51 bytes in Cavena 890.
 - A subtitle number over 65535 in Cavena 890, so more than 4110 new cues.
+- A frame number larger than the largest integer, such as 359999999 s at `1e12` fps, in a format that writes frames.
 - Text that is not UTF-8 in a JSON format.
 - Text that is not UTF-8 in TTML, iTT or SAMI output.
 - A stored TTML head that is not valid XML.
