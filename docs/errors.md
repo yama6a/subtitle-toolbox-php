@@ -52,6 +52,7 @@ try {
 - 2 objects of one class in `ReadOptions::$formats` or `WriteOptions::$formats`, or a write class in `ReadOptions` and a read class in `WriteOptions`.
 - A missing OCR engine, a missing `tesseract` program, a missing Tesseract language or a missing php-glyph-ocr package.
 - A missing `ext-curl` for the translation engines.
+- An empty target language in `TranslationRunner::translate()`.
 - A `ReadOptions::$encoding` without a PAC code page, such as `KOI8-R`, for a PAC file.
 
 ## Unwritable content
@@ -80,6 +81,8 @@ try {
 - An HTTP error, such as 403 for a wrong key or 456 for a used-up DeepL quota.
 - A request without a response.
 - An answer that the engine cannot read.
+- An engine that returns another number of translations than texts, in `TranslationRunner::translate()`.
+- An answer with more than 1 MiB plus 16 bytes for each byte of the request, in `CurlHttpClient`.
 
 ## Line numbers
 These readers set the line number:
