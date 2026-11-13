@@ -19,6 +19,8 @@ final class SpeakerLabels
     private const VOICE       = '/^(?:' . Markup::VOICE_TAG . '|' . Markup::VOICE_TAG_START . '>)$/';
     private const VOICE_END   = '/^<\/v\s*>$/';
     private const OPEN_STYLE  = '/^<([a-zA-Z][a-zA-Z0-9]*)(?:[\s.][^>]*)?>$/';
+    /** The number of open style tags, innermost first, that close and open again at a change of the speaker. */
+    private const REOPENED_STYLE_TAGS = 4;
     private const CLOSE_STYLE = '/^<\/([a-zA-Z][a-zA-Z0-9]*)\s*>$/';
 
 
@@ -117,7 +119,7 @@ final class SpeakerLabels
             $speakers = count(array_filter($lines, fn (SpeakerLine $line): bool => $line->startsSpeaker));
             $result   = [];
             foreach ($lines as $line) {
-                $hasDash  = preg_match('/^\h*-/', Markup::visibleText($line->text)) === 1;
+                $hasDash  = preg_match('/^\h*-/u', Markup::visibleText($line->text)) === 1;
                 $result[] = $speakers >= 2 && $line->startsSpeaker && !$hasDash ? Markup::escapeText($dash) . $line->text : $line->text;
             }
 
@@ -166,7 +168,7 @@ final class SpeakerLabels
             foreach ($lines as $index => $line) {
                 [$name, $rest] = self::removeLabel($line, $options);
                 if ($name === null) {
-                    $result[] = ($pending ?? "") . $line;
+                    $result[] = ($pending === null ? "" : $pending[0] . $pending[1]) . $line;
                     $pending  = null;
                     continue;
                 }
@@ -174,12 +176,12 @@ final class SpeakerLabels
                 $tag = Markup::voiceTag($name);
                 if (Markup::visibleText($rest) === "") {
                     $isLast   = $index === count($lines) - 1;
-                    $pending  = $isLast ? null : $tag . $rest;
+                    $pending  = $isLast ? null : [$tag, implode("", array_filter(Markup::splitTags($line), fn (string $token, int $index): bool => $index % 2 === 1, ARRAY_FILTER_USE_BOTH))];
                     $result[] = $isLast ? $line : "";
                     continue;
                 }
 
-                $result[] = $tag . $rest;
+                $result[] = $tag . ($pending[1] ?? "") . $rest;
                 $pending  = null;
             }
 
@@ -238,10 +240,16 @@ final class SpeakerLabels
      */
     private static function splitLine(string $line, SpeakerSplitState $state): void
     {
-        $current = "";
-        $split   = false;
-        foreach (Markup::splitTags($line) as $index => $token) {
+        $current  = "";
+        $split    = false;
+        $tokens   = Markup::splitTags($line);
+        $hasVoice = false;
+        foreach ($tokens as $index => $token) {
+            $hasVoice = $hasVoice || ($index % 2 === 1 && preg_match('/^<\/?v[\s.>]/', $token) === 1);
+        }
+        foreach ($tokens as $index => $token) {
             if ($index % 2 === 0) {
+                $token    = $hasVoice ? str_replace("<", "&lt;", $token) : $token;
                 $current .= $split && Markup::visibleText($current) === "" ? ltrim($token) : $token;
                 continue;
             }
@@ -259,9 +267,10 @@ final class SpeakerLabels
                 continue;
             }
             if (Markup::visibleText($current) !== "") {
-                $closing        = implode("", array_map(fn (OpenStyleTag $tag): string => "</$tag->name>", array_reverse($state->open)));
+                $reopened       = array_slice($state->open, -self::REOPENED_STYLE_TAGS);
+                $closing        = implode("", array_map(fn (OpenStyleTag $tag): string => "</$tag->name>", array_reverse($reopened)));
                 $state->parts[] = ["speaker" => $state->speaker, "text" => rtrim($current) . $closing];
-                $current        = implode("", array_map(fn (OpenStyleTag $tag): string => $tag->tag, $state->open));
+                $current        = implode("", array_map(fn (OpenStyleTag $tag): string => $tag->tag, $reopened));
                 $split          = true;
             }
             $state->speaker = $name;
@@ -305,8 +314,8 @@ final class SpeakerLabels
 
         $visible = preg_replace('/^\h*(?:-\h*)?/u', "", Markup::visibleText($line)) ?? "";
         $name    = trim(explode(":", $visible, 2)[0]);
-        if (preg_match('/^\h*-/', Markup::visibleText($line)) === 1) {
-            $rest = preg_replace('/^((?:' . Markup::TAG . ')*)\h*-\h*/', '$1', $rest) ?? $rest;
+        if (preg_match('/^\h*-/u', Markup::visibleText($line)) === 1) {
+            $rest = preg_replace('/^((?:' . Markup::TAG . ')*)\h*-\h*/u', '$1', $rest) ?? $rest;
         }
 
         return [preg_match('/\p{Ll}/u', $name) === 1 ? $name : self::titleCase($name), $rest];
