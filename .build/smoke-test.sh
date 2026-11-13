@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Runs the PHAR once per feature that depends on how it was built: the version, iconv, the EUC-JP table of iconv and the bundled OCR.
+# It checks that the PHAR holds LICENSE and THIRD_PARTY_NOTICES.md, and the image holds them in /usr/share/doc/stbox/.
 # It also checks that the PHP of the image has ext-curl, which the translate command needs.
 # Usage: .build/smoke-test.sh <expected version> <tests/files as the PHP command sees it> <PHAR path> <PHP command...>
 # SMOKE_TESSERACT=1 also reads Cyrillic text with Tesseract, for the image with all Tesseract languages.
@@ -33,6 +34,17 @@ if ! "$@" -r 'exit(function_exists("curl_init") ? 0 : 1);'; then
   exit 1
 fi
 
+for name in LICENSE THIRD_PARTY_NOTICES.md; do
+  if ! "$@" -r 'exit(is_file("phar://" . $argv[1] . "/" . $argv[2]) ? 0 : 1);' "$phar" "$name"; then
+    echo "The PHAR holds no $name" >&2
+    exit 1
+  fi
+  if [ "$phar" = /usr/local/bin/stbox.phar ] && ! "$@" -r 'exit(is_file("/usr/share/doc/stbox/" . $argv[1]) ? 0 : 1);' "$name"; then
+    echo "The image holds no /usr/share/doc/stbox/$name" >&2
+    exit 1
+  fi
+done
+
 ocr=$("$@" "$phar" convert "$files/pgs/text_1080p.sup" --ocr --to srt --output -)
 if [[ $ocr != *Bergen* ]]; then
   printf 'convert --ocr printed:\n%s\n' "$ocr" >&2
@@ -40,6 +52,10 @@ if [[ $ocr != *Bergen* ]]; then
 fi
 
 if [ "${SMOKE_TESSERACT:-}" = 1 ]; then
+  if ! "$@" -r 'exit(is_file("/usr/share/tessdata/LICENSE") ? 0 : 1);'; then
+    echo "The image holds no tessdata_fast LICENSE in /usr/share/tessdata" >&2
+    exit 1
+  fi
   ocr=$("$@" "$phar" convert "$files/pgs/text_cyrillic_1080p.sup" --ocr --ocr-engine tesseract --ocr-language rus --to srt --output -)
   if [[ $ocr != *Берген* ]]; then
     printf 'convert --ocr-engine tesseract printed:\n%s\n' "$ocr" >&2

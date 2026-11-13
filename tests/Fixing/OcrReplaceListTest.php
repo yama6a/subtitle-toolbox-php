@@ -21,7 +21,7 @@ class OcrReplaceListTest extends TestCase
         $this->assertSame([" deck'" => " deck."], $list->endLines);
         $this->assertSame(["*'*." => "p.m."], $list->partialLines);
         $this->assertSame(["Pe* hou*" => "per hour"], $list->partialLinesAlways);
-        $this->assertSame(["/(\\p{L})'$/u" => "$1.", "/\\b(\\d+) k\\*/u" => "$1 km"], $list->regularExpressions);
+        $this->assertSame(["/(\\p{L})'$/u" => "$1.", "/\\b(\\d+) k\\*/u" => "$1 km", "/x/u" => '\\${name}'], $list->regularExpressions);
     }
 
 
@@ -38,7 +38,7 @@ class OcrReplaceListTest extends TestCase
             "</RegularExpressions></OCRFixReplaceList>"
         );
 
-        $this->assertSame(["~(a)/b~u" => "\\$ \$0 \\\\ \${1}"], $list->regularExpressions);
+        $this->assertSame(["~(a)/b~u" => "\\$ \$0 \\\\ \${1}", "/(?<x>c)/u" => '${x}'], $list->regularExpressions);
         $this->assertSame("$ a/b \\ a x", preg_replace("~(a)/b~u", $list->regularExpressions["~(a)/b~u"], "a/b x"));
     }
 
@@ -80,5 +80,17 @@ class OcrReplaceListTest extends TestCase
         $this->expectExceptionMessage("The regular expression \"/[/u\" is not valid");
 
         new OcrReplaceList(regularExpressions: ["/[/u" => ""]);
+    }
+
+
+    public function testKeepsTheDotNetSubstitutionsOfTheSubject(): void
+    {
+        $list = OcrReplaceList::fromSubtitleEditXml(
+            "<ReplaceList><RegularExpressions>" .
+            '<RegEx find="x" replaceWith="[${name}] [$`] [$\'] [$+] [$_] [$$`]" />' .
+            "</RegularExpressions></ReplaceList>"
+        );
+
+        $this->assertSame(["/x/u" => '[\\${name}] [$`] [$\'] [$+] [$_] [\\$`]'], $list->regularExpressions);
     }
 }

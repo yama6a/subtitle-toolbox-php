@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Timing;
 
+use SubtitleToolbox\CueList;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\SortedSearch;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -14,14 +17,17 @@ final class ShotChangeTiming
      * Moves cue times to the shot changes of $options, closes gaps and puts all times on frames.
      * A gap closes to minGapFrames when it is longer than minGapFrames and shorter than snapWindowFrames frames.
      * A gap with a shot change inside stays.
+     *
+     * @throws InvalidArgumentException when a cue would end at 100000 hours or later. No cue changes then.
      */
     public static function apply(Subtitle $subtitle, ShotChangeOptions $options): ShotChangeReport
     {
-        $shots = array_map(fn (float $time): int => self::toFrame($time, $options), $options->shotChanges);
-        $shots = array_values(array_unique($shots));
+        $frameRate = new FrameRate($options->frameRate);
+        $shots     = array_map(fn (float $time): int => $frameRate->secondsToFrames($time), $options->shotChanges);
+        $shots     = array_values(array_unique($shots));
         sort($shots);
 
-        [$cues, $starts, $ends] = self::toFrames($subtitle, $options);
+        [$cues, $starts, $ends] = self::toFrames($subtitle, $frameRate);
         [$originalStarts, $originalEnds] = [$starts, $ends];
         $count = count($cues);
 
@@ -47,7 +53,7 @@ final class ShotChangeTiming
             $ends = self::chain($starts, $ends, $shots, $options);
         }
 
-        self::write($cues, $starts, $ends, $options);
+        self::write($cues, $starts, $ends, $frameRate);
 
         return new ShotChangeReport(
             count(array_diff_assoc($starts, $originalStarts)),
@@ -119,33 +125,31 @@ final class ShotChangeTiming
 
 
     /** @return array{list<SubtitleCue>, list<int>, list<int>} */
-    private static function toFrames(Subtitle $subtitle, ShotChangeOptions $options): array
+    private static function toFrames(Subtitle $subtitle, FrameRate $frameRate): array
     {
         $cues = $subtitle->getCues();
 
-        $starts = array_map(fn (SubtitleCue $cue): int => self::toFrame($cue->getStart(), $options), $cues);
-        $ends   = array_map(fn (SubtitleCue $cue): int => self::toFrame($cue->getEnd(), $options), $cues);
+        $starts = array_map(fn (SubtitleCue $cue): int => $frameRate->secondsToFrames($cue->getStart()), $cues);
+        $ends   = array_map(fn (SubtitleCue $cue): int => $frameRate->secondsToFrames($cue->getEnd()), $cues);
 
         return [$cues, $starts, $ends];
     }
 
 
-    private static function toFrame(float $seconds, ShotChangeOptions $options): int
-    {
-        return (int)round($seconds * $options->frameRate);
-    }
-
-
     /**
+     * A time that rounds up to the next frame can reach MAX_HOURS, so it checks every cue before it changes one.
+     *
      * @param list<SubtitleCue> $cues
      * @param list<int> $starts
      * @param list<int> $ends
+     * @throws InvalidArgumentException
      */
-    private static function write(array $cues, array $starts, array $ends, ShotChangeOptions $options): void
+    private static function write(array $cues, array $starts, array $ends, FrameRate $frameRate): void
     {
+        CueList::checkEnds(array_map(fn (int $start, int $end): float => $frameRate->framesToSeconds(max($start, $end)), $starts, $ends));
         foreach ($cues as $i => $cue) {
-            $cue->setStart($starts[$i] / $options->frameRate);
-            $cue->setEnd($ends[$i] / $options->frameRate);
+            $cue->setStart($frameRate->framesToSeconds($starts[$i]));
+            $cue->setEnd($frameRate->framesToSeconds($ends[$i]));
         }
     }
 }

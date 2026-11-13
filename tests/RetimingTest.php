@@ -247,6 +247,8 @@ class RetimingTest extends \PHPUnit\Framework\TestCase
             "shift from a time"     => [fn (Subtitle $s) => $s->shift(359998500, 1000), "The retimed cue 5 would end at 360000003 s. Cue times must be below 100000 hours."],
             "sync by 2 points"      => [fn (Subtitle $s) => $s->syncByPoints([new SyncPoint(5, 5), new SyncPoint(10, 2000000)]),
                                         "The retimed cue 4 would end at 478798808 s. Cue times must be below 100000 hours."],
+            "shift to 100000 hours once rounded" => [fn (Subtitle $s) => $s->shift(359999991.9996),
+                                        "The retimed cue 1 would end at 359999999.9996 s. Cue times must be below 100000 hours."],
             "shift not finite"      => [fn (Subtitle $s) => $s->shift(INF), "The shift must be a finite number of seconds, got INF."],
         ];
     }
@@ -265,5 +267,43 @@ class RetimingTest extends \PHPUnit\Framework\TestCase
             $this->assertSame($message, $exception->getMessage());
         }
         $this->assertSame($before, $subtitle->toString(Format::WebVtt));
+    }
+
+
+    /**
+     * @return array<string, array{float, string, Closure(Subtitle): mixed, float, string}>
+     */
+    public static function retimingsOnAHalfMillisecond(): array
+    {
+        return [
+            "#1078 scale 500 ms by 1.001"   => [0.5, "a <00:00:00.500> b", fn (Subtitle $s) => $s->scale(1.001), 0.501, "a <00:00:00.501> b"],
+            "#1078 scale 9 ms by 1.5"       => [0.009, "a <00:00:00.009> b", fn (Subtitle $s) => $s->scale(1.5), 0.014, "a <00:00:00.014> b"],
+            "#1078 sync by 2 points"        => [0.009, "a <00:00:00.009> b", fn (Subtitle $s) => $s->syncByPoints([new SyncPoint(0, 0), new SyncPoint(10, 15)]),
+                                                0.014, "a <00:00:00.014> b"],
+            "#1079 shift by 0.5 ms"         => [1.001, "a <00:00:01.001> b", fn (Subtitle $s) => $s->shift(0.0005), 1.002, "a <00:00:01.002> b"],
+            "#1079 shift by -0.5 ms"        => [2.001, "a <00:00:02.001> b", fn (Subtitle $s) => $s->shift(-0.0005), 2.001, "a <00:00:02.001> b"],
+            "#1079 sync by 1 point"         => [1.001, "a <00:00:01.001> b", fn (Subtitle $s) => $s->syncByPoints([new SyncPoint(0, 0.0005)]),
+                                                1.002, "a <00:00:01.002> b"],
+        ];
+    }
+
+
+    /**
+     * The exact decimal result is on a half millisecond, so it rounds away from zero for the cue time and the word timestamp alike.
+     * The float result is a hair below or above it. 0.5 * 1.001 is 0.50049999999999994, and 1.001 + 0.0005 is 1.0014999999999998.
+     */
+    #[DataProvider("retimingsOnAHalfMillisecond")]
+    public function testRetimingOnAHalfMillisecondRoundsCueTimesAndWordTimestampsAlike(
+        float $start,
+        string $text,
+        Closure $retime,
+        float $newStart,
+        string $newText
+    ): void {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue($start, 5, $text));
+
+        $retime($subtitle);
+
+        $this->assertSame([$newStart, $newText], [$subtitle->getCues()[0]->getStart(), $subtitle->getCues()[0]->getText()]);
     }
 }

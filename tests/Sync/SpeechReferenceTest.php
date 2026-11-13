@@ -60,6 +60,33 @@ class SpeechReferenceTest extends TestCase
     }
 
 
+    public function testATimeThatGoesBackCountsAsTheTimeBeforeIt(): void
+    {
+        $log = self::LINE . "silence_start: 5\n" . self::LINE . "silence_end: 3\n" . self::LINE . "silence_start: 4\n";
+
+        $this->assertSame([[0.0, 5.0]], TestSubtitles::times(SpeechReference::fromFfmpegSilencedetect($log, 10)));
+    }
+
+
+    /**
+     * FFmpeg prints times with %.6g, so a time near 0 has an exponent. The cue end 0.000012 s rounds to 0 ms.
+     */
+    public function testTimeWithAnExponent(): void
+    {
+        $log = self::LINE . "silence_start: 1.2e-05\n" . self::LINE . "silence_end: 2\n" . self::LINE . "silence_start: 3.5E+0\n";
+
+        $this->assertSame([[0.0, 0.0], [2.0, 3.5]], TestSubtitles::times(SpeechReference::fromFfmpegSilencedetect($log, 10)));
+    }
+
+
+    public function testMediaDurationOf100000HoursThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The media duration must be below 100000 hours, got 360000000 s.");
+        SpeechReference::fromFfmpegSilencedetect("", 360000000);
+    }
+
+
     public function testLogWithoutSilenceIsSpeechFromStartToEnd(): void
     {
         $this->assertSame([[0.0, 12.5]], TestSubtitles::times(SpeechReference::fromFfmpegSilencedetect("ffmpeg version 6.1.1\n", 12.5)));
@@ -100,6 +127,15 @@ class SpeechReferenceTest extends TestCase
     public function testFromIntervalsWithoutIntervalsIsEmpty(): void
     {
         $this->assertSame([], SpeechReference::fromIntervals([])->getCues());
+    }
+
+
+    public function testIntervalEndOf100000HoursThrows(): void
+    {
+        $this->assertSame([[0.0, 359999999.999]], TestSubtitles::times(SpeechReference::fromIntervals([[0, 359999999.999]])));
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Interval 1 ends at 1.0E+20 s. Cue times must be below 100000 hours.");
+        SpeechReference::fromIntervals([[0, 1], [2, 1e20]]);
     }
 
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Translation;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\TranslationException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -21,10 +22,15 @@ final class TranslationRunner
 
     /**
      * Translates the text of each cue with the engine and sets the language metadata to $targetLanguage. The subtitle
-     * changes only when every engine call succeeds.
+     * changes only when every engine call succeeds. A translated cue holds no word timestamps, because the source word times
+     * do not fit the translated words.
      */
     public function translate(Subtitle $subtitle, string $sourceLanguage, string $targetLanguage, ?TranslationOptions $options = null): TranslationReport
     {
+        if (trim($targetLanguage) === "") {
+            throw new InvalidArgumentException("The target language is missing.");
+        }
+
         $options  = $options ?? new TranslationOptions();
         $warnings = [];
         $cues     = array_map(fn (SubtitleCue $cue): SubtitleCue => clone $cue, $subtitle->getCues());
@@ -40,8 +46,8 @@ final class TranslationRunner
             $translations = $this->engine->translate($texts, $sourceLanguage, $targetLanguage);
             if (!array_is_list($translations) || count($translations) !== count($texts) ||
                 count(array_filter($translations, "is_string")) !== count($texts)) {
-                throw new InvalidArgumentException("The translation engine must return one string per text, " .
-                                                   "got " . count($translations) . " values for " . count($texts) . " texts.");
+                throw new TranslationException("The translation engine must return one string per text, " .
+                                               "got " . count($translations) . " values for " . count($texts) . " texts.");
             }
 
             foreach ($batch as $requestIndex => $request) {
@@ -113,9 +119,11 @@ final class TranslationRunner
      */
     private static function requestText(array $cues): string
     {
-        return count($cues) === 1
+        $text = count($cues) === 1
             ? implode("\n", $cues[0]->getLines())
             : implode(" ", array_map(fn (SubtitleCue $cue): string => implode(" ", $cue->getLines()), $cues));
+
+        return preg_replace(Markup::WORD_TIMESTAMP_REGEX, "", $text);
     }
 
 
@@ -157,15 +165,18 @@ final class TranslationRunner
         $warnings   = [];
         $cueIndexes = $request->cueIndexes;
         $tags       = $request->encoded->tags;
+        $tokens     = null;
         if (!PlaceholderTags::keepsPlaceholders($translation, $tags)) {
+            // The rest after remove() is plain text, even where removal formed a new placeholder such as "<x1>".
             $translation = PlaceholderTags::remove($translation);
+            $tokens      = $translation === "" ? [] : [new PlaceholderToken(PlaceholderTokenType::Text, Markup::decodeEntities($translation))];
             $tags        = [];
             foreach ($cueIndexes as $cueIndex) {
                 $warnings[] = new TranslationWarning($cueIndex, "The engine dropped or changed a placeholder tag. The cue has no tags.");
             }
         }
 
-        $tokens = PlaceholderTags::tokenize($translation);
+        $tokens ??= PlaceholderTags::tokenize($translation);
         if (count($cueIndexes) === 1) {
             $cues[$cueIndexes[0]]->setLines(explode("\n", PlaceholderTags::restore($tokens, $tags)));
 

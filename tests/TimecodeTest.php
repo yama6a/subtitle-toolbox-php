@@ -366,6 +366,15 @@ class TimecodeTest extends TestCase
     }
 
 
+    public function testIsBelowLimitChecksTheTimeRoundedToMilliseconds(): void
+    {
+        $this->assertSame(
+            [true, true, false, false, false, false],
+            array_map(Timecode::isBelowLimit(...), [-5.0, 359999999.999, 359999999.9996, 360000000.0, 1e300, NAN])
+        );
+    }
+
+
     public function testLastCueEndStopsAtTheLastMillisecondBelowTheLimit(): void
     {
         $this->assertSame(15.0, Timecode::lastCueEnd(10, 5));

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Sync;
 
 use SubtitleToolbox\CueList;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\TimeRanges;
@@ -24,23 +25,13 @@ final class ReferenceSync
     /**
      * Finds the scale and offset that make the cue times of $subtitle match those of the reference in $options.
      * Then it retimes $subtitle with them.
+     *
+     * @throws InvalidArgumentException when a cue would end at Timecode::MAX_HOURS or later.
      */
     public static function apply(Subtitle $subtitle, ReferenceSyncOptions $options): ReferenceSyncReport
     {
-        $report   = self::find($subtitle, $options);
-        $segments = $report->segments;
-        if (count($segments) > 1) {
-            self::retimeSegments($subtitle, $segments);
-
-            return $report;
-        }
-
-        if ($report->scale != 1) {
-            $subtitle->scale($report->scale);
-        }
-        if ($report->offset != 0) {
-            $subtitle->shift($report->offset);
-        }
+        $report = self::find($subtitle, $options);
+        self::retimeSegments($subtitle, $report->segments);
 
         return $report;
     }
@@ -48,23 +39,28 @@ final class ReferenceSync
 
     /**
      * Scales and then shifts each cue with the segment that holds its start. An earlier cue ends before a later segment starts.
+     * It checks the new times of every cue before it changes one.
      *
      * @param list<SyncSegment> $segments
+     * @throws InvalidArgumentException when a cue would end at Timecode::MAX_HOURS or later.
      */
     private static function retimeSegments(Subtitle $target, array $segments): void
     {
         $segmentCues = array_fill(0, count($segments), []);
-        foreach ($target->getCues() as $cue) {
+        foreach ($target->getCues() as $cueIndex => $cue) {
             $index = count($segments) - 1;
             while ($index > 0 && $cue->getStart() < $segments[$index]->from) {
                 $index--;
             }
-            $segmentCues[$index][] = $cue;
+            $segmentCues[$index][$cueIndex] = $cue;
         }
 
         foreach ($segmentCues as $index => $cues) {
+            CueList::checkTimeLimit($cues, fn (float $time): float => self::retime($time, $segments[$index]));
+        }
+        foreach ($segmentCues as $index => $cues) {
             foreach ($cues as $cue) {
-                CueList::mapTimes($cue, fn (float $time): float => $time * $segments[$index]->scale + $segments[$index]->offset);
+                CueList::mapTimes($cue, fn (float $time): float => self::retime($time, $segments[$index]));
             }
         }
 
@@ -81,10 +77,16 @@ final class ReferenceSync
     }
 
 
+    private static function retime(float $time, SyncSegment $segment): float
+    {
+        return $time * $segment->scale + $segment->offset;
+    }
+
+
     /**
      * Ends each cue that starts before $laterStart at least SEGMENT_GAP before it.
      *
-     * @param list<SubtitleCue> $cues
+     * @param array<int, SubtitleCue> $cues
      */
     private static function endBefore(array $cues, float $laterStart): void
     {
