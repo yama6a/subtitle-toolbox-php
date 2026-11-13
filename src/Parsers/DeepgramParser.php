@@ -17,6 +17,11 @@ final class DeepgramParser extends SubtitleParser
     protected const FORMAT_OPTIONS = TranscriptReadOptions::class;
     public const FORMAT_DATA_KEY = Format::Deepgram->value;
 
+    // Each sentence cue keeps a copy of its paragraph, so a damaged file with many sentences and large paragraphs
+    // needs memory that grows with the square of its size. The copies may hold this many times the file size, plus the allowance.
+    private const MAX_PARAGRAPH_COPY_FACTOR = 16;
+    private const PARAGRAPH_COPY_ALLOWANCE  = 1 << 20;
+
 
     protected static function formatDataKey(): string
     {
@@ -38,7 +43,7 @@ final class DeepgramParser extends SubtitleParser
 
         $utterances = self::listOrEmpty($results["utterances"] ?? null);
         $cues       = $utterances === []
-            ? $this->readChannels($results["channels"])
+            ? $this->readChannels($results["channels"], self::MAX_PARAGRAPH_COPY_FACTOR * strlen($content) + self::PARAGRAPH_COPY_ALLOWANCE)
             : $this->readUtterances($utterances, "results.utterances", "transcript", $this->readWords(...));
 
         $results["channels"] = array_map(self::channelData(...), $results["channels"]);
@@ -61,7 +66,10 @@ final class DeepgramParser extends SubtitleParser
     }
 
 
-    private function readChannels(array $channels): array
+    /**
+     * @param int $paragraphBytes the bytes of paragraph data that the cues of all sentences may hold together
+     */
+    private function readChannels(array $channels, int $paragraphBytes): array
     {
         $cues = [];
         foreach ($channels as $channelIndex => $channel) {
@@ -78,7 +86,7 @@ final class DeepgramParser extends SubtitleParser
                 continue;
             }
 
-            array_push($cues, ...$this->paragraphCues($paragraphs, $words, $path, $channelIndex));
+            array_push($cues, ...$this->paragraphCues($paragraphs, $words, $path, $channelIndex, $paragraphBytes));
         }
 
         return $cues;
@@ -87,16 +95,28 @@ final class DeepgramParser extends SubtitleParser
 
     /**
      * Returns a cue for each sentence of the paragraphs, with the words between its start and its end.
+     * Each cue keeps its paragraph without the sentences. It moves $paragraphBytes down by the JSON size of these copies.
      *
      * @return list<SubtitleCue>
+     * @throws ParsingException when the copies need more than $paragraphBytes.
      */
-    private function paragraphCues(array $paragraphs, array $words, string $path, int $channelIndex): array
+    private function paragraphCues(array $paragraphs, array $words, string $path, int $channelIndex, int &$paragraphBytes): array
     {
         $cues      = [];
         $wordIndex = 0;
         foreach ($paragraphs as $paragraphIndex => $paragraph) {
-            $speaker = self::speaker(is_array($paragraph) ? $paragraph["speaker"] ?? null : null);
-            foreach (self::listOrEmpty($paragraph["sentences"] ?? null) as $sentenceIndex => $sentence) {
+            $sentences = self::listOrEmpty($paragraph["sentences"] ?? null);
+            if ($sentences === []) {
+                continue;
+            }
+            $speaker        = self::speaker($paragraph["speaker"] ?? null);
+            $paragraphData  = array_diff_key($paragraph, ["sentences" => true]);
+            $paragraphBytes -= count($sentences) * strlen(RawJson::encode($paragraphData));
+            if ($paragraphBytes < 0) {
+                throw new ParsingException("The sentences of $path.paragraphs repeat more paragraph data than " .
+                                           self::MAX_PARAGRAPH_COPY_FACTOR . " times the size of the file.");
+            }
+            foreach ($sentences as $sentenceIndex => $sentence) {
                 $sentencePath = "$path.paragraphs.paragraphs[$paragraphIndex].sentences[$sentenceIndex]";
                 try {
                     $start = $this->seconds(is_array($sentence) ? $sentence["start"] ?? null : null, "$sentencePath.start");
@@ -109,7 +129,7 @@ final class DeepgramParser extends SubtitleParser
 
                 $sentenceWords = self::wordsBetween($words, $wordIndex, $start, $end);
                 $formatData    = $sentence + ["channel" => $channelIndex] + ($speaker === null ? [] : ["speaker" => $paragraph["speaker"]])
-                    + ["paragraph" => array_diff_key($paragraph, ["sentences" => true])];
+                    + ["paragraph" => $paragraphData];
                 $cue           = $this->cue($start, $end, $text, $sentenceWords, $speaker,
                                             $formatData + ["words" => array_merge([], ...array_column($sentenceWords, "data"))],
                                             $sentenceIndex, $sentence);

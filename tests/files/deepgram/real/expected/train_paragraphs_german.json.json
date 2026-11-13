@@ -126,6 +126,46 @@
                                 "punctuated_word": "ab."
                             }
                         ]
+                    },
+                    "words": {
+                        "times": [
+                            {
+                                "start": 0.4,
+                                "end": 0.82
+                            },
+                            {
+                                "start": 0.82,
+                                "end": 1.24
+                            },
+                            {
+                                "start": 1.24,
+                                "end": 1.7
+                            },
+                            {
+                                "start": 1.7,
+                                "end": 2.08
+                            },
+                            {
+                                "start": 2.08,
+                                "end": 2.38
+                            },
+                            {
+                                "start": 2.38,
+                                "end": 2.76
+                            },
+                            {
+                                "start": 2.76,
+                                "end": 3.22
+                            },
+                            {
+                                "start": 3.22,
+                                "end": 3.64
+                            },
+                            {
+                                "start": 3.64,
+                                "end": 4.06
+                            }
+                        ]
                     }
                 }
             },
@@ -185,6 +225,30 @@
                                 "punctuated_word": "ein."
                             }
                         ]
+                    },
+                    "words": {
+                        "times": [
+                            {
+                                "start": 4.34,
+                                "end": 4.64
+                            },
+                            {
+                                "start": 4.64,
+                                "end": 5.02
+                            },
+                            {
+                                "start": 5.02,
+                                "end": 5.44
+                            },
+                            {
+                                "start": 5.44,
+                                "end": 5.74
+                            },
+                            {
+                                "start": 5.74,
+                                "end": 6.2
+                            }
+                        ]
                     }
                 }
             },
@@ -242,6 +306,30 @@
                                 "end": 8.96,
                                 "confidence": 0.9387655,
                                 "punctuated_word": "geschlossen."
+                            }
+                        ]
+                    },
+                    "words": {
+                        "times": [
+                            {
+                                "start": 7.1,
+                                "end": 7.52
+                            },
+                            {
+                                "start": 7.52,
+                                "end": 7.86
+                            },
+                            {
+                                "start": 7.86,
+                                "end": 8.28
+                            },
+                            {
+                                "start": 8.28,
+                                "end": 8.58
+                            },
+                            {
+                                "start": 8.58,
+                                "end": 8.96
                             }
                         ]
                     }

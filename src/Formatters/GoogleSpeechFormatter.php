@@ -134,7 +134,7 @@ final class GoogleSpeechFormatter extends SubtitleFormatter
             : self::wordTime($words[count($words) - 1], "end"), $end);
         $sameText  = TranscriptWords::sameText($cue, $text);
         $voice     = $diarized ? TranscriptWords::speaker($cue) : null;
-        $speaker   = $voice === null ? null : ($v2 ? ["speakerLabel" => $voice] : ["speakerTag" => preg_match('/^[0-9]+$/D', $voice) === 1 ? (int) $voice : $voice]);
+        $speaker   = $voice === null ? null : ($v2 ? ["speakerLabel" => $voice] : ["speakerTag" => TranscriptWords::speakerNumber($voice)]);
         $confident = array_filter($words, fn (mixed $word): bool => isset($word["confidence"])) !== [];
         $words     = TranscriptWords::words(
             $cue,
@@ -175,7 +175,7 @@ final class GoogleSpeechFormatter extends SubtitleFormatter
      */
     private static function seconds(mixed $value): ?float
     {
-        if (is_string($value) && preg_match('/^(\d+(?:\.\d+)?)s$/', $value, $match) === 1) {
+        if (is_string($value) && preg_match('/^(\d+(?:\.\d+)?)s$/D', $value, $match) === 1) {
             return (float) $match[1];
         }
         if (is_array($value) && (isset($value["seconds"]) || isset($value["nanos"])) && is_numeric($value["seconds"] ?? 0) && is_numeric($value["nanos"] ?? 0)) {

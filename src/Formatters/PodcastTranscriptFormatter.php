@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
+use SubtitleToolbox\Parsers\WordTimes;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -72,8 +73,9 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
 
     /**
      * Splits each cue at a speaker change, and at each word timestamp when $wordSegments is true.
+     * A word ends at the next word start, or at its end in WordTimes when that is earlier.
      *
-     * @return list<array{cue: int, speaker: ?string, start: float, end: float, body: string}>
+     * @return list<array{cue: int, speaker: ?string, start: float, end: float, wordEnd: ?float, body: string}>
      */
     private function pieces(Subtitle $subtitle, bool $wordSegments): array
     {
@@ -82,7 +84,10 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
             $cuePieces = [];
             $speaker   = null;
             $start     = $cue->getStart();
+            $wordEnd   = null;
             $text      = "";
+            $wordEnds  = $wordSegments ? WordTimes::ends($cue) : [];
+            $wordIndex = 0;
             $tokens    = Markup::splitTags(Markup::rubyAsText(implode(" ", $cue->getLines())));
             foreach ($tokens as $position => $token) {
                 if ($position % 2 === 0) {
@@ -103,15 +108,17 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
                     continue;
                 }
 
-                $cuePieces = $this->addPiece($cuePieces, $index, $speaker, $start, $text);
+                $cuePieces = $this->addPiece($cuePieces, $index, $speaker, $start, $wordEnd, $text);
                 $speaker   = $name;
                 $start     = $isTimestamp ? $this->wordStartInCue($wordTime, $cue) : $start;
+                $wordEnd   = $isTimestamp ? $wordEnds[$wordIndex++] ?? null : null;
                 $text      = "";
             }
-            $cuePieces = $this->addPiece($cuePieces, $index, $speaker, $start, $text);
+            $cuePieces = $this->addPiece($cuePieces, $index, $speaker, $start, $wordEnd, $text);
 
-            foreach (array_keys($cuePieces) as $offset) {
-                $cuePieces[$offset]["end"] = $wordSegments ? $cuePieces[$offset + 1]["start"] ?? $cue->getEnd() : $cue->getEnd();
+            foreach ($cuePieces as $offset => $piece) {
+                $end                       = $wordSegments ? $cuePieces[$offset + 1]["start"] ?? $cue->getEnd() : $cue->getEnd();
+                $cuePieces[$offset]["end"] = $piece["wordEnd"] === null ? $end : min($end, $piece["wordEnd"]);
             }
             array_push($pieces, ...$cuePieces);
         }
@@ -120,11 +127,11 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
     }
 
 
-    private function addPiece(array $pieces, int $cue, ?string $speaker, float $start, string $text): array
+    private function addPiece(array $pieces, int $cue, ?string $speaker, float $start, ?float $wordEnd, string $text): array
     {
         $body = trim(preg_replace('/[ \t\n\r]+/', " ", Markup::decodeEntities($text)) ?? "");
         if ($body !== "") {
-            $pieces[] = ["cue" => $cue, "speaker" => $speaker, "start" => $start, "end" => $start, "body" => $body];
+            $pieces[] = ["cue" => $cue, "speaker" => $speaker, "start" => $start, "end" => $start, "wordEnd" => $wordEnd, "body" => $body];
         }
 
         return $pieces;

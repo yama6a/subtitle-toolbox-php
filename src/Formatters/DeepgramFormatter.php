@@ -29,9 +29,12 @@ final class DeepgramFormatter extends SubtitleFormatter
         $cues          = [];
         $utterances    = [];
         $hasUtterances = false;
+        // Format data can come from library JSON. A channel number such as 1000000000 would make the loop below build that many channels.
+        $channelLimit  = count($channels) + count($subtitle->getCues());
         foreach ($subtitle->getCues() as $cue) {
-            $cueData        = $cue->findFormatData(self::KEY);
-            $channel       = is_int($cueData["channel"] ?? null) && $cueData["channel"] >= 0 ? $cueData["channel"] : 0;
+            $cueData       = $cue->findFormatData(self::KEY);
+            $channel       = $cueData["channel"] ?? null;
+            $channel       = is_int($channel) && $channel >= 0 && $channel < $channelLimit ? $channel : 0;
             $entry         = self::cue($cue, $cueData);
             $hasUtterances = $hasUtterances || isset($cueData["transcript"]) || ($entry["words"] === [] && $entry["paragraph"] === null);
             $utterances[]  = array_replace(
@@ -78,7 +81,7 @@ final class DeepgramFormatter extends SubtitleFormatter
         $sameEnd   = TranscriptWords::sameTime(self::seconds($sources["end"]), $end);
         $sameText  = TranscriptWords::sameText($cue, $sources["text"]);
         $voice     = TranscriptWords::speaker($cue);
-        $speaker   = $voice !== null && preg_match('/^[0-9]+$/D', $voice) === 1 ? (int) $voice : $voice;
+        $speaker   = TranscriptWords::speakerNumber($voice);
         $words     = TranscriptWords::words(
             $cue,
             $words,
