@@ -38,7 +38,8 @@ final class OcrReplaceList
      * @param array<string, string> $endLines           the end of the last line of a cue
      * @param array<string, string> $partialLines       a text that starts and ends at a word boundary
      * @param array<string, string> $partialLinesAlways any part of a line
-     * @param array<string, string> $regularExpressions a PCRE pattern with delimiters => a preg_replace() replacement
+     * @param array<string, string> $regularExpressions a PCRE pattern with delimiters => a preg_replace() replacement,
+     *                                                  which may also hold the .NET substitutions $`, $', $+, $_ and ${name}
      */
     public function __construct(
         public readonly array $wholeWords = [],
@@ -61,6 +62,7 @@ final class OcrReplaceList
     /**
      * Reads a Subtitle Edit OCR replace list such as eng_OCRFixReplaceList_User.xml.
      * It skips the sections that need a spell checker and the regular expressions that PCRE cannot run.
+     * A replacement keeps $`, $', $+, $_ and ${name} of an existing group. ${name} without such a group is literal text.
      */
     public static function fromSubtitleEditXml(string $xml): self
     {
@@ -116,7 +118,7 @@ final class OcrReplaceList
     /**
      * Turns a .NET pattern and replacement into a PCRE pattern with delimiters and a preg_replace() replacement.
      *
-     * @return array{string, string}|null null when PCRE rejects the pattern or the replacement uses a named group
+     * @return array{string, string}|null null when PCRE rejects the pattern
      */
     private static function convertRegex(string $find, string $replaceWith): ?array
     {
@@ -130,9 +132,8 @@ final class OcrReplaceList
             return null;
         }
 
-        $supported   = true;
         $replacement = preg_replace_callback('/\\\\|\$(?:\$|&|\d+|\{\d+\}|\{\w*\}|[`\'+_])?/',
-            function (array $match) use (&$supported): string {
+            function (array $match) use ($find): string {
                 if ($match[0] === "\\") {
                     return "\\\\";
                 }
@@ -142,15 +143,21 @@ final class OcrReplaceList
                 if ($match[0] === "$&") {
                     return "\$0";
                 }
-                if (preg_match('/^\$(?:\d+|\{\d+\})$/', $match[0]) === 1) {
-                    return $match[0];
+                if (preg_match('/^\$\{(\w*)\}$/', $match[0], $name) === 1 && !self::hasNamedGroup($find, $name[1])
+                    && preg_match('/^\d+$/', $name[1]) !== 1) {
+                    return "\\" . $match[0];
                 }
-                $supported = false;
 
-                return "";
+                return $match[0];
             },
             $replaceWith);
 
-        return $supported && $replacement !== null ? [$pattern, $replacement] : null;
+        return $replacement !== null ? [$pattern, $replacement] : null;
+    }
+
+
+    private static function hasNamedGroup(string $find, string $name): bool
+    {
+        return $name !== "" && preg_match('/\(\?(?:P?<|\')' . preg_quote($name, "/") . '[>\']/', $find) === 1;
     }
 }

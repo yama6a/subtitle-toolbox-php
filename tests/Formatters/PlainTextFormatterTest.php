@@ -104,4 +104,18 @@ class PlainTextFormatterTest extends TestCase
 
         $this->assertSame(file_get_contents(self::DIR . "plaintext/real/$fileName"), $subtitle->toString(Format::PlainText, $options));
     }
+
+
+    public function testAGapEqualToTheParagraphGapStartsAParagraphDespiteFloatRounding(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 1.3, "A"))
+            ->addCue(new SubtitleCue(3.3, 4, "B"));
+        $short    = (new Subtitle())
+            ->addCue(new SubtitleCue(0.1, 0.2, "A"))
+            ->addCue(new SubtitleCue(0.3, 0.4, "B"));
+
+        $this->assertSame("A\n\nB\n", $subtitle->toString(Format::PlainText));
+        $this->assertSame("A\n\nB\n", $short->toString(Format::PlainText, new WriteOptions(formats: [new PlainTextWriteOptions(paragraphGap: 0.1)])));
+    }
 }

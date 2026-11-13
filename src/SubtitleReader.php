@@ -54,8 +54,9 @@ final class SubtitleReader
         }
 
         $content = self::readFile($path);
-        $decoded = self::decode($content, Format::detect($content), $options);
-        if (trim(StringHelpers::removeUtf8Bom($decoded->content)) === "" && ($byPath = self::formatOfExtension($path)) !== null) {
+        $byPath  = self::formatOfExtension($path);
+        $decoded = self::decode($content, Format::detect($content) ?? (self::isBinary($byPath) ? $byPath : null), $options);
+        if (trim(StringHelpers::removeUtf8Bom($decoded->content)) === "" && $byPath !== null) {
             return (new Subtitle())->setFormat($byPath);
         }
         $format = self::detectFormat($decoded->content, $path) ?? throw new UnknownFormatException(self::unknownFormatMessage("load()"));
