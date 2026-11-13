@@ -282,13 +282,28 @@ final class CueList
 
 
     /**
-     * Returns true when $first and $second have the same alignment, the same forced flag and the same <v> speakers.
+     * Returns true when $first and $second have the same alignment and position, forced flag and <v> speakers.
      */
     public static function canJoin(SubtitleCue $first, SubtitleCue $second): bool
     {
-        return $first->getAlignment() === $second->getAlignment()
+        return self::samePlace($first, $second)
             && $first->isForced() === $second->isForced()
             && self::speakers($first) === self::speakers($second);
+    }
+
+
+    /**
+     * Returns true when $first and $second have the same alignment and the same position, or both have no position.
+     */
+    public static function samePlace(SubtitleCue $first, SubtitleCue $second): bool
+    {
+        $position      = $first->findPosition();
+        $otherPosition = $second->findPosition();
+
+        return $first->getAlignment() === $second->getAlignment()
+            && ($position === null || $otherPosition === null
+                ? $position === $otherPosition
+                : $position->x === $otherPosition->x && $position->y === $otherPosition->y);
     }
 
 

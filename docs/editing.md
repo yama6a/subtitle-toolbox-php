@@ -50,11 +50,11 @@ $subtitle->mergeSameTimeCues();                 // joins cues with the same star
 - **Merge**: the metadata and the format data of `$part1` win over those of `$part2`. The comments of both files stay before their cues. At the same place, the comments of `$part1` come first.
 - **Slice**: a cue that crosses the start or end time gets cut there. The copy keeps the metadata, the format data and the comments before the kept cues. The original stays unchanged.
 - **Split and join**: the first cue keeps its identifier. A comment before a joined cue moves before the result. An index without a cue throws `CueNotFoundException`, as in `removeCue()`.
-- **Duplicates**: `removeDuplicateCues()` joins a run of adjacent cues with the same text. Two cues join when they are identical, overlap, touch, or are at most `maxGap` seconds apart. The default `maxGap` is 0. The joined cue runs from the earliest start to the latest end. Cues with other text between them stay apart. Same-text cues also stay apart when their alignment, forced flag or format data differ, such as an ASS `Glow` event on layer 0 under a `Default` event on layer 1. A negative, NAN or INF `maxGap` throws `InvalidArgumentException`.
+- **Duplicates**: `removeDuplicateCues()` joins a run of adjacent cues with the same text. Two cues join when they are identical, overlap, touch, or are at most `maxGap` seconds apart. The default `maxGap` is 0. The joined cue runs from the earliest start to the latest end. Cues with other text between them stay apart. Same-text cues also stay apart when their alignment, position, forced flag or format data differ, such as an ASS `Glow` event on layer 0 under a `Default` event on layer 1. A negative, NAN or INF `maxGap` throws `InvalidArgumentException`.
 - **Same times**: `mergeSameTimeCues()` joins a run of adjacent cues whose start and end both differ by at most `timeTolerance` seconds from the first cue of the run. The default `timeTolerance` is 0. Example: ASS gives `- Where are you going?` and `- Home.` at 1.0 to 3.0 s as 2 events, one per speaker. Many TVs show only one of them. After the join, one cue holds both lines.
   - The joined cue keeps the start, identifier and format data of the first cue. It runs to the latest end of the run.
   - The lines keep the input order. A cue text that is already in the joined cue is not added again.
-  - Cues with another alignment or forced flag stay apart, so a sign at the top keeps its place. Other format data, such as the ASS style, does not stop a join.
+  - Cues with another alignment, position or forced flag stay apart, so a sign at the top keeps its place. A cue with a [position](subtitle.md#alignment-and-format-data) and a cue without one also stay apart. Other format data, such as the ASS style, does not stop a join.
   - Image cues, such as PGS or VobSub cues, never join. A joined cue can hold only one image.
   - The method adds no dialogue dash. `CommonErrorFixer` can add them.
   - A negative, NAN or INF `timeTolerance` throws `InvalidArgumentException`.
@@ -167,7 +167,7 @@ Resegmenter::apply($subtitle, new ResegmentOptions(mode: ResegmentMode::ByWords,
 - **`minDuration`**: `ByWords` does not use it.
 - **Times**: a new cue starts at the word timestamp of its first word. Without one, the time splits in proportion to the visible characters.
 - **Text without spaces**: text such as Japanese splits after CJK punctuation and at word timestamps.
-- **Regrouping**: `ByWords` ends a cue after a sentence end and before a pause of `maxWordGap` seconds. It also ends a cue before a word that would break a limit. It never joins words of cues with different `<v>` speakers, alignments or forced flags. Cues without word timestamps stay unchanged.
+- **Regrouping**: `ByWords` ends a cue after a sentence end and before a pause of `maxWordGap` seconds. It also ends a cue before a word that would break a limit. It never joins words of cues with different `<v>` speakers, alignments, positions or forced flags. Cues without word timestamps stay unchanged.
 - **Tags**: a core markup tag can be open at a break. It then closes at the end of the first cue and opens again in the next cue.
 - **Unchanged**: image cues and cues of one word.
 - **Cue data**: a new cue keeps the alignment, forced flag and format data of its source cue. Only the cue with the first word of a source cue keeps its identifier.
