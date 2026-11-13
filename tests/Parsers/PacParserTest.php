@@ -121,6 +121,34 @@ class PacParserTest extends TestCase
     }
 
 
+    public static function reversedTimes(): array
+    {
+        return [
+            "5 s to 2 s"  => [500, 200, [[2.0, 5.0]], ParseWarningAction::Repaired, "The cue ends at 2 s, before it starts at 5 s."],
+            "50 s to 2 s" => [5000, 200, [], ParseWarningAction::Skipped, "The cue ends at 2 s, before it starts at 50 s."],
+        ];
+    }
+
+
+    #[DataProvider("reversedTimes")]
+    public function testCueThatEndsBeforeItStartsThrowsInStrictModeAndRepairsOrSkipsInLenientMode(int $in, int $out, array $times, ParseWarningAction $action, string $message): void
+    {
+        $content = substr_replace(self::pac("Hello"), pack("v2", 0, $in), 24, 4);
+        $content = substr_replace($content, pack("v2", 0, $out), 28, 4);
+        try {
+            (new PacParser())->parse($content, new ReadOptions());
+            $this->fail("No exception");
+        } catch (ParsingException $exception) {
+            $this->assertStringContainsString($message, $exception->getMessage());
+        }
+
+        $subtitle = (new PacParser())->parse($content, new ReadOptions(lenient: true));
+
+        $this->assertSame($times, array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertSame($action, $subtitle->getParseWarnings()[0]->action);
+    }
+
+
     public function testSkipsColorsAndCodesAndReadsFfAsSpace(): void
     {
         $subtitle = (new PacParser())->parse(self::pac("\x03Red\xFFtext\x1FC1 end\x1FCcomment"), new ReadOptions());

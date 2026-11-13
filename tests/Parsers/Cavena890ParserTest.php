@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 
 class Cavena890ParserTest extends TestCase
@@ -76,6 +77,45 @@ class Cavena890ParserTest extends TestCase
         $this->expectExceptionMessage("A Cavena 890 file starts with a header of 388 bytes.");
 
         (new Cavena890Parser())->parse(str_repeat("\0", 100), new ReadOptions());
+    }
+
+
+    /**
+     * Returns a cue block that starts at frame $start and ends at frame $end, at 25 frames per second.
+     */
+    private static function blockBetween(int $start, int $end): string
+    {
+        $block = self::block(16, "One");
+        $block = substr_replace($block, substr(pack("N", $start), 1), Cavena890::START, 3);
+
+        return substr_replace($block, substr(pack("N", $end), 1), Cavena890::END, 3);
+    }
+
+
+    public function testCueThatEndsBeforeItStartsThrowsInStrictModeAndSwapsInLenientMode(): void
+    {
+        $content = Cavena890::newHeader() . self::blockBetween(125, 50);
+        try {
+            (new Cavena890Parser())->parse($content, new ReadOptions());
+            $this->fail("No exception");
+        } catch (ParsingException $exception) {
+            $this->assertStringContainsString("The cue ends at 2 s, before it starts at 5 s.", $exception->getMessage());
+        }
+
+        $subtitle = (new Cavena890Parser())->parse($content, new ReadOptions(lenient: true));
+
+        $this->assertSame([[2.0, 5.0]], array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertSame(ParseWarningAction::Repaired, $subtitle->getParseWarnings()[0]->action);
+    }
+
+
+    public function testCueThatEndsMoreThan30SecondsBeforeItStartsIsSkippedInLenientMode(): void
+    {
+        $content = Cavena890::newHeader() . self::blockBetween(2500, 50) . self::block(32, "Two");
+        $subtitle = (new Cavena890Parser())->parse($content, new ReadOptions(lenient: true));
+
+        $this->assertSame(["Two"], array_map(fn ($cue): string => $cue->getText(), $subtitle->getCues()));
+        $this->assertSame(ParseWarningAction::Skipped, $subtitle->getParseWarnings()[0]->action);
     }
 
 

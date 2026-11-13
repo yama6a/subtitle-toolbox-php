@@ -69,13 +69,13 @@ class SpeechReferenceTest extends TestCase
 
 
     /**
-     * FFmpeg prints times with %.6g, so a time near 0 has an exponent. The cue end 0.000012 s rounds to 0 ms.
+     * FFmpeg prints times with %.6g, so a time near 0 has an exponent. The speech from 0 s to 0.000012 s rounds to 0 ms, so the filter drops it.
      */
     public function testTimeWithAnExponent(): void
     {
         $log = self::LINE . "silence_start: 1.2e-05\n" . self::LINE . "silence_end: 2\n" . self::LINE . "silence_start: 3.5E+0\n";
 
-        $this->assertSame([[0.0, 0.0], [2.0, 3.5]], TestSubtitles::times(SpeechReference::fromFfmpegSilencedetect($log, 10)));
+        $this->assertSame([[2.0, 3.5]], TestSubtitles::times(SpeechReference::fromFfmpegSilencedetect($log, 10)));
     }
 
 

@@ -124,4 +124,29 @@ class MpSubFormatterTest extends TestCase
             $subtitle->toString(Format::MpSub)
         );
     }
+
+
+    public function testFramesBelowTheLimitReadBack(): void
+    {
+        $subtitle = Subtitle::fromString("WEBVTT\n\n99999:59:59.900 --> 99999:59:59.999\nx\n", Format::WebVtt);
+        $output   = $subtitle->toString(Format::MpSub, new WriteOptions(formats: [new MpSubWriteOptions(frameRate: 25.0)]));
+
+        $this->assertStringContainsString("8999999998 1\n", $output);
+        $this->assertCount(1, Subtitle::fromString($output, Format::MpSub)->getCues());
+    }
+
+
+    public function testHeaderLineBreaksBecomeSpacesAndKeysThatAreNotCapitalsAreSkipped(): void
+    {
+        $subtitle = (new Subtitle())
+            ->setMetadata(Subtitle::METADATA_TITLE, "A\nB")
+            ->setFormatData("mpsub", ["lower" => "x", "NOTE" => "a\r\nb"])
+            ->addCue(new SubtitleCue(0, 1, "x"));
+        $output   = $subtitle->toString(Format::MpSub, new WriteOptions(bom: false));
+
+        $this->assertStringContainsString("TITLE=A B\n", $output);
+        $this->assertStringContainsString("NOTE=a  b\n", $output);
+        $this->assertStringNotContainsString("lower", $output);
+        $this->assertCount(1, Subtitle::fromString($output, Format::MpSub)->getCues());
+    }
 }

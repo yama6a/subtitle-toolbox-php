@@ -136,7 +136,10 @@ final class EbuStlParser extends SubtitleParser
 
             $read["groups"][ord($header[EbuStl::TTI_SGN])] = true;
             $read["firstTimeIn"] ??= EbuStl::timeCodeDigits(substr($header, EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE));
-            $read["cues"][] = self::cue($header, $lines, $hexes, $frameRate, $offset, $maxRow);
+            $cue = $this->cue($header, $lines, $hexes, $frameRate, $offset, $maxRow, $blockIndex - count($blocks));
+            if ($cue !== null) {
+                $read["cues"][] = $cue;
+            }
         }
 
         return $read;
@@ -164,11 +167,18 @@ final class EbuStlParser extends SubtitleParser
      * @param list<string> $lines
      * @param list<string> $hexes
      */
-    private static function cue(string $header, array $lines, array $hexes, FrameRate $frameRate, float $offset, int $maxRow): SubtitleCue
+    private function cue(string $header, array $lines, array $hexes, FrameRate $frameRate, float $offset, int $maxRow, int $blockIndex): ?SubtitleCue
     {
         $start = max(0.0, self::timeCodeBytesToSeconds(substr($header, EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE), $frameRate) - $offset);
         $end   = max(0.0, self::timeCodeBytesToSeconds(substr($header, EbuStl::TTI_TCO, EbuStl::TIME_CODE_SIZE), $frameRate) - $offset);
-        $cue   = new SubtitleCue($start, $end, $lines);
+        try {
+            [$start, $end] = $this->orderedTimes($start, $end, null, $blockIndex, $hexes);
+        } catch (ParsingException $exception) {
+            $this->fail($exception, null, $blockIndex, $hexes);
+
+            return null;
+        }
+        $cue = new SubtitleCue($start, $end, $lines);
         $cue->setAlignment(EbuStl::alignment(ord($header[EbuStl::TTI_VP]), ord($header[EbuStl::TTI_JC]), $maxRow));
         $cue->setFormatData(self::FORMAT_DATA_KEY, [
             "subtitleGroupNumber" => ord($header[EbuStl::TTI_SGN]),

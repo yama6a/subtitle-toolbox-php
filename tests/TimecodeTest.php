@@ -348,6 +348,8 @@ class TimecodeTest extends TestCase
             "deciseconds just below the limit"  => [359999999.999, 10, 3599999999],
             "seconds half a second below"       => [359999999.5, 1, 359999999],
             "milliseconds far past the limit"   => [1e20, 1000, 359999999999],
+            "10000 units past the limit"        => [1e20, 10000, 3599999999990],
+            "10000 units just below the limit"  => [359999999.999, 10000, 3599999999990],
             "a negative time"                   => [-1.5, 100, 0],
             "a half centisecond"                => [1.005, 100, 101],
             "a half second"                     => [0.5, 1, 1],

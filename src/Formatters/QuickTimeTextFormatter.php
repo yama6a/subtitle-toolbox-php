@@ -101,9 +101,7 @@ final class QuickTimeTextFormatter extends SubtitleFormatter
     private function timestamp(float $seconds, int $perSecond, bool $relative, int $position): array
     {
         $from  = $relative ? $position : 0;
-        // unitsBelowLimit() stops at the last unit below 100000 hours. A unit shorter than half a millisecond there
-        // reads as 100000 hours, so the time stops at LAST_TIME first.
-        $units = $this->units(Timecode::totalMilliseconds(min($seconds, Timecode::LAST_TIME)) - $from, $perSecond);
+        $units = $this->units(Timecode::totalMilliseconds($seconds) - $from, $perSecond);
         // The parser rejects a relative timestamp that takes the sum to 100000 hours. Half a unit of rounding can do that.
         if ($units > 0 && $from + $this->readMilliseconds($units, $perSecond) >= self::LIMIT_MILLISECONDS) {
             $units--;
