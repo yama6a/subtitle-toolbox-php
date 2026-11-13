@@ -38,6 +38,46 @@ class CurlHttpClientTest extends TestCase
 
 
     #[RequiresPhpExtension("curl")]
+    public function testReturnsTheHeaderLinesOfTheResponse(): void
+    {
+        $server = LocalServer::start(self::ROUTER);
+        try {
+            $response = (new CurlHttpClient())->post("$server->url/echo?status=429&header=" . rawurlencode("Retry-After: 30"), [], "x");
+
+            $this->assertSame(429, $response[0]);
+            $this->assertContains("Retry-After: 30", $response[2]);
+            $this->assertNotContains("", $response[2]);
+        } finally {
+            $server->stop();
+        }
+    }
+
+
+    #[RequiresPhpExtension("curl")]
+    public function testStopsReadingAtOneMebibytePlus16BytesPerRequestByte(): void
+    {
+        $server = LocalServer::start(self::ROUTER);
+        try {
+            $client = new CurlHttpClient();
+            $limit  = 1048576 + 16 * 2;
+
+            $response = $client->post("$server->url/echo?pad=" . ($limit - 200), [], "ab");
+            $this->assertSame(200, $response[0]);
+            $this->assertGreaterThan($limit - 200, strlen($response[1]));
+
+            try {
+                $client->post("$server->url/echo?pad=$limit", [], "ab");
+                $this->fail("No exception");
+            } catch (TranslationException $exception) {
+                $this->assertSame("TranslationException (Error #109): The answer from 127.0.0.1 has more than $limit bytes.", $exception->getMessage());
+            }
+        } finally {
+            $server->stop();
+        }
+    }
+
+
+    #[RequiresPhpExtension("curl")]
     public function testAFailedConnectionNamesTheHostAndNotTheQuery(): void
     {
         $socket = stream_socket_server("tcp://127.0.0.1:0");
