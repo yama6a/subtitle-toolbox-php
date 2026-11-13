@@ -21,8 +21,7 @@ class ApplicationTranslateTest extends TestCase
 
     private const TRANSLATION = __DIR__ . "/../files/translation/";
 
-    private const TRANSLATE_VARIABLES = ["DEEPL_API_KEY", "GOOGLE_TRANSLATE_API_KEY", "OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL",
-                                         "SUBTITLE_TOOLBOX_TRANSLATE_URL"];
+    private const TRANSLATE_VARIABLES = ["DEEPL_API_KEY", "GOOGLE_TRANSLATE_API_KEY", "OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL"];
 
     private ?LocalServer $server = null;
 
@@ -40,12 +39,13 @@ class ApplicationTranslateTest extends TestCase
             putenv($variable);
         }
         // A translate test without the fake server must not reach a real service.
-        putenv("SUBTITLE_TOOLBOX_TRANSLATE_URL=" . self::closedPortUrl());
+        TranslateCommand::$testBaseUrl = self::closedPortUrl();
     }
 
 
     protected function tearDown(): void
     {
+        TranslateCommand::$testBaseUrl = null;
         $this->server?->stop();
         $this->server = null;
         if ($this->serverLog !== "") {
@@ -76,7 +76,7 @@ class ApplicationTranslateTest extends TestCase
     {
         $this->serverLog = tempnam(sys_get_temp_dir(), "translate-log");
         $this->server    = LocalServer::start(self::TRANSLATION . "fake-server.php", ["FAKE_SERVER_LOG" => $this->serverLog]);
-        putenv("SUBTITLE_TOOLBOX_TRANSLATE_URL=" . $this->server->url);
+        TranslateCommand::$testBaseUrl = $this->server->url;
         foreach ($keys as $variable => $key) {
             putenv("$variable=$key");
         }
@@ -221,7 +221,7 @@ class ApplicationTranslateTest extends TestCase
                           self::runApplication(["translate", "-", "--engine", "openai", "--target-language", "de"]));
         putenv("OPENAI_MODEL=llama3");
         putenv("OPENAI_BASE_URL=localhost:11434/v1");
-        putenv("SUBTITLE_TOOLBOX_TRANSLATE_URL");
+        TranslateCommand::$testBaseUrl = null;
         $this->assertSame(self::usageError("translate", "The environment variable OPENAI_BASE_URL must start with http:// or https://, got \"localhost:11434/v1\"."),
                           self::runApplication(["translate", "-", "--engine", "openai", "--target-language", "de"]));
         $this->assertSame(self::usageError("translate", "The API key is empty. Pass --api-key or set OPENAI_API_KEY."),
@@ -229,24 +229,36 @@ class ApplicationTranslateTest extends TestCase
     }
 
 
-    public function testTheTestUrlWorksOnlyForThisMachine(): void
+    public function testTheTestUrlVariableOfTheEnvironmentIsIgnored(): void
     {
-        $cases = [
-            "http://127.0.0.1:8080/x?y=1"         => "http://127.0.0.1:8080",
-            "https://localhost"                   => "https://localhost",
-            "http://[::1]:9000/"                  => "http://[::1]:9000",
-            "http://example.com"                  => null,
-            "http://127.0.0.1.example.com"        => null,
-            "http://localhost@example.com/"       => null,
-            "ftp://127.0.0.1"                     => null,
-            "127.0.0.1:8080"                      => null,
-        ];
-        foreach ($cases as $url => $expected) {
-            putenv("SUBTITLE_TOOLBOX_TRANSLATE_URL=$url");
-            $this->assertSame($expected, TranslateCommand::localTestUrl(), $url);
+        TranslateCommand::$testBaseUrl = null;
+        putenv("SUBTITLE_TOOLBOX_TRANSLATE_URL=http://127.0.0.1:1");
+        putenv("OPENAI_MODEL=llama3");
+        putenv("OPENAI_BASE_URL=localhost:11434/v1");
+
+        try {
+            $this->assertSame(self::usageError("translate", "The environment variable OPENAI_BASE_URL must start with http:// or https://, got \"localhost:11434/v1\"."),
+                              self::runApplication(["translate", "-", "--engine", "openai", "--target-language", "de"]));
+        } finally {
+            putenv("SUBTITLE_TOOLBOX_TRANSLATE_URL");
         }
-        putenv("SUBTITLE_TOOLBOX_TRANSLATE_URL");
-        $this->assertNull(TranslateCommand::localTestUrl());
+    }
+
+
+    public function testAKeyModelOrBaseUrlOf0IsAValue(): void
+    {
+        TranslateCommand::$testBaseUrl = null;
+
+        putenv("DEEPL_API_KEY=0");
+        putenv("OPENAI_API_KEY=key");
+        putenv("OPENAI_MODEL=0");
+        putenv("OPENAI_BASE_URL=0");
+        $this->assertSame(self::usageError("translate", "The environment variable OPENAI_BASE_URL must start with http:// or https://, got \"0\"."),
+                          self::runApplication(["translate", "-", "--engine", "openai", "--target-language", "de"]));
+
+        putenv("OPENAI_MODEL");
+        $this->assertSame(self::usageError("translate", "Set the environment variable OPENAI_MODEL, for example OPENAI_MODEL=gpt-4o-mini."),
+                          self::runApplication(["translate", "-", "--engine", "openai", "--target-language", "de"]));
     }
 
 

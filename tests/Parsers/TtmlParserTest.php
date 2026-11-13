@@ -230,7 +230,16 @@ class TtmlParserTest extends TestCase
             $head
         )[2];
 
-        $this->assertSame("<v Anna>Hi\nthere </v><v b2>Bye", $text);
+        $this->assertSame("<v Anna>Hi\nthere </v><v b2>Bye</v>", $text);
+    }
+
+
+    public function testAVoiceThatCoversAllTheTextStaysOpenAndALaterVoiceCloses(): void
+    {
+        $head = "<metadata><ttm:agent xml:id=\"a1\" type=\"person\"><ttm:name type=\"full\">Anna</ttm:name></ttm:agent></metadata>";
+
+        $this->assertSame("<v Anna>Hi", $this->parseParagraph("<p end=\"1s\" ttm:agent=\"a1\">Hi</p>", "", $head)[2]);
+        $this->assertSame("Hi <v b2>Bye</v>", $this->parseParagraph("<p end=\"1s\">Hi <span ttm:agent=\"b2\">Bye</span></p>", "", $head)[2]);
     }
 
 
