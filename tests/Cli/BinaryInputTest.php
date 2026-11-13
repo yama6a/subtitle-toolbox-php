@@ -286,7 +286,8 @@ class BinaryInputTest extends CliTestCase
         $this->assertStringStartsWith("movie.mkv: UnsupportedFormatException (Error #102): The MKV or WebM file has 6 subtitle tracks. Pass --track N with one of them:\n" .
                                       "  3: S_TEXT/UTF8, de, \"Deutsch (Forced)\", forced\n  4: S_TEXT/ASS, eng, \"English\", default\n", $stderr);
         $this->assertSame(3, $this->runCli(["convert", "movie.mkv", "--to", "srt", "--track", "9", "-o", "-"])[0]);
-        $this->assertSame([3, "", "trip.srt: ParsingException (Error #100): The file is not a Matroska or WebM file.\n"],
+        $this->assertSame([3, "", "trip.srt: UnsupportedFormatException (Error #102): The file is not an MKV, WebM, MP4 or MPEG-TS file. " .
+                                  "Leave out --track for a subtitle file.\n"],
                           $this->runCli(["convert", "trip.srt", "--to", "vtt", "--track", "3", "-o", "-"]));
     }
 

@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Container;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Mp4\Mp4Reader;
 use SubtitleToolbox\Container\MpegTs\MpegTsReader;
+use SubtitleToolbox\Exceptions\UnsupportedFormatException;
 
 /**
  * Knows a video container by its first bytes and opens the reader for it.
@@ -44,9 +45,10 @@ final class Containers
 
 
     /**
-     * Opens the reader of the container that the first bytes show. Other content goes to MatroskaReader, which names the problem.
+     * Opens the reader of the container that the first bytes show.
      *
      * @param string|resource $file a file path or a seekable stream at its start
+     * @throws UnsupportedFormatException when the first bytes show no container. A damaged container throws ParsingException.
      */
     public static function open($file): ContainerReader
     {
@@ -58,9 +60,10 @@ final class Containers
         }
 
         return match (self::detect($head)) {
-            ContainerFormat::Mp4    => Mp4Reader::open($file),
-            ContainerFormat::MpegTs => MpegTsReader::open($file),
-            default                 => MatroskaReader::open($file),
+            ContainerFormat::Matroska => MatroskaReader::open($file),
+            ContainerFormat::Mp4      => Mp4Reader::open($file),
+            ContainerFormat::MpegTs   => MpegTsReader::open($file),
+            null                      => throw new UnsupportedFormatException("The file is not an MKV, WebM, MP4 or MPEG-TS file."),
         };
     }
 

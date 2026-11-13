@@ -40,6 +40,9 @@ final class CliMessages
             '$1The input is an $2 file. ' . ($track === null ? "Write one track to a subtitle file with convert --track N first." : "Pass $track N."),
             $message
         ) ?? $message;
+        if ($track !== null && str_ends_with($message, "The file is not an MKV, WebM, MP4 or MPEG-TS file.")) {
+            $message .= " Leave out $track for a subtitle file.";
+        }
 
         return strtr($message, [
             "Call loadTrack() with one of them:"                                => $pickTrack,
