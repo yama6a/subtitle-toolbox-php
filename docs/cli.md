@@ -111,6 +111,7 @@ php stbox.phar --version
 - **MKV and WebM**: `--track` picks a subtitle track, see [MKV and WebM](#mkv-and-webm).
 - **Image cues**: `--skip-image-cues` leaves out image cues without text in place of failing.
 - **WebVTT output**: WebVTT has classes for 8 text colors only. The tool drops other colors and prints each one on standard error, for example `movie.srt: Cue #3 at 4 s: dropped the color "#123456", because WebVTT has classes for 8 colors only.` See [WebVTT](formats.md#webvtt).
+- **EBU STL output**: the output holds `?` for a character that the character code table lacks. The command prints one line on standard error for each. An example is `show.srt: Cue 1: the character table has no "Ж", so the file holds "?".` The exit code stays 0. See [EBU STL](formats.md#ebu-stl).
 - **SCC output**: `--scc-fit` wraps lines, replaces characters, and delays or drops captions that SCC cannot hold, in place of failing. It prints each change on standard error. See [SCC](formats.md#scc).
 
 ## Frame rates

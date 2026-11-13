@@ -291,6 +291,7 @@ EBU STL is the binary exchange format of European broadcasters, from [EBU Tech 3
 
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
 use SubtitleToolbox\ReadOptions;
@@ -302,13 +303,14 @@ $subtitle = Subtitle::fromString(file_get_contents('news.stl'), Format::EbuStl,
     new ReadOptions(formats: [new EbuStlReadOptions(subtractStartOfProgramme: true)])); // cue times minus the start of programme
 $subtitle->findFormatData('stl')['gsi']['TCP'];                                   // '10000000'
 $subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 30)]));  // 25 or 30
+(new EbuStlFormatter())->formatWithReport($subtitle)->replacedCharacters[0]->message;             // Cue 1: the character table has no "Ж", so the file holds "?".
 ```
 
-- **Times**: the disk format code `STL25.01` or `STL30.01` sets the frame rate. By default, the parser keeps the time codes of the file.
+- **Times**: the disk format code `STL25.01` or `STL30.01` sets the frame rate. By default, the parser keeps the time codes of the file. The formatter reads the TCP field at the frame rate of the stored disk format code, as the parser does, also when `EbuStlWriteOptions::$frameRate` writes another rate.
 - **Start of programme**: `EbuStlReadOptions(subtractStartOfProgramme: true)` subtracts the TCP time code, for example `10:00:00:00`. A time before it becomes 0. The formatter adds TCP again.
-- **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). These tables hold Latin, Cyrillic, Arabic, Greek and Hebrew letters. The formatter writes `?` for a character outside the table, for example the em dash and the guillemets in table 01.
+- **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). These tables hold Latin, Cyrillic, Arabic, Greek and Hebrew letters. The formatter writes `?` for a character outside the table, for example the em dash and the guillemets in table 01. `EbuStlFormatter::formatWithReport()` returns the output and an `EbuStlReplacedCharacter` for each such character. Its `location` is `Cue 1`, `Comment before cue 1` or `GSI field OPT`. The CLI prints one line on standard error for each, and the exit code stays 0.
 - **Styles**: italics, underline and the 8 teletext colors become `<i>`, `<u>` and `<font color>`, and back. White gives no tag. The formatter drops other colors. A teletext row resets the styles, so the formatter repeats a style that spans rows at the start of each row. For example, `<i>` around 2 lines makes both rows italic.
-- **Blocks**: the parser joins the TTI blocks of one subtitle and skips user data blocks. A subtitle with the comment flag becomes a comment. The formatter splits text over the 112 bytes of one TTI text field into extension blocks.
+- **Blocks**: the parser joins the TTI blocks of one subtitle and skips user data blocks. A subtitle with the comment flag becomes a comment. The formatter writes new blocks for a comment whose stored block list is empty. The formatter splits text over the 112 bytes of one TTI text field into extension blocks.
 - **Alignment**: the justification code gives the column. The vertical position gives the row: the top, middle or bottom third of the rows.
 - **Metadata**: the title is the OPT field. The language is the LC field, for example `09` is `en`.
 - **Format data**: the subtitle keeps the GSI fields by name in `gsi`, for example `DSC` and `TCP`. Each cue keeps its subtitle group, cumulative status, vertical position, justification code and original blocks.
@@ -316,7 +318,7 @@ $subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOp
 - **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text keeps its text field bytes, also after retiming.
 - **New files**: a subtitle from another format gets these GSI values. The creation date is today.
   - Code page 850, 25 fps and level-1 teletext.
-  - The character table that holds the most characters of the text. Table 00 wins a tie. So a Russian text gets table 01.
+  - The character table that holds the most characters of the text. Table 00 wins a tie. So a Russian text gets table 01. The count uses the visible text, without tags and with decoded entities.
   - 40 characters per row and 23 rows.
   - Subtitle numbers from 1.
 
