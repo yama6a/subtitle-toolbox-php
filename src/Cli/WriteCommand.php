@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Cli;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\ImageFormatter;
 use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
@@ -206,6 +207,7 @@ abstract class WriteCommand extends FileCommand
         try {
             $content = match (true) {
                 $outputFormat === Format::WebVtt               => $this->webVtt($subtitle, $options, $console, $label),
+                $outputFormat === Format::EbuStl               => $this->ebuStl($subtitle, $options, $console, $label),
                 $outputFormat === Format::Scc && $this->sccFit => $this->fittedScc($subtitle, $options, $console, $label),
                 default                                        => $subtitle->toString($outputFormat, $options),
             };
@@ -233,6 +235,17 @@ abstract class WriteCommand extends FileCommand
         $report = (new WebVttFormatter())->formatWithReport(self::textCues($subtitle, $options), $options);
         foreach ($report->droppedColors as $dropped) {
             $console->err("$label: $dropped->message\n");
+        }
+
+        return $report->content;
+    }
+
+
+    private function ebuStl(Subtitle $subtitle, WriteOptions $options, Console $console, string $label): string
+    {
+        $report = (new EbuStlFormatter())->formatWithReport(self::textCues($subtitle, $options), $options);
+        foreach ($report->replacedCharacters as $replaced) {
+            $console->err("$label: $replaced->message\n");
         }
 
         return $report->content;
