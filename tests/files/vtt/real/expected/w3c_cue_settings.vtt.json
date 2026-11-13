@@ -14,6 +14,10 @@
                 ],
                 "identifier": null,
                 "alignment": 1,
+                "position": {
+                    "x": 10.0,
+                    "y": 100.0
+                },
                 "formatData": {
                     "vtt": {
                         "position": "10%,line-left",
@@ -31,6 +35,10 @@
                 ],
                 "identifier": null,
                 "alignment": 3,
+                "position": {
+                    "x": 90.0,
+                    "y": 100.0
+                },
                 "formatData": {
                     "vtt": {
                         "position": "90%",

@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\CuePosition;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -163,6 +164,73 @@ class WebVttFormatterTest extends TestCase
             ),
             $subtitle->toString(Format::WebVtt)
         );
+    }
+
+
+    private const TTML_AT_95 = "<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:tts=\"http://www.w3.org/ns/ttml#styling\"><head><layout>"
+                               . "<region xml:id=\"r\" tts:origin=\"10% 10%\" tts:extent=\"80% 85%\" tts:displayAlign=\"after\" tts:textAlign=\"center\"/>"
+                               . "</layout></head><body><div><p begin=\"1s\" end=\"2s\" region=\"r\">Hello</p></div></body></tt>";
+
+
+    public function testTtmlCueWritesItsPosition(): void
+    {
+        $subtitle = Subtitle::fromString(self::TTML_AT_95, Format::Ttml);
+
+        $this->assertStringContainsString("00:00:01.000 --> 00:00:02.000 line:95%,end\nHello\n", $subtitle->toString(Format::WebVtt));
+    }
+
+
+    public function testSetAlignmentGivesTheOutputWithoutPosition(): void
+    {
+        $subtitle = Subtitle::fromString(self::TTML_AT_95, Format::Ttml);
+        $cue      = $subtitle->getCues()[0];
+        $cue->setAlignment($cue->getAlignment());
+
+        $this->assertStringContainsString("00:00:01.000 --> 00:00:02.000\nHello\n", $subtitle->toString(Format::WebVtt));
+    }
+
+
+    /**
+     * @return array<string, array{Alignment, CuePosition, string}>
+     */
+    public static function positionProvider(): array
+    {
+        return [
+            "bottom center"          => [Alignment::BottomCenter, new CuePosition(45, 95), " line:95%,end position:45%,center"],
+            "bottom edge"            => [Alignment::BottomCenter, new CuePosition(50, 100), ""],
+            "bottom left"            => [Alignment::BottomLeft, new CuePosition(20, 90), " position:20%,line-left align:left"],
+            "top right keeps line 0" => [Alignment::TopRight, new CuePosition(84.6666, 5), " line:0 position:84.667%,line-right align:right"],
+            "middle center"          => [Alignment::MiddleCenter, new CuePosition(60, 40), " line:50%,center position:60%,center"],
+            "outside the cell"       => [Alignment::BottomCenter, new CuePosition(50, 10), ""],
+        ];
+    }
+
+
+    #[DataProvider("positionProvider")]
+    public function testPositionBecomesCueSettings(Alignment $alignment, CuePosition $position, string $settings): void
+    {
+        $subtitle = (new Subtitle())->addCue((new SubtitleCue(1, 2, "One"))->setAlignment($alignment)->setPosition($position));
+
+        $this->assertStringContainsString("00:00:01.000 --> 00:00:02.000$settings\nOne\n", $subtitle->toString(Format::WebVtt));
+    }
+
+
+    public function testStoredCueSettingsWinOverThePosition(): void
+    {
+        $subtitle = Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:02.000 line:95%,end position:45%,center size:50%\nOne\n", Format::WebVtt);
+        $subtitle->getCues()[0]->setPosition(new CuePosition(40, 80));
+
+        $this->assertStringContainsString("00:00:01.000 --> 00:00:02.000 line:95%,end position:45%,center size:50%\n", $subtitle->toString(Format::WebVtt));
+    }
+
+
+    public function testWebVttToTtmlToWebVttKeepsThePosition(): void
+    {
+        $webVtt = Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:02.000 line:95%,end position:45%,center\nOne\n", Format::WebVtt);
+        $ttml   = Subtitle::fromString($webVtt->toString(Format::Ttml), Format::Ttml);
+
+        $this->assertEquals(new CuePosition(45, 95), $ttml->getCues()[0]->findPosition());
+        $this->assertStringContainsString("00:00:01.000 --> 00:00:02.000 line:95%,end position:45%,center\nOne\n", $ttml->toString(Format::WebVtt));
     }
 
 

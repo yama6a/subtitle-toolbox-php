@@ -23,7 +23,7 @@ final class XmlLoader
     {
         $xml      = self::declareUtf8($xml);
         $document = new DOMDocument();
-        // PHP 8.2 and 8.3 have no LIBXML_RECOVER constant.
+        // PHP 8.3 has no LIBXML_RECOVER constant.
         $document->recover = $recover;
         $previous = libxml_use_internal_errors(true);
         try {

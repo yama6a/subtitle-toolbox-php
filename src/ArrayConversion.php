@@ -29,6 +29,10 @@ trait ArrayConversion
                 "identifier" => $cue->findIdentifier(),
                 "alignment"  => $cue->getAlignment() === Alignment::BottomCenter ? null : $cue->getAlignment()->value,
             ];
+            $position = $cue->findPosition();
+            if ($position !== null) {
+                $cueArray["position"] = ["x" => $position->x, "y" => $position->y];
+            }
             if ($cue->isForced()) {
                 $cueArray["forced"] = true;
             }

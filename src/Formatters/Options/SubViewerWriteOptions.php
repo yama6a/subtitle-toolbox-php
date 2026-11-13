@@ -7,10 +7,10 @@ namespace SubtitleToolbox\Formatters\Options;
 final class SubViewerWriteOptions implements FormatWriteOptions
 {
     /**
-     * @param SubViewerVersion $version The SubViewer version to write.
+     * @param ?SubViewerVersion $version The SubViewer version to write. null writes the stored version, else SubViewer 2.
      */
     public function __construct(
-        public readonly SubViewerVersion $version = SubViewerVersion::V2,
+        public readonly ?SubViewerVersion $version = null,
     ) {
     }
 }
