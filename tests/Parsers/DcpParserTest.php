@@ -182,6 +182,30 @@ class DcpParserTest extends TestCase
     }
 
 
+    #[DataProvider('unusableRates')]
+    public function testARateOutsideOneToAThousandFallsToTheNextRule(string $rates): void
+    {
+        $content = "<SubtitleReel xmlns=\"x\">$rates<SubtitleList>" .
+            "<Subtitle TimeIn=\"00:00:01:00\" TimeOut=\"00:00:02:00\"><Text Valign=\"bottom\" Vposition=\"8\">a</Text></Subtitle>" .
+            "</SubtitleList></SubtitleReel>";
+
+        $this->assertSame([[1.0, 2.0, ["a"]]], self::describe(Subtitle::fromString($content, Format::Dcp)));
+    }
+
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function unusableRates(): array
+    {
+        return [
+            "an edit rate that rounds to 0"  => ["<EditRate>1 3</EditRate>"],
+            "a time code rate above 1000"    => ["<TimeCodeRate>5000</TimeCodeRate>"],
+            "a time code rate, then an edit" => ["<TimeCodeRate>5000</TimeCodeRate><EditRate>2000 1</EditRate>"],
+        ];
+    }
+
+
     /**
      * @return list<array{float, float, list<string>}>
      */

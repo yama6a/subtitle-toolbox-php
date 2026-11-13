@@ -2,5 +2,9 @@
     "main": "bin/stbox",
     "output": "stbox.phar",
     "compression": "GZ",
-    "git-version": "package_version"
+    "git-version": "package_version",
+    "files": [
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.md"
+    ]
 }

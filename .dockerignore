@@ -5,3 +5,5 @@
 !/composer.lock
 !/box.json
 !/.build/build-phar.sh
+!/LICENSE
+!/THIRD_PARTY_NOTICES.md

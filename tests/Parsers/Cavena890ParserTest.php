@@ -29,6 +29,27 @@ class Cavena890ParserTest extends TestCase
     }
 
 
+    public static function chineseLines(): array
+    {
+        return [
+            "surrogate pair"           => ["\x54\x09\xD8\x42\xDF\xB7", "吉𠮷"],
+            "lone high surrogate"      => ["\x54\x09\xD8\x42\x91\xCE", "吉野"],
+            "7Fh as the last low byte" => ["\x5C\x9B\x5C\x7F", "岛屿"],
+            "51 bytes, odd length"     => [str_repeat("\x54\x09", 25) . "\x41", str_repeat("吉", 25) . "䄀"],
+        ];
+    }
+
+
+    #[DataProvider("chineseLines")]
+    public function testReadsChineseLines(string $lower, string $text): void
+    {
+        $header = substr_replace(Cavena890::newHeader(), "\x90", Cavena890::LANGUAGE_1, 1);
+        $block  = substr_replace(self::block(16, ""), str_pad($lower, 51, "\0"), Cavena890::LINE_2, 51);
+
+        $this->assertSame($text, (new Cavena890Parser())->parse($header . $block, new ReadOptions())->getCues()[0]->getText());
+    }
+
+
     public static function headers(): array
     {
         return [

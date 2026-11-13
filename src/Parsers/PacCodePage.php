@@ -137,10 +137,12 @@ enum PacCodePage: string
             return $this->singleByte()->encode($text);
         }
 
+        // The reader starts a new line at each FEh, so a code with that byte is written as a missing character.
         $bytes = Pac::DOUBLE_BYTE;
         foreach (Markup::characters($text) as $character) {
             $pair   = strlen($character) === 1 ? false : @iconv("UTF-8", $encoding, $character);
-            $bytes .= $pair !== false && strlen($pair) === 2 ? $pair : "\0" . (strlen($character) === 1 ? $character : CodePage::REPLACEMENT);
+            $usable = $pair !== false && strlen($pair) === 2 && !str_contains($pair, chr(Pac::LINE_START));
+            $bytes .= $usable ? $pair : "\0" . (strlen($character) === 1 ? $character : CodePage::REPLACEMENT);
         }
 
         return $bytes;

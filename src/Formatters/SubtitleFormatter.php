@@ -85,6 +85,50 @@ abstract class SubtitleFormatter
 
 
     /**
+     * Splits each line at its line feeds and trims the pieces. Drops the pieces that end up empty.
+     * A format with its own line break needs this, because a line feed inside a line would start a new line of the file.
+     *
+     * @param list<string> $lines
+     * @return list<string>
+     */
+    protected static function splitAtLineFeeds(array $lines): array
+    {
+        $pieces = [];
+        foreach ($lines as $line) {
+            foreach (explode(LineEnding::Lf->value, $line) as $piece) {
+                if (trim($piece) !== "") {
+                    $pieces[] = trim($piece);
+                }
+            }
+        }
+
+        return $pieces;
+    }
+
+
+    /**
+     * Joins the lines of a cue with "|", the line break of MPL2, TMPlayer and SubViewer 1. A "|" in the text becomes U+00A6 BROKEN BAR,
+     * because these formats have no escape and the parser would read it as a line break.
+     *
+     * @param list<string> $lines
+     */
+    protected static function joinWithBars(array $lines): string
+    {
+        return implode("|", str_replace("|", "\u{00A6}", self::splitAtLineFeeds($lines)));
+    }
+
+
+    /**
+     * Puts U+2060 WORD JOINER in front of the line when it matches $structure, a pattern for the lines that the parser reads
+     * as a timing line or another part of the file. The joiner has no width and no parser reads a line that starts with it as structure.
+     */
+    protected static function keepAsText(string $line, string $structure): string
+    {
+        return preg_match($structure, $line) === 1 ? "\u{2060}" . $line : $line;
+    }
+
+
+    /**
      * Groups the comments by the index of the cue they come before. The group at the cue count holds the comments after the last cue.
      *
      * @return array<int, list<Comment>>

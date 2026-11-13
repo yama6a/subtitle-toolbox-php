@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Hls;
 
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -127,6 +128,21 @@ class HlsWebVttJoinerTest extends TestCase
 
             $this->assertSame($this->summarize($original), $this->summarize($joined));
             $this->assertSame($original->toString(Format::WebVtt), $joined->toString(Format::WebVtt));
+        }
+    }
+
+
+    public function testJoinRejectsAStreamStartOutsideThe33BitRange(): void
+    {
+        $segment = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nOne\n";
+
+        foreach ([1 << 40, -(1 << 40), -1, TimestampMap::MPEGTS_WRAP] as $streamStart) {
+            try {
+                HlsWebVttJoiner::join([$segment], $streamStart);
+                $this->fail("No exception for $streamStart.");
+            } catch (InvalidArgumentException $exception) {
+                $this->assertStringContainsString("from 0 to 8589934591, got $streamStart.", $exception->getMessage());
+            }
         }
     }
 }

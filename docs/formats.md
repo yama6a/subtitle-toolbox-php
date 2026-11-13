@@ -56,7 +56,7 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 
 - **`load()` with a format**: reads the file in that format and never guesses. For VobSub, pass the `.idx` or the `.sub` file. The other file must lie next to it. A path without extension, such as `d/movie`, is the `.sub` file, and `d/movie.idx` must exist. Otherwise `load()` throws `InvalidArgumentException`.
 - **`load()` without a format**: tries only formats whose `isAutoDetected()` is true. It reads the format that [detection](detection.md) finds in the content. An iTT file with the `.itt` extension reads as iTT, not TTML.
-- **Extension fallback**: when detection finds nothing, `load()` takes the format of the extension, for example `.tsv`. It skips an extension that a format without detection also uses, such as `.json` and `.txt`. Then it throws `UnknownFormatException`.
+- **Extension fallback**: when detection finds nothing, `load()` takes the format of the extension, for example `.tsv`. It skips an extension that a format without detection also uses, such as `.json` and `.txt`. Then it throws `UnknownFormatException`. A binary format found by its extension, such as Cavena 890 by `.890`, gets the bytes of the file. `ReadOptions::$encoding` does not convert them.
 - **Control characters**: the text parsers drop Ctrl-Z characters at the end of a file, as DOS editors write them. They remove the other C0 control characters except tab and the line endings, and DEL. Lenient mode warns once per file for a removed character. A NUL throws `ParsingException` with its line in strict mode, because it marks UTF-16 or UTF-32 read with the wrong encoding. Lenient mode removes it with the same warning. The WebVTT parsers replace NUL with U+FFFD in both modes, as the WebVTT spec says. Format characters such as U+200E and U+200D stay.
 - **Empty files**: `load()` reads a file that is empty, or holds only a BOM and whitespace, as an empty subtitle in the format of its extension. The extension fallback rules apply. `fromString()` has no extension, so it throws `UnknownFormatException` for empty content.
 - **Empty file in every format**: a text file with only white space or a BOM gives an empty subtitle in every format and mode, also WebVTT without `WEBVTT`.
@@ -190,7 +190,7 @@ $subtitle->toString(Format::Cavena890);
 - **Alignment**: the alignment byte 50h is left and 52h is right. Everything else is bottom center.
 - **Format data**: the subtitle keeps `variant`, the `header` bytes and `shortEnd`, which is true when the last block lacks its last 4 bytes, as Subtitle Edit writes it. Each cue keeps its text and its original blocks.
 - **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text keeps its blocks, also after retiming. New text keeps the table of the file and gets `?` for a character outside it. The formatter writes the number of blocks in the 3 count fields of the header.
-- **New files**: Latin with the English language code, the header of Subtitle Edit and subtitle numbers 16, 32, 48 and so on.
+- **New files**: Latin with the English language code, the header of Subtitle Edit and subtitle numbers 16, 32, 48 and so on up to 65520, then 65521 to 65535. So each cue gets its own number, and a new file holds up to 4110 cues. More cues throw `UnwritableContentException`.
 
 ## CSV and TSV
 Translators, reviewers and dubbing studios work in Excel or Google Sheets. `CsvParser` and `CsvFormatter` read and write subtitles as CSV and TSV tables, with RFC 4180 quoting.
@@ -293,6 +293,7 @@ EBU STL is the binary exchange format of European broadcasters, from [EBU Tech 3
 
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
 use SubtitleToolbox\ReadOptions;
@@ -304,13 +305,14 @@ $subtitle = Subtitle::fromString(file_get_contents('news.stl'), Format::EbuStl,
     new ReadOptions(formats: [new EbuStlReadOptions(subtractStartOfProgramme: true)])); // cue times minus the start of programme
 $subtitle->findFormatData('stl')['gsi']['TCP'];                                   // '10000000'
 $subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOptions(frameRate: 30)]));  // 25 or 30
+(new EbuStlFormatter())->formatWithReport($subtitle)->replacedCharacters[0]->message;             // Cue 1: the character table has no "Ж", so the file holds "?".
 ```
 
-- **Times**: the disk format code `STL25.01` or `STL30.01` sets the frame rate. By default, the parser keeps the time codes of the file.
+- **Times**: the disk format code `STL25.01` or `STL30.01` sets the frame rate. By default, the parser keeps the time codes of the file. The formatter reads the TCP field at the frame rate of the stored disk format code, as the parser does, also when `EbuStlWriteOptions::$frameRate` writes another rate.
 - **Start of programme**: `EbuStlReadOptions(subtractStartOfProgramme: true)` subtracts the TCP time code, for example `10:00:00:00`. A time before it becomes 0. The formatter adds TCP again.
-- **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). These tables hold Latin, Cyrillic, Arabic, Greek and Hebrew letters. The formatter writes `?` for a character outside the table, for example the em dash and the guillemets in table 01.
+- **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). These tables hold Latin, Cyrillic, Arabic, Greek and Hebrew letters. The formatter writes `?` for a character outside the table, for example the em dash and the guillemets in table 01. `EbuStlFormatter::formatWithReport()` returns the output and an `EbuStlReplacedCharacter` for each such character. Its `location` is `Cue 1`, `Comment before cue 1` or `GSI field OPT`. The CLI prints one line on standard error for each, and the exit code stays 0.
 - **Styles**: italics, underline and the 8 teletext colors become `<i>`, `<u>` and `<font color>`, and back. White gives no tag. The formatter drops other colors. A teletext row resets the styles, so the formatter repeats a style that spans rows at the start of each row. For example, `<i>` around 2 lines makes both rows italic.
-- **Blocks**: the parser joins the TTI blocks of one subtitle and skips user data blocks. A subtitle with the comment flag becomes a comment. The formatter splits text over the 112 bytes of one TTI text field into extension blocks.
+- **Blocks**: the parser joins the TTI blocks of one subtitle and skips user data blocks. A subtitle with the comment flag becomes a comment. The formatter writes new blocks for a comment whose stored block list is empty. The formatter splits text over the 112 bytes of one TTI text field into extension blocks.
 - **Alignment**: the justification code gives the column. The vertical position gives the row: the top, middle or bottom third of the rows.
 - **Metadata**: the title is the OPT field. The language is the LC field, for example `09` is `en`.
 - **Format data**: the subtitle keeps the GSI fields by name in `gsi`, for example `DSC` and `TCP`. Each cue keeps its subtitle group, cumulative status, vertical position, justification code and original blocks.
@@ -318,7 +320,7 @@ $subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOp
 - **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text keeps its text field bytes, also after retiming.
 - **New files**: a subtitle from another format gets these GSI values. The creation date is today.
   - Code page 850, 25 fps and level-1 teletext.
-  - The character table that holds the most characters of the text. Table 00 wins a tie. So a Russian text gets table 01.
+  - The character table that holds the most characters of the text. Table 00 wins a tie. So a Russian text gets table 01. The count uses the visible text, without tags and with decoded entities.
   - 40 characters per row and 23 rows.
   - Subtitle numbers from 1.
 
@@ -365,6 +367,7 @@ $subtitle->toString(Format::Lyrics);                                       // ID
 - **Text on the next line**: a timestamp line without text takes the next line as its text, if that line has no timestamp and is no ID tag. So `[00:02:35]` and then `Hello` on the next line give one cue at 2 min 35 s.
 - **End times**: a cue ends at the next timestamp in time order. A timestamp without text, such as `[00:17.20]` before another timestamp line, only ends the cue before it. The formatter writes such a line back. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **Output**: times in centiseconds. The formatter strips all tags. Text with `<`, `>` and `&` round-trips.
+- **Line feeds**: the formatter writes a line feed inside a cue line as a space, because an LRC cue has no line break.
 
 ## MCC
 MCC (MacCaption) is the closed caption file of Telestream MacCaption and CaptionMaker. Broadcasters and caption services deliver it next to the video. Each line holds a time code and the caption data of one frame as hex: a SMPTE 334-2 caption distribution packet with CEA-608 byte pairs and CEA-708 data.
@@ -399,11 +402,11 @@ $subtitle->toString(Format::Mcc, new WriteOptions(formats: [new MccWriteOptions(
 - **Reads**: CEA-708 service 1 by default. Its captions win, because CEA-708 holds accented letters and other languages that the CEA-608 part lacks. `MccReadOptions(service: 2)` reads service 2. A file without captions in the service, or `MccReadOptions(service: null)`, gives the CEA-608 byte pairs of field 1. The parser decodes them as [SCC](#scc) does, so `SccReadOptions` and `--scc-roll-up` apply, and the cues get the `scc` format data. It reads version 1.0 and 2.0.
 - **CEA-708**: each change of the text in the visible windows starts a new cue. Italics, underline and the pen color become `<i>`, `<u>` and `<font color>`. The window anchor gives the alignment: its anchor point gives left, center or right, and its height on the screen gives top, middle or bottom. The decoder reads the characters of G0, G1 and G2 and the music note. It skips the icons of G3, P16 characters and the commands of C2 and C3. Window colors, borders, fonts and pen sizes do not change the cues.
 - **Frame rates**: the `Time Code Rate` line holds 24, 25, 30, 30DF, 50, 60 or 60DF. The frame rate code of the caption distribution packets tells 23.976 from 24, 29.97 from 30 and 59.94 from 60. So a file with `Time Code Rate=24` and the code of 23.976 fps reads at 23.976 fps. The format data holds the frame rate as `23.976`, `24`, `25`, `29.97`, `30`, `50`, `59.94` or `60`.
-- **Times**: a CEA-708 cue starts at the frame of the packet that shows it. A CEA-608 cue starts on a CEA-608 frame of 29.97 fps, as in SCC. At other frame rates a CEA-608 time can move by up to 17 ms.
+- **Times**: a CEA-708 cue starts at the frame of the packet that shows it. A CEA-608 cue starts on a CEA-608 frame of 29.97 fps, as in SCC. At other frame rates a CEA-608 time can move by up to 17 ms. The hour of a time code has 2 to 6 digits, as in SCC.
 - **Writes**: one line per frame with caption data. Frames without data get no line, as in files from ffmpeg. The output uses the alias letters of the MCC header, except `U`, as writers disagree on its length.
   - CEA-708 service 1 holds the cue text, the italics, the underline and the colors of CEA-608. Each cue loads into a hidden window, which shows at the cue start. Two windows take turns. The alignment sets the anchor of the window and the justification of its lines. A line longer than 42 characters wraps. A character outside G0, G1 and G2 becomes its CEA-608 replacement.
   - CEA-608 field 1 holds the pop-on captions that the [SCC](#scc) formatter writes with `SccWriteOptions(fit: true)`. So the CEA-608 part replaces characters that it lacks, wraps lines to 32 characters, and delays or drops captions that do not fit in time. Text that the fit cannot hold throws `UnwritableContentException`, as in SCC. Field 2 holds null pairs.
-- **Round trip**: the formatter keeps the version, the frame rate, the drop-frame mode and the header fields of the input, such as `UUID` and `Creation Date`. A new file gets version 2.0, 29.97 fps with drop-frame time code, a `UUID` from a hash of its caption data and the date of today in UTC. So the same captions give the same file on one day. Version 1.0 has no 60DF, so 59.94 fps with drop-frame time code writes version 2.0.
+- **Round trip**: the formatter keeps the version, the frame rate, the drop-frame mode and the header fields of the input, such as `UUID` and `Creation Date`. A header field name holds only letters and spaces and starts with a letter. The formatter leaves out a stored field with another name, such as `X-Encoder`, because the parser would read its line as caption data. A new file gets version 2.0, 29.97 fps with drop-frame time code, a `UUID` from a hash of its caption data and the date of today in UTC. So the same captions give the same file on one day. Version 1.0 has no 60DF, so 59.94 fps with drop-frame time code writes version 2.0.
 - **Options**: `MccWriteOptions(frameRate: 25)` or the CLI option `--output-fps 25` sets the frame rate. `MccWriteOptions(dropFrame: false)` writes non-drop time code at 29.97 and 59.94 fps.
 - **Damaged data**: the parser ignores the checksums, as some writers leave them wrong. A line without a time code, a character outside the hex digits and the alias letters, and a packet that is shorter than its data throw `ParsingException` in strict mode. Lenient mode skips the line with a warning. A file without a `Time Code Rate` line reads as 30DF in lenient mode.
 - **Not read**: CEA-608 data of field 2 (CC3 and CC4). MCC data inside video files. An MP4 or MOV `c708` track holds the same packets and reads as MCC, see [mkv.md](mkv.md#mp4).
@@ -434,6 +437,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWri
 - **Frame rate line**: the format data holds `frameRateLine: true` when the file starts with `{1}{1}<fps>`. The formatter then writes that line with the frame rate of the output, so the file reads back at the same frame rate. `MicroDvdWriteOptions(writeFrameRateLine: true)` writes the line for any input. To drop the line of a MicroDVD input, remove `frameRateLine` from the format data.
 - **Control codes**: `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` become core markup. The parser reads the codes at the start of each `|`-separated line. A code later in the line stays text. A lower-case code styles one line. An upper-case code styles the whole cue. The `microdvd` format data keeps other control codes.
 - **Output**: the formatter writes control codes only for tags that wrap a whole line. It strips other tags. A tag that spans lines wraps each of its lines, so `<i>` around 2 lines gives `{y:i}` on both lines. A `<v>` tag does not hide the styles inside it. An unchanged cue keeps its original control codes. With `stripTags`, the formatter writes no control codes, also not the stored font and size codes such as `{f:Arial}` and `{s:30}`.
+- **Bar in text**: the formatter writes a `|` in the text as U+00A6 BROKEN BAR, because the parser reads `|` as a line break.
 
 ## MPL2 and TMPlayer
 Both formats are common in Polish subtitle downloads and use the `.txt` extension.
@@ -461,6 +465,7 @@ $subtitle->toString(Format::TmPlayer);                                     // 00
 - **TMPlayer end times**: a cue ends at the next later time in the file, also when a line comes out of time order. For example, `00:00:07:B` before `00:00:04:A` gives A from 4 s to 7 s. A line without text only ends the cue before it. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **TMPlayer gaps**: TMPlayer counts whole seconds, so the formatter rounds each time to the second. A cue that ends before the next cue starts gets a line without text at its end. For a cue shorter than 1 s, that line comes 1 s after the start.
 - **`.txt` files**: see [cli.md](cli.md#formats-and-file-extensions).
+- **Escapes**: neither format has an escape for `|`. The formatters write a `|` in the text as U+00A6 BROKEN BAR. A line feed inside a cue line becomes the `|` line break.
 
 ## MPSub
 ```php
@@ -520,8 +525,8 @@ $subtitle->toString(Format::Pac);
 - **Alignment**: the alignment byte of the first line gives the column. The vertical position gives the row: 0 to 4 is the top, 5 to 8 the middle, 9 to 11 the bottom. The formatter writes row 1 for the top, row 6 for the middle and the bottom row 11 minus the extra lines for the bottom.
 - **Right to left**: Subtitle Edit stores the Latin letters and digits of Arabic and Hebrew lines in display order. The parser and the formatter turn them around.
 - **Story record**: a first record with `STORY:` holds the programme data and is no cue. The format data keeps it in `header`.
-- **Format data**: the subtitle keeps `codePage`, `frameRate`, the number of the first subtitle in `firstNumber`, and the bytes before the first and after the last subtitle in `header` and `footer`. Each cue keeps its vertical position, the alignment byte, its text and the original text bytes.
-- **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text and alignment keeps its text bytes, also after retiming. New text keeps the code page of the file and gets `?` for a character outside it.
+- **Format data**: the subtitle keeps `codePage`, `frameRate`, the number of the first subtitle in `firstNumber`, and the bytes before the first and after the last subtitle in `header` and `footer`. Each cue keeps its vertical position, the alignment byte, its text and the original text bytes. A stored `header` that does not start with 01h and 19 zero bytes counts as missing, so the formatter writes the default header.
+- **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text and alignment keeps its text bytes, also after retiming. New text keeps the code page of the file and gets `?` for a character outside it. In the Chinese and Korean code pages, a character whose double-byte code holds the byte FEh also gets `?`, because FEh starts a new line. For example, `全` is A5FEh in CP950.
 - **New files**: Latin when Latin holds all the text, else PAC Unicode. 25 fps, subtitle numbers from 0, and the end block of Subtitle Edit.
 - **Limits**: the parser does not read colors, and it reads lines that Screen marks for a second code page with the code page of the file.
 
@@ -541,17 +546,19 @@ $subtitle->toString(Format::QuickTimeText);
 | Input | Parser result |
 |:--- |:--- |
 | `{timeScale:600}` and `[00:00:07.300]` | 7.5 s. The fraction counts units of the time scale |
-| `[00:00:07.25]` without `{timeScale}` | 7.25 s. The fraction is a decimal fraction |
+| `[00:00:07.25]` without `{timeScale}` | 7.25 s. The fraction is a decimal fraction of any length |
 | `[00:00:01.00]`, `One`, `[00:00:04.00]`, `[00:00:05.00]`, `Two` | `One` from 1 s to 4 s, `Two` from 5 s for [`ReadOptions::$lastCueDuration`](read-options.md) |
 | `{italic}Sung`, then `{plain}Spoken` in a later sample | `<i>Sung</i>`, then `Spoken` |
 
 - **Samples**: each timestamp starts a sample, and the next timestamp ends it. A sample without text is a gap. Text after the `]` on the timestamp line belongs to the sample.
-- **Relative timestamps**: with `{timeStamps:relative}`, each timestamp counts from the one before it.
+- **Relative timestamps**: with `{timeStamps:relative}`, each timestamp counts from the one before it. The sum must stay below 100000 hours.
 - **Styles**: `{bold}`, `{italic}` and `{underline}` become `<b>`, `<i>` and `<u>`. They apply to the rest of the sample and to all later samples, until `{plain}` resets them. The parser drops the other descriptors from the text, such as `{font:Geneva}` or `{justify:center}`.
 - **Strict mode**: a file must start with `{QTtext}`, and a fraction must be below the time scale. Lenient mode reads both with a `ParseWarning`.
 - **Format data**: the `qttext` data keeps the lines before the first timestamp in `header`. `pairedTimestamps` is `true` when each cue has its own end timestamp and an empty line after it, as Subtitle Edit writes. A cue whose text holds descriptors keeps the text in `source`.
 - **Round trip**: an unchanged file comes out byte for byte, except for empty lines between samples in the QuickTime layout.
 - **Output**: the formatter writes the header of the input, or the 5 header lines of Subtitle Edit with `{timeScale:30}` for a new file. Subtitle Edit reads only 2 fraction digits. Without `{timeScale}`, the formatter writes milliseconds. It writes `<b>`, `<i>` and `<u>` as descriptors, with `{plain}` to end a style, and strips all other tags.
+- **Output header**: the formatter writes each CR and LF of a stored header line as a space, and drops a stored header line that reads as a timestamp. It writes `{QTtext}` first when the stored header does not start with it. So the output always reads back.
+- **Output times**: the formatter rounds each time from whole milliseconds to units of the time scale, half up. A time stays below 100000 hours: at `{timeScale:30}`, 359999999.999 s writes `[99999:59:59.29]`. A relative timestamp counts from the time that the parser reaches after the timestamps before it. So a rounding error stays below half a unit, and a cue that starts before the end of the cue before it moves only itself. Above 12.8 million units per second, the count of units must fit in an int. So the latest time that the formatter writes is 4.6 * 10^18 ms divided by the time scale.
 
 ## SAMI
 ```php
@@ -579,6 +586,7 @@ SBV is the YouTube caption format `0:00:01.500,0:00:04.000`.
 - **Parser**: accepts any number of hour digits below the [time limit](#the-format-enum). A timing line without text gives a cue with no lines. A timing line starts a new cue, also without an empty line before it. Text after an empty line stays in the cue before it, as long as no timing line follows, see [lenient-parsing.md](lenient-parsing.md).
 - **Lenient mode**: also reads `0:00:07.980.0:00:11.300`, `0:00:07,980,0:00:11,300` and `0:00:07.98,0:00:11.3`, and warns. A time has 1 or 2 minute and second digits, `.`, `,` or `:` before the fraction, and 1 to 4 fraction digits.
 - **Formatter**: writes one hour digit below 10 hours, and no UTF-8 BOM. It strips all tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips. It skips a cue with no lines.
+- **Text that looks like a timing line**: the formatter puts U+2060 WORD JOINER in front of a text line that the parser reads as a timing line, such as `0:00:03.500,0:00:03.800`. The line has no width and reads back as text.
 
 ## SCC
 SCC (Scenarist Closed Captions) is the closed caption format of US broadcast. Many streaming services also take it. Each line of an SCC file is a time code and CEA-608 byte pairs, one pair per frame at 29.97 fps.
@@ -616,13 +624,13 @@ $report->changes[0]->message;                                                   
 
   | Action | Change |
   |:--- |:--- |
-  | `Transliterated` | a character that CEA-608 lacks becomes a similar one: `Š` becomes `S`, `Œ` becomes `OE`, `…` becomes `...` and `–` becomes `-` |
+  | `Transliterated` | a character that CEA-608 lacks becomes a similar one: `Š` becomes `S`, `Œ` becomes `OE`, `…` becomes `...` and `–` becomes `-`. A character written as an entity, such as `&hellip;`, is replaced too |
   | `Wrapped` | the text wraps again into at most 4 lines of at most 32 characters |
   | `Delayed` | the caption shows after the cue start |
   | `Dropped` | the output leaves out a caption that cannot show before the cue end |
 
   Text that does not wrap into 4 lines of 32 characters, and a character without a replacement such as `日`, still throw. Split such cues first, as the exception message says.
-- **Times**: a semicolon before the frames marks drop-frame time code, a colon marks non-drop time code. A caption that no command erases lasts [`ReadOptions::$lastCueDuration`](read-options.md).
+- **Times**: a semicolon before the frames marks drop-frame time code, a colon marks non-drop time code. The hour has 2 to 6 digits. Drop-frame labels run about 6 minutes ahead of the real time at 100000 hours, so the last caption before that limit has a label such as `100000:05:49;20`. The formatter writes a cue time from 100000 hours on at the last frame before them. A caption that no command erases lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **Damaged data**: the parser ignores the second copy of a doubled control code and drops a byte with a parity error. It skips data channel 2, XDS packets and text mode.
 - **Position**: rows 1 to 4 give `Alignment::TopCenter`, and all other rows give `Alignment::BottomCenter`. The `scc` format data keeps the row and column of each line. The formatter writes them back when they still fit the cue. Otherwise it places the lines by the alignment, at the bottom and centered by default.
 - **Timing of the formatter**: it loads each caption before the cue start. So the caption shows on the first frame of the cue. When the frames after the previous caption are too few for the load, the caption shows late. Of two overlapping cues, the later one replaces the earlier one.
@@ -684,6 +692,8 @@ $subtitle->toString(Format::SpruceStl, new WriteOptions(formats: [new SpruceStlW
 - A tag is `<b>`, `<i>`, `<u>`, `<s>`, `<font>` or `<v>`, or a name with only `name=value` attributes, such as `<foo>` or `<span class="x">`. Other text in angle brackets, such as `<a sentence in brackets>`, is cue text.
 - A tag of another name without attributes is cue text when the cue has no end tag for it, so `<today>` stays text and `<foo>a</foo>` is a tag. FFmpeg writes such text from ASS unchanged. `<br>` and the WebVTT tags `<c>`, `<lang>`, `<ruby>` and `<rt>` are always tags.
 - The formatter keeps `<b>`, `<i>`, `<u>`, `<s>` and `<font>`, and strips all other tags.
+- The formatter writes a time of 1000 hours or more as `999:59:59,999`, the last time that the parser reads.
+- The formatter puts U+2060 WORD JOINER in front of a text line that the parser reads as a timing line, such as `00:00:03,500 --> 00:00:03,800` or `10:30 -> 11:00`. The line has no width and reads back as text.
 
 ## SubViewer
 SubViewer 1 and 2 are `.sub` formats from older DivX releases and DVD rippers. One parser reads both versions.
@@ -711,6 +721,9 @@ $old->toString(Format::SubViewer);             // SubViewer 1
 - **Delay**: the parser adds the SubViewer 1 `[DELAY]` seconds to every time, as FFmpeg does, and stores `[DELAY]` as 0. It keeps the SubViewer 2 `[DELAY]` value and does not apply it.
 - **SubViewer 2 text**: `[br]` and each text line become a cue line. The formatter writes all lines of a cue on one line, joined by `[br]`.
 - **SubViewer 1 cues**: a `[00:00:01]` line with text below starts a cue. A time line with an empty line below ends the cue before it. A cue without such an end line ends where the next cue starts. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md). `|` is a line break. As in FFmpeg, the parser reads only the first text line after a time line.
+- **Cue without an end line**: in SubViewer 1, the cue ends at the next cue that does not start before it. Without such a cue, it lasts `lastCueDuration`.
+- **Text the parser reads as structure**: the formatter writes a `|` as U+00A6 BROKEN BAR in SubViewer 1, and `[br]` as `[`, U+2060 WORD JOINER and `br]` in SubViewer 2. It puts U+2060 in front of a text line that looks like a time line, a timing line, a style line or the script line. A line feed inside a cue line becomes the `|` of SubViewer 1.
+- **Header repairs**: the formatter writes each CR and LF of a header value as a space. It skips a header key that the parser reads as another key, such as an empty key, a key with `]`, a key with a lower-case letter or, in SubViewer 2, `COLF`. It writes a value empty when the line would look like a timing line or a style line in SubViewer 2. In SubViewer 1, a value that starts with `[` stays on the tag line.
 - **Output**: times in centiseconds for version 2 and in seconds for version 1. The formatter strips all tags and decodes HTML entities. It skips cues without text, because an empty line ends a cue.
 
 ## TTML

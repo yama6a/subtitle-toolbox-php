@@ -19,6 +19,9 @@ class JsonTypeErrorsTest extends TestCase
 
     private const INFINITY = "__INFINITY__";
 
+    private const PAC_CODE_PAGES = '"latin", "latin-czech", "latin-turkish", "greek", "cyrillic", "arabic", "hebrew", "thai", ' .
+                                   '"chinese-traditional", "chinese-simplified", "korean", "japanese", "unicode"';
+
 
     /**
      * Returns the JSON of the fixture with the value at $path replaced. INFINITY becomes the number 1e400.
@@ -159,6 +162,20 @@ class JsonTypeErrorsTest extends TestCase
             "MPSub value list"         => [Format::MpSub, ["mpsub" => ["NOTE" => ["x"]]], "The field formatData.mpsub.NOTE must be a string."],
             "iTT frame rate number"    => [Format::Itt, ["itt" => ["frameRate" => 25]], "The field formatData.itt.frameRate must be a string."],
             "FFmetadata stream tags"   => [Format::FfMetadataChapters, ["ffmeta-chapters" => ["streams" => ["x"]]], "The field formatData.ffmeta-chapters.streams[0] must be a list or an object."],
+            "PAC unknown code page"    => [Format::Pac, ["pac" => ["codePage" => "klingon"]],
+                                           'The field formatData.pac.codePage must be one of ' . self::PAC_CODE_PAGES . '.'],
+            "PAC code page number"     => [Format::Pac, ["pac" => ["codePage" => 5]], 'The field formatData.pac.codePage must be one of ' . self::PAC_CODE_PAGES . '.'],
+            "PAC frame rate 24"        => [Format::Pac, ["pac" => ["frameRate" => 24]], "The field formatData.pac.frameRate must be one of 25, 30."],
+            "PAC negative first number" => [Format::Pac, ["pac" => ["firstNumber" => -5]], "The field formatData.pac.firstNumber must be an integer from 0 to 65535."],
+            "PAC header not hex"       => [Format::Pac, ["pac" => ["header" => "zz"]], "The field formatData.pac.header must be an even number of hexadecimal digits."],
+            "PAC footer odd length"    => [Format::Pac, ["pac" => ["footer" => "fff"]], "The field formatData.pac.footer must be an even number of hexadecimal digits."],
+            "Cavena 890 variant"       => [Format::Cavena890, ["cavena890" => ["variant" => "klingon"]],
+                                           'The field formatData.cavena890.variant must be one of "latin", "scandinavian", "hebrew", "russian", "greek", "arabic", "chinese".'],
+            "Cavena 890 header not hex" => [Format::Cavena890, ["cavena890" => ["header" => "zz"]],
+                                            "The field formatData.cavena890.header must be the hexadecimal digits of 388 bytes."],
+            "Cavena 890 short header"  => [Format::Cavena890, ["cavena890" => ["header" => "00"]],
+                                           "The field formatData.cavena890.header must be the hexadecimal digits of 388 bytes."],
+            "Cavena 890 short end"     => [Format::Cavena890, ["cavena890" => ["shortEnd" => 1]], "The field formatData.cavena890.shortEnd must be a boolean."],
         ];
     }
 
@@ -185,6 +202,17 @@ class JsonTypeErrorsTest extends TestCase
     }
 
 
+    public function testEveryPacCodePageAndCavena890VariantIsValidFormatData(): void
+    {
+        foreach (Parsers\PacCodePage::cases() as $codePage) {
+            $this->assertSame($codePage->value, (new Subtitle())->setFormatData("pac", ["codePage" => $codePage->value])->findFormatData("pac")["codePage"]);
+        }
+        foreach (Parsers\Cavena890Variant::cases() as $variant) {
+            $this->assertSame($variant->value, (new Subtitle())->setFormatData("cavena890", ["variant" => $variant->value])->findFormatData("cavena890")["variant"]);
+        }
+    }
+
+
     public static function badCueFormatData(): array
     {
         return [
@@ -198,6 +226,13 @@ class JsonTypeErrorsTest extends TestCase
             "FFmetadata time base"      => [["ffmeta-chapters" => ["timeBase" => "0/1000"]], "The field cues[0].formatData.ffmeta-chapters.timeBase must be a time base such as \"1/1000\"."],
             "image size string"         => [["image" => ["width" => "2"]], "The field cues[0].formatData.image.width must be an integer."],
             "WebVTT setting number"     => [["vtt" => ["line" => 0]], "The field cues[0].formatData.vtt.line must be a string."],
+            "PAC vertical position"     => [["pac" => ["verticalPosition" => 256]], "The field cues[0].formatData.pac.verticalPosition must be an integer from 0 to 255."],
+            "PAC alignment string"      => [["pac" => ["alignment" => "2"]], "The field cues[0].formatData.pac.alignment must be an integer from 0 to 255."],
+            "PAC text number"           => [["pac" => ["text" => 5]], "The field cues[0].formatData.pac.text must be a string."],
+            "PAC bytes not hex"         => [["pac" => ["bytes" => "fe0"]], "The field cues[0].formatData.pac.bytes must be an even number of hexadecimal digits."],
+            "Cavena 890 text number"    => [["cavena890" => ["text" => 5]], "The field cues[0].formatData.cavena890.text must be a string."],
+            "Cavena 890 short block"    => [["cavena890" => ["blocks" => ["0010"]]],
+                                            "The field cues[0].formatData.cavena890.blocks[0] must be the hexadecimal digits of 128 bytes."],
         ];
     }
 

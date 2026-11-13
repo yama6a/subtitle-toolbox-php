@@ -112,7 +112,7 @@ final class MicroDvdFormatter extends SubtitleFormatter
         return [
             "color" => $color,
             "tags"  => array_values(array_intersect(self::STYLE_TAGS, $tags)),
-            "text"  => Markup::plainText($line),
+            "text"  => str_replace("|", "\u{00A6}", Markup::plainText($line)),
         ];
     }
 }

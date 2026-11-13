@@ -44,6 +44,9 @@ trait Fixes
 
     /**
      * Makes each cue last at least $minDuration seconds, but ends it at least $minGap seconds before the next cue starts.
+     *
+     * @throws InvalidArgumentException when $minDuration is not above 0, $minGap is negative or not finite,
+     *         or a cue would end at Timecode::MAX_HOURS or later.
      */
     public function extendShortCues(float $minDuration, float $minGap = 0): self
     {
@@ -51,6 +54,7 @@ trait Fixes
         $this->fixesAssertGap($minGap);
 
         $cues = $this->getCues();
+        $ends = [];
         foreach ($cues as $index => $cue) {
             $end = $cue->getStart() + $minDuration;
             if (isset($cues[$index + 1])) {
@@ -59,8 +63,13 @@ trait Fixes
 
             $hasSameStartAsPrevious = isset($cues[$index - 1]) && $cues[$index - 1]->getStart() === $cue->getStart();
             if (!$hasSameStartAsPrevious && Timecode::roundToMilliseconds($end) > $cue->getEnd()) {
-                $cue->setEnd($end);
+                $ends[$index] = $end;
             }
+        }
+
+        CueList::checkEnds($ends);
+        foreach ($ends as $index => $end) {
+            $cues[$index]->setEnd($end);
         }
 
         return $this;
@@ -71,6 +80,9 @@ trait Fixes
      * Shows each cue $leadIn seconds earlier and $leadOut seconds longer, but at least $minGap seconds away from its neighbours.
      * The lead-out comes first, so it takes the space between two cues before the lead-in of the next cue.
      * A start or end inside another cue stays where it is.
+     *
+     * @throws InvalidArgumentException when $leadIn, $leadOut or $minGap is negative or not finite,
+     *         or a cue would end at Timecode::MAX_HOURS or later.
      */
     public function addLeadInOut(float $leadIn, float $leadOut, float $minGap = 0): self
     {

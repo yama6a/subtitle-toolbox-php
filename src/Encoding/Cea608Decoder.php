@@ -310,7 +310,8 @@ final class Cea608Decoder
     private function rollUp(): void
     {
         $rolled = [];
-        for ($row = $this->row - $this->rollUpRows + 1; $row < $this->row; $row++) {
+        // The screen has no row 0, so a row that rolls above row 1 leaves it.
+        for ($row = max(1, $this->row - $this->rollUpRows + 1); $row < $this->row; $row++) {
             if (isset($this->displayed[$row + 1])) {
                 $rolled[$row] = $this->displayed[$row + 1];
             }

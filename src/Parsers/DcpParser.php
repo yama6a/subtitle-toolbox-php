@@ -351,11 +351,14 @@ final class DcpParser extends SubtitleParser
     private function timeCodeRate(DOMElement $root): float
     {
         $timeCodeRate = $this->childText($root, "TimeCodeRate");
-        if ($timeCodeRate !== null && preg_match('/^\d+$/D', $timeCodeRate) && (int) $timeCodeRate > 0) {
+        if ($timeCodeRate !== null && preg_match('/^\d+$/D', $timeCodeRate) && (int) $timeCodeRate >= 1 && (int) $timeCodeRate <= 1000) {
             return (float) $timeCodeRate;
         }
         if (preg_match('/^(\d+)\s+(\d+)$/D', $this->childText($root, "EditRate") ?? "", $matches) && (int) $matches[1] > 0 && (int) $matches[2] > 0) {
-            return (float) round((int) $matches[1] / (int) $matches[2]);
+            $editRate = round((int) $matches[1] / (int) $matches[2]);
+            if ($editRate >= 1 && $editRate <= 1000) {
+                return (float) $editRate;
+            }
         }
 
         return self::DEFAULT_RATE;

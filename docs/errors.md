@@ -47,7 +47,8 @@ try {
 `InvalidArgumentException` covers these cases:
 
 - An invalid value, for example frame rate 0 or NAN in a number option.
-- A retiming or `append()` that moves a cue time to 100000 hours or more, for example `scale(1e300)`.
+- A retiming, `append()`, `extendShortCues()`, `addLeadInOut()`, `ReferenceSync::apply()` or `ShotChangeTiming::apply()` that moves a cue time to 100000 hours or more, for example `scale(1e300)`.
+- A `SpeechReference` media duration or interval end of 100000 hours or more.
 - A missing MicroDVD output frame rate.
 - 2 objects of one class in `ReadOptions::$formats` or `WriteOptions::$formats`, or a write class in `ReadOptions` and a read class in `WriteOptions`.
 - A missing OCR engine, a missing `tesseract` program, a missing Tesseract language or a missing php-glyph-ocr package.
@@ -70,6 +71,7 @@ try {
 - Cue text that needs more than 241 TTI blocks of 112 bytes in EBU STL.
 - A subtitle number over 65535, or cue text of 65535 bytes or more, in PAC.
 - A line of more than 51 bytes in Cavena 890.
+- A subtitle number over 65535 in Cavena 890, so more than 4110 new cues.
 - A frame number larger than the largest integer, such as 359999999 s at `1e12` fps, in a format that writes frames.
 - Text that is not UTF-8 in a JSON format.
 - Text that is not UTF-8 in TTML, iTT or SAMI output.

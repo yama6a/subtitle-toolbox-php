@@ -40,7 +40,7 @@ final class MccParser extends SubtitleParser
             if ($line === "" || str_starts_with($line, "//") || str_starts_with($line, self::FILE_FORMAT)) {
                 continue;
             }
-            if (preg_match('/^([A-Za-z][A-Za-z ]*)=(.*)$/', $line, $matches) === 1) {
+            if (preg_match('/^(' . Mcc::HEADER_FIELD_NAME . ')=(.*)$/', $line, $matches) === 1) {
                 $header[trim($matches[1])] = trim($matches[2]);
                 continue;
             }
@@ -93,7 +93,7 @@ final class MccParser extends SubtitleParser
     private static function readLine(string $line, int $lineNumber): array
     {
         // Version 2.0 may add the field and the line number after the frames, for example 01:00:00:00.1,9.
-        if (preg_match('/^(\d{2}):(\d{2}):(\d{2})[:;](\d{2})(?:\.[01](?:,\d+)?)?[ \t]+(\S+)$/', $line, $matches) !== 1) {
+        if (preg_match('/^(\d{2,6}):(\d{2}):(\d{2})[:;](\d{2})(?:\.[01](?:,\d+)?)?[ \t]+(\S+)$/', $line, $matches) !== 1) {
             throw new ParsingException("The MCC line \"$line\" does not start with a time code.", $lineNumber);
         }
 
