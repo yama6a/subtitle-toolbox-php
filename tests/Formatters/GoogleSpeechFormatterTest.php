@@ -104,6 +104,18 @@ class GoogleSpeechFormatterTest extends TestCase
     }
 
 
+    public function testAVoiceNumberThatDoesNotFitAnIntStaysAStringSpeakerTag(): void
+    {
+        $subtitle = (new Subtitle())->setFormatData("google-speech", ["results" => [[]]]);
+        $subtitle->addCue(new SubtitleCue(0, 1, "<v 99999999999999999999><00:00:00.000>Hi"));
+        $subtitle->addCue(new SubtitleCue(1, 2, "<v 007><00:00:01.000>Bye"));
+
+        $words = self::write($subtitle)["results"][0]["alternatives"][0]["words"];
+
+        $this->assertSame(["99999999999999999999", 7], array_column($words, "speakerTag"));
+    }
+
+
     public function testADiarizedCueWithoutWordsThrows(): void
     {
         $subtitle = self::read("restaurant_v2_diarization.json", new ReadOptions());

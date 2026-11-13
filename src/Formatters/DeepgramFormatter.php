@@ -81,7 +81,7 @@ final class DeepgramFormatter extends SubtitleFormatter
         $sameEnd   = TranscriptWords::sameTime(self::seconds($sources["end"]), $end);
         $sameText  = TranscriptWords::sameText($cue, $sources["text"]);
         $voice     = TranscriptWords::speaker($cue);
-        $speaker   = self::speakerNumber($voice);
+        $speaker   = TranscriptWords::speakerNumber($voice);
         $words     = TranscriptWords::words(
             $cue,
             $words,
@@ -162,19 +162,6 @@ final class DeepgramFormatter extends SubtitleFormatter
         }
 
         return ["transcript" => substr($transcript, 0, -1), "paragraphs" => $result];
-    }
-
-
-    /**
-     * Returns a voice name of digits as the number of a Deepgram speaker. A name that does not fit an int stays a string.
-     */
-    private static function speakerNumber(?string $voice): int|string|null
-    {
-        if ($voice === null || preg_match('/^[0-9]+$/D', $voice) !== 1) {
-            return $voice;
-        }
-
-        return (string) (int) $voice === (ltrim($voice, "0") ?: "0") ? (int) $voice : $voice;
     }
 
 
