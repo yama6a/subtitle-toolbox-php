@@ -36,21 +36,6 @@ final class TrackFileBuilder
 
 
     /**
-     * @param list<array{startMs: int, endMs: int, data: string}> $cues
-     */
-    public static function subRipFile(array $cues): string
-    {
-        $file = "";
-        foreach ($cues as $index => $cue) {
-            $file .= ($index + 1) . "\n" . self::time($cue["startMs"], ",", true) . " --> " . self::time($cue["endMs"], ",", true) .
-                     "\n" . self::cueText($cue["data"]) . "\n\n";
-        }
-
-        return $file;
-    }
-
-
-    /**
      * Rebuilds the Dialogue lines from the fields of each block, as mkvextract does.
      * The fields are ReadOrder, Layer, Style, Name, MarginL, MarginR, MarginV, Effect and Text.
      * Each Dialogue line takes its fields in the order of the Format line of the header.
