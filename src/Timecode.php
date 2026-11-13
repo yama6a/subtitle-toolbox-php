@@ -175,14 +175,16 @@ final class Timecode
      * For example, ASS writes centiseconds (100), MPL2 tenths of a second (10) and TMPlayer whole seconds (1).
      * The count rounds once from whole milliseconds, half up, so 1.005 s is 101 centiseconds on every PHP version.
      * It stays between 0 and the last unit below MAX_HOURS, because every parser rejects a time of MAX_HOURS.
+     * The time stops at LAST_TIME first, and the count stops below MAX_HOURS after rounding.
      * So 359999999.999 s is 35999999999 centiseconds, which reads back as 99999:59:59.99, not 100000:00:00.00.
+     * At 10000 units per second, the last unit is 99999:59:59.9990, not 99999:59:59.9999, which reads back as 100000 hours.
      * Use it in every writer that rounds a time to a unit. FrameRate::framesBelowLimit() is the same rule for frames.
      *
      * @internal
      */
     public static function unitsBelowLimit(float $seconds, int $unitsPerSecond): int
     {
-        $milliseconds = self::totalMilliseconds(min(max(0.0, $seconds), self::LIMIT_SECONDS));
+        $milliseconds = self::totalMilliseconds(min(max(0.0, $seconds), self::LAST_TIME));
         // Whole seconds and the milliseconds after them, so that the product stays far inside the int range.
         $units = intdiv($milliseconds, 1000) * $unitsPerSecond + intdiv(2 * ($milliseconds % 1000) * $unitsPerSecond + 1000, 2000);
 

@@ -357,6 +357,18 @@ class TtmlParserTest extends TestCase
     }
 
 
+    public function testEntityOfTheInternalDtdReadsAsItsText(): void
+    {
+        $subtitle = Subtitle::fromString(
+            "<?xml version=\"1.0\"?>\n<!DOCTYPE tt [<!ENTITY ent \"X\"> <!ENTITY sig \"Thanks, <br/>Anna\">]>\n"
+            . "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div>"
+            . "<p begin=\"1s\" end=\"2s\">a&ent;b</p><p begin=\"3s\" end=\"4s\">&sig;</p></div></body></tt>",
+            Format::Ttml);
+
+        $this->assertSame(["aXb", "Thanks, Anna"], array_map(fn ($cue): string => $cue->getText(), $subtitle->getCues()));
+    }
+
+
     public function testExternalEntityIsNotLoaded(): void
     {
         $subtitle = Subtitle::fromString(

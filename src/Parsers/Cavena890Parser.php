@@ -42,8 +42,11 @@ final class Cavena890Parser extends SubtitleParser
         }
 
         $subtitle = new Subtitle();
-        foreach (self::cueBlocks($body) as $blocks) {
-            $subtitle->addCue(self::cue($blocks, $variant));
+        foreach (self::cueBlocks($body) as $index => $blocks) {
+            $cue = $this->cue($blocks, $variant, $index);
+            if ($cue !== null) {
+                $subtitle->addCue($cue);
+            }
         }
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["variant" => $variant->value, "header" => bin2hex($header), "shortEnd" => $shortEnd]);
 
@@ -81,7 +84,7 @@ final class Cavena890Parser extends SubtitleParser
     /**
      * @param list<string> $blocks
      */
-    private static function cue(array $blocks, Cavena890Variant $variant): SubtitleCue
+    private function cue(array $blocks, Cavena890Variant $variant, int $index): ?SubtitleCue
     {
         $lines = [];
         foreach ($blocks as $block) {
@@ -93,7 +96,21 @@ final class Cavena890Parser extends SubtitleParser
             }
         }
 
-        $cue = new SubtitleCue(self::seconds($blocks[0], Cavena890::START), self::seconds($blocks[0], Cavena890::END), $lines);
+        try {
+            [$start, $end] = $this->orderedTimes(
+                self::seconds($blocks[0], Cavena890::START),
+                self::seconds($blocks[0], Cavena890::END),
+                null,
+                $index,
+                array_map("bin2hex", $blocks)
+            );
+        } catch (ParsingException $exception) {
+            $this->fail($exception, null, $index, array_map("bin2hex", $blocks));
+
+            return null;
+        }
+
+        $cue = new SubtitleCue($start, $end, $lines);
         $cue->setAlignment(Cavena890::alignment(ord($blocks[0][Cavena890::ALIGNMENT])));
         $cue->setFormatData(self::FORMAT_DATA_KEY, ["text" => $cue->getText(), "blocks" => array_map("bin2hex", $blocks)]);
 
