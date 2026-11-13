@@ -191,6 +191,18 @@ final class Timecode
 
 
     /**
+     * Returns true when $seconds, rounded to milliseconds as a cue holds it, is below MAX_HOURS.
+     * So 359999999.999 s passes, and 359999999.9996 s fails, because the cue would hold 360000000 s. NAN fails.
+     *
+     * @internal
+     */
+    public static function isBelowLimit(float $seconds): bool
+    {
+        return self::roundToMilliseconds($seconds) < self::LIMIT_SECONDS;
+    }
+
+
+    /**
      * Returns the end of a last cue that has no end in the file: $duration after $start, but at most LAST_TIME.
      * So the cue reads back in every format, also when it starts less than $duration before MAX_HOURS.
      *

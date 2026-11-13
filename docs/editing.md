@@ -26,11 +26,12 @@ $subtitle->syncByPoints([                            // 10 s becomes 12 s, 600 s
 ```
 
 - **Negative times**: a start or end time that becomes negative becomes 0. The cue stays in the subtitle.
-- **Time limit**: a cue time must stay below 100000 hours, the limit of the parsers. A `shift()`, `scale()`, `convertFrameRate()`, `syncByPoints()` or `append()` that moves a cue end to 100000 hours or more throws `InvalidArgumentException`, for example `scale(1e300)`. The subtitle then stays as it was. `shift()` and `append()` also reject an offset of NAN or INF.
+- **Time limit**: a cue time must stay below 100000 hours, the limit of the parsers. A `shift()`, `scale()`, `convertFrameRate()`, `syncByPoints()` or `append()` that moves a cue end to 100000 hours or more throws `InvalidArgumentException`, for example `scale(1e300)`. So do `extendShortCues()`, `addLeadInOut()`, `ReferenceSync::apply()` and `ShotChangeTiming::apply()`. The check uses the end rounded to milliseconds, so an end of 359999999.9996 s fails too. The subtitle then stays as it was. `shift()` and `append()` also reject an offset of NAN or INF.
 - **Shift range**: the start time of a cue decides if `shift()` moves it. So a cue that starts before `$to` and ends after it moves as a whole. A cue that starts before `$from` stays. `$to` must be after `$from`, else `shift()` throws `InvalidArgumentException`. A cue that moves before an earlier cue changes its place in the list. Its comments move with it.
 - **Sync by points**: `syncByPoints()` moves each old time to its new time. Between 2 points it corrects the times linearly. Before the first point and after the last point it continues the correction of the nearest 2 points. 1 point shifts all cues.
 - **Point order**: the old and new times must both increase from point to point. Else `syncByPoints()` throws `InvalidArgumentException`.
 - **Cue across a point**: each start, end and word timestamp moves by the segment that holds it. So a cue across a point keeps its times in step with the speech.
+- **Rounding**: each new time rounds once to whole milliseconds, half away from zero. A cue time and a word timestamp at the same time get the same result on every PHP version. Example: `shift(0.0005)` moves 1.001 s to 1.002 s, and `scale(1.5)` moves 0.009 s to 0.014 s.
 - **Word timestamps**: these 4 methods also move the word timestamps in the cue text, such as `<00:00:02.000>`. `append()` with an offset and `withSlice()` with `$moveToZero` move them too. A word timestamp that becomes negative becomes 0.
 - **Cue boundaries**: some methods move a start or end time without moving the speech. So the word timestamps keep their times. These are `fixOverlaps()`, `extendShortCues()`, `addLeadInOut()`, `limitLongCues()`, the [shot change timing](#shot-changes-and-gaps) and the snap of `DualSubtitle`.
 - **Speech-to-text format data**: the format data of Whisper, Deepgram, AssemblyAI, AWS Transcribe and Google input is a copy of the source file. It keeps the times of the source file. Read the word times from the word timestamps in the cue text.
@@ -203,9 +204,10 @@ An **in-time** is the start time of a cue. An **out-time** is the end time of a 
 | An in-time up to `snapWindowFrames` frames after a shot change moves to the shot change. | shot change 62.500, cue starts 62.708 | starts 62.500 |
 | An out-time up to `snapWindowFrames` frames before a shot change ends `minGapFrames` before it. | shot change 70.000, cue ends 69.750 | ends 69.917 |
 
-- **Frames**: all cue times of the result fall on frames of `frameRate`, rounded to milliseconds.
+- **Frames**: all cue times of the result fall on frames of `frameRate`, rounded to milliseconds. A time on an exact half frame goes to the later frame, as in the formatters. So 0.58 s at 25 fps is frame 15.
+- **Time limit**: a cue end that rounds up to a frame at 100000 hours or later throws `InvalidArgumentException`. The subtitle then stays as it was. Example: an end of 359999999.99 s at 25 fps.
 - **Blocked moves**: a move does not happen when it makes a cue shorter than `minDurationFrames`. It also does not happen when it brings the cue closer than `minGapFrames` to the cue before or after it. A move that makes a short cue longer still happens.
-- **Input**: `fromFfmpegLog()` reads the `pts_time:` values. `fromText()` reads one time per line, in seconds or as `hh:mm:ss.mmm`, and skips empty lines. Both return the times sorted, without duplicates.
+- **Input**: `fromFfmpegLog()` reads the `pts_time:` values. `fromText()` reads one time per line, in seconds or as `hh:mm:ss.mmm`, and skips empty lines. Both return the times sorted, without duplicates. Both throw `ParsingException` with the line for a time of 100000 hours or more.
 
 ### Closing gaps
 Example at 24 fps with the default options: cue A ends at 10.000, cue B starts at 10.292. The gap is 7 frames. After `apply()`, A ends at 10.208, 2 frames before B.
