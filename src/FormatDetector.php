@@ -21,6 +21,7 @@ final class FormatDetector
     /**
      * The signatures of the text and binary formats, keyed by format. Order matters, first match wins.
      * Each pattern runs on the content without a UTF-8 BOM, with LF line endings and without leading white space.
+     * The PGS pattern runs on the raw bytes, because the line end change would join a 0D 0A in a time stamp.
      */
     private const SIGNATURES = [
         Format::WebVtt->value   => '/\AWEBVTT(?:[ \t\n]|\z)/',
@@ -58,6 +59,7 @@ final class FormatDetector
      */
     public static function detect(string $content): ?Format
     {
+        $raw     = $content;
         $content = ltrim(StringHelpers::removeUtf8Bom($content));
 
         if (str_starts_with($content, "{")) {
@@ -69,7 +71,7 @@ final class FormatDetector
 
         $content = StringHelpers::normalizeEOLs($content);
         foreach (self::SIGNATURES as $format => $pattern) {
-            if (preg_match($pattern, $content) === 1) {
+            if (preg_match($pattern, $format === Format::Pgs->value ? $raw : $content) === 1) {
                 return Format::from($format);
             }
         }
