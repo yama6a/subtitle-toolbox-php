@@ -153,6 +153,31 @@ class CloudSpeechParsersTest extends TestCase
     }
 
 
+    public function testDeepgramRejectsParagraphsThatTheSentencesRepeatTooOften(): void
+    {
+        $sentences = array_map(fn (int $index): array => ["text" => "a", "start" => $index, "end" => $index + 0.5], range(0, 99));
+        $json      = json_encode(["results" => ["channels" => [["alternatives" => [["words" => [], "paragraphs" => ["paragraphs" => [
+            ["speaker" => 0, "notes" => str_repeat("x", 200000), "sentences" => $sentences],
+        ]]]]]]]]);
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The sentences of results.channels[0].alternatives[0].paragraphs repeat more paragraph data than 16 times the size of the file.");
+        (new DeepgramParser())->parse($json, new ReadOptions());
+    }
+
+
+    public function testDeepgramKeepsTheParagraphOfEachSentence(): void
+    {
+        $json = '{"results": {"channels": [{"alternatives": [{"words": [], "paragraphs": {"paragraphs": [' .
+                '{"speaker": 0, "num_words": 2, "sentences": [{"text": "Hi.", "start": 0, "end": 1}, {"text": "Bye.", "start": 1, "end": 2}]}]}}]}]}}';
+
+        $this->assertSame([["speaker" => 0, "num_words" => 2], ["speaker" => 0, "num_words" => 2]], array_map(
+            fn (SubtitleCue $cue): array => $cue->findFormatData("deepgram")["paragraph"],
+            (new DeepgramParser())->parse($json, new ReadOptions())->getCues()
+        ));
+    }
+
+
     public function testGoogleRejectsADurationWithALineBreakAtTheEnd(): void
     {
         $this->expectException(ParsingException::class);
