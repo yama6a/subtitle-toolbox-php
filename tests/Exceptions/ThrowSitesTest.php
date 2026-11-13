@@ -48,6 +48,7 @@ use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PaletteReducer;
 use SubtitleToolbox\Image\PngDecoder;
 use SubtitleToolbox\Image\PngEncoder;
+use SubtitleToolbox\Karaoke\WordHighlight;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
@@ -523,6 +524,7 @@ class ThrowSitesTest extends TestCase
                                                                 ...$invalid],
             "Karaoke/WordHighlightOptions.php: speaker style" => [fn () => new WordHighlightOptions(style: "v Ann"), ...$invalid],
             "Karaoke/WordHighlightOptions.php: 0 words"       => [fn () => new WordHighlightOptions(maxWordsPerCue: 0), ...$invalid],
+            "Karaoke/WordHighlight.php: more than 64 MiB"     => [fn () => WordHighlight::apply(TestSubtitles::fromCues([new SubtitleCue(0, 60, implode("", array_map(fn (int $second): string => sprintf("<00:00:%02d.000>w ", $second), range(0, 59))) . str_repeat("word ", 300000))])), ...$invalid],
             "MergeShortCuesOptions.php: minimum characters 0" => [fn () => new MergeShortCuesOptions(minCharacters: 0), ...$invalid],
             "Ocr/GlyphOcrOptions.php: ink threshold 0"      => [fn () => new GlyphOcrOptions(inkThreshold: 0), ...$invalid],
             "Ocr/GlyphOcrOptions.php: space width 0"        => [fn () => new GlyphOcrOptions(spaceWidth: 0), ...$invalid],
