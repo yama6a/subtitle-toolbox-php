@@ -245,4 +245,14 @@ class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase
             (new \ReflectionClass(HearingImpairedOptions::class))->getMethods()
         ));
     }
+
+
+    public function testNoBreakSpaceCountsAsSpaceInTheDashAndBlankTagRules(): void
+    {
+        $options = new HearingImpairedOptions();
+
+        $this->assertSame("Is it open?", HearingImpairedRemover::removeFromText("\u{00A0}- Is it open?\n- (laughs)", $options));
+        $this->assertSame("Hi", HearingImpairedRemover::removeFromText("Hi [x]<i>\u{00A0}</i>", $options));
+        $this->assertSame("A.", HearingImpairedRemover::removeFromText("\u{2000}-\u{2000}A.\n- [x]", $options));
+    }
 }
