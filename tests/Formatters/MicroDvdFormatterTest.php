@@ -261,4 +261,12 @@ class MicroDvdFormatterTest extends TestCase
         $read = new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 25)]);
         $this->assertSame(["Rock \u{00A6} Pop", "\u{00A6}"], Subtitle::fromString($output, Format::MicroDvd, $read)->getCues()[0]->getLines());
     }
+
+
+    public function testTheFormatterAndTheSubtitleGiveTheSameMessageWithoutAFrameRate(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("MicroDVD output needs the frame rate of the video. Set MicroDvdWriteOptions::\$frameRate.");
+        (new MicroDvdFormatter())->format((new Subtitle())->addCue(new SubtitleCue(1, 2, "x")));
+    }
 }

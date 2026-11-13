@@ -233,7 +233,7 @@ class BinaryInfoValidateTest extends CliTestCase
             "--check-leading-or-trailing-spaces", "--max-speakers", "2", "--allowed-characters", "[A-Za-z0-9 .,!?<>/\\-]",
         ], $vtt));
         $this->assertSame(
-            self::usageError("validate", "The option --dialogue-dash must be a hyphen, an en dash or an em dash, with or without one space after it, got \"x\"."),
+            self::usageError("validate", "The option --dialogue-dash must be a hyphen, a Unicode hyphen, an en dash or an em dash, with or without one space after it, got \"x\"."),
             $this->runCli(["validate", "-", "--dialogue-dash", "x"], $vtt)
         );
     }

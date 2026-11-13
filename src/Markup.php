@@ -703,6 +703,23 @@ final class Markup
 
 
     /**
+     * Returns false for a word time that is earlier than the latest one that it kept in $latest. Else it returns true
+     * and sets $latest to $seconds. A caller drops the word timestamp on false, so the timestamps of a cue never go back in time.
+     *
+     * @internal
+     */
+    public static function keepsWordTimeOrder(float $seconds, ?float &$latest): bool
+    {
+        if ($latest !== null && $seconds < $latest) {
+            return false;
+        }
+        $latest = $seconds;
+
+        return true;
+    }
+
+
+    /**
      * Replaces each core word timestamp in $text with the timestamp of $map(seconds). A time below 0 becomes 0.
      *
      * @param callable(float): float $map

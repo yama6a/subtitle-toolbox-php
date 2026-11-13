@@ -181,7 +181,7 @@ final class SpruceStlFormatter extends SubtitleFormatter
                     }
                     continue;
                 }
-                $token = str_replace("|", "\u{00A6}", Markup::decodeEntities($token));
+                $token = self::replaceBar(Markup::decodeEntities($token));
                 $token = preg_replace('/\^(?=[BIU])/', "^\u{2060}", $token);
                 if (trim($token) === "") {
                     $text .= $token;

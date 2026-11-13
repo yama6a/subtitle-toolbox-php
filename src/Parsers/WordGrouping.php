@@ -290,11 +290,9 @@ trait WordGrouping
             if ($word[1] === null) {
                 continue;
             }
-            if ($latest !== null && $word[1] < $latest) {
+            if (!Markup::keepsWordTimeOrder($word[1], $latest)) {
                 $word[1] = null;
-                continue;
             }
-            $latest = $word[1];
         }
 
         return $words;

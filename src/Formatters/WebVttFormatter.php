@@ -192,17 +192,17 @@ final class WebVttFormatter extends SubtitleFormatter
      */
     private function dropEarlierWordTimestamps(string $text): string
     {
-        $latest = 0.0;
+        $latest = null;
 
-        return preg_replace_callback(Markup::WORD_TIMESTAMP_REGEX, function (array $match) use (&$latest): string {
-            $seconds = Markup::wordTimestampSeconds($match[1]) ?? $latest;
-            if ($seconds < $latest) {
-                return "";
-            }
-            $latest = $seconds;
+        return preg_replace_callback(
+            Markup::WORD_TIMESTAMP_REGEX,
+            function (array $match) use (&$latest): string {
+                $seconds = Markup::wordTimestampSeconds($match[1]) ?? $latest ?? 0.0;
 
-            return $match[1];
-        }, $text) ?? $text;
+                return Markup::keepsWordTimeOrder($seconds, $latest) ? $match[1] : "";
+            },
+            $text
+        ) ?? $text;
     }
 
 

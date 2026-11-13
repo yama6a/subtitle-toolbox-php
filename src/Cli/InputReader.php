@@ -93,6 +93,9 @@ final class InputReader
         if (!is_file($input)) {
             Command::fail("The file does not exist.");
         }
+        if (!is_readable($input)) {
+            Command::fail("Cannot read the file.");
+        }
 
         return $this->readPath($input, $input, $listTracks);
     }

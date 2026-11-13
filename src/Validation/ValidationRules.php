@@ -110,6 +110,8 @@ final class ValidationRules
      */
     public static function netflixEnglish(float $frameRate): self
     {
+        FrameRate::check($frameRate, "The frame rate of the Netflix gap rule must be greater than 0, got %s.");
+
         return new self(
             maxCharactersPerSecond: 20,
             maxCharactersPerLine: self::NETFLIX_MAX_CHARACTERS_PER_LINE,

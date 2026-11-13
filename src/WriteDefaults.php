@@ -34,12 +34,12 @@ final class WriteDefaults
         if ($format === Format::MicroDvd && $microDvd->frameRate === null) {
             $formats = FormatOptionsList::with($formats, OptionsCopy::with($microDvd, [
                 "frameRate" => $subtitle->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
-                    ?? throw new InvalidArgumentException("MicroDVD output needs the frame rate of the video. Set MicroDvdWriteOptions::\$frameRate."),
+                    ?? throw new InvalidArgumentException(MicroDvdWriteOptions::MISSING_FRAME_RATE),
             ]));
         }
         if ($format === Format::Itt && FormatOptionsList::find($formats, IttWriteOptions::class)?->frameRate === null
             && !isset($subtitle->findFormatData(IttParser::FORMAT_DATA_KEY)["frameRate"])) {
-            throw new InvalidArgumentException("iTT output needs the frame rate of the video. Set IttWriteOptions::\$frameRate.");
+            throw new InvalidArgumentException(IttWriteOptions::MISSING_FRAME_RATE);
         }
 
         return $formats === $options->formats ? $options : OptionsCopy::with($options, ["formats" => $formats]);
