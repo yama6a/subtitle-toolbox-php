@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds stbox.phar with php-glyph-ocr bundled, from a copy of the tree, so the checkout stays clean.
+# Builds stbox.phar with php-glyph-ocr, LICENSE and THIRD_PARTY_NOTICES.md bundled, from a copy of the tree, so the checkout stays clean.
 # Usage: .build/build-phar.sh <version> [output path]. Needs php, composer and box on the PATH.
 set -euo pipefail
 
@@ -10,7 +10,7 @@ output=${2:-$root/stbox.phar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-cp -R "$root/bin" "$root/src" "$root/composer.json" "$root/composer.lock" "$root/box.json" "$work/"
+cp -R "$root/bin" "$root/src" "$root/composer.json" "$root/composer.lock" "$root/box.json" "$root/LICENSE" "$root/THIRD_PARTY_NOTICES.md" "$work/"
 cd "$work"
 
 composer install --no-dev --no-interaction --no-progress

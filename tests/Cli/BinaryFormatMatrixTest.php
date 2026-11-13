@@ -112,6 +112,7 @@ class BinaryFormatMatrixTest extends CliTestCase
             [$input, $output] = explode(">", $pair);
             $file   = "$this->dir/$input-to-$output.out";
             $stderr = preg_replace('/^.*: dropped the color "[^"]*", because WebVTT has classes for 8 colors only\.\n/m', "", $stderr);
+            $stderr = preg_replace('/^.*: the (?:character table|code page of the GSI block) has no "[^"]*", so the file holds "\?"\.\n/m', "", $stderr);
             if (self::hasPhpError($stderr)) {
                 $outcomes[$pair] = "convert PHP error: $stderr";
             } elseif ($code !== 0) {

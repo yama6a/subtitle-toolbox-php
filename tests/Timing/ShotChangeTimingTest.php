@@ -284,6 +284,46 @@ class ShotChangeTimingTest extends TestCase
     }
 
 
+    /**
+     * 0.58 s at 25 fps is frame 14.5 exactly, but 0.58 * 25 is 14.499999999999998 in binary. It rounds up as in the formatters.
+     */
+    public function testATimeOnAHalfFrameRoundsUp(): void
+    {
+        $cueTime  = TestSubtitles::fromTimes([[0.58, 5]]);
+        $shotTime = TestSubtitles::fromTimes([[0.62, 5]]);
+
+        ShotChangeTiming::apply($cueTime, new ShotChangeOptions(25));
+        ShotChangeTiming::apply($shotTime, new ShotChangeOptions(25, [0.58]));
+
+        $this->assertSame([[0.6, 5.0]], TestSubtitles::times($cueTime));
+        $this->assertSame([[0.6, 5.0]], TestSubtitles::times($shotTime));
+    }
+
+
+    public function testATimeThatRoundsUpTo100000HoursThrowsAndKeepsTheTimes(): void
+    {
+        $subtitle = TestSubtitles::fromTimes([[1, 2], [359999999.9, 359999999.99]]);
+
+        try {
+            ShotChangeTiming::apply($subtitle, new ShotChangeOptions(frameRate: 25));
+            $this->fail("No exception.");
+        } catch (InvalidArgumentException $exception) {
+            $this->assertSame("The retimed cue 2 would end at 360000000 s. Cue times must be below 100000 hours.", $exception->getMessage());
+        }
+        $this->assertSame([[1.0, 2.0], [359999999.9, 359999999.99]], TestSubtitles::times($subtitle));
+    }
+
+
+    public function testTheLastFrameBelow100000HoursStays(): void
+    {
+        $subtitle = TestSubtitles::fromTimes([[359999999.9, 359999999.95]]);
+
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(frameRate: 25));
+
+        $this->assertSame([[359999999.92, 359999999.96]], TestSubtitles::times($subtitle));
+    }
+
+
     public static function invalidOptions(): array
     {
         return [

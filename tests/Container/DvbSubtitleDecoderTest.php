@@ -9,6 +9,8 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PgsColors;
 use SubtitleToolbox\Image\PngDecoder;
+use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\SubtitleCue;
 
 class DvbSubtitleDecoderTest extends TestCase
@@ -90,6 +92,52 @@ class DvbSubtitleDecoderTest extends TestCase
         $this->expectExceptionMessage("Cannot read region 0: an image of 8000x1 pixels is larger than the limit");
 
         (new DvbSubtitleDecoder())->add(self::region(0, 8000, 1, 2, []), 0.0);
+    }
+
+
+    /**
+     * After a PTS discontinuity, the next display set can start before the shown one. The shown cue then ends at its start.
+     */
+    public function testACueNeverEndsBeforeItStarts(): void
+    {
+        $decoder = new DvbSubtitleDecoder();
+        $decoder->add(self::page(0, [[0, 0, 0]], timeOut: 30) . self::region(0, 2, 1, 2, [[1, 0, 0]]) . self::object(1, "\x11\x11\x00\x00\xF0") . self::end(), 5.0);
+        $decoder->add(self::page(1, [[0, 0, 0]]) . self::region(0, 2, 1, 2, [[1, 0, 0]]) . self::object(1, "\x11\x22\x00\x00\xF0") . self::end(), 2.0);
+
+        $this->assertSame([[5.0, 5.0], [2.0, 7.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $decoder->finish(5.0)));
+    }
+
+
+    public function testThrowsForRegionsWithMorePixelsInTotalThanTheImageLimit(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("Cannot read region 1: the regions hold more than 8294400 pixels in total.");
+
+        (new DvbSubtitleDecoder())->add(self::region(0, 3840, 2160, 3, []) . self::region(1, 1, 1, 2, []), 0.0);
+    }
+
+
+    /**
+     * A region that replaces the region with its id does not add to the total.
+     */
+    public function testLenientModeSkipsARegionPastThePixelLimitOfTheRegions(): void
+    {
+        $decoder = new DvbSubtitleDecoder(lenient: true);
+        $decoder->add(self::page(0, [[0, 0, 0], [1, 0, 0]]) . self::region(0, 3840, 2160, 3, []) . self::region(0, 3840, 2160, 3, [])
+                      . self::region(1, 2, 1, 2, [[1, 0, 0]]) . self::object(1, "\x11\x11\x00\x00\xF0") . self::end(), 0.0);
+
+        $this->assertSame([], $decoder->finish(5.0));
+        $this->assertSame([["Cannot read region 1: the regions hold more than 8294400 pixels in total.", null, 3, ParseWarningAction::Skipped]],
+                          array_map(fn (ParseWarning $w): array => [$w->message, $w->lineNumber, $w->blockIndex, $w->action], $decoder->warnings()));
+    }
+
+
+    public function testDrawsARegionThatThePageListsTwiceOnce(): void
+    {
+        $decoder = new DvbSubtitleDecoder();
+        $decoder->add(self::page(0, [[0, 0, 0], [0, 10, 0]]) . self::region(0, 2, 1, 2, [[1, 0, 0]]) . self::object(1, "\x11\x11\x00\x00\xF0") . self::end(), 0.0);
+
+        $this->assertSame([[0.0, 5.0, 0, 0, 2, 1, 720, 576, [self::RED, self::RED]]], self::images($decoder->finish(5.0)));
     }
 
 

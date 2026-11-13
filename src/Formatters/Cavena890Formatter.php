@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Cavena890;
 use SubtitleToolbox\Parsers\Cavena890Parser;
@@ -24,6 +25,11 @@ final class Cavena890Formatter extends SubtitleFormatter
     private const MAX_FRAME = 0xFFFFFF;
     private const MAX_NUMBER = 0xFFFF;
 
+    // New numbers step by 16 up to this number, then by 1 up to MAX_NUMBER, so that each cue gets its own number.
+    // That gives 4095 numbers in steps of 16 and 15 more.
+    private const LAST_STEPPED_NUMBER = 0xFFF0;
+    private const MAX_NEW_CUES        = 4110;
+
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
@@ -37,7 +43,15 @@ final class Cavena890Formatter extends SubtitleFormatter
         foreach ($subtitle->getCues() as $cue) {
             $cueBlocks = $this->blocks($cue, $variant, $options->stripTags);
             $stored    = unpack("n", $cueBlocks[0], Cavena890::NUMBER)[1];
-            $number    = min(self::MAX_NUMBER, $stored > $number ? $stored : $number + Cavena890::NUMBER_STEP);
+            $number    = match (true) {
+                $stored > $number                                             => $stored,
+                $number + Cavena890::NUMBER_STEP <= self::LAST_STEPPED_NUMBER => $number + Cavena890::NUMBER_STEP,
+                default                                                       => $number + 1,
+            };
+            if ($number > self::MAX_NUMBER) {
+                throw new UnwritableContentException("Cavena 890 allows subtitle numbers up to " . self::MAX_NUMBER . ", so a new file holds up to " .
+                                                     self::MAX_NEW_CUES . " cues.");
+            }
             foreach ($cueBlocks as $block) {
                 $blocks[] = substr_replace($block, pack("n", $number), Cavena890::NUMBER, 2);
             }

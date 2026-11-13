@@ -144,9 +144,10 @@ final class VobSubParser extends SubtitleParser
                 continue;
             }
 
-            $end = $unit["stop"] ?? min(Timecode::lastCueEnd($unit["start"], $this->options->lastCueDuration),
-                                        $units[$index + 1]["start"] ?? INF);
-            $cue = new SubtitleCue($unit["start"], $end);
+            $start = min($unit["start"], Timecode::LAST_TIME);
+            $end   = $unit["stop"] ?? min(Timecode::lastCueEnd($unit["start"], $this->options->lastCueDuration),
+                                          $units[$index + 1]["start"] ?? INF);
+            $cue   = new SubtitleCue($start, max($start, min($end, Timecode::LAST_TIME)));
             $unit["image"]->applyTo($cue);
             $parsedCues[] = $cue;
         }
@@ -310,8 +311,13 @@ final class VobSubParser extends SubtitleParser
             throw new ParsingException("The .idx timestamp line \"$line\" is not valid.");
         }
 
+        $time = $this->readTime($matches[1], $line) + $delay;
+        if (Timecode::roundToMilliseconds($time) <= -Timecode::MAX_HOURS * 3600) {
+            throw new ParsingException("The .idx time \"$line\" with delay {$delay}s is not above -" . Timecode::MAX_HOURS . " hours.");
+        }
+
         return [
-            "time"    => self::boundedTime($this->readTime($matches[1], $line) + $delay, $delay === 0.0 ? $line : "$line with delay {$delay}s", null),
+            "time"    => self::boundedTime($time, $delay === 0.0 ? $line : "$line with delay {$delay}s", null),
             "filepos" => (int) hexdec($matches[2]),
         ];
     }
