@@ -35,7 +35,8 @@
                 "alignment": null,
                 "formatData": {
                     "youtube": {
-                        "start": "4.0"
+                        "start": "4.0",
+                        "computedEnd": 6.5
                     }
                 }
             },
@@ -64,7 +65,8 @@
                 "alignment": null,
                 "formatData": {
                     "youtube": {
-                        "start": "8.0"
+                        "start": "8.0",
+                        "computedEnd": 13.0
                     }
                 }
             }

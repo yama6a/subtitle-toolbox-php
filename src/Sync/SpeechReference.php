@@ -60,7 +60,7 @@ final class SpeechReference
             $intervals[] = [$speechStart, $mediaDuration];
         }
 
-        return self::fromIntervals(array_values(array_filter($intervals, fn (array $interval): bool => $interval[1] > $interval[0])));
+        return self::fromIntervals(array_values(array_filter($intervals, fn (array $interval): bool => Timecode::totalMilliseconds($interval[1]) > Timecode::totalMilliseconds($interval[0]))));
     }
 
 

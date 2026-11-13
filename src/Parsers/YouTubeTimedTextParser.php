@@ -23,6 +23,12 @@ final class YouTubeTimedTextParser extends SubtitleParser
     protected const FORMAT_OPTIONS = TranscriptReadOptions::class;
     public const FORMAT_DATA_KEY = Format::YouTubeTimedText->value;
 
+    /**
+     * The cue format data field that holds the end in seconds which the parser gave a caption without a duration.
+     * The formatter writes no duration while the cue still ends there.
+     */
+    public const COMPUTED_END = "computedEnd";
+
     // A window anchor point runs from 0, top left, to 8, bottom right, row by row.
     private const ALIGNMENTS = [7, 8, 9, 4, 5, 6, 1, 2, 3];
 
@@ -103,6 +109,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
             $captions[] = [
                 "start"      => $start,
                 "end"        => $end,
+                "openEnd"    => !isset($event["dDurationMs"]),
                 "window"     => $event["wWinId"] ?? null,
                 "append"     => !empty($event["aAppend"]),
                 "alignment"  => self::alignment($this->entry($positions, $event["wpWinPosId"] ?? null)["apPoint"] ?? null),
@@ -230,6 +237,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
             $captions[] = [
                 "start"      => $start,
                 "end"        => $end,
+                "openEnd"    => $end === null,
                 "window"     => null,
                 "append"     => false,
                 "alignment"  => null,
@@ -276,6 +284,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
             $captions[] = [
                 "start"      => $start,
                 "end"        => $end,
+                "openEnd"    => $end === null,
                 "window"     => $attributes["w"] ?? null,
                 "append"     => ($attributes["a"] ?? "") === "1",
                 "alignment"  => self::alignment($anchors[$attributes["wp"] ?? ""] ?? null),
@@ -451,6 +460,9 @@ final class YouTubeTimedTextParser extends SubtitleParser
                                   $this->options->lastCueDuration);
         foreach ($ends as $index => $end) {
             $kept[$index]["end"] = $end;
+            if ($kept[$index]["openEnd"]) {
+                $kept[$index]["formatData"][self::COMPUTED_END] = $end;
+            }
         }
 
         return $kept;
