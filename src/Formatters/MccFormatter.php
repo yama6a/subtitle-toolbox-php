@@ -63,12 +63,12 @@ final class MccFormatter extends SubtitleFormatter
         }
         // A packet holds a header byte and a block header byte. A cc_data triplet holds 2 bytes.
         $capacity = 2 * ($tripletCount - 2) - 2;
-        $blocks   = (new Cea708Encoder())->blocks($subtitle, fn (float $seconds): int => (int) round($seconds * $numerator / $denominator), $capacity);
+        $rate     = new FrameRate($numerator / $denominator);
+        $blocks   = (new Cea708Encoder())->blocks($subtitle, $rate->framesBelowLimit(...), $capacity);
         $frames   = array_unique([...array_keys($byFrame), ...array_keys($blocks)]);
         sort($frames);
 
         $lines    = "";
-        $rate     = new FrameRate($numerator / $denominator);
         $sequence = 0;
         foreach ($frames as $frame) {
             $triplets = [];

@@ -390,7 +390,7 @@ final class SccFormatter extends SubtitleFormatter
 
     private function secondsToFrame(float $seconds): int
     {
-        return (new FrameRate(self::FRAMES_PER_SECOND))->secondsToFrames(max(0.0, $seconds));
+        return (new FrameRate(self::FRAMES_PER_SECOND))->framesBelowLimit($seconds);
     }
 
 

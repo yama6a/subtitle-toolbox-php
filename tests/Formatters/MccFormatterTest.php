@@ -144,6 +144,16 @@ class MccFormatterTest extends TestCase
     }
 
 
+    public function testATimeCodeOf100000HoursReadsBack(): void
+    {
+        $output = (new Subtitle())->addCue(new SubtitleCue(359999990, 359999995, "last"))->toString(Format::Mcc);
+
+        $this->assertStringContainsString("\n100000:05:49:20\t", $output);
+        $cue = Subtitle::fromString($output)->getCues()[0];
+        $this->assertSame([359999990.0, 359999995.0, ["last"]], [round($cue->getStart()), round($cue->getEnd()), $cue->getLines()]);
+    }
+
+
     public function testWritesOnlyTheHeaderForASubtitleWithoutCues(): void
     {
         $this->assertStringEndsWith("Time Code Rate=30DF\n\n", (new Subtitle())->toString(Format::Mcc));
