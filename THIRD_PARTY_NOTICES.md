@@ -9,6 +9,8 @@ Rules for adding a port are in [CONTRIBUTING.md](CONTRIBUTING.md).
 - Project: <https://github.com/mantas-done/subtitles>
 - Licence: MIT
 - Checked at: `959d1705b1ed12cbb9ddba517f8bcb814e1919a8`, and `vtt/real/mantas_styles.vtt` from `e41f318224dc9c38339c2bfcb0199e5bb788abce` with the same licence text
+- Code adapted from it:
+  - `SpruceStlParser::frameRate()` in `src/Parsers/SpruceStlParser.php`, from `src/Code/Converters/StlConverter.php`
 - Files copied from it:
   - `tests/files/ttml/real/mantas_dfxp_br.dfxp`
   - `tests/files/ttml/real/mantas_duplicated_ids.ttml`
@@ -19,6 +21,8 @@ Rules for adding a port are in [CONTRIBUTING.md](CONTRIBUTING.md).
   - `tests/files/vtt/real/mantas_styles.vtt`
 - Files written for this repository in the shape of its fixtures:
   - `tests/files/csv/real/mantas_done_shape.csv`
+  - `tests/files/csv/real/headerless_frame_times.csv`
+  - `tests/files/lrc/hours_with_text_on_next_line.lrc`
   - `tests/files/lrc/real/mantas-done-lrc.lrc`
   - `tests/files/microdvd/real/sub_microdvd.sub`
   - `tests/files/microdvd/real/sub_microdvd_with_styles.sub`
@@ -68,6 +72,7 @@ SOFTWARE.
 - Files written for this repository in the shape of its fixtures:
   - `tests/files/lrc/real/subsrt-sample.lrc`
   - `tests/files/sami/real/subsrt_sample.smi`
+  - `tests/files/sbv/real/subsrt_shape.sbv`
 
 ```text
 MIT License
@@ -718,8 +723,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 - Project: <https://github.com/SubtitleEdit/subtitleedit>
 - Licence: MIT
-- Checked at: `58fad713d9c2b322784bc2fa52148e078dbc8759`. Older commits are GPL-3.0, and nothing comes from them.
+- Checked at: the `LICENSE` file is MIT at every commit that the code cites, `5b9ee8baf08c472c7a74fbc337446b656dedabb4`, `e1b854665b40bf6e04271c2ec64084947060e632`, `58fad713d9c2b322784bc2fa52148e078dbc8759` and `a0dfbfe65f0517ef85b1e69f1606bca93f68ac3c`. Subtitle Edit replaced its GPL-3.0 `LICENSE.txt` with this MIT `LICENSE` in commit `771236c5` of 2026-02-28. Nothing comes from older commits.
 - Code adapted from it:
+  - `src/Fixing/OcrReplaceList.php` and `src/Fixing/OcrReplaceListFixer.php`: the OCR replace list sections and rules, from `src/libuilogic/Ocr/FixEngine/OcrFixReplaceList2.cs` at `e1b854665b40bf6e04271c2ec64084947060e632`
+  - `src/HearingImpaired/HearingImpairedRemover.php`: the hearing-impaired removal rules, from `src/libse/Forms/RemoveTextForHI.cs` at `5b9ee8baf08c472c7a74fbc337446b656dedabb4`
   - `src/Parsers/Mcc.php`: the MCC alias letters, the MCC header text and the packet layout, from `src/libse/SubtitleFormats/MacCaption10.cs` and `src/libse/Cea708/Smpte291M.cs`
   - `src/Encoding/Cea708.php`: the G2 character table, from `src/libse/Cea708/Cea708.cs`
   - `src/Parsers/Pac.php`, `src/Parsers/PacCodePage.php`, `src/Parsers/PacCodeTables.php`, `src/Parsers/PacCodePageDetector.php`, `src/Parsers/PacParser.php` and `src/Formatters/PacFormatter.php`: the PAC record layout, control codes, character tables and the script checks of the code page detection, from `src/libse/SubtitleFormats/Pac.cs` at `a0dfbfe65f0517ef85b1e69f1606bca93f68ac3c`, which has the same MIT licence

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Fixing;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class OcrReplaceListFixerTest extends TestCase
@@ -33,5 +34,40 @@ class OcrReplaceListFixerTest extends TestCase
         $this->assertSame(["On the deck'", "On the deck."], OcrReplaceListFixer::replaceList(["On the deck'", "On the deck'"], $list, false));
         $this->assertSame(["On the deck'"], OcrReplaceListFixer::replaceList(["On the deck'"], $list, true));
         $this->assertSame(["So cold."], OcrReplaceListFixer::replaceList(["So c0ld."], $list, true));
+    }
+
+
+    public function testAnEntryWithAnEmptySearchTextDoesNothing(): void
+    {
+        $list = new OcrReplaceList(endLines: ["" => "!"], beginLines: ["" => ">> "]);
+
+        $this->assertSame(["Hello. Hi"], OcrReplaceListFixer::replaceList(["Hello. Hi"], $list, false));
+    }
+
+
+    /**
+     * @return array<string, array{string, string, string, string}>
+     */
+    public static function dotNetSubstitutions(): array
+    {
+        return [
+            "name without a group is literal" => ["x", '[${name}]', "axc", 'a[${name}]c'],
+            "name of a group"                 => ["(?<n>q)(z)?", '${n}|$2', "qz", "q|z"],
+            "text before the match"           => ["b", '[$`]', "abc", "a[a]c"],
+            "text after the match"            => ["b", "[$']", "abc", "a[c]c"],
+            "whole subject"                   => ["b", '[$_]', "abc", "a[abc]c"],
+            "last group"                      => ["(b)(x)?", '[$+]', "abc", "a[b]c"],
+            "escaped dollar and backslash"    => ["b", '[$$][\\]', "abc", 'a[$][\\]c'],
+        ];
+    }
+
+
+    #[DataProvider("dotNetSubstitutions")]
+    public function testRegularExpressionsRunTheDotNetSubstitutions(string $find, string $replaceWith, string $text, string $expected): void
+    {
+        $xml  = "<ReplaceList><RegularExpressions><RegEx find=\"" . htmlspecialchars($find) . "\" replaceWith=\"" . htmlspecialchars($replaceWith) . "\" /></RegularExpressions></ReplaceList>";
+        $list = OcrReplaceList::fromSubtitleEditXml($xml);
+
+        $this->assertSame([$expected], OcrReplaceListFixer::replaceList([$text], $list, false));
     }
 }

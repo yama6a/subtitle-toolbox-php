@@ -80,6 +80,43 @@ class DcpFormatterTest extends TestCase
     }
 
 
+    public function testAStoredSubtitleWithoutFadeTimesGetsTheDefaults(): void
+    {
+        $subtitle = Subtitle::fromString(
+            "<DCSubtitle Version=\"1.0\"><Subtitle TimeIn=\"00:00:01:000\" TimeOut=\"00:00:02:000\">" .
+            "<Text VAlign=\"bottom\" VPosition=\"8\">x</Text></Subtitle></DCSubtitle>",
+            Format::Dcp
+        );
+
+        $this->assertStringContainsString(
+            "<Subtitle TimeIn=\"00:00:01:000\" TimeOut=\"00:00:02:000\" FadeUpTime=\"20\" FadeDownTime=\"20\" SpotNumber=\"1\">",
+            $subtitle->toString(Format::Dcp)
+        );
+    }
+
+
+    public function testATimeJustBelowTheLimitReadsBack(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(359999999.99, 359999999.999, "x"));
+        $output   = $subtitle->toString(Format::Dcp);
+
+        $this->assertStringContainsString("TimeOut=\"99999:59:59:23\"", $output);
+        $this->assertCount(1, Subtitle::fromString($output, Format::Dcp)->getCues());
+    }
+
+
+    public function testWhiteTextInsideAColoredFontKeepsItsColor(): void
+    {
+        $subtitle = Subtitle::fromString(
+            "<DCSubtitle Version=\"1.0\"><Font Color=\"FFEBEBEB\"><Subtitle TimeIn=\"00:00:01:000\" TimeOut=\"00:00:02:000\">" .
+            "<Text VAlign=\"bottom\" VPosition=\"8\"><Font Color=\"FFFFFFFF\">white</Font></Text></Subtitle></Font></DCSubtitle>",
+            Format::Dcp
+        );
+
+        $this->assertStringContainsString("<Font Color=\"FFFFFFFF\">white</Font>", $subtitle->toString(Format::Dcp));
+    }
+
+
     public function testWritesStylesAgainstTheFontAroundTheSubtitles(): void
     {
         $subtitle = Subtitle::fromString(

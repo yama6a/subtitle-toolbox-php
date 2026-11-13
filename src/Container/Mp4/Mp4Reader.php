@@ -14,6 +14,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatOptionsList;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Mcc;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\ReadOptions;
@@ -84,6 +85,13 @@ final class Mp4Reader implements ContainerReader
 
     // An edit list entry with this media time is an empty edit, a span without media before the track starts.
     private const EMPTY_EDIT = -1;
+
+    // A name box of ISO/IEC 14496-12 may start with 4 bytes of version and flags. A QuickTime text list has entries of a
+    // 16-bit length, a 16-bit language code and the text.
+    private const NAME_VERSION_AND_FLAGS = "\0\0\0\0";
+    private const TEXT_ENTRY_HEADER_SIZE = 4;
+
+    private const FRAGMENTED = "The MP4 file is fragmented. The reader reads only samples in the moov box.";
 
     /** @var resource */
     private $stream;
@@ -166,6 +174,9 @@ final class Mp4Reader implements ContainerReader
         $data  = $this->trackData[$trackNumber];
         if ($data["encrypted"]) {
             throw new ParsingException("Track $trackNumber has the codec $track->codecId and is encrypted.");
+        }
+        if ($track->codecId === "") {
+            throw new ParsingException("Track $trackNumber has no sample entry.");
         }
         if ($track->format === null) {
             throw new ParsingException("Track $trackNumber has the codec $track->codecId. The reader extracts only " .
@@ -324,8 +335,15 @@ final class Mp4Reader implements ContainerReader
         }
 
         foreach ($this->children(0, $this->fileSize) as $box) {
+            if ($box["type"] === "moof") {
+                throw new ParsingException(self::FRAGMENTED);
+            }
             if ($box["type"] === "moov") {
-                $mvhd = $this->childMap($box)["mvhd"] ?? null;
+                $boxes = $this->childMap($box);
+                if (isset($boxes["mvex"])) {
+                    throw new ParsingException(self::FRAGMENTED);
+                }
+                $mvhd = $boxes["mvhd"] ?? null;
                 if ($mvhd !== null) {
                     $this->movieTimescale = unpack("N", $this->read($mvhd, self::MVHD_TIMESCALE_OFFSET[$this->boxVersion($mvhd)], 4))[1];
                 }
@@ -365,7 +383,7 @@ final class Mp4Reader implements ContainerReader
 
         $entry = isset($stbl["stsd"]) ? $this->sampleEntry($stbl["stsd"]) : ["codec" => "", "encrypted" => false, "forced" => false];
         $udta  = isset($boxes["udta"]) ? $this->childMap($boxes["udta"]) : [];
-        $name  = isset($udta["name"]) ? $this->readString($udta["name"], 0) : "";
+        $name  = isset($udta["name"]) ? $this->readName($udta["name"]) : "";
         $elng  = isset($mdia["elng"]) ? $this->readString($mdia["elng"], 4) : "";
 
         $this->tracks[$id]    = new SubtitleTrack(
@@ -494,7 +512,50 @@ final class Mp4Reader implements ContainerReader
      */
     private function readString(array $box, int $at): string
     {
-        $string = explode("\0", $this->read($box, $at, max(0, $box["end"] - $box["offset"] - $at)))[0];
+        return self::text($this->read($box, $at, max(0, $box["end"] - $box["offset"] - $at)));
+    }
+
+
+    /**
+     * Reads the track name from plain text, from text after version and flags, or from the first entry of a QuickTime text list.
+     *
+     * @param array{type: string, offset: int, end: int} $name
+     */
+    private function readName(array $name): string
+    {
+        $data = $this->read($name, 0, $name["end"] - $name["offset"]);
+        if (str_starts_with($data, self::NAME_VERSION_AND_FLAGS)) {
+            return self::text(substr($data, strlen(self::NAME_VERSION_AND_FLAGS)));
+        }
+        if (self::isTextList($data)) {
+            return self::text(substr($data, self::TEXT_ENTRY_HEADER_SIZE, unpack("n", $data)[1]));
+        }
+
+        return self::text($data);
+    }
+
+
+    /**
+     * Tells whether the entries of a QuickTime text list fill $data exactly. Plain text such as "English" starts with a
+     * length that runs past the end.
+     */
+    private static function isTextList(string $data): bool
+    {
+        $at = 0;
+        while ($at + self::TEXT_ENTRY_HEADER_SIZE <= strlen($data)) {
+            $at += self::TEXT_ENTRY_HEADER_SIZE + unpack("n", $data, $at)[1];
+        }
+
+        return $data !== "" && $at === strlen($data);
+    }
+
+
+    /**
+     * Returns $bytes up to the first zero byte. Invalid UTF-8 gives "".
+     */
+    private static function text(string $bytes): string
+    {
+        $string = explode("\0", $bytes)[0];
 
         return StringHelpers::isValidUtf8($string) ? $string : "";
     }
@@ -682,13 +743,14 @@ final class Mp4Reader implements ContainerReader
 
 
     /**
-     * Wraps each style run of $text in <b>, <i> and <u> tags. The start and end count characters, and the end is exclusive.
+     * Escapes $text and wraps each style run in <b>, <i> and <u> tags. The start and end count characters of the plain
+     * text, and the end is exclusive, so the reader escapes each character after the split.
      *
      * @param list<array{int, int, int}> $styles
      */
     private static function addStyleTags(string $text, array $styles): string
     {
-        $characters = preg_split("//u", $text, -1, PREG_SPLIT_NO_EMPTY);
+        $characters = array_map(Markup::escapeText(...), preg_split("//u", $text, -1, PREG_SPLIT_NO_EMPTY));
         $covered    = 0;
         usort($styles, fn (array $a, array $b): int => $a[0] <=> $b[0]);
         foreach ($styles as [$start, $end, $flags]) {
@@ -771,11 +833,11 @@ final class Mp4Reader implements ContainerReader
 
 
     /**
-     * Returns a printable type as it is, and other bytes as hex.
+     * Returns a printable type as it is, and other bytes as hex. A track without a sample entry has the empty type.
      */
     private static function codecName(string $type): string
     {
-        return preg_match('/^[\x20-\x7E]{4}$/', $type) === 1 ? $type : "0x" . bin2hex($type);
+        return $type === "" || preg_match('/^[\x20-\x7E]{4}$/', $type) === 1 ? $type : "0x" . bin2hex($type);
     }
 
 

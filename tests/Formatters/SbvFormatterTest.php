@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\ReadOptions;
 
 class SbvFormatterTest extends TestCase
 {
@@ -83,5 +84,20 @@ class SbvFormatterTest extends TestCase
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "Text"));
 
         $this->assertStringStartsWith("0:00:01.000", $subtitle->toString(Format::Sbv));
+    }
+
+
+    public function testATextLineInTheShapeOfATimingLineReadsBackAsText(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 2, ["0:00:03.500,0:00:03.800", "0:00:03.5, then"]))
+            ->addCue(new SubtitleCue(5, 6, ["c"]));
+        $output = $subtitle->toString(Format::Sbv);
+
+        foreach ([new ReadOptions(), new ReadOptions(lenient: true)] as $options) {
+            $cues = Subtitle::fromString($output, Format::Sbv, $options)->getCues();
+            $this->assertCount(2, $cues);
+            $this->assertSame(["\u{2060}0:00:03.500,0:00:03.800", "\u{2060}0:00:03.5, then"], $cues[0]->getLines());
+        }
     }
 }

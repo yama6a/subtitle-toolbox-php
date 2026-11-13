@@ -7,8 +7,10 @@ namespace SubtitleToolbox\Formatters;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -90,6 +92,59 @@ class PacFormatterTest extends TestCase
         $output = (new Subtitle())->addCue(new SubtitleCue(700 * 3600, 700 * 3600 + 1, ["Late"]))->toString(Format::Pac);
 
         $this->assertSame([654 * 100, 654 * 100], array_values(unpack("v2", substr($output, 24, 2) . substr($output, 28, 2))));
+    }
+
+
+    public function testUnknownStoredCodePageThrowsALibraryException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The field formatData.pac.codePage must be one of");
+
+        (new Subtitle())->addCue(new SubtitleCue(1.0, 2.0, "Hi"))->setFormatData("pac", ["codePage" => "klingon"]);
+    }
+
+
+    public static function storedHeaders(): array
+    {
+        return [
+            "too short"        => ["0102"],
+            "empty"            => [""],
+            "other first byte" => ["02" . str_repeat("00", 19)],
+        ];
+    }
+
+
+    #[DataProvider("storedHeaders")]
+    public function testStoredHeaderWithoutThe20HeaderBytesCountsAsMissing(string $header): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.0, 2.0, "Hi"))->setFormatData("pac", ["header" => $header]);
+
+        $output = $subtitle->toString(Format::Pac);
+
+        $this->assertSame("01" . str_repeat("00", 19), bin2hex(substr($output, 0, 20)));
+        $this->assertSame("Hi", Subtitle::fromString($output, Format::Pac)->getCues()[0]->getText());
+    }
+
+
+    public static function codesWithFeh(): array
+    {
+        return [
+            "chinese-traditional" => ["chinese-traditional", "CP950", "全部 二月", "?部 二月"],
+            "chinese-simplified"  => ["chinese-simplified", "CP936", "二月", "?月"],
+            "korean"              => ["korean", "CP949", "딸기", "?기"],
+        ];
+    }
+
+
+    #[DataProvider("codesWithFeh")]
+    public function testDoubleByteCodeWithFehWritesAsAMissingCharacter(string $codePage, string $encoding, string $text, string $readBack): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.0, 2.0, [$text]))->setFormatData("pac", ["codePage" => $codePage]);
+
+        $output = $subtitle->toString(Format::Pac);
+
+        $this->assertStringContainsString("\0?", $output);
+        $this->assertSame([$readBack], Subtitle::fromString($output, Format::Pac, new ReadOptions($encoding))->getCues()[0]->getLines());
     }
 
 

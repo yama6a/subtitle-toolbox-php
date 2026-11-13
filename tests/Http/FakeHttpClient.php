@@ -12,13 +12,13 @@ final class FakeHttpClient implements HttpClient
     /** @var list<array{url: string, headers: list<string>, body: array}> */
     public array $requests = [];
 
-    /** @var list<array{0: int, 1: string}> */
+    /** @var list<array{0: int, 1: string, 2?: list<string>}> */
     private array $responses;
 
 
     /**
-     * @param list<array{0: int, 1: string}>                          $responses
-     * @param (\Closure(array): array{0: int, 1: string})|null $respond   builds a response from the decoded request body
+     * @param list<array{0: int, 1: string, 2?: list<string>}>                          $responses
+     * @param (\Closure(array): array{0: int, 1: string, 2?: list<string>})|null $respond   builds a response from the decoded request body
      */
     public function __construct(array $responses = [], private readonly ?\Closure $respond = null)
     {

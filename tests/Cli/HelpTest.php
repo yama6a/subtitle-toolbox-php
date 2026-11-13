@@ -325,10 +325,11 @@ class HelpTest extends TestCase
     public function testHelpDescribesTheDiffExitCodeAndJson(): void
     {
         $this->assertStringContainsString("\nExit codes:\n" .
-                                          "  0  Success.\n" .
-                                          "  1  A file broke a validation rule, or diff found a difference.\n" .
-                                          "  2  Invalid arguments.\n" .
-                                          "  3  A file could not be read or written.\n\n" .
+                                          "  0    Success.\n" .
+                                          "  1    A file broke a validation rule, or diff found a difference.\n" .
+                                          "  2    Invalid arguments.\n" .
+                                          "  3    A file could not be read or written.\n" .
+                                          "  130  SIGINT or SIGTERM stopped the run.\n\n" .
                                           "Options:\n" .
                                           "  -h, --help     Show this help.\n" .
                                           "  -V, --version  Print the version.\n",

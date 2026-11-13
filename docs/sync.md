@@ -9,7 +9,7 @@ A German SRT for the 25 fps release is late and drifts against a 23.976 fps vide
 use SubtitleToolbox\Sync\ReferenceSync;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 
-$result = ReferenceSync::apply($german, new ReferenceSyncOptions(reference: $english));   // calls scale() and then shift() on $german
+$result = ReferenceSync::apply($german, new ReferenceSyncOptions(reference: $english));   // scales and then shifts the times of $german
 $result->scale;                                                                           // 1.04271 (25 / 23.976)
 $result->offset;                                                                          // -2.3, added after the scale
 $result->score;                                                                           // 0.89
@@ -23,6 +23,8 @@ ReferenceSync::apply($german, new ReferenceSyncOptions(
 ```
 
 - **In place**: `apply()` changes the subtitle that you pass. Pass `clone $german` to keep the original and only read the result.
+- **Rounding**: each new time is the old time times the scale plus the offset, rounded once to whole milliseconds. The word timestamps move with the cues, as in [`scale()`](editing.md#retiming).
+- **Time limit**: when the sync would move a cue end to 100000 hours or more, `apply()` throws `InvalidArgumentException` and changes no cue.
 - **Matching**: only the cue times count, not the text. The idea comes from [alass](https://github.com/kaegi/alass).
 - **Scale factors**: 1, 24/23.976, 25/24 and 25/23.976 and their inverses. Other factors are not found. One scale applies to the whole file.
 - **Offsets**: the search finds offsets between `minOffset` and `maxOffset`, to 0.01 s.
@@ -74,6 +76,8 @@ ReferenceSync::apply($german, new ReferenceSyncOptions(reference: $transcript));
 ```
 
 - **Log**: the reader takes the `silence_start` and `silence_end` lines of the FFmpeg `silencedetect` filter. Speech fills the time between the silences from 0 to `mediaDuration`. A silence without an end runs to `mediaDuration`.
+- **Times**: a time can have an exponent, such as `1.2e-05`, because FFmpeg writes times with 6 significant digits. A time below the time before it counts as that time, so the speech cues never overlap. FFmpeg writes such a time only in a damaged or edited log.
+- **Time limit**: a `mediaDuration` of 100000 hours or more throws `InvalidArgumentException`. So does an interval end of `fromIntervals()`.
 - **Mono**: `silencedetect=mono=1` writes one line per channel. The reader throws `ParsingException` for such a log, and for a `silence_end` without a `silence_start` before it.
 - **Score**: speech starts later and ends earlier than its cue. So the score stays lower than with a reference subtitle. The German example scores 0.78 against the speech and 0.89 against the English subtitle.
 - **Whisper**: a [Whisper JSON](transcripts.md#whisper-json) transcript has cue times from the audio. Its language does not matter, because only the times count.

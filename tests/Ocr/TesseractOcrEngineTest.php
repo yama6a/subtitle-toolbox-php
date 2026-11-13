@@ -237,6 +237,19 @@ class TesseractOcrEngineTest extends TestCase
     }
 
 
+    public function testAProgramThatCannotStartIsNotReportedAsAnExitCode(): void
+    {
+        $run = new \ReflectionMethod(TesseractOcrEngine::class, "run");
+
+        [$code, $output, $error] = $run->invoke(null, [__DIR__ . "/no-such-program"]);
+
+        $this->assertNull($code);
+        $this->assertSame("", $output);
+        $this->assertStringContainsString("No such file or directory", $error);
+        $this->assertStringNotContainsString("proc_open()", $error);
+    }
+
+
     // Other test runs on the same machine share the temp directory, so the test checks only its own image file.
     public function testDeletesTheTemporaryImage(): void
     {

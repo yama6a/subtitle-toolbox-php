@@ -8,6 +8,8 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\IndexedImages;
 use SubtitleToolbox\Image\PgsColors;
+use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\SubtitleCue;
 
 /**
@@ -78,12 +80,19 @@ final class DvbSubtitleDecoder
     /** @var list<array{float, float, CueImage}> */
     private array $cues = [];
 
+    // The index of the segment that the decoder reads, counting only the segments of its pages, for the block index of a warning.
+    private int $segment = 0;
+
+    /** @var list<ParseWarning> */
+    private array $warnings = [];
+
 
     /**
      * @param int|null $compositionPage the page of the subtitles, or null to read the segments of every page
      * @param int|null $ancillaryPage   the page with the CLUTs and objects that several subtitle services share
+     * @param bool     $lenient         skip a region that takes the regions above the pixel limit of an image, with a warning
      */
-    public function __construct(?int $compositionPage = null, ?int $ancillaryPage = null)
+    public function __construct(?int $compositionPage = null, ?int $ancillaryPage = null, private readonly bool $lenient = false)
     {
         $this->pageIds = $compositionPage === null ? null : [$compositionPage, $ancillaryPage ?? $compositionPage];
     }
@@ -113,13 +122,15 @@ final class DvbSubtitleDecoder
                 self::SEGMENT_END     => $this->show(),
                 default               => null,
             };
+            $this->segment++;
         }
         $this->show();
     }
 
 
     /**
-     * Returns the cues with times from $zero seconds. A last cue without a page time-out lasts $lastCueDuration.
+     * Returns the cues with times from $zero seconds. A last cue without a page time-out lasts $lastCueDuration. A cue never ends
+     * before it starts, also when the PTS goes back, for example after a PTS discontinuity.
      *
      * @return list<SubtitleCue>
      */
@@ -129,7 +140,20 @@ final class DvbSubtitleDecoder
             $this->endCue(is_finite($this->shown["expires"]) ? $this->shown["expires"] : $this->shown["start"] + $lastCueDuration);
         }
 
-        return array_map(fn (array $cue): SubtitleCue => IndexedImages::cue(max(0, $cue[0] - $zero), max(0, $cue[1] - $zero), $cue[2]), $this->cues);
+        return array_map(function (array $cue) use ($zero): SubtitleCue {
+            $start = max(0, $cue[0] - $zero);
+
+            return IndexedImages::cue($start, max($start, $cue[1] - $zero), $cue[2]);
+        }, $this->cues);
+    }
+
+
+    /**
+     * @return list<ParseWarning> the warnings of lenient mode
+     */
+    public function warnings(): array
+    {
+        return $this->warnings;
     }
 
 
@@ -172,9 +196,16 @@ final class DvbSubtitleDecoder
         if ($depth === null || $region["width"] === 0 || $region["height"] === 0) {
             return;
         }
+        // The regions together hold at most the pixels of one image, so many large regions cannot use gigabytes of memory.
         $tooLarge = CueImage::sizeLimitError($region["width"], $region["height"]);
-        if ($tooLarge !== null) {
-            throw new ParsingException("Cannot read region {$region["id"]}: $tooLarge");
+        $total    = $tooLarge === null && $this->regionPixels($region["id"]) + $region["width"] * $region["height"] > CueImage::MAX_PIXELS
+            ? "the regions hold more than " . CueImage::MAX_PIXELS . " pixels in total." : null;
+        if ($tooLarge !== null || ($total !== null && !$this->lenient)) {
+            throw new ParsingException("Cannot read region {$region["id"]}: " . ($tooLarge ?? $total));
+        }
+        if ($total !== null) {
+            $this->warnings[] = new ParseWarning("Cannot read region {$region["id"]}: $total", null, $this->segment, [], ParseWarningAction::Skipped);
+            return;
         }
 
         $old        = $this->regions[$region["id"]] ?? null;
@@ -193,6 +224,20 @@ final class DvbSubtitleDecoder
 
         $this->regions[$region["id"]] = ["width" => $region["width"], "height" => $region["height"], "depth" => $depth, "clut" => $region["clut"],
                                          "rows" => $rows, "objects" => $objects];
+    }
+
+
+    /**
+     * Returns the pixels of all regions but the one with the id $id, which a new region with that id replaces.
+     */
+    private function regionPixels(int $id): int
+    {
+        $pixels = 0;
+        foreach ($this->regions as $regionId => $region) {
+            $pixels += $regionId === $id ? 0 : $region["width"] * $region["height"];
+        }
+
+        return $pixels;
     }
 
 
@@ -304,11 +349,13 @@ final class DvbSubtitleDecoder
     {
         [$width, $height, $left, $top] = $this->display;
         $parts = [];
+        $drawn = [];
         foreach ($this->pageRegions as [$id, $x, $y]) {
             $region = $this->regions[$id] ?? null;
-            if ($region === null) {
+            if ($region === null || isset($drawn[$id])) {
                 continue;
             }
+            $drawn[$id] = true;
 
             $colors  = array_replace(array_fill(0, 256, 0), ($this->cluts[$region["clut"]] ?? self::defaultClut())[$region["depth"]]);
             $indexes = implode("", $region["rows"]);

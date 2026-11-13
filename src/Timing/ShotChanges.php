@@ -14,12 +14,24 @@ final class ShotChanges
      * Returns the sorted pts_time values of an ffmpeg log from the select and showinfo filters, in seconds.
      *
      * @return list<float>
+     * @throws ParsingException when a time is not below Timecode::MAX_HOURS.
      */
     public static function fromFfmpegLog(string $log): array
     {
-        preg_match_all('/\bpts_time:\s*(\d+(?:\.\d+)?)/', $log, $matches);
+        $log = StringHelpers::normalizeEOLs($log);
+        preg_match_all('/\bpts_time:\s*(\d+(?:\.\d+)?)/', $log, $matches, PREG_OFFSET_CAPTURE);
 
-        return self::sorted(array_map('floatval', $matches[1]));
+        $times = [];
+        foreach ($matches[1] as [$text, $offset]) {
+            $time = (float)$text;
+            if (!Timecode::isBelowLimit($time)) {
+                throw new ParsingException("The shot change time \"$text\" is not below " . Timecode::MAX_HOURS . " hours.",
+                                           substr_count($log, "\n", 0, $offset) + 1);
+            }
+            $times[] = $time;
+        }
+
+        return self::sorted($times);
     }
 
 
@@ -27,6 +39,7 @@ final class ShotChanges
      * Returns the sorted times of a text with one time per line, in seconds or as hh:mm:ss.mmm.
      *
      * @return list<float>
+     * @throws ParsingException when a line holds no time, or a time that is not below Timecode::MAX_HOURS.
      */
     public static function fromText(string $text): array
     {
@@ -37,10 +50,14 @@ final class ShotChanges
                 continue;
             }
 
+            $time = null;
             if (preg_match('/^\d+(?:\.\d+)?$/', $line)) {
-                $times[] = (float)$line;
+                $time = (float)$line;
             } elseif (preg_match('/^(\d+):([0-5]\d):([0-5]\d)(?:\.(\d+))?$/', $line, $parts)) {
-                $times[] = Timecode::toSeconds((int) $parts[1], (int) $parts[2], (int) $parts[3], $parts[4] ?? "");
+                $time = Timecode::toSeconds((int) $parts[1], (int) $parts[2], (int) $parts[3], $parts[4] ?? "");
+            }
+            if ($time !== null && Timecode::isBelowLimit($time)) {
+                $times[] = $time;
             } else {
                 throw new ParsingException("The shot change time \"$line\" is not valid. Use seconds or hh:mm:ss.mmm.",
                                            $index + 1);

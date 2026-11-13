@@ -65,8 +65,10 @@ class SubtitleDiffTest extends TestCase
             [CueDifferenceKind::Added, null, 12],
         ], $this->summarize($differences));
 
-        $this->assertSame($original->getCues()[3], $differences[1]->oldCue);
-        $this->assertSame($edited->getCues()[3], $differences[1]->newCue);
+        $this->assertNotSame($original->getCues()[3], $differences[1]->oldCue);
+        $this->assertEquals($original->getCues()[3], $differences[1]->oldCue);
+        $this->assertNotSame($edited->getCues()[3], $differences[1]->newCue);
+        $this->assertEquals($edited->getCues()[3], $differences[1]->newCue);
         $this->assertNull($differences[3]->oldCue);
         $this->assertSame("Cards and coins are fine.", $differences[3]->newCue->getText());
         $this->assertSame("Thank you.", $differences[4]->oldCue->getText());
@@ -303,5 +305,34 @@ class SubtitleDiffTest extends TestCase
         $changes = array_values(array_filter(SubtitleDiff::compare($old, $new), $ferry));
 
         $this->assertSame([CueDifferenceKind::Removed, CueDifferenceKind::Added], array_map(fn (CueDifference $d): CueDifferenceKind => $d->kind, $changes));
+    }
+
+
+    public function testDifferencesHoldCopiesOfTheCues(): void
+    {
+        $old = (new Subtitle())->addCue(new SubtitleCue(1, 2, "Hello"));
+        $new = (new Subtitle())->addCue(new SubtitleCue(1, 2, "Hallo"));
+
+        $differences = SubtitleDiff::compare($old, $new);
+        $differences[0]->oldCue->setStart(50);
+        $differences[0]->newCue->setStart(60);
+
+        $this->assertSame(1.0, $old->getCues()[0]->getStart());
+        $this->assertSame(1.0, $new->getCues()[0]->getStart());
+    }
+
+
+    public function testAddedAndRemovedDifferencesHoldCopiesOfTheCues(): void
+    {
+        $old = (new Subtitle())->addCue(new SubtitleCue(1, 2, "Hello"));
+        $new = (new Subtitle())->addCue(new SubtitleCue(10, 11, "World"));
+
+        foreach (SubtitleDiff::compare($old, $new) as $difference) {
+            $cue = $difference->oldCue ?? $difference->newCue;
+            $cue->setStart(50);
+        }
+
+        $this->assertSame(1.0, $old->getCues()[0]->getStart());
+        $this->assertSame(10.0, $new->getCues()[0]->getStart());
     }
 }
