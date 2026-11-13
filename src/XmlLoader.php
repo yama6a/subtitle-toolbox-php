@@ -28,7 +28,8 @@ final class XmlLoader
         $previous = libxml_use_internal_errors(true);
         try {
             // LIBXML_NONET blocks network access. Without LIBXML_NOENT and LIBXML_DTDLOAD, libxml loads no external entity.
-            $loaded     = $xml !== "" && $document->loadXML($xml, LIBXML_NONET);
+            // Without LIBXML_BIGLINES, libxml reports line 65535 for every element after that line.
+            $loaded     = $xml !== "" && $document->loadXML($xml, LIBXML_NONET | LIBXML_BIGLINES);
             $error      = libxml_get_last_error() ?: null;
             $firstError = libxml_get_errors()[0] ?? null;
         } finally {
@@ -70,14 +71,15 @@ final class XmlLoader
 
 
     /**
-     * Subtitle::fromString() converts UTF-16 and UTF-32 input to UTF-8 but keeps the XML declaration.
-     * Some tools also declare UTF-16 for UTF-8 files. libxml rejects both.
+     * Subtitle::fromString() converts the input to UTF-8 but keeps the XML declaration, such as encoding="ISO-8859-1".
+     * libxml would then decode the UTF-8 bytes a second time, or reject them for a UTF-16 declaration.
+     * Some tools also declare UTF-16 for UTF-8 files.
      * Raw UTF-16 bytes hold zero bytes, so the pattern leaves them alone.
      */
     private static function declareUtf8(string $xml): string
     {
         return preg_replace(
-            '/\A(\xEF\xBB\xBF)?(<\?xml\s[^>]*?\bencoding\s*=\s*)(["\'])(?:utf-?(?:16|32)|ucs-?[24])(?:[bl]e)?\3/i',
+            '/\A(\xEF\xBB\xBF)?(<\?xml\s[^>]*?\bencoding\s*=\s*)(["\'])[^"\']*\3/i',
             '${1}${2}${3}UTF-8${3}',
             $xml,
             1
