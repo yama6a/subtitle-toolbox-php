@@ -268,7 +268,7 @@ final class MatroskaReader implements ContainerReader
             $track->codecId === self::CODEC_DVBSUB => $this->dvbSubtitle($codecPrivate, $blocks, $options),
             $format === Format::Pgs                => (new PgsParser())->parseTrack(...TrackFileBuilder::pgsStream($blocks, $this->timestampScale), options: $options),
             $format === Format::WebVtt             => (new WebVttParser())->parse(TrackFileBuilder::webVttFile($track, $codecPrivate, $blocks), $options),
-            $format === Format::SubRip             => (new SubRipParser())->parse(TrackFileBuilder::subRipFile($blocks), $options),
+            $format === Format::SubRip             => $this->subRipSubtitle($trackNumber, $blocks, $options),
             $format === Format::Ass                => (new AssParser())->parse(TrackFileBuilder::assFile($track, $codecPrivate, $blocks), $options),
             default                                => (new VobSubParser())->parseBlocks($codecPrivate, array_map(
                 fn (array $block): array => ["start" => $block["startMs"] / 1000, "end" => $block["endMs"] / 1000, "data" => $block["data"]],
@@ -282,6 +282,27 @@ final class MatroskaReader implements ContainerReader
             foreach ($subtitle->getCues() as $cue) {
                 $cue->setForced(true);
             }
+        }
+
+        return $subtitle;
+    }
+
+
+    /**
+     * Reads the text of the blocks of an S_TEXT/UTF8 track with SubRipParser and takes the cue times from the block times.
+     *
+     * @param list<array{startMs: int, endMs: int, data: string}> $blocks
+     */
+    private function subRipSubtitle(int $trackNumber, array $blocks, ReadOptions $options): Subtitle
+    {
+        $subtitle = (new SubRipParser())->parse(TrackFileBuilder::subRipFile($blocks), $options);
+        $cues     = $subtitle->getCues();
+        if (count($cues) !== count($blocks)) {
+            throw new ParsingException("Track $trackNumber has " . count($blocks) . " blocks, but the SubRip text of the blocks holds " .
+                                       count($cues) . " cues. A block must not hold a timing line.");
+        }
+        foreach ($cues as $index => $cue) {
+            $cue->setEnd($blocks[$index]["endMs"] / 1000)->setStart($blocks[$index]["startMs"] / 1000);
         }
 
         return $subtitle;

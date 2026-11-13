@@ -416,6 +416,8 @@ class ThrowSitesTest extends TestCase
                                                                 MkvFixtureWriter::element(0xA3, "\0\0\0\0")]))->extract(2), ...$parsing],
             "Container/Matroska/MatroskaReader.php: time of 100000 hours" => [fn () => self::mkv(MkvFixtureWriter::cluster(1 << 40, [
                                                                 MkvFixtureWriter::simpleBlock(2, 0, "x")]))->extract(2), ...$parsing],
+            "Container/Matroska/MatroskaReader.php: timing line in a SubRip block" => [fn () => self::mkv(MkvFixtureWriter::cluster(0, [
+                                                                MkvFixtureWriter::simpleBlock(2, 0, "x\n00:00:01,000 --> 00:00:02,000\ny")]))->extract(2, new ReadOptions(lenient: true)), ...$parsing],
             "Container/Matroska/MatroskaReader.php: laced subtitle block" => [fn () => self::mkv(MkvFixtureWriter::cluster(0, [
                                                                 MkvFixtureWriter::simpleBlock(2, 0, "\0x", MkvFixtureWriter::LACING_XIPH)]))->extract(2), ...$parsing],
             "Container/Matroska/MatroskaReader.php: bzlib compression" => [fn () => self::mkv(MkvFixtureWriter::cluster(0, [

@@ -206,9 +206,6 @@ class MatroskaReaderTest extends TestCase
     }
 
 
-    /**
-     * A WebVTT track, because SubRip times have at most 3 digits of hours.
-     */
     public function testTheLastBlockWithoutDurationEndsBelow100000Hours(): void
     {
         $stream = self::stream(MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, MkvFixtureWriter::element(
@@ -218,6 +215,29 @@ class MatroskaReaderTest extends TestCase
 
         $this->assertSame([[3.0, 359999999.999, ["Mind the gap."], false]],
                           $this->cues(MatroskaReader::open($stream)->extract(2, new ReadOptions(lastCueDuration: 400000 * 3600))));
+    }
+
+
+    /**
+     * 1000 hours are 3,600,000,000 ticks of 1 ms. SubRip timing lines hold at most 3 digits of hours.
+     */
+    public function testReadsSubRipCuesFrom1000HoursUpToTheLimit(): void
+    {
+        $stream = self::stream(MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, MkvFixtureWriter::element(
+            MkvFixtureWriter::TRACKS,
+            MkvFixtureWriter::trackEntry(["number" => 2, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_TEXT/UTF8"]),
+        ) . MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 1000, "Platform 4.", 1000)])
+          . MkvFixtureWriter::cluster(3600000000, [MkvFixtureWriter::blockGroup(2, 0, "A very late cue.", 2000)])
+          . MkvFixtureWriter::cluster(359996400000, [MkvFixtureWriter::simpleBlock(2, 0, "Mind the gap.")])));
+
+        $this->assertSame(
+            [
+                [1.0, 2.0, ["Platform 4."], false],
+                [3600000.0, 3600002.0, ["A very late cue."], false],
+                [359996400.0, 359999999.999, ["Mind the gap."], false],
+            ],
+            $this->cues(MatroskaReader::open($stream)->extract(2, new ReadOptions(lastCueDuration: 400000 * 3600))),
+        );
     }
 
 

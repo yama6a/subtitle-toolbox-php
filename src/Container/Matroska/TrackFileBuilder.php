@@ -36,14 +36,16 @@ final class TrackFileBuilder
 
 
     /**
-     * @param list<array{startMs: int, endMs: int, data: string}> $cues
+     * Writes each block with the timing line 00:00:00,000 --> 00:00:00,000, because SubRip times hold at most 3 digits of hours.
+     * The caller sets the times of the parsed cues from the block times.
+     *
+     * @param list<array{data: string}> $cues
      */
     public static function subRipFile(array $cues): string
     {
         $file = "";
         foreach ($cues as $index => $cue) {
-            $file .= ($index + 1) . "\n" . self::time($cue["startMs"], ",", true) . " --> " . self::time($cue["endMs"], ",", true) .
-                     "\n" . self::cueText($cue["data"]) . "\n\n";
+            $file .= ($index + 1) . "\n00:00:00,000 --> 00:00:00,000\n" . self::cueText($cue["data"]) . "\n\n";
         }
 
         return $file;
