@@ -371,6 +371,26 @@ class SccFormatterTest extends TestCase
     }
 
 
+    public function testFitReplacesACharacterWrittenAsAnEntity(): void
+    {
+        $options = new WriteOptions(formats: [new SccWriteOptions(fit: true)]);
+        $report  = (new SccFormatter())->formatWithReport($this->subtitle(new SubtitleCue(1.0, 3.0, "Wait&hellip; what?")), $options);
+
+        $this->assertSame([[0, SccFitAction::Transliterated, "Cue #0 at 1 s: replaced \"\u{2026}\" with \"...\"."]],
+                          array_map(fn (SccFitChange $change): array => [$change->cueIndex, $change->action, $change->message], $report->changes));
+        $this->assertSame(["Wait... what?"], Subtitle::fromString($report->content, Format::Scc)->getCues()[0]->getLines());
+    }
+
+
+    public function testFitKeepsAnEscapedAmpersandAfterAReplacement(): void
+    {
+        $subtitle = $this->subtitle(new SubtitleCue(1.0, 3.0, "&amp;hellip; \u{160}"));
+        $output   = $subtitle->toString(Format::Scc, new WriteOptions(formats: [new SccWriteOptions(fit: true)]));
+
+        $this->assertSame(["&amp;hellip; S"], Subtitle::fromString($output, Format::Scc)->getCues()[0]->getLines());
+    }
+
+
     public function testFitKeepsTagsAndTextThatSccHolds(): void
     {
         $subtitle = $this->subtitle(new SubtitleCue(1.0, 3.0, ["<i>Caf\u{E9} \u{201C}Zagreb\u{201D}</i>", "<font color=\"red\">&lt;\u{160}&gt;</font>"]));

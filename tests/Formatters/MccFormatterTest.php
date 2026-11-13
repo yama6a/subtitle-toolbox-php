@@ -136,6 +136,14 @@ class MccFormatterTest extends TestCase
     }
 
 
+    public function testReplacesACharacterWrittenAsAnEntity(): void
+    {
+        $output = (new Subtitle())->addCue(new SubtitleCue(1, 3, "Wait&hellip; what?"))->toString(Format::Mcc);
+
+        $this->assertSame(["Wait... what?"], Subtitle::fromString($output, options: new ReadOptions(formats: [new MccReadOptions(service: null)]))->getCues()[0]->getLines());
+    }
+
+
     public function testWritesOnlyTheHeaderForASubtitleWithoutCues(): void
     {
         $this->assertStringEndsWith("Time Code Rate=30DF\n\n", (new Subtitle())->toString(Format::Mcc));

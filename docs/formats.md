@@ -616,7 +616,7 @@ $report->changes[0]->message;                                                   
 
   | Action | Change |
   |:--- |:--- |
-  | `Transliterated` | a character that CEA-608 lacks becomes a similar one: `Š` becomes `S`, `Œ` becomes `OE`, `…` becomes `...` and `–` becomes `-` |
+  | `Transliterated` | a character that CEA-608 lacks becomes a similar one: `Š` becomes `S`, `Œ` becomes `OE`, `…` becomes `...` and `–` becomes `-`. A character written as an entity, such as `&hellip;`, is replaced too |
   | `Wrapped` | the text wraps again into at most 4 lines of at most 32 characters |
   | `Delayed` | the caption shows after the cue start |
   | `Dropped` | the output leaves out a caption that cannot show before the cue end |
