@@ -315,9 +315,27 @@ trait CueEditing
     private static function cueEditingContinuesRun(SubtitleCue $first, SubtitleCue $cue, float $runStart, float $runEnd, float $maxGap): bool
     {
         return $first->getText() === $cue->getText() && CueList::canJoin($first, $cue)
-            && $first->getAllFormatData() === $cue->getAllFormatData()
+            && self::sortedKeys($first->getAllFormatData()) === self::sortedKeys($cue->getAllFormatData())
             && Timecode::roundToMilliseconds($cue->getStart() - $runEnd) <= $maxGap
             && Timecode::roundToMilliseconds($runStart - $cue->getEnd()) <= $maxGap;
+    }
+
+
+    /**
+     * Sorts the keys of $data and of every array in it, so that two maps with the same entries in another order are equal.
+     */
+    private static function sortedKeys(array $data): array
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $data[$key] = self::sortedKeys($value);
+            }
+        }
+        if (!array_is_list($data)) {
+            ksort($data);
+        }
+
+        return $data;
     }
 
 

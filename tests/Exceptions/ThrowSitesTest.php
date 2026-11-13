@@ -37,11 +37,13 @@ use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
+use SubtitleToolbox\Hls\HlsWebVttJoiner;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Hls\TimestampMap;
 use SubtitleToolbox\Http\CurlHttpClient;
 use SubtitleToolbox\Http\FakeHttpClient;
 use SubtitleToolbox\Http\WithoutCurl;
+use SubtitleToolbox\Http\LocalServer;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PaletteReducer;
 use SubtitleToolbox\Image\PngDecoder;
@@ -127,6 +129,7 @@ use SubtitleToolbox\WriteOptions;
 require_once __DIR__ . "/../files/mkv/generator/MkvFixtureWriter.php";
 require_once __DIR__ . "/../files/mp4/generator/Mp4FixtureWriter.php";
 require_once __DIR__ . "/../Http/FakeHttpClient.php";
+require_once __DIR__ . "/../Http/LocalServer.php";
 require_once __DIR__ . "/../Http/WithoutCurl.php";
 
 class ThrowSitesTest extends TestCase
@@ -352,6 +355,12 @@ class ThrowSitesTest extends TestCase
             "Container/Mp4/Mp4Reader.php: unknown track" => [fn () => self::mp4()->extract(9), ...$invalid],
             "Container/Mp4/Mp4Reader.php: not MP4" => [fn () => Mp4Reader::open(self::stream(str_repeat("\0", 16))), ...$parsing],
             "Container/Mp4/Mp4Reader.php: no moov" => [fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp())), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: no sample entry" => [fn () => self::mp4(["boxes" => [
+                                                                "stsd" => Mp4FixtureWriter::fullBox("stsd", 0, 0, pack("N", 0))]])->extract(1), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: moof before moov" => [fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp() . Mp4FixtureWriter::box("moof", ""))),
+                                                                ...$parsing],
+            "Container/Mp4/Mp4Reader.php: mvex in moov" => [fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp() .
+                                                                Mp4FixtureWriter::box("moov", Mp4FixtureWriter::box("mvex", "")))), ...$parsing],
             "Container/Mp4/Mp4Reader.php: timescale 0" => [fn () => self::mp4(["timescale" => 0]), ...$parsing],
             "Container/Mp4/Mp4Reader.php: stts too short" => [fn () => self::mp4(["boxes" => [
                                                                 "stts" => Mp4FixtureWriter::fullBox("stts", 0, 0, pack("N", 0))]])->extract(1), ...$parsing],
@@ -461,6 +470,8 @@ class ThrowSitesTest extends TestCase
                 new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: PNG size"         => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage(self::png(), 0, 0, 2, 1, 9, 9),
                 new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
+            "Formatters/PgsFormatter.php: PNG decode"       => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage("GIF89a", 0, 0, 1, 1, 9, 9),
+                new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage(self::png(), 0, 0, 1, 1, 9, 9),
                 new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/SccFormatter.php: 5 lines"          => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, ["1", "2", "3", "4", "5"]))
@@ -479,6 +490,7 @@ class ThrowSitesTest extends TestCase
             "Hls/HlsSegmentOptions.php: segment duration 0" => [fn () => new HlsSegmentOptions(segmentDuration: 0), ...$invalid],
             "Hls/HlsSegmentOptions.php: no %d in pattern"   => [fn () => new HlsSegmentOptions(fileNamePattern: "sub.vtt"), ...$invalid],
             "Hls/HlsSegmentOptions.php: media duration 0"   => [fn () => new HlsSegmentOptions(mediaDuration: 0), ...$invalid],
+            "Hls/HlsWebVttJoiner.php: stream start above 33 bits" => [fn () => HlsWebVttJoiner::join([], TimestampMap::MPEGTS_WRAP), ...$invalid],
             "Hls/HlsWebVttSegmenter.php: no duration"       => [fn () => HlsWebVttSegmenter::segment(new Subtitle()), ...$invalid],
             "Hls/TimestampMap.php: MPEGTS above 33 bits"    => [fn () => new TimestampMap(TimestampMap::MPEGTS_WRAP), ...$invalid],
             "Hls/TimestampMap.php: negative LOCAL"          => [fn () => new TimestampMap(0, -1), ...$invalid],
@@ -614,6 +626,11 @@ class ThrowSitesTest extends TestCase
                 self::pgsSegment(0x16, "\x02\xD0\x02\x40\x10\0\1\x80\0\0\1" . "\0\7\0\0\0\0\0\0") .
                 self::pgsSegment(0x14, "\0\0\1\x10\x80\x80\xFF") .
                 self::pgsSegment(0x15, "\0\7\0\xC0\0\0\7\0\4\0\2\1\1\0\0") .
+                self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
+            "Parsers/PgsParser.php: screen size 0"          => [fn () => (new PgsParser())->parse(
+                self::pgsSegment(0x16, "\0\0\0\0\x10\0\1\x80\0\0\1" . "\0\7\0\0\0\0\0\0") .
+                self::pgsSegment(0x14, "\0\0\1\x10\x80\x80\xFF") .
+                self::pgsSegment(0x15, "\0\7\0\xC0\0\0\6\0\2\0\1\1\1") .
                 self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
             "Parsers/PgsParser.php: object too large"       => [fn () => (new PgsParser())->parse(
                 self::pgsSegment(0x15, "\0\7\0\xC0\0\0\4" . pack("nn", 8000, 1)), new ReadOptions()), ...$parsing],
@@ -790,6 +807,14 @@ class ThrowSitesTest extends TestCase
             "Http/CurlHttpClient.php: no curl extension"    => [fn () => throw WithoutCurl::exception("new " . CurlHttpClient::class . "();"),
                                                                 ...$invalid],
             "Http/CurlHttpClient.php: no connection"        => [fn () => (new CurlHttpClient())->post(self::closedPortUrl(), [], ""), ...$translation],
+            "Http/CurlHttpClient.php: answer too long"      => [function () {
+                $server = LocalServer::start(__DIR__ . "/../files/translation/fake-server.php");
+                try {
+                    (new CurlHttpClient())->post("$server->url/echo?pad=1100000", [], "");
+                } finally {
+                    $server->stop();
+                }
+            }, ...$translation],
             "Translation/DeepLEngine.php: HTTP 403"         => [fn () => (new DeepLEngine(new DeepLOptions("key", httpClient: new FakeHttpClient([[403, ""]]))))
                                                                 ->translate(["a"], "en", "de"), ...$translation],
             "Translation/DeepLEngine.php: no translations"  => [fn () => (new DeepLEngine(new DeepLOptions("key", httpClient: new FakeHttpClient([[200, "{}"]]))))
@@ -827,7 +852,13 @@ class ThrowSitesTest extends TestCase
                 {
                     return [];
                 }
-            }))->translate(self::subtitle(), "en", "de"), ...$invalid],
+            }))->translate(self::subtitle(), "en", "de"), ...$translation],
+            "Translation/TranslationRunner.php: empty target language" => [fn () => (new TranslationRunner(new class implements TranslationEngine {
+                public function translate(array $texts, string $sourceLanguage, string $targetLanguage): array
+                {
+                    return $texts;
+                }
+            }))->translate(self::subtitle(), "en", " "), ...$invalid],
             "Validation/ValidationRules.php: invalid character class" => [fn () => new ValidationRules(allowedCharacters: "[z-a]"),
                 ...$invalid],
             "WriteDefaults.php: MicroDVD without a frame rate" => [fn () => self::subtitle()->toString(Format::MicroDvd), ...$invalid],

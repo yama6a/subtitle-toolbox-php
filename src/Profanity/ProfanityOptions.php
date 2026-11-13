@@ -27,7 +27,7 @@ final class ProfanityOptions
         public readonly float $padding = 0.0,
     ) {
         foreach ($words as $word) {
-            if (!is_string($word) || preg_match('/^[^*\s](?:[^*]*[^*\s])?\*?$/u', $word) !== 1) {
+            if (!is_string($word) || preg_match('/^[^*\s](?:[^*]*[^*\s])?\*?\z/u', $word) !== 1) {
                 throw new InvalidArgumentException("A profanity word must be a non-empty UTF-8 string with a * only at the end, got " .
                                                    var_export($word, true) . ".");
             }

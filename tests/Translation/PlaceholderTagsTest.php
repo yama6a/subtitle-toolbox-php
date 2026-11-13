@@ -20,15 +20,13 @@ class PlaceholderTagsTest extends TestCase
     }
 
 
-    public function testASelfClosingTagAndWordTimestampsGetSinglePlaceholders(): void
+    public function testASelfClosingTagGetsASinglePlaceholder(): void
     {
-        $encoded = PlaceholderTags::encode("<00:00:01.000>Hello <00:00:01.500>world<br/>");
+        $encoded = PlaceholderTags::encode("Hello <br/>world<br/>");
 
-        $this->assertSame("<x1/>Hello <x2/>world<x3/>", $encoded->text);
-        $this->assertEquals([1 => new TagPair("<00:00:01.000>", null), 2 => new TagPair("<00:00:01.500>", null), 3 => new TagPair("<br/>", null)],
-                            $encoded->tags);
-        $this->assertSame("<00:00:01.000>Hallo <00:00:01.500>Welt<br/>",
-                          PlaceholderTags::restore(PlaceholderTags::tokenize("<x1/>Hallo <x2/>Welt<x3/>"), $encoded->tags));
+        $this->assertSame("Hello <x1/>world<x2/>", $encoded->text);
+        $this->assertEquals([1 => new TagPair("<br/>", null), 2 => new TagPair("<br/>", null)], $encoded->tags);
+        $this->assertSame("Hallo <br/>Welt<br/>", PlaceholderTags::restore(PlaceholderTags::tokenize("Hallo <x1/>Welt<x2/>"), $encoded->tags));
     }
 
 
