@@ -74,7 +74,7 @@ final class SamiFormatter extends SubtitleFormatter
         }
 
         // An HTML parser keeps a tag open into the next <P>, so a SubRip cue such as "<i>never closed" would style the next cue.
-        $html = implode("<br>", $lines);
+        $html = str_replace(LineEnding::Lf->value, "<br>", implode("<br>", $lines));
 
         return $this->openParagraph($class, []) . $html . Markup::closeCoreTags(Markup::openCoreTags($html));
     }
@@ -88,7 +88,7 @@ final class SamiFormatter extends SubtitleFormatter
         $tag = "<P" . ($class === null ? "" : " Class=$class");
         foreach ($attributes as $name => $value) {
             $tag .= " " . strtoupper($name) . "=" .
-                    (preg_match('/^[\w.-]+$/', $value) ? $value : "\"" . htmlspecialchars(XmlOutput::requireUtf8($value), ENT_QUOTES, "UTF-8") . "\"");
+                    (preg_match('/^[\w.-]+\z/', $value) ? $value : "\"" . htmlspecialchars(XmlOutput::requireUtf8($value), ENT_QUOTES, "UTF-8") . "\"");
         }
 
         return "$tag>";

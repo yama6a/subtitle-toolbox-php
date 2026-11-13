@@ -23,10 +23,12 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
 ```
 
 - **Text runs**: `replaceText()`, `changeCase()` and `mapText()` work on text runs. Use `mapLines()` to change tags.
+- **Regex errors**: a regex that does not compile, or that fails on a text run, throws `InvalidArgumentException` with the PCRE message. A text run that is not valid UTF-8 fails a regex with the `u` flag, so the call throws and no cue changes silently.
 - **Word timestamps**: `stripFormatting()` keeps them. Pass `false` as the second argument to remove them too.
 - **Empty cues**: a transform removes a cue that had text before and has only tags or spaces after. Comments stay before the next cue.
 - **Case modes**: `CaseMode::Upper`, `CaseMode::Lower` and `CaseMode::Sentence`.
 - **Unicode**: the full Unicode case mapping applies. `ß` becomes `SS`, and Greek `Σ` at the end of a word becomes `ς` in lower case. For text that is not valid UTF-8, only the letters A to Z change.
+- **Character count**: the line wrapper and `Markup::countCharacters()` count extended grapheme clusters with PCRE2. PCRE2 does not join a regional indicator with a following combining mark or zero width joiner. So U+1F1E9 U+0301 and U+1F1E9 U+200D count as 2, where UAX #29 rule GB9 gives 1. A pair of regional indicators, such as a flag, counts as 1. Full UAX #29 rules are out of scope.
 - **Turkish and Azerbaijani**: pass `'tr'` or `'az'` as the second argument of `changeCase()`. Then `i` and `İ` pair, and `ı` and `I` pair. Without it, `İ` becomes `i` with a combining dot, U+0307.
 - **Sentence case**: a sentence starts at the first letter or digit after `.`, `!`, `?` or the ellipsis U+2026, and a space or line break. `www.example.com` stays lower case.
 - **Abbreviations**: a comma after the period ends no sentence, so `I.E., NOW` becomes `i.e., now`. After `i.e.`, `e.g.`, `etc.` and `vs.`, a lower case word also continues the sentence. A tag between them does not change that. An upper case word after them starts a new sentence.

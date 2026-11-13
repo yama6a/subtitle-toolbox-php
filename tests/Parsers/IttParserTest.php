@@ -64,6 +64,18 @@ class IttParserTest extends TestCase
     }
 
 
+    public function testKeepsTheFirstOfTwoSameNameParameters(): void
+    {
+        $subtitle = Subtitle::fromString(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:a=\"http://www.w3.org/ns/ttml#parameter\" xmlns:b=\"http://www.w3.org/2006/10/ttaf1#parameter\""
+            . " a:timeBase=\"smpte\" a:frameRate=\"25\" b:frameRate=\"30\"><body><div><p begin=\"00:00:01:12\" end=\"00:00:02:00\">Hi</p></div></body></tt>",
+            Format::Itt);
+
+        $this->assertSame(["timeBase" => "smpte", "frameRate" => "25"], $subtitle->findFormatData(IttParser::FORMAT_DATA_KEY));
+        $this->assertSame(1.48, $subtitle->getCues()[0]->getStart());
+    }
+
+
     public function testFileWithoutTimingParametersHasNoFormatData(): void
     {
         $subtitle = Subtitle::fromString(

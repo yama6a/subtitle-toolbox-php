@@ -29,7 +29,7 @@ final class TmPlayerFormatter extends SubtitleFormatter
         $output = "";
         foreach ($cues as $index => [$cue, $lines]) {
             $start   = Timecode::unitsBelowLimit($cue->getStart(), 1);
-            $output .= sprintf(self::TIME_PATTERN, ...Timecode::seconds($start)) . implode("|", $lines) . LineEnding::Lf->value;
+            $output .= sprintf(self::TIME_PATTERN, ...Timecode::seconds($start)) . self::joinWithBars($lines) . LineEnding::Lf->value;
 
             if (!isset($cues[$index + 1])) {
                 continue;

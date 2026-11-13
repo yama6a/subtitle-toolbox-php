@@ -149,6 +149,17 @@ class DcpParserTest extends TestCase
     }
 
 
+    public function testReadsRawIso88591BytesWithAMatchingDeclaration(): void
+    {
+        $content = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n"
+                   . sprintf(self::SMPTE, "<Subtitle TimeIn=\"00:00:01:00\" TimeOut=\"00:00:02:00\"><Text Valign=\"bottom\" Vposition=\"8\">Caf\u{e9} cr\u{e8}me</Text></Subtitle>");
+
+        $subtitle = (new DcpParser())->parse(mb_convert_encoding($content, "ISO-8859-1", "UTF-8"));
+
+        $this->assertSame([[1.0, 2.0, ["Caf\u{e9} cr\u{e8}me"]]], self::describe($subtitle));
+    }
+
+
     public function testLenientModeSkipsAnImageSubtitleAndABadTime(): void
     {
         $subtitles = '<Subtitle TimeIn="00:00:01:00" TimeOut="00:00:02:00"><Image Valign="bottom">urn:uuid:1</Image></Subtitle>' .
@@ -168,6 +179,30 @@ class DcpParserTest extends TestCase
         $this->assertSame(Format::Dcp, Format::detect("<?xml version=\"1.0\"?>\n<DCSubtitle Version=\"1.1\"></DCSubtitle>"));
         $this->assertSame(Format::Dcp, Format::detect("<dcst:SubtitleReel xmlns:dcst=\"http://www.smpte-ra.org/schemas/428-7/2007/DCST\"/>"));
         $this->assertSame(Format::Ttml, Format::detect(file_get_contents(__DIR__ . "/../files/ttml/real/bbc_ebu_tt_d.ttml")));
+    }
+
+
+    #[DataProvider('unusableRates')]
+    public function testARateOutsideOneToAThousandFallsToTheNextRule(string $rates): void
+    {
+        $content = "<SubtitleReel xmlns=\"x\">$rates<SubtitleList>" .
+            "<Subtitle TimeIn=\"00:00:01:00\" TimeOut=\"00:00:02:00\"><Text Valign=\"bottom\" Vposition=\"8\">a</Text></Subtitle>" .
+            "</SubtitleList></SubtitleReel>";
+
+        $this->assertSame([[1.0, 2.0, ["a"]]], self::describe(Subtitle::fromString($content, Format::Dcp)));
+    }
+
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function unusableRates(): array
+    {
+        return [
+            "an edit rate that rounds to 0"  => ["<EditRate>1 3</EditRate>"],
+            "a time code rate above 1000"    => ["<TimeCodeRate>5000</TimeCodeRate>"],
+            "a time code rate, then an edit" => ["<TimeCodeRate>5000</TimeCodeRate><EditRate>2000 1</EditRate>"],
+        ];
     }
 
 

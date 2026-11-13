@@ -18,10 +18,13 @@ final class FormatDetector
 
     private const XML_PROLOG = '(?:\s|<\?.*?\?>|<!--.*?-->|<!DOCTYPE[^>]*>)*';
 
+    private const RAW_FORMATS = [Format::Pgs->value, Format::Pac->value];
+
     /**
      * The signatures of the text and binary formats, keyed by format. Order matters, first match wins.
      * Each pattern runs on the content without a UTF-8 BOM, with LF line endings and without leading white space.
-     * The PGS pattern runs on the raw bytes, because the line end change would join a 0D 0A in a time stamp.
+     * The PGS and PAC patterns run on the raw bytes, because the line end change would join a 0D 0A in a time stamp
+     * or a subtitle number.
      */
     private const SIGNATURES = [
         Format::WebVtt->value   => '/\AWEBVTT(?:[ \t\n]|\z)/',
@@ -71,7 +74,7 @@ final class FormatDetector
 
         $content = StringHelpers::normalizeEOLs($content);
         foreach (self::SIGNATURES as $format => $pattern) {
-            if (preg_match($pattern, $format === Format::Pgs->value ? $raw : $content) === 1) {
+            if (preg_match($pattern, in_array($format, self::RAW_FORMATS, true) ? $raw : $content) === 1) {
                 return Format::from($format);
             }
         }

@@ -152,4 +152,23 @@ class SamiFormatterTest extends TestCase
         );
     }
 
+
+    public function testALineFeedInsideALineBecomesABreak(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["a\nb"]));
+        $output   = $subtitle->toString(Format::Sami);
+
+        $this->assertStringContainsString("a<br>b", $output);
+        $this->assertSame(["a", "b"], Subtitle::fromString($output, Format::Sami)->getCues()[0]->getLines());
+    }
+
+
+    public function testAnAttributeValueThatEndsWithALineFeedIsQuoted(): void
+    {
+        $smi    = "<SAMI><BODY>\n<SYNC Start=1000><P Class=ENCC ID=\"a&#10;\">Hello</P>\n</BODY></SAMI>";
+        $output = Subtitle::fromString($smi, Format::Sami)->toString(Format::Sami);
+
+        $this->assertStringContainsString("ID=\"a\n\"", $output);
+        $this->assertStringNotContainsString("ID=a\n", $output);
+    }
 }

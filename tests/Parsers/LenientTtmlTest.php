@@ -66,6 +66,34 @@ class LenientTtmlTest extends TestCase
     }
 
 
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function html5EntityNames(): array
+    {
+        return [
+            "&nbsp;"             => ["&nbsp;", "a\u{a0}b"],
+            "&NonBreakingSpace;" => ["&NonBreakingSpace;", "a\u{a0}b"],
+            "&AMP;"              => ["&AMP;", "a&amp;b"],
+            "&COPY;"             => ["&COPY;", "a\u{a9}b"],
+            "&mldr;"             => ["&mldr;", "a\u{2026}b"],
+            "unknown name"       => ["&nope;", "a&amp;nope;b"],
+        ];
+    }
+
+
+    #[DataProvider("html5EntityNames")]
+    public function testLenientModeReadsEveryHtml5NameOfACharacter(string $entity, string $text): void
+    {
+        $subtitle = (new TtmlParser())->parse(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div><p begin=\"1s\" end=\"2s\">a{$entity}b</p></div></body></tt>",
+            new ReadOptions(lenient: true)
+        );
+
+        $this->assertSame($text, $subtitle->getCues()[0]->getText());
+    }
+
+
     #[DataProvider("unrecoverableTtml")]
     public function testTtmlThatLibxmlCannotRepairToATtRootStillThrows(string $content): void
     {
@@ -99,10 +127,10 @@ class LenientTtmlTest extends TestCase
     #[DataProvider("looseTtmlTimes")]
     public function testLenientModeReadsLooseTtmlTimeExpressions(string $begin, float $seconds): void
     {
-        $content  = "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div>\n<p begin=\"$begin\" end=\"00:00:30.000\">Text</p></div></body></tt>";
+        $content  = "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div>\n<p begin=\"$begin\" end=\"00:05:00.000\">Text</p></div></body></tt>";
         $subtitle = (new TtmlParser())->parse($content, new ReadOptions(lenient: true));
 
-        $this->assertSame([[$seconds, 30.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertSame([[$seconds, 300.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
         $this->assertSame(
             [[2, 0, self::REPAIRED, "The time expression \"$begin\" is not valid. The parser read it as {$seconds}s."]],
             TestSubtitles::warnings($subtitle)

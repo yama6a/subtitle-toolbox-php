@@ -231,6 +231,26 @@ class SccFormatterTest extends TestCase
     }
 
 
+    public function testATimeCodeOf100000HoursReadsBack(): void
+    {
+        $output = $this->subtitle(new SubtitleCue(359999990.0, 359999995.0, "last"))->toString(Format::Scc);
+
+        $this->assertStringContainsString("\n100000:05:49;20\t", $output);
+        $cue = Subtitle::fromString($output, Format::Scc)->getCues()[0];
+        $this->assertSame([359999990.0, 359999995.0, ["last"]], [round($cue->getStart()), round($cue->getEnd()), $cue->getLines()]);
+    }
+
+
+    public function testKeepsACueAfter100000HoursAtTheLastFrameBeforeThem(): void
+    {
+        $output = $this->subtitle(new SubtitleCue(400000000.0, 400000001.0, "late"))->toString(Format::Scc);
+
+        $cues = Subtitle::fromString($output, Format::Scc)->getCues();
+        $this->assertSame([["late"]], array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $cues));
+        $this->assertLessThan(360000000.0, $cues[0]->getStart());
+    }
+
+
     public function testKeepsTheTimeCodeTypeOfTheParsedFile(): void
     {
         $subtitle = Subtitle::fromString(self::HEADER . "00:00:01:00\t9420 9420 9470 9470 c8e9 942f 942f\n\n00:00:03:00\t942c 942c\n", Format::Scc);
@@ -368,6 +388,26 @@ class SccFormatterTest extends TestCase
         $this->expectException(UnwritableContentException::class);
         $this->expectExceptionMessage("Cue #0 at 1 s has the character \"\u{65E5}\", which CEA-608 cannot show.");
         $this->subtitle(new SubtitleCue(1.0, 2.0, "\u{160}\u{65E5}"))->toString(Format::Scc, $options);
+    }
+
+
+    public function testFitReplacesACharacterWrittenAsAnEntity(): void
+    {
+        $options = new WriteOptions(formats: [new SccWriteOptions(fit: true)]);
+        $report  = (new SccFormatter())->formatWithReport($this->subtitle(new SubtitleCue(1.0, 3.0, "Wait&hellip; what?")), $options);
+
+        $this->assertSame([[0, SccFitAction::Transliterated, "Cue #0 at 1 s: replaced \"\u{2026}\" with \"...\"."]],
+                          array_map(fn (SccFitChange $change): array => [$change->cueIndex, $change->action, $change->message], $report->changes));
+        $this->assertSame(["Wait... what?"], Subtitle::fromString($report->content, Format::Scc)->getCues()[0]->getLines());
+    }
+
+
+    public function testFitKeepsAnEscapedAmpersandAfterAReplacement(): void
+    {
+        $subtitle = $this->subtitle(new SubtitleCue(1.0, 3.0, "&amp;hellip; \u{160}"));
+        $output   = $subtitle->toString(Format::Scc, new WriteOptions(formats: [new SccWriteOptions(fit: true)]));
+
+        $this->assertSame(["&amp;hellip; S"], Subtitle::fromString($output, Format::Scc)->getCues()[0]->getLines());
     }
 
 

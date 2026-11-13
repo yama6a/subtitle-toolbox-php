@@ -188,6 +188,7 @@ class MccParserTest extends TestCase
             "no time code"       => ["captions", "The MCC line \"captions\" does not start with a time code."],
             "invalid letter"     => ["00:00:00:00\tT49SV", "The MCC data has the invalid character \"V\" at position 5."],
             "half a byte"        => ["00:00:00:00\tT4", "The MCC data ends with half a byte."],
+            "two-byte letter"    => ["00:00:01:00\tT4\u{E9}", "The MCC data has the invalid character \"\u{E9}\" at position 3."],
             "no CDP identifier"  => ["00:00:00:00\tT0A9670ZZZZZZZZZZZZZZ", "The data holds no caption distribution packet."],
             "short cc_data"      => ["00:00:00:00\tT0BS0B4F43ZZ72F4FC", "The caption distribution packet is shorter than its 20 cc_data triplets."],
         ];
