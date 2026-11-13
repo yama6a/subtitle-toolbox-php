@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\CuePosition;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -98,6 +99,51 @@ class TtmlFormatterTest extends TestCase
             [Alignment::BottomCenter, Alignment::TopRight, Alignment::TopCenter, Alignment::BottomCenter],
             array_map(fn (SubtitleCue $cue): Alignment => $cue->getAlignment(), array_slice(Subtitle::fromString($output, Format::Ttml)->getCues(), 0, 4))
         );
+    }
+
+
+    public function testWebVttCueWritesARegionAtItsPosition(): void
+    {
+        $subtitle = Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:02.000 line:95%,end position:45%,center\nOne\n", Format::WebVtt);
+        $ttml     = $subtitle->toString(Format::Ttml);
+
+        $this->assertStringContainsString(
+            "<region xml:id=\"bottomCenter-45-95\" tts:origin=\"0% 0%\" tts:extent=\"90% 95%\" tts:displayAlign=\"after\" tts:textAlign=\"center\"/>",
+            $ttml
+        );
+        $this->assertStringContainsString("<p begin=\"00:00:01.000\" end=\"00:00:02.000\" region=\"bottomCenter-45-95\">One</p>", $ttml);
+    }
+
+
+    public function testPositionRegionsReachTheScreenEdges(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue((new SubtitleCue(1, 2, "One"))->setAlignment(Alignment::TopLeft)->setPosition(new CuePosition(5, 20)))
+            ->addCue((new SubtitleCue(3, 4, "Two"))->setAlignment(Alignment::MiddleRight)->setPosition(new CuePosition(80, 60)))
+            ->addCue((new SubtitleCue(5, 6, "Three"))->setAlignment(Alignment::TopLeft)->setPosition(new CuePosition(5, 20)));
+        $ttml = $subtitle->toString(Format::Ttml);
+
+        $this->assertStringContainsString("<region xml:id=\"topLeft-5-20\" tts:origin=\"5% 20%\" tts:extent=\"95% 80%\" tts:displayAlign=\"before\" tts:textAlign=\"left\"/>", $ttml);
+        $this->assertStringContainsString("<region xml:id=\"middleRight-80-60\" tts:origin=\"0% 20%\" tts:extent=\"80% 80%\" tts:displayAlign=\"center\" tts:textAlign=\"right\"/>", $ttml);
+        $this->assertSame(2, substr_count($ttml, "<region "));
+        $this->assertEquals(
+            [new CuePosition(5, 20), new CuePosition(80, 60), new CuePosition(5, 20)],
+            array_map(fn (SubtitleCue $cue): ?CuePosition => $cue->findPosition(), Subtitle::fromString($ttml, Format::Ttml)->getCues())
+        );
+    }
+
+
+    public function testStoredRegionWinsOverThePosition(): void
+    {
+        $subtitle = Subtitle::fromString(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:tts=\"http://www.w3.org/ns/ttml#styling\"><head><layout>"
+            . "<region xml:id=\"r\" tts:origin=\"10% 10%\" tts:extent=\"80% 85%\" tts:displayAlign=\"after\" tts:textAlign=\"center\"/>"
+            . "</layout></head><body><div><p begin=\"1s\" end=\"2s\" region=\"r\">Hello</p></div></body></tt>",
+            Format::Ttml
+        );
+
+        $this->assertStringContainsString("<p begin=\"00:00:01.000\" end=\"00:00:02.000\" region=\"r\">Hello</p>", $subtitle->toString(Format::Ttml));
+        $this->assertSame(1, substr_count($subtitle->toString(Format::Ttml), "<region "));
     }
 
 

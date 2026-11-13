@@ -32,7 +32,7 @@ class ArrayConversionTest extends TestCase
             ->setMetadata(Subtitle::METADATA_TITLE, "Bakery")
             ->setMetadata(Subtitle::METADATA_LANGUAGE, "en")
             ->setFormatData("ass", ["styles" => [["Name" => "Default", "Fontsize" => "72"]]]);
-        $subtitle->addCue((new SubtitleCue(1.5, 4, ["Hello", "<i>world</i>"]))->setIdentifier("intro")->setAlignment(Alignment::TopCenter));
+        $subtitle->addCue((new SubtitleCue(1.5, 4, ["Hello", "<i>world</i>"]))->setIdentifier("intro")->setAlignment(Alignment::TopCenter)->setPosition(new CuePosition(50, 5)));
         $subtitle->addCue((new SubtitleCue(4.5, 6.25, "Fresh bread &amp; rolls"))->setFormatData("vtt", ["settings" => "line:0"]));
         $subtitle->addComment("Translated by Jane Doe", 0);
 
@@ -48,7 +48,8 @@ class ArrayConversionTest extends TestCase
             "comments"   => [["text" => "Translated by Jane Doe", "beforeCueIndex" => 0]],
             "formatData" => ["ass" => ["styles" => [["Name" => "Default", "Fontsize" => "72"]]]],
             "cues"       => [
-                ["start" => 1.5, "end" => 4.0, "lines" => ["Hello", "<i>world</i>"], "identifier" => "intro", "alignment" => 8, "formatData" => []],
+                ["start" => 1.5, "end" => 4.0, "lines" => ["Hello", "<i>world</i>"], "identifier" => "intro", "alignment" => 8,
+                 "position" => ["x" => 50.0, "y" => 5.0], "formatData" => []],
                 ["start" => 4.5, "end" => 6.25, "lines" => ["Fresh bread &amp; rolls"], "identifier" => null, "alignment" => null,
                  "formatData" => ["vtt" => ["settings" => "line:0"]]],
             ],
@@ -87,6 +88,17 @@ class ArrayConversionTest extends TestCase
     }
 
 
+    public function testJsonWritesAndReadsThePosition(): void
+    {
+        $json = $this->bakery()->toString(Format::Json);
+
+        $this->assertStringContainsString('"alignment":8,"position":{"x":50.0,"y":5.0},', $json);
+        $this->assertStringNotContainsString('"alignment":null,"position"', $json);
+        $this->assertEquals(new CuePosition(50, 5), Subtitle::fromString($json, Format::Json)->getCues()[0]->findPosition());
+        $this->assertNull(Subtitle::fromString($json, Format::Json)->getCues()[1]->findPosition());
+    }
+
+
     public function testNumericMetadataKeysSurviveTheJsonRoundTrip(): void
     {
         $subtitle = (new Subtitle())->setMetadata("0", "zero");
@@ -122,6 +134,11 @@ class ArrayConversionTest extends TestCase
             "line as number"         => [["version" => 1, "cues" => [["lines" => ["Rain", 7]] + $cue]], "The field cues[0].lines[1] must be a string."],
             "identifier as number"   => [["version" => 1, "cues" => [["identifier" => 7] + $cue]], "The field cues[0].identifier must be a string or null."],
             "alignment out of range" => [["version" => 1, "cues" => [["alignment" => 10] + $cue]], "The field cues[0].alignment must be an integer from 1 to 9 or null."],
+            "position as list"       => [["version" => 1, "cues" => [["position" => [50, 5]] + $cue]], "The field cues[0].position.x must be a number from 0 to 100."],
+            "position as string"     => [["version" => 1, "cues" => [["position" => "50 5"] + $cue]], "The field cues[0].position must be an object or null."],
+            "position x as string"   => [["version" => 1, "cues" => [["position" => ["x" => "50", "y" => 5]] + $cue]], "The field cues[0].position.x must be a number from 0 to 100."],
+            "position y over 100"    => [["version" => 1, "cues" => [["position" => ["x" => 50, "y" => 100.5]] + $cue]], "The field cues[0].position.y must be a number from 0 to 100."],
+            "position without y"     => [["version" => 1, "cues" => [["position" => ["x" => 50]] + $cue]], "The field cues[0].position.y must be a number from 0 to 100."],
             "cue format data string" => [["version" => 1, "cues" => [["formatData" => "a"] + $cue]], "The field cues[0].formatData must be an object."],
             "cue format data value"  => [["version" => 1, "cues" => [["formatData" => ["ass" => "x"]] + $cue]], "The field cues[0].formatData.ass must be an object."],
             "metadata value number"  => [["version" => 1, "metadata" => ["title" => 7], "cues" => []], "The field metadata.title must be a string."],

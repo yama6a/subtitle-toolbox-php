@@ -42,3 +42,35 @@ $subtitle->toString(Format::SubViewer, new WriteOptions(formats: [new SubViewerW
 - To keep the 5.x output, pass `version: SubViewerVersion::V2`.
 - `stbox convert movie.sub --from subviewer --to subviewer` keeps a SubViewer 1 file as SubViewer 1. The CLI has no option for the version.
 - Code that reads `$options->version` gets null for `new SubViewerWriteOptions()`.
+
+## Cue positions in WebVTT and TTML
+
+A cue now keeps the exact point that a WebVTT or TTML file gives it. The new class `CuePosition` holds the point in percent of the video. `SubtitleCue::findPosition()` returns it, and `setPosition()` sets it. The WebVTT and TTML formatters write it for a cue from the other format. All other formatters ignore it.
+
+Example: a TTML cue in the region `tts:origin="10% 10%" tts:extent="80% 85%" tts:displayAlign="after" tts:textAlign="center"` sits at 95 % of the height.
+
+| Conversion | 5.x | 6.0 |
+|:--- |:--- |:--- |
+| that TTML cue to WebVTT | `00:00:01.000 --> 00:00:02.000` | `00:00:01.000 --> 00:00:02.000 line:95%,end` |
+| WebVTT `line:95%,end position:45%,center` to TTML | `region="bottomCenter"`, with `tts:origin="10% 10%" tts:extent="80% 80%"` | `region="bottomCenter-45-95"`, with `tts:origin="0% 0%" tts:extent="90% 95%"` |
+| a cue at the default place of its alignment, such as `line:90%,end` or the region `bottomCenter` | unchanged | unchanged |
+| WebVTT to WebVTT, TTML to TTML | the stored settings or region | the stored settings or region |
+
+To keep the 5.x output, call `setAlignment()` with the alignment that the cue has. It clears the position:
+
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Subtitle;
+
+$subtitle = Subtitle::fromString(file_get_contents('movie.ttml'), Format::Ttml);
+foreach ($subtitle->getCues() as $cue) {
+    $cue->setAlignment($cue->getAlignment());
+}
+$subtitle->toString(Format::WebVtt);
+```
+
+- `setAlignment()` now clears the position, also with the same alignment. Code that calls `setAlignment()` on a cue from a WebVTT or TTML file drops its point.
+- Library JSON stays version 1. A cue with a position gets the key `"position": {"x": 50.0, "y": 95.0}`. A 5.x reader ignores the key. `fromArray()` and `Format::Json` throw `ParsingException` for a bad position, for example `The field cues[0].position.x must be a number from 0 to 100.`
+- The iTT parser reads the file as TTML, so its cues get a position too. The iTT formatter ignores it.
+- The CLI has no option for the position. `stbox convert movie.ttml --to vtt` writes it.
+- [subtitle.md](subtitle.md#alignment-and-format-data) and [formats.md](formats.md#webvtt) describe the rules.

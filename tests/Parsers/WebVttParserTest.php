@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Comment;
+use SubtitleToolbox\CuePosition;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
@@ -311,6 +312,35 @@ class WebVttParserTest extends TestCase
 
         $this->assertSame(["vertical" => "rl", "size" => "50.5%", "position" => "10%,line-left"], $cue->findFormatData("vtt"));
         $this->assertSame(Alignment::BottomCenter, $cue->getAlignment());
+    }
+
+
+    /**
+     * @return array<string, array{string, Alignment, ?CuePosition}>
+     */
+    public static function positionProvider(): array
+    {
+        return [
+            "issue 1149 settings"           => ["line:95%,end position:45%,center", Alignment::BottomCenter, new CuePosition(45, 95)],
+            "default height of the bottom"  => ["line:90%,end", Alignment::BottomCenter, null],
+            "line number"                   => ["line:0", Alignment::TopCenter, null],
+            "top edge in percent"           => ["line:0% position:40%", Alignment::TopCenter, new CuePosition(40, 0)],
+            "left column"                   => ["position:20%,line-left align:left", Alignment::BottomLeft, new CuePosition(20, 100)],
+            "line start is the top row"     => ["line:85%", Alignment::BottomCenter, null],
+            "position anchor of the column" => ["position:45%,line-right", Alignment::BottomCenter, null],
+            "position outside the cell"     => ["line:95%,end position:80%,center", Alignment::BottomCenter, null],
+            "vertical text"                 => ["vertical:rl line:95%,end position:45%,center", Alignment::BottomCenter, null],
+        ];
+    }
+
+
+    #[DataProvider("positionProvider")]
+    public function testCueSettingsGiveThePosition(string $settings, Alignment $alignment, ?CuePosition $position): void
+    {
+        $cue = Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:02.000 $settings\nOne\n", Format::WebVtt)->getCues()[0];
+
+        $this->assertSame($alignment, $cue->getAlignment());
+        $this->assertEquals($position, $cue->findPosition());
     }
 
 
