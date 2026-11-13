@@ -233,7 +233,7 @@ $german  = Subtitle::fromString(file_get_contents('movie.de.srt'));
 $dual = DualSubtitle::fromPair($english, $german);   // stack mode, the German line without a style
 $dual = DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(secondaryStyle: 'i'));
 $dual = DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(
-    mode: DualSubtitleMode::TopBottom,              // English at the bottom, German at the top
+    mode: DualSubtitleMode::TopBottom,              // German at the top, English keeps its own alignment
     timeTolerance: 0.25,                            // seconds
     secondaryStyle: 'font color="#ffff00"',
     secondaryAlignment: Alignment::TopCenter,
@@ -246,6 +246,6 @@ $dual = DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(
 | `topBottom` | the English cue with `Alignment::BottomCenter`, and the German cue with `Alignment::TopCenter` from 1.000 s to 4.000 s | SubRip with `{\an8}`, WebVTT, ASS, TTML, iTT, EBU STL and SCC. The other formats do not write the alignment |
 
 - **Stack**: each secondary cue joins the primary cue that it overlaps most. The joined cue spans from the earlier start to the later end. A cue without an overlap stays a cue of its own.
-- **Top and bottom**: a secondary start or end time moves to the closest primary start or end time within `timeTolerance`. So the two languages appear and disappear together. A cue keeps its times when both would move to the same time.
+- **Top and bottom**: a primary cue keeps its own alignment, which is bottom center in most formats. A secondary cue gets `secondaryAlignment`. A secondary start or end time moves to the closest primary start or end time within `timeTolerance`. So the two languages appear and disappear together. A cue keeps its times when both would move to the same time.
 - **Secondary style**: a core markup tag, such as `i` or `font color="#ffff00"`, around each secondary line. The WebVTT formatter writes a color as a class such as `<c.yellow>`, see [WebVTT](formats.md#webvtt).
 - **Copied data**: the result is a new `Subtitle`. Metadata, comments and format data come from the primary subtitle. The secondary cues lose their identifiers and format data. The language becomes `en+de` when both subtitles have a language.

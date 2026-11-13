@@ -46,7 +46,7 @@ Other content goes to the signatures of the text and binary formats. Detection c
 | 15 | `Pac` | the byte 01h, 20 zero bytes, a subtitle number of 2 bytes and a byte from 60h to 67h |
 | 16 | `SpruceStl` | `00:00:01:10 , 00:00:03:10 ,` after optional `$` command and `//` comment lines. Without such a line first, the text must not start with `"` |
 | 17 | `Scc` | `Scenarist_SCC V1.0` |
-| 18 | `Mcc` | `File Format=MacCaption_MCC V2.0` or `V1.0` |
+| 18 | `Mcc` | `File Format=MacCaption_MCC V<digits>.<digits>`. The reader then accepts only `V2.0` and `V1.0` |
 | 19 | `YouTubeTimedText` | a `<timedtext>` or `<transcript>` root |
 | 20 | `Mpl2` | `[12][45]` |
 | 21 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=`, but not an `hh:mm:ss:ff` frame timecode such as `00:00:01:10,` |

@@ -9,7 +9,7 @@ use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString($download, Format::SubRip, new ReadOptions(lenient: true));
 foreach ($subtitle->getParseWarnings() as $warning) {
-    $line = $warning->lineNumber ?? '-';   // lineNumber is null for EBU STL, PGS, VobSub and JSON
+    $line = $warning->lineNumber ?? '-';   // lineNumber is null for EBU STL, PAC, Cavena 890, PGS, VobSub and JSON
     $logger->warning("line $line: $warning->message ({$warning->action->value})");
 }
 // line 6: Block #1 has no timing line on its second line. The line is "00:00:05,000 => 00:00:07,000". (skipped)
@@ -71,7 +71,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 
 - **Ignored**: the chapter parsers ignore `ReadOptions::$lenient` and always throw. For example, the Podcasting 2.0 chapters parser throws for `"startTime": -5`.
 - **`ParseWarning`**: see [ParseWarning fields](#parsewarning-fields). A skipped block reports the line of the error, as `ParsingException::getLineNumber()` does in strict mode. A repair reports the line where the parser split or read the cue. SubRip and WebVTT report a repaired time or arrow on the timing line.
-- **No line numbers**: binary EBU STL, PGS, VobSub and the JSON formats have no line numbers, so their warnings have `lineNumber` null. The YouTube XML formats report the line of the XML element.
+- **No line numbers**: binary EBU STL, PAC, Cavena 890, PGS, VobSub and the JSON formats have no line numbers, so their warnings have `lineNumber` null. The YouTube XML formats report the line of the XML element.
 - **Warnings**: `Subtitle::getParseWarnings()` returns the warnings of the read that made the subtitle.
 - **Not the format**: lenient mode still throws for a WebVTT file without `WEBVTT` when the first timing line is not a WebVTT timing line, for example `00:00:01,000 --> 00:00:02,000`. Autodetection still needs the `WEBVTT` line. SubRip and SBV have no signature, so a file without one readable cue gives no cues and warnings.
 - **Whole-file errors**: lenient mode still throws for a problem outside one cue. Examples:
@@ -93,7 +93,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 
 | Parser | Lenient mode |
 |:--- |:--- |
-| SubRip, WebVTT, SBV, ASS and SSA, SubViewer, MPL2, MicroDVD, TTML, iTT, EBU STL, PAC, Cavena 890, library JSON, Podcasting 2.0 transcript JSON, Whisper JSON, Amazon Transcribe, Deepgram, AssemblyAI, Google | swaps the start and the end with a `repaired` warning when the cue then lasts 30 s or less. A longer cue is skipped |
+| SubRip, WebVTT, SBV, ASS and SSA, SubViewer, MPL2, MicroDVD, TTML, iTT, EBU STL, PAC, Cavena 890, QuickTime text, DCP, Spruce STL, library JSON, Podcasting 2.0 transcript JSON, Whisper JSON, Amazon Transcribe, Deepgram, AssemblyAI, Google | swaps the start and the end with a `repaired` warning when the cue then lasts 30 s or less. A longer cue is skipped |
 | CSV, TSV | skips the row. A row that a comma in a time split, or a cut-off last row, gives such an end, and a swap would give wrong times |
 
 - **Why 30 s**: a swapped typo gives a normal cue length. A cue of more than 30 s comes from a broken time, so a swap would invent a cue.

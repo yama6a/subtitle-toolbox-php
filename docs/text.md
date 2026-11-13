@@ -123,8 +123,8 @@ $subtitle->toString(Format::SubRip);
 | CSV, TSV | the `speaker` column | the `speaker` column |
 | Podcasting 2.0 transcript JSON | the segment `speaker` | the segment `speaker` |
 | HTML transcript | `<cite>` | `<cite>` |
-| Whisper JSON | the segment `speaker`, with `TranscriptReadOptions::$speakerVoices` | no formatter |
-| Cloud speech-to-text JSON | the speaker labels of the service, with `TranscriptReadOptions::$speakerVoices` | no formatter |
+| Whisper JSON | the segment `speaker`, with `TranscriptReadOptions::$speakerVoices` | the segment `speaker` |
+| Cloud speech-to-text JSON | the speaker labels of the service, with `TranscriptReadOptions::$speakerVoices` | Deepgram and AssemblyAI `speaker`, Amazon Transcribe `speaker_label` and `speaker_labels`, Google `speakerTag` or `speakerLabel` |
 | JSON | the cue lines | the cue lines |
 | all other formats, iTT too | no speaker | nothing. Convert with `style: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors` first |
 

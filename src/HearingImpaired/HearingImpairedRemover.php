@@ -10,7 +10,8 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
 /**
- * The rules follow the "Remove text for hearing impaired" tool of Subtitle Edit:
+ * Adapted from Subtitle Edit, src/libse/Forms/RemoveTextForHI.cs, MIT, at commit 5b9ee8b.
+ * It holds the rules of the "Remove text for hearing impaired" tool:
  * https://github.com/SubtitleEdit/subtitleedit/blob/5b9ee8baf08c472c7a74fbc337446b656dedabb4/src/libse/Forms/RemoveTextForHI.cs
  */
 final class HearingImpairedRemover

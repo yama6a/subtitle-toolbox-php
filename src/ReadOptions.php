@@ -18,7 +18,7 @@ final class ReadOptions
 
     /**
      * @param TextEncoding|string|null $encoding        The encoding of input that is not UTF-8. A TextEncoding case, or any other name that iconv accepts, for example "CP1125". A UTF-16 or UTF-32 BOM wins. Valid UTF-8 without zero bytes stays as is.
-     * @param bool                     $lenient         Skip or repair a broken block and record a ParseWarning instead of throwing. SCC, PGS, VobSub and the chapter formats ignore it.
+     * @param bool                     $lenient         Skip or repair a broken block and record a ParseWarning instead of throwing. The chapter formats ignore it. VobSub skips a broken unit in lenient mode, and an error in its `.idx` content fails in both modes.
      * @param float                    $lastCueDuration Seconds that a last cue without an end lasts.
      * @param list<FormatReadOptions>  $formats         The settings of single formats, at most one object per class. Each parser uses the object of its own class and ignores the others.
      */

@@ -56,12 +56,12 @@ php stbox.phar --version
 |:--- |:--- |:--- |
 | 0 | every file succeeded, and `validate` and `diff` found nothing | `validate movie.srt --preset bbc` with no broken rule |
 | 1 | a result: `validate` found a broken rule, or `diff` found a difference | `diff old.srt new.srt` for 2 files that differ |
-| 2 | a usage error, before the tool reads a file | an unknown option, a directory without subtitle files, an output that exists, a number too large for a float such as `--shift 1e999`, `--ass-karaoke-tag` with `--to srt`, an unknown `--ass-style` field, `validate --video-fps` without `--preset netflix-en`. `--ocr` without an installed OCR engine or without the data of the `--ocr-language`, see [OCR](#ocr). `translate` without `ext-curl` or without an API key, see [Translate](#translate) |
-| 3 | a file could not be read or written | a missing input, a file that does not parse, an output that cannot be created, content that the output format cannot hold such as 5 lines in SCC, a side file that is missing or does not parse, a translation service that answers with an error |
+| 2 | a usage error, before the tool reads a file | an unknown option, a directory without subtitle files, an output that exists, a number too large for a float such as `--shift 1e999`, `--ass-karaoke-tag` with `--to srt`, an unknown `--ass-style` field, a `--mask-words` file that is empty or holds a bad word such as `a*b`, `validate --video-fps` without `--preset netflix-en`. `--ocr` without an installed OCR engine or without the data of the `--ocr-language`, see [OCR](#ocr). `translate` without `ext-curl` or without an API key, see [Translate](#translate) |
+| 3 | a file could not be read or written | a missing input, a file that does not parse, an output that cannot be created, content that the output format cannot hold such as 5 lines in SCC, a side file that is missing or does not parse, except the `--mask-words` file (exit code 2), a translation service that answers with an error |
 | 130 | `SIGINT` or `SIGTERM` stopped the run, see the Signals item above | Ctrl+C during a batch |
 
-- **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 3. An error outside a file, such as an output that cannot be created, prints `Error: MESSAGE` and exits with code 3. A PHP error outside a file also prints its class.
-- **Side files**: a side file is a file that an option names besides the inputs. These options take a side file: `--reference`, `--silence-log`, `--mask-words`, `--errors-replace-list`, `--snap-shot-changes` and `--ocr-database`. The tool reads each side file once, after the checks of the arguments. So `convert a.srt b.srt --to vtt --mask-words missing.txt` fails with exit code 2, because 2 inputs need `--output-dir`. A side file that is missing or does not parse stops the run before the first input, also with `--keep-going`. The tool prints `Error: PATH: MESSAGE`, for example `Error: words.txt: The file does not exist.`, and exits with code 3.
+- **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. `InvalidArgumentException`, `UnwritableContentException` and `CueNotFoundException` keep the plain message, as in [errors.md](errors.md), for example `trip.srt: The MCC formatter accepts the frame rates ..., got 12.` Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 3. An error outside a file, such as an output that cannot be created, prints `Error: MESSAGE` and exits with code 3. A PHP error outside a file also prints its class.
+- **Side files**: a side file is a file that an option names besides the inputs. These options take a side file: `--reference`, `--silence-log`, `--mask-words`, `--errors-replace-list`, `--snap-shot-changes` and `--ocr-database`. The tool reads each side file once, after the checks of the arguments. So `convert a.srt b.srt --to vtt --mask-words missing.txt` fails with exit code 2, because 2 inputs need `--output-dir`. A side file that is missing or does not parse stops the run before the first input, also with `--keep-going`. The tool prints `Error: PATH: MESSAGE`, for example `Error: words.txt: The file does not exist.`, and exits with code 3. A `--mask-words` file that is empty or holds a bad word, such as `a*b`, is a usage error instead: exit code 2 and the usage hint.
 - **Signals**: with `ext-pcntl`, `SIGINT` and `SIGTERM` stop a batch. The tool finishes the file in progress and starts no other input. It then prints `Stopped by a signal.` and the batch summary on standard error, and exits with code 130. Without `ext-pcntl`, a signal ends the process at once.
 - **Stable parts**: see [compatibility.md](compatibility.md) for the parts of the tool that semantic versioning covers.
 - **Messages**: where a library message names a PHP method or option, the tool names the CLI option. For example "Call loadTrack() with one of them" becomes "Pass --track N with one of them".
@@ -121,7 +121,7 @@ php stbox.phar --version
 | Option | Sets | Commands |
 |:--- |:--- |:--- |
 | `--input-fps RATE` | the frame rate of a MicroDVD input without a `{1}{1}<fps>` first line, of Spruce STL timecodes, and of CSV or TSV times in `hh:mm:ss:ff`, as `MicroDvdReadOptions::$frameRate`, `SpruceStlReadOptions::$frameRate` and `CsvReadOptions::$frameRate` | all that read a file |
-| `--output-fps RATE` | the frame rate of MicroDVD, Spruce STL and iTT output, as `MicroDvdWriteOptions::$frameRate`, `SpruceStlWriteOptions::$frameRate` and `IttWriteOptions::$frameRate` | all that write a file |
+| `--output-fps RATE` | the frame rate of MicroDVD, Spruce STL, iTT and MCC output, as `MicroDvdWriteOptions::$frameRate`, `SpruceStlWriteOptions::$frameRate`, `IttWriteOptions::$frameRate` and `MccWriteOptions::$frameRate` | all that write a file |
 | `--video-fps RATE` | the frame rate of the video for the frame rules, see [Timing](#timing) and [Validate](#validate) | `convert`, `validate` |
 | `--fps RATE` | each of the 3 options above that the command has | all that read a file |
 
@@ -198,7 +198,7 @@ vendor/bin/stbox convert season1/*.srt --output-dir fixed/ --errors-fix
 | 2. Forced | `forced` | `--forced-only` | OCR then reads only the cues that stay |
 | 3. OCR | `ocr` | `--ocr` | the later steps need text |
 | 4. Text | `errors`, `sdh`, `replace`, `text` | `--errors-fix`, `--sdh`, `--replace`, `--speakers`, `--case`, `--strip-tags`, `--rtl` | the removal of hearing-impaired annotations changes the line lengths, so it runs before wrapping |
-| 5. Structure | `structure` | `--structure-resegment`, `--structure-unwrap`, `--structure-merge-same-time`, `--structure-merge-short`, `--structure-split-long`, `--structure-wrap`, `--structure-merge-duplicates` | |
+| 5. Structure | `structure` | `--structure-resegment`, `--structure-unwrap`, `--structure-merge-same-time`, `--structure-merge-short`, `--structure-split-long`, `--structure-wrap`, `--structure-merge-duplicates` | the options run in the order of this row, whatever the order of the flags. `convert --help structure` lists `--structure-merge-same-time` last. It runs second so that the cues it joins take part in `--structure-merge-short` and `--structure-wrap` |
 | 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--timing-fix-overlaps`, `--timing-min-duration`, `--timing-lead-in`, `--timing-lead-out`, `--timing-max-duration` | splits in step 5 create new cues |
 | 7. Masking | `masking` | `--mask-words` | the mute ranges of `--mute-edl` and `--mute-filter` need the final times |
 | 8. Karaoke | `karaoke` | `--karaoke` | it multiplies the cues |
@@ -322,8 +322,8 @@ vendor/bin/stbox convert movie.srt --to srt -o movie.timed.srt --video-fps 24 --
 |:--- |:--- |
 | `--karaoke` | writes one cue per word with the active word styled, with [`WordHighlight::apply()`](text.md#word-highlight-and-karaoke) |
 | `--karaoke-style TAG` | `b`, `i`, `u`, `s` or `'font color="#ffff00"'` |
-| `--ass-karaoke-tag TAG` | `k`, `kf` or `ko`, the ASS tag for word timestamps, see [formats.md](formats.md#ass-and-ssa). Needs ASS output. Pass only one of `--karaoke` and `--ass-karaoke-tag` |
-| `--ass-style STYLE` | changes the `Default` style, for example `'Fontname=Roboto,Fontsize=48,Outline=2'`, see [formats.md](formats.md#ass-and-ssa). Needs ASS output |
+| `--ass-karaoke-tag TAG` | `k`, `kf` or `ko`, the ASS tag for word timestamps, see [formats.md](formats.md#ass-and-ssa). Needs `--to ass`. Pass only one of `--karaoke` and `--ass-karaoke-tag` |
+| `--ass-style STYLE` | changes the `Default` style, for example `'Fontname=Roboto,Fontsize=48,Outline=2'`, see [formats.md](formats.md#ass-and-ssa). Needs `--to ass` |
 
 - **Library only**: the cumulative mode and the word limit of `WordHighlightOptions` have no option. Call `WordHighlight::apply()` for them.
 
@@ -434,7 +434,7 @@ OPENAI_BASE_URL=http://localhost:11434/v1 OPENAI_MODEL=llama3 vendor/bin/stbox t
 | `--api-key KEY` | `apiKey` of the engine options. Default: `DEEPL_API_KEY` for `deepl`, `GOOGLE_TRANSLATE_API_KEY` for `google`, `OPENAI_API_KEY` for `openai` |
 | `--source-language CODE` | the language of the input, for example `de`. Default: the engine detects it |
 | `--target-language CODE` | the language of the output, for example `en-US` for DeepL or `fr` for Google. Required |
-| `--fps`, `--input-fps`, `--output-fps` | `frameRate` of the MicroDVD, Spruce STL, CSV and iTT read and write options, see [Frame rates](#frame-rates) |
+| `--fps`, `--input-fps`, `--output-fps` | `frameRate` of the MicroDVD, Spruce STL, CSV, iTT and MCC options. `--input-fps` sets the read options of MicroDVD, Spruce STL and CSV. `--output-fps` sets the write options of MicroDVD, Spruce STL, iTT and MCC, see [Frame rates](#frame-rates) |
 
 - **Key**: the tool reads only the variable of the chosen engine. With `--engine deepl`, a set `GOOGLE_TRANSLATE_API_KEY` does not help. The key never appears in the output or in error messages.
 - **openai**: the tool reads the model from `OPENAI_MODEL`, which is required. It reads the base URL from `OPENAI_BASE_URL`, default `https://api.openai.com/v1`. The key is optional, because a local service such as Ollama needs none.
