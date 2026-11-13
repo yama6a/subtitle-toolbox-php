@@ -137,6 +137,14 @@ class CloudSpeechParsersTest extends TestCase
     }
 
 
+    public function testGoogleRejectsADurationWithALineBreakAtTheEnd(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The field results[0].resultEndTime must be a time.");
+        Subtitle::fromString('{"results": [{"alternatives": [{"transcript": "a"}], "resultEndTime": "0.660s\n"}]}', Format::GoogleSpeech);
+    }
+
+
     public function testDeepgramReadsEveryChannelInTimeOrder(): void
     {
         $json = '{"results": {"channels": [' .

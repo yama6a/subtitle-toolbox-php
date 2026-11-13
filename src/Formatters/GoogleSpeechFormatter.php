@@ -175,7 +175,7 @@ final class GoogleSpeechFormatter extends SubtitleFormatter
      */
     private static function seconds(mixed $value): ?float
     {
-        if (is_string($value) && preg_match('/^(\d+(?:\.\d+)?)s$/', $value, $match) === 1) {
+        if (is_string($value) && preg_match('/^(\d+(?:\.\d+)?)s$/D', $value, $match) === 1) {
             return (float) $match[1];
         }
         if (is_array($value) && (isset($value["seconds"]) || isset($value["nanos"])) && is_numeric($value["seconds"] ?? 0) && is_numeric($value["nanos"] ?? 0)) {

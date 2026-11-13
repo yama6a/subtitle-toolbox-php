@@ -127,6 +127,15 @@ class GoogleSpeechFormatterTest extends TestCase
     }
 
 
+    public function testAStoredEndWithALineBreakAtTheEndIsNoDuration(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue((new SubtitleCue(0, 0.66, "a"))->setFormatData("google-speech", ["transcript" => "a", "resultEndTime" => "0.660s\n"]));
+
+        $this->assertSame(["0.660s"], array_column(json_decode($subtitle->toString(Format::GoogleSpeech), true)["results"], "resultEndTime"));
+    }
+
+
     public function testCuesFromAnotherFormatGiveV1Results(): void
     {
         $subtitle = new Subtitle();
