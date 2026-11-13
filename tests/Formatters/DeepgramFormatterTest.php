@@ -105,6 +105,29 @@ class DeepgramFormatterTest extends TestCase
     }
 
 
+    public function testAVoiceNumberThatDoesNotFitAnIntStaysAString(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(0, 1, "<v 99999999999999999999>Hi"));
+        $subtitle->addCue(new SubtitleCue(1, 2, "<v 007>Bye"));
+
+        $this->assertSame(["99999999999999999999", 7], array_column(self::write($subtitle)["utterances"], "speaker"));
+    }
+
+
+    public function testACueWithAChannelNumberPastTheCuesGoesToChannelZero(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue((new SubtitleCue(0, 1, "Hi"))->setFormatData("deepgram", ["channel" => 1000000000]));
+        $subtitle->addCue((new SubtitleCue(1, 2, "Bye"))->setFormatData("deepgram", ["channel" => 1]));
+
+        $results = self::write($subtitle);
+
+        $this->assertCount(2, $results["channels"]);
+        $this->assertSame([0, 1], array_column($results["utterances"], "channel"));
+    }
+
+
     public function testCuesFromAnotherFormatGiveUtterancesAndWordsForTheWordTimestamps(): void
     {
         $subtitle = new Subtitle();
