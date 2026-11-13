@@ -40,11 +40,11 @@ final class PodcastTranscriptParser extends SubtitleParser
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, array_diff_key($data, ["segments" => true]));
 
         foreach ($this->groups($this->readSegments($data["segments"])) as $group) {
-            $speaker = $group[0]["speaker"];
-            $words   = [];
+            $speaker    = $group[0]["speaker"];
+            $timestamps = count($group) > 1 && $this->formatOptions()->wordTimestamps;
+            $words      = [];
             foreach ($group as $segment) {
-                $timestamp = count($group) > 1 && $this->formatOptions()->wordTimestamps ? "<" . Markup::coreTimestamp($segment["start"]) . ">" : "";
-                $words[]   = $timestamp . Markup::escapeText($segment["body"]);
+                $words[] = ($timestamps ? "<" . Markup::coreTimestamp($segment["start"]) . ">" : "") . Markup::escapeText($segment["body"]);
             }
             $markup = implode(" ", $words);
             if ($speaker !== "") {
@@ -54,6 +54,9 @@ final class PodcastTranscriptParser extends SubtitleParser
             $cue = new SubtitleCue($group[0]["start"], $group[count($group) - 1]["end"], $markup);
             if (count($group) === 1 && $group[0]["other"] !== []) {
                 $cue->setFormatData(self::FORMAT_DATA_KEY, $group[0]["other"]);
+            }
+            if ($timestamps) {
+                WordTimes::store($cue, array_map(fn (array $segment): array => [$segment["start"], $segment["end"]], $group));
             }
             $parsedCues[] = $cue;
         }

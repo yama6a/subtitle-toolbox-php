@@ -93,6 +93,7 @@ final class WhisperJsonParser extends SubtitleParser
                         "start" => self::isTime($word["start"] ?? null)
                             ? self::boundedField(Timecode::roundToMilliseconds($word["start"]), "$wordPaths[$position].start")
                             : null,
+                        "end"   => self::isTime($word["end"] ?? null) ? Timecode::roundToMilliseconds($word["end"]) : null,
                     ];
                 }
             } catch (ParsingException $exception) {
@@ -124,10 +125,10 @@ final class WhisperJsonParser extends SubtitleParser
 
             $words = [];
             try {
-                foreach (self::tokenWords(is_array($segment["tokens"] ?? null) ? $segment["tokens"] : []) as [$wordText, $from, $tokenIndex]) {
+                foreach (self::tokenWords(is_array($segment["tokens"] ?? null) ? $segment["tokens"] : []) as [$wordText, $from, $tokenIndex, $to]) {
                     $words[] = ["text" => $wordText, "start" => self::isTime($from)
                         ? self::boundedField(Timecode::roundToMilliseconds($from / 1000), "$path.tokens[$tokenIndex].offsets.from")
-                        : null];
+                        : null, "end" => self::isTime($to) ? Timecode::roundToMilliseconds($to / 1000) : null];
                 }
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($segment)]);
@@ -150,12 +151,13 @@ final class WhisperJsonParser extends SubtitleParser
 
 
     /**
-     * Returns the words of whisper.cpp tokens: the trimmed text, the "offsets.from" of the first token and the key of the first token.
+     * Returns the words of whisper.cpp tokens: the trimmed text, the "offsets.from" of the first token, the key of the first token
+     * and the "offsets.to" of the last token.
      * A token with a leading space starts a new word, as in should_split_on_word() of whisper.cpp. Special tokens such as "[_BEG_]" are no words.
      *
      * @internal
      *
-     * @return list<array{string, mixed, int|string}>
+     * @return list<array{string, mixed, int|string, mixed}>
      */
     public static function tokenWords(array $tokens): array
     {
@@ -167,12 +169,13 @@ final class WhisperJsonParser extends SubtitleParser
             }
 
             if ($words === [] || str_starts_with($tokenText, " ")) {
-                $words[] = ["", $token["offsets"]["from"] ?? null, $tokenIndex];
+                $words[] = ["", $token["offsets"]["from"] ?? null, $tokenIndex, null];
             }
             $words[count($words) - 1][0] .= $tokenText;
+            $words[count($words) - 1][3]  = $token["offsets"]["to"] ?? null;
         }
 
-        return array_map(fn (array $word): array => [trim($word[0]), $word[1], $word[2]], $words);
+        return array_map(fn (array $word): array => [trim($word[0]), $word[1], $word[2], $word[3]], $words);
     }
 
 

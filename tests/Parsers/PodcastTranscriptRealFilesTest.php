@@ -74,7 +74,7 @@ class PodcastTranscriptRealFilesTest extends TestCase
     }
 
 
-    public function testWordSegmentsRoundTripWithTheirStartTimes(): void
+    public function testWordSegmentsRoundTripWithTheirTimes(): void
     {
         $content  = file_get_contents(self::DIR . "spec_word_segments.json");
         $original = json_decode($content, true)["segments"];
@@ -86,7 +86,7 @@ class PodcastTranscriptRealFilesTest extends TestCase
             array_map(fn (array $segment): array => [$segment["speaker"], (float)$segment["startTime"], trim($segment["body"])], $original),
             array_map(fn (array $segment): array => [$segment["speaker"], $segment["startTime"], $segment["body"]], $written)
         );
-        $this->assertSame([1.0, 3.0], [$written[0]["endTime"], $written[4]["endTime"]]);
+        $this->assertSame(array_map(fn (array $segment): float => (float) $segment["endTime"], $original), array_column($written, "endTime"));
     }
 
 

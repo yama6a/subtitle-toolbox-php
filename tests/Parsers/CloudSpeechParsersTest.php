@@ -137,6 +137,55 @@ class CloudSpeechParsersTest extends TestCase
     }
 
 
+    public function testAwsGivesAWordThatManySegmentsNameToTheFirstSegment(): void
+    {
+        $json = '{"results": {"items": [' .
+                '{"id": 0, "type": "pronunciation", "start_time": "0", "end_time": "1", "alternatives": [{"confidence": "0.9", "content": "a"}]},' .
+                '{"id": 1, "type": "punctuation", "alternatives": [{"confidence": "0.0", "content": "."}]}], "audio_segments": [' .
+                '{"start_time": "0", "end_time": "1", "transcript": "a.", "items": [0, 1, 0]},' .
+                '{"start_time": "1", "end_time": "2", "transcript": "a.", "items": [0]}]}}';
+        $cues = (new AwsTranscribeParser())->parse($json, new ReadOptions())->getCues();
+
+        $this->assertSame([[0, 1], []], array_map(
+            fn (SubtitleCue $cue): array => array_column($cue->findFormatData("aws-transcribe")["items"], "id"),
+            $cues
+        ));
+    }
+
+
+    public function testDeepgramRejectsParagraphsThatTheSentencesRepeatTooOften(): void
+    {
+        $sentences = array_map(fn (int $index): array => ["text" => "a", "start" => $index, "end" => $index + 0.5], range(0, 99));
+        $json      = json_encode(["results" => ["channels" => [["alternatives" => [["words" => [], "paragraphs" => ["paragraphs" => [
+            ["speaker" => 0, "notes" => str_repeat("x", 200000), "sentences" => $sentences],
+        ]]]]]]]]);
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The sentences of results.channels[0].alternatives[0].paragraphs repeat more paragraph data than 16 times the size of the file.");
+        (new DeepgramParser())->parse($json, new ReadOptions());
+    }
+
+
+    public function testDeepgramKeepsTheParagraphOfEachSentence(): void
+    {
+        $json = '{"results": {"channels": [{"alternatives": [{"words": [], "paragraphs": {"paragraphs": [' .
+                '{"speaker": 0, "num_words": 2, "sentences": [{"text": "Hi.", "start": 0, "end": 1}, {"text": "Bye.", "start": 1, "end": 2}]}]}}]}]}}';
+
+        $this->assertSame([["speaker" => 0, "num_words" => 2], ["speaker" => 0, "num_words" => 2]], array_map(
+            fn (SubtitleCue $cue): array => $cue->findFormatData("deepgram")["paragraph"],
+            (new DeepgramParser())->parse($json, new ReadOptions())->getCues()
+        ));
+    }
+
+
+    public function testGoogleRejectsADurationWithALineBreakAtTheEnd(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The field results[0].resultEndTime must be a time.");
+        Subtitle::fromString('{"results": [{"alternatives": [{"transcript": "a"}], "resultEndTime": "0.660s\n"}]}', Format::GoogleSpeech);
+    }
+
+
     public function testDeepgramReadsEveryChannelInTimeOrder(): void
     {
         $json = '{"results": {"channels": [' .

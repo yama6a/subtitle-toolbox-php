@@ -60,6 +60,19 @@ final class TranscriptWords
 
 
     /**
+     * Returns a voice name of digits as a speaker number, as Deepgram and Google write it. A name that does not fit an int stays a string.
+     */
+    public static function speakerNumber(?string $voice): int|string|null
+    {
+        if ($voice === null || preg_match('/^[0-9]+$/D', $voice) !== 1) {
+            return $voice;
+        }
+
+        return (string) (int) $voice === (ltrim($voice, "0") ?: "0") ? (int) $voice : $voice;
+    }
+
+
+    /**
      * Returns the words of the core word timestamps of the cue, or null for a cue without word timestamps.
      * A word is the text from its timestamp to the next one. It ends where the next word starts, or at the cue end.
      * Text before the first timestamp is a word without a start.

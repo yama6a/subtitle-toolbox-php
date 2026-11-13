@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Parsers\WordTimes;
 
 final class SubtitleCue
 {
@@ -125,13 +126,16 @@ final class SubtitleCue
 
     /**
      * Replaces the time of each word timestamp in the lines, such as <00:00:02.000>, with $map(seconds).
-     * A time below 0 becomes 0.
+     * The stored word times of WordTimes move with them. A time below 0 becomes 0.
      *
      * @param callable(float): float $map
      */
     public function mapWordTimestamps(callable $map): self
     {
         $this->lines = array_map(fn (string $line): string => Markup::mapWordTimestamps($line, $map), $this->lines);
+        if (isset($this->formatData[WordTimes::FORMAT_DATA_KEY])) {
+            $this->formatData[WordTimes::FORMAT_DATA_KEY] = WordTimes::mapTimes($this->formatData[WordTimes::FORMAT_DATA_KEY], $map);
+        }
 
         return $this;
     }

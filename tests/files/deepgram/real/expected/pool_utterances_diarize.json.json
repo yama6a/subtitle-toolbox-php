@@ -120,6 +120,38 @@
                         ],
                         "speaker": 0,
                         "id": "0b8a2c4e-1d3f-4a5b-8c6d-7e8f9a0b1c2d"
+                    },
+                    "words": {
+                        "times": [
+                            {
+                                "start": 0.24,
+                                "end": 0.7
+                            },
+                            {
+                                "start": 0.7,
+                                "end": 1.12
+                            },
+                            {
+                                "start": 1.12,
+                                "end": 1.5
+                            },
+                            {
+                                "start": 1.5,
+                                "end": 1.92
+                            },
+                            {
+                                "start": 1.92,
+                                "end": 2.38
+                            },
+                            {
+                                "start": 2.38,
+                                "end": 2.84
+                            },
+                            {
+                                "start": 2.84,
+                                "end": 3.18
+                            }
+                        ]
                     }
                 }
             },
@@ -196,6 +228,34 @@
                         ],
                         "speaker": 1,
                         "id": "1c9b3d5f-2e4a-4b6c-9d7e-8f9a0b1c2d3e"
+                    },
+                    "words": {
+                        "times": [
+                            {
+                                "start": 3.6,
+                                "end": 3.98
+                            },
+                            {
+                                "start": 3.98,
+                                "end": 4.28
+                            },
+                            {
+                                "start": 4.28,
+                                "end": 4.66
+                            },
+                            {
+                                "start": 4.66,
+                                "end": 5.08
+                            },
+                            {
+                                "start": 5.08,
+                                "end": 5.38
+                            },
+                            {
+                                "start": 5.38,
+                                "end": 5.84
+                            }
+                        ]
                     }
                 }
             },
@@ -236,6 +296,18 @@
                         ],
                         "speaker": 0,
                         "id": "2dac4e6a-3f5b-4c7d-8e8f-9a0b1c2d3e4f"
+                    },
+                    "words": {
+                        "times": [
+                            {
+                                "start": 6.5,
+                                "end": 6.8
+                            },
+                            {
+                                "start": 6.8,
+                                "end": 7.26
+                            }
+                        ]
                     }
                 }
             }

@@ -102,16 +102,21 @@ final class AwsTranscribeParser extends SubtitleParser
     }
 
 
+    /**
+     * Returns one cue per audio segment with the words that its items name.
+     * A word belongs to the first segment that names it, so a damaged file that names a word in many segments copies it once.
+     */
     private function readSegments(array $segments, array $words): array
     {
         $wordsById = [];
-        foreach ($words as $word) {
+        foreach ($words as $wordIndex => $word) {
             foreach ($word["data"] as $item) {
                 if (is_int($item["id"] ?? null) || is_string($item["id"] ?? null)) {
-                    $wordsById[$item["id"]] = $word;
+                    $wordsById[$item["id"]] = $wordIndex;
                 }
             }
         }
+        $claimed = [];
 
         $cues = [];
         foreach ($segments as $index => $segment) {
@@ -127,9 +132,10 @@ final class AwsTranscribeParser extends SubtitleParser
 
             $segmentWords = [];
             foreach (self::listOrEmpty($segment["items"] ?? null) as $id) {
-                $word = is_int($id) || is_string($id) ? $wordsById[$id] ?? null : null;
-                if ($word !== null && end($segmentWords) !== $word) {
-                    $segmentWords[] = $word;
+                $wordIndex = is_int($id) || is_string($id) ? $wordsById[$id] ?? null : null;
+                if ($wordIndex !== null && !isset($claimed[$wordIndex])) {
+                    $claimed[$wordIndex] = true;
+                    $segmentWords[]      = $words[$wordIndex];
                 }
             }
 

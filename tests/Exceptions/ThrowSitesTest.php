@@ -603,6 +603,9 @@ class ThrowSitesTest extends TestCase
             "Parsers/DcpParser.php: image"                  => [fn () => (new DcpParser())->parse("<DCSubtitle><Subtitle TimeIn=\"00:00:01:000\" TimeOut=\"00:00:02:000\"><Image>1.png</Image></Subtitle></DCSubtitle>", new ReadOptions()), ...$parsing],
             "Parsers/DcpParser.php: bad time"               => [fn () => (new DcpParser())->parse("<DCSubtitle><Subtitle TimeIn=\"1s\" TimeOut=\"00:00:02:000\"><Text>a</Text></Subtitle></DCSubtitle>", new ReadOptions()), ...$parsing],
             "Parsers/DeepgramParser.php: no channels"       => [fn () => (new DeepgramParser())->parse('{"metadata": {}}', new ReadOptions()), ...$parsing],
+            "Parsers/DeepgramParser.php: paragraph copies"  => [fn () => (new DeepgramParser())->parse(json_encode(["results" => ["channels" => [["alternatives" => [[
+                "paragraphs" => ["paragraphs" => [["notes" => str_repeat("x", 1 << 20), "sentences" => array_fill(0, 20, ["text" => "a"])]]],
+            ]]]]]]), new ReadOptions()), ...$parsing],
             "Parsers/EbuStlParser.php: no GSI block"        => [fn () => (new EbuStlParser())->parse("STL", new ReadOptions()), ...$parsing],
             "Parsers/EbuStlParser.php: partial TTI block"   => [fn () => (new EbuStlParser())->parse(str_repeat(" ", 1025), new ReadOptions()), ...$parsing],
             "Parsers/EbuStlParser.php: disk format code"    => [fn () => (new EbuStlParser())->parse(str_repeat(" ", 1024), new ReadOptions()), ...$parsing],
