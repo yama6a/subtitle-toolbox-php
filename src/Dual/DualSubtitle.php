@@ -63,8 +63,8 @@ final class DualSubtitle
             $bestIndex   = null;
             $bestOverlap = 0;
             foreach ($primaryCues as $primaryIndex => $primaryCue) {
-                $overlap = min($primaryCue->getEnd(), $secondaryCue->getEnd())
-                           - max($primaryCue->getStart(), $secondaryCue->getStart());
+                $overlap = Timecode::roundToMilliseconds(min($primaryCue->getEnd(), $secondaryCue->getEnd())
+                                                         - max($primaryCue->getStart(), $secondaryCue->getStart()));
                 if ($overlap > $bestOverlap) {
                     $bestIndex   = $primaryIndex;
                     $bestOverlap = $overlap;
@@ -166,17 +166,20 @@ final class DualSubtitle
 
 
     /**
-     * Copies the times, styled lines and alignment, but not the identifier or format data of the secondary format.
+     * Copies the times, styled lines, alignment and forced flag, but not the identifier or format data of the secondary format.
      */
     private static function copySecondaryCue(SubtitleCue $cue, DualSubtitleOptions $options): SubtitleCue
     {
         $lines = $cue->getLines();
         if ($options->secondaryStyle !== null) {
-            $openTag  = "<" . trim($options->secondaryStyle) . ">";
-            $closeTag = "</" . $options->getSecondaryTagName() . ">";
+            $tagName  = $options->getSecondaryTagName();
+            $openTag  = "<" . $tagName . substr(trim($options->secondaryStyle), strlen($tagName)) . ">";
+            $closeTag = "</" . $tagName . ">";
             $lines    = array_map(fn (string $line): string => $openTag . $line . $closeTag, $lines);
         }
 
-        return (new SubtitleCue($cue->getStart(), $cue->getEnd(), $lines))->setAlignment($cue->getAlignment());
+        return (new SubtitleCue($cue->getStart(), $cue->getEnd(), $lines))
+            ->setAlignment($cue->getAlignment())
+            ->setForced($cue->isForced());
     }
 }

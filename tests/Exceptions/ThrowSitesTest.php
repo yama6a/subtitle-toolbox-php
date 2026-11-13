@@ -37,6 +37,7 @@ use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
+use SubtitleToolbox\Hls\HlsWebVttJoiner;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Hls\TimestampMap;
 use SubtitleToolbox\Http\CurlHttpClient;
@@ -468,6 +469,7 @@ class ThrowSitesTest extends TestCase
             "Hls/HlsSegmentOptions.php: segment duration 0" => [fn () => new HlsSegmentOptions(segmentDuration: 0), ...$invalid],
             "Hls/HlsSegmentOptions.php: no %d in pattern"   => [fn () => new HlsSegmentOptions(fileNamePattern: "sub.vtt"), ...$invalid],
             "Hls/HlsSegmentOptions.php: media duration 0"   => [fn () => new HlsSegmentOptions(mediaDuration: 0), ...$invalid],
+            "Hls/HlsWebVttJoiner.php: stream start above 33 bits" => [fn () => HlsWebVttJoiner::join([], TimestampMap::MPEGTS_WRAP), ...$invalid],
             "Hls/HlsWebVttSegmenter.php: no duration"       => [fn () => HlsWebVttSegmenter::segment(new Subtitle()), ...$invalid],
             "Hls/TimestampMap.php: MPEGTS above 33 bits"    => [fn () => new TimestampMap(TimestampMap::MPEGTS_WRAP), ...$invalid],
             "Hls/TimestampMap.php: negative LOCAL"          => [fn () => new TimestampMap(0, -1), ...$invalid],
