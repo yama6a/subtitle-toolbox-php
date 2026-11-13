@@ -36,23 +36,6 @@ final class TrackFileBuilder
 
 
     /**
-     * Writes each block with the timing line 00:00:00,000 --> 00:00:00,000, because SubRip times hold at most 3 digits of hours.
-     * The caller sets the times of the parsed cues from the block times.
-     *
-     * @param list<array{data: string}> $cues
-     */
-    public static function subRipFile(array $cues): string
-    {
-        $file = "";
-        foreach ($cues as $index => $cue) {
-            $file .= ($index + 1) . "\n00:00:00,000 --> 00:00:00,000\n" . self::cueText($cue["data"]) . "\n\n";
-        }
-
-        return $file;
-    }
-
-
-    /**
      * Rebuilds the Dialogue lines from the fields of each block, as mkvextract does.
      * The fields are ReadOrder, Layer, Style, Name, MarginL, MarginR, MarginV, Effect and Text.
      * Each Dialogue line takes its fields in the order of the Format line of the header.

@@ -241,6 +241,30 @@ class MatroskaReaderTest extends TestCase
     }
 
 
+    public static function readModes(): array
+    {
+        return ["strict" => [false], "lenient" => [true]];
+    }
+
+
+    #[DataProvider("readModes")]
+    public function testASubRipBlockWithATimingLineInItsTextIsOneCue(bool $lenient): void
+    {
+        $stream = self::stream(MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, MkvFixtureWriter::element(
+            MkvFixtureWriter::TRACKS,
+            MkvFixtureWriter::trackEntry(["number" => 2, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_TEXT/UTF8"]),
+        ) . MkvFixtureWriter::cluster(0, [
+            MkvFixtureWriter::blockGroup(2, 1000, "Type it as\n00:00:05,000 --> 00:00:06,000\nto set a cue.", 1000),
+            MkvFixtureWriter::blockGroup(2, 3000, "Next.", 1000),
+        ])));
+
+        $this->assertSame(
+            [[1.0, 2.0, ["Type it as", "00:00:05,000 --&gt; 00:00:06,000", "to set a cue."], false], [3.0, 4.0, ["Next."], false]],
+            $this->cues(MatroskaReader::open($stream)->extract(2, new ReadOptions(lenient: $lenient))),
+        );
+    }
+
+
     public static function compressedTracks(): array
     {
         return [

@@ -73,7 +73,7 @@ abstract class SubtitleParser
         $this->useOptions($options);
 
         if (!static::BINARY) {
-            $content = $this->removeControlCharacters(StringHelpers::removeUtf8Bom($this->checkUtf8($content)));
+            $content = $this->cleanText($content);
             if (trim($content, self::WHITE_SPACE) === "") {
                 return new Subtitle();
             }
@@ -93,6 +93,15 @@ abstract class SubtitleParser
 
 
     abstract protected function read(string $content): Subtitle;
+
+
+    /**
+     * Checks the UTF-8 of $content, then removes the BOM and the control characters, as parse() does for a text format.
+     */
+    protected function cleanText(string $content): string
+    {
+        return $this->removeControlCharacters(StringHelpers::removeUtf8Bom($this->checkUtf8($content)));
+    }
 
 
     /**
