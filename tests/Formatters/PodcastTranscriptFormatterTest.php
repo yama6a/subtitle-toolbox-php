@@ -9,6 +9,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
+use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -84,5 +85,16 @@ class PodcastTranscriptFormatterTest extends TestCase
             ["startTime" => 0.0, "endTime" => 0.24, "body" => "The"],
             json_decode($json, true)["segments"][0]
         );
+    }
+
+
+    public function testWritesNoEndTimeBeforeTheStartTimeOfAJoinedCue(): void
+    {
+        $json     = '{"segments":[{"startTime":5,"endTime":6,"body":"a"},{"startTime":1,"endTime":2,"body":"b"}]}';
+        $subtitle = (new PodcastTranscriptParser())->parse($json, new ReadOptions());
+        $out      = $subtitle->toString(Format::PodcastTranscript);
+
+        $this->assertSame(['startTime' => 5.0, 'endTime' => 5.0, 'body' => 'a b'], json_decode($out, true)["segments"][0]);
+        $this->assertCount(1, (new PodcastTranscriptParser())->parse($out, new ReadOptions())->getCues());
     }
 }

@@ -142,11 +142,11 @@ final class GoogleSpeechFormatter extends SubtitleFormatter
             $sameStart && $sameEnd,
             $sameText,
             fn (mixed $word): array => [self::wordText($word), self::wordTime($word, "start"), self::wordTime($word, "end")],
-            fn (string $word, float $wordStart, float $wordEnd): array => [
+            fn (string $word, float $wordStart, float $wordEnd, mixed $from): array => [
                 ($v2 ? "startOffset" : "startTime") => self::duration($wordStart),
                 ($v2 ? "endOffset" : "endTime")     => self::duration($wordEnd),
                 "word"                              => $word,
-            ] + ($confident ? ["confidence" => TranscriptWords::NEW_WORD_CONFIDENCE] : []) + ($speaker ?? []),
+            ] + ($confident ? ["confidence" => $from["confidence"] ?? TranscriptWords::NEW_WORD_CONFIDENCE] : []) + ($speaker ?? []),
         ) ?? [];
         if ($speaker !== null) {
             $words = array_map(fn (mixed $word): mixed => is_array($word) ? array_replace($word, $speaker) : $word, $words);

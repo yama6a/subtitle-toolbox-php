@@ -213,6 +213,7 @@ WordHighlight::apply($subtitle, new WordHighlightOptions(
 | `cumulative` | `<u>The beach was</u> quiet.` |
 | `word` with `maxWordsPerCue: 3` | `beach <u>was</u> quiet.` |
 
+- **Size limit**: each word cue holds the text of the cue, so the new cues of one cue hold about the number of words times the length of the text. `apply()` throws an `InvalidArgumentException` when the lines of all new cues hold more than 64 MiB, and the subtitle stays as it was. Split the cue with `Resegmenter` or set `maxWordsPerCue`.
 - **Result**: `apply()` replaces the cues of the subtitle with word cues without word timestamps. Pass `clone $subtitle` to keep the original. A cue without word timestamps stays as it is. Comments stay before the first word cue of their cue.
 - **Times**: a word cue lasts from its timestamp to the next one. The last word lasts until the cue end. The time before the first timestamp gets a cue without a styled word. A word of 0 s gets no cue.
 - **Cue data**: each word cue keeps the alignment, the forced flag and the format data. Only the first word cue keeps the identifier.
