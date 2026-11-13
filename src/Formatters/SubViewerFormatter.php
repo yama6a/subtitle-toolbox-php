@@ -26,10 +26,21 @@ final class SubViewerFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $version = $this->formatOptions($options)->version;
+        $version = $this->formatOptions($options)->version ?? self::storedVersion($subtitle);
         $output  = $version === SubViewerVersion::V1 ? $this->formatVersion1($subtitle) : $this->formatVersion2($subtitle);
 
         return $this->applyOutputOptions($output, $options);
+    }
+
+
+    /**
+     * Returns the version that SubViewerParser stored, or SubViewer 2 for a subtitle from another format.
+     */
+    private static function storedVersion(Subtitle $subtitle): SubViewerVersion
+    {
+        $version = $subtitle->findFormatData(SubViewerParser::FORMAT_DATA_KEY)["version"] ?? null;
+
+        return is_int($version) ? SubViewerVersion::tryFrom($version) ?? SubViewerVersion::V2 : SubViewerVersion::V2;
     }
 
 

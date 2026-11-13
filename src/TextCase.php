@@ -36,10 +36,7 @@ final class TextCase
             return strtolower($text);
         }
 
-        $lower = mb_strtolower($turkic ? str_replace(["İ", "I"], ["i", "ı"], $text) : $text, "UTF-8");
-
-        // PHP 8.2 lacks the Unicode Final_Sigma rule, which PHP 8.3 added to mb_strtolower().
-        return preg_replace('/(?<=\p{L})σ(?!\p{L})/u', "ς", $lower);
+        return mb_strtolower($turkic ? str_replace(["İ", "I"], ["i", "ı"], $text) : $text, "UTF-8");
     }
 
 
