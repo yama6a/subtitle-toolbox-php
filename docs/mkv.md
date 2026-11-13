@@ -69,10 +69,10 @@ Subtitle::loadTrack('/media/phone-video.mp4', 2)->save('phone-video.srt');
 |:--- |:--- |
 | `container` | `ContainerFormat::Mp4` |
 | `number` | the track ID of `tkhd` |
-| `codecId` | the sample entry type, for example `tx3g` or `c608` |
+| `codecId` | the sample entry type, for example `tx3g` or `c608`. It is empty for a track without a sample entry |
 | `format` | `Format::SubRip` for `tx3g`, `Format::Scc` for `c608`, `Format::Mcc` for `c708`, null for other codecs and encrypted tracks |
 | `language` | the `elng` box, else the `mdhd` language, for example `eng` |
-| `name` | the `udta/name` box |
+| `name` | the `udta/name` box: plain text, text after 4 bytes of version and flags, or the first entry of a QuickTime text list |
 | `default` | the track enabled flag of `tkhd` |
 | `forced` | the `tx3g` display flag "all samples are forced" |
 
@@ -84,7 +84,8 @@ Subtitle::loadTrack('/media/phone-video.mp4', 2)->save('phone-video.srt');
 - **Format**: `findFormat()` is `Format::SubRip` for `tx3g`. The cues hold text with SubRip tags, as from an `S_TEXT/UTF8` track of an MKV file. It is `Format::Scc` for `c608`, so `convert movie.mov --track 3` without `--to` writes SCC. It is `Format::Mcc` for `c708`.
 - **Detection**: `load()` and `fromString()` without a format know an MP4 file by the `ftyp` box at byte 4.
 - **Memory**: the reader reads the sample tables of the wanted track and its samples only. It skips the media data with `fseek()`.
-- **Errors**: `extract()` throws `ParsingException` for another codec, such as `wvtt`, and for an encrypted track (`enct` or a `sinf` box). It also throws `ParsingException` for a sample outside the file. The same applies when the `stsz` box lists more sample bytes than the file has.
+- **Fragmented files**: the reader reads only the samples that the `moov` box lists. CMAF, DASH and HLS fMP4 files keep their samples in `moof` boxes. `open()` throws `ParsingException` with the message "The MP4 file is fragmented. The reader reads only samples in the moov box." for a `moov` box with an `mvex` box and for a `moof` box before the `moov` box.
+- **Errors**: `extract()` throws `ParsingException` for another codec, such as `wvtt`, for a track without a sample entry and for an encrypted track (`enct` or a `sinf` box). It also throws `ParsingException` for a sample outside the file. The same applies when the `stsz` box lists more sample bytes than the file has.
 - **Not read**: CEA-608 data inside the H.264 or HEVC video stream. Tools such as CCExtractor and ffmpeg extract it.
 - **Spec**: ISO/IEC 14496-12 for the boxes, 3GPP TS 26.245 for timed text, the [QuickTime File Format](https://developer.apple.com/documentation/quicktime-file-format/closed_captioning_sample_data) for `c608` and `c708` samples.
 
@@ -175,5 +176,5 @@ Subtitle::loadTrack('/media/recording.m2ts', 304)->save('recording.srt');
 - **Position**: the middle of the text on the caption plane gives the alignment: the left, middle or right third, and the top, middle or bottom third. Text in the top left corner gives `Alignment::TopLeft`.
 - **Ignored**: underline, bold, italic, flashing, background colors, outlines, built-in sounds, mosaic characters and vertical writing. The reader reads vertical text as rows.
 - **Errors**: the reader skips a data group or a data unit that ends early and ends a statement at a control function that ends early. It does not check the CRC.
-- **Spec**: [ARIB STD-B24](https://www.arib.or.jp/english/std_tr/broadcasting/std-b24.html) for the captions, [ARIB TR-B14](https://www.arib.or.jp/english/std_tr/broadcasting/tr-b14.html) for their use in broadcasts, ABNT NBR 15606-1 for the Latin variant.
 - **Limits**: a number of a control sequence (CSI) stops at 1,048,576. A repeat to the end of the row (RPC 0) writes at most 1,024 cells. A row of the widest writing format holds 96 cells, so a damaged stream cannot fill the memory.
+- **Spec**: [ARIB STD-B24](https://www.arib.or.jp/english/std_tr/broadcasting/std-b24.html) for the captions, [ARIB TR-B14](https://www.arib.or.jp/english/std_tr/broadcasting/tr-b14.html) for their use in broadcasts, ABNT NBR 15606-1 for the Latin variant.

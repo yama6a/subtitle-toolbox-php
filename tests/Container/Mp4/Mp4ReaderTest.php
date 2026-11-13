@@ -181,6 +181,35 @@ class Mp4ReaderTest extends TestCase
     }
 
 
+    public function testThrowsForATrackWithoutASampleEntry(): void
+    {
+        $reader = self::oneTrack(["boxes" => ["stsd" => Mp4FixtureWriter::fullBox("stsd", 0, 0, pack("N", 0))]]);
+
+        $this->assertSame(["", null], [$reader->getSubtitleTracks()[0]->codecId, $reader->trackFormat(1)]);
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("Track 1 has no sample entry.");
+
+        $reader->extract(1);
+    }
+
+
+    public static function nameBoxes(): array
+    {
+        return [
+            "plain text"          => ["English"],
+            "version and flags"   => ["\0\0\0\0English"],
+            "QuickTime text list" => [pack("nn", 7, 0x15C7) . "English" . pack("nn", 7, 0x1225) . "Anglais"],
+        ];
+    }
+
+
+    #[DataProvider("nameBoxes")]
+    public function testReadsTheTrackNameOfEachNameBoxLayout(string $name): void
+    {
+        $this->assertSame("English", self::oneTrack(["name" => $name])->getSubtitleTracks()[0]->name);
+    }
+
+
     public function testEscapesTheTextOfASample(): void
     {
         $this->assertSame(["&lt;laughs&gt; Tom &amp; Ann", "&amp;amp;"],
@@ -318,6 +347,17 @@ class Mp4ReaderTest extends TestCase
             "tx3g text that is not UTF-8"       => [
                 fn () => self::oneTrack([], Mp4FixtureWriter::textSample("Caf\xE9"))->extract(1),
                 "The text of the sample of track 1 at byte 529 is not valid UTF-8.",
+            ],
+            "a moof box before the moov box"   => [
+                fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp() . Mp4FixtureWriter::box("moof", "") .
+                                                      Mp4FixtureWriter::moov([]))),
+                "The MP4 file is fragmented. The reader reads only samples in the moov box.",
+            ],
+            "an mvex box in the moov box"      => [
+                fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp() . Mp4FixtureWriter::box("moov", substr(Mp4FixtureWriter::moov([
+                    ["id" => 1, "handler" => "sbtl", "entry" => Mp4FixtureWriter::tx3gEntry(), "chunks" => []],
+                ]), 8) . Mp4FixtureWriter::box("mvex", Mp4FixtureWriter::fullBox("trex", 0, 0, pack("N5", 1, 1, 0, 0, 0)))))),
+                "The MP4 file is fragmented. The reader reads only samples in the moov box.",
             ],
             "no moov box"                       => [
                 fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp() . Mp4FixtureWriter::box("mdat", "abc"))),
