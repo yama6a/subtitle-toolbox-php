@@ -10,6 +10,7 @@ use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Pac;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -157,5 +158,26 @@ class PacFormatterTest extends TestCase
         $this->expectExceptionMessage("PAC allows subtitle numbers up to 65535.");
 
         $subtitle->toString(Format::Pac);
+    }
+
+
+    #[DataProvider("storedFooters")]
+    public function testStoredFooterWithoutTheEndByteCountsAsMissing(string $footer): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.0, 2.0, "Hi"))->setFormatData("pac", ["footer" => $footer]);
+
+        $output = $subtitle->toString(Format::Pac);
+
+        $this->assertStringEndsWith(Pac::FOOTER, $output);
+        $this->assertSame("Hi", Subtitle::fromString($output, Format::Pac)->getCues()[0]->getText());
+    }
+
+
+    public static function storedFooters(): array
+    {
+        return [
+            "other first byte" => ["0200"],
+            "text"             => ["64756d6d79"],
+        ];
     }
 }

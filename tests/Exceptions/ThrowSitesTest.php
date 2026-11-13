@@ -472,6 +472,8 @@ class ThrowSitesTest extends TestCase
                 new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: PNG decode"       => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage("GIF89a", 0, 0, 1, 1, 9, 9),
                 new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
+            "Formatters/PgsFormatter.php: image data"       => [fn () => (new Subtitle())->addCue((new SubtitleCue(1, 2))->setFormatData("image", ["png" => "x"]))
+                ->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage(self::png(), 0, 0, 1, 1, 9, 9),
                 new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/SccFormatter.php: 5 lines"          => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, ["1", "2", "3", "4", "5"]))
