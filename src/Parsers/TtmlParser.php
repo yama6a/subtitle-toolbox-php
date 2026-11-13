@@ -376,6 +376,10 @@ final class TtmlParser extends SubtitleParser
             $open  = $spans === null && $this->options->lenient;
             [$begin, $end] = $spans ?? ($open ? [$begin, $begin] : throw new ParsingException("The paragraph that begins at {$begin}s has no end time.", $paragraph->getLineNo()));
         }
+        // The check keeps xmlLines() off the path of a valid paragraph.
+        if ($end < $begin) {
+            [$begin, $end] = $this->orderedTimes($begin, $end, $paragraph->getLineNo(), $this->paragraphIndex, $this->xmlLines($paragraph));
+        }
         $runs = array_values(array_filter(
             $runs,
             fn (TtmlRun $run): bool => !$run->isTimedSpan() || $run->begin > $begin && ($open || $run->begin < $end)

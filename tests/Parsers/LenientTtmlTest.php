@@ -99,10 +99,10 @@ class LenientTtmlTest extends TestCase
     #[DataProvider("looseTtmlTimes")]
     public function testLenientModeReadsLooseTtmlTimeExpressions(string $begin, float $seconds): void
     {
-        $content  = "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div>\n<p begin=\"$begin\" end=\"00:00:30.000\">Text</p></div></body></tt>";
+        $content  = "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div>\n<p begin=\"$begin\" end=\"00:05:00.000\">Text</p></div></body></tt>";
         $subtitle = (new TtmlParser())->parse($content, new ReadOptions(lenient: true));
 
-        $this->assertSame([[$seconds, 30.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertSame([[$seconds, 300.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
         $this->assertSame(
             [[2, 0, self::REPAIRED, "The time expression \"$begin\" is not valid. The parser read it as {$seconds}s."]],
             TestSubtitles::warnings($subtitle)
