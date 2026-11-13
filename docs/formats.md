@@ -541,17 +541,19 @@ $subtitle->toString(Format::QuickTimeText);
 | Input | Parser result |
 |:--- |:--- |
 | `{timeScale:600}` and `[00:00:07.300]` | 7.5 s. The fraction counts units of the time scale |
-| `[00:00:07.25]` without `{timeScale}` | 7.25 s. The fraction is a decimal fraction |
+| `[00:00:07.25]` without `{timeScale}` | 7.25 s. The fraction is a decimal fraction of any length |
 | `[00:00:01.00]`, `One`, `[00:00:04.00]`, `[00:00:05.00]`, `Two` | `One` from 1 s to 4 s, `Two` from 5 s for [`ReadOptions::$lastCueDuration`](read-options.md) |
 | `{italic}Sung`, then `{plain}Spoken` in a later sample | `<i>Sung</i>`, then `Spoken` |
 
 - **Samples**: each timestamp starts a sample, and the next timestamp ends it. A sample without text is a gap. Text after the `]` on the timestamp line belongs to the sample.
-- **Relative timestamps**: with `{timeStamps:relative}`, each timestamp counts from the one before it.
+- **Relative timestamps**: with `{timeStamps:relative}`, each timestamp counts from the one before it. The sum must stay below 100000 hours.
 - **Styles**: `{bold}`, `{italic}` and `{underline}` become `<b>`, `<i>` and `<u>`. They apply to the rest of the sample and to all later samples, until `{plain}` resets them. The parser drops the other descriptors from the text, such as `{font:Geneva}` or `{justify:center}`.
 - **Strict mode**: a file must start with `{QTtext}`, and a fraction must be below the time scale. Lenient mode reads both with a `ParseWarning`.
 - **Format data**: the `qttext` data keeps the lines before the first timestamp in `header`. `pairedTimestamps` is `true` when each cue has its own end timestamp and an empty line after it, as Subtitle Edit writes. A cue whose text holds descriptors keeps the text in `source`.
 - **Round trip**: an unchanged file comes out byte for byte, except for empty lines between samples in the QuickTime layout.
 - **Output**: the formatter writes the header of the input, or the 5 header lines of Subtitle Edit with `{timeScale:30}` for a new file. Subtitle Edit reads only 2 fraction digits. Without `{timeScale}`, the formatter writes milliseconds. It writes `<b>`, `<i>` and `<u>` as descriptors, with `{plain}` to end a style, and strips all other tags.
+- **Output header**: the formatter writes each CR and LF of a stored header line as a space, and drops a stored header line that reads as a timestamp. It writes `{QTtext}` first when the stored header does not start with it. So the output always reads back.
+- **Output times**: the formatter rounds each time from whole milliseconds to units of the time scale, half up. A time stays below 100000 hours: at `{timeScale:30}`, 359999999.999 s writes `[99999:59:59.29]`. A relative timestamp counts from the time that the parser reaches after the timestamps before it. So a rounding error stays below half a unit, and a cue that starts before the end of the cue before it moves only itself. Above 12.8 million units per second, the count of units must fit in an int. So the latest time that the formatter writes is 4.6 * 10^18 ms divided by the time scale.
 
 ## SAMI
 ```php
