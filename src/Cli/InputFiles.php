@@ -57,8 +57,7 @@ final class InputFiles
         $files     = [];
         foreach (scandir($directory) ?: [] as $name) {
             $path   = "$directory/$name";
-            $format = Format::tryFromPath($name);
-            if (!is_file($path) || $format === null || !$format->canRead()) {
+            if (!is_file($path) || !self::isSubtitleFile($path)) {
                 continue;
             }
             // The .sub file of a VobSub pair is not MicroDVD. The parser reads it through its .idx file.
@@ -70,5 +69,31 @@ final class InputFiles
         }
 
         return $files;
+    }
+
+
+    /**
+     * Returns true when the extension of $path belongs to a readable format.
+     * When the first format of the extension cannot be read, such as plain text for ".txt", the content must show a readable format.
+     */
+    private static function isSubtitleFile(string $path): bool
+    {
+        $first = Format::tryFromPath($path);
+        if ($first === null) {
+            return false;
+        }
+        if ($first->canRead()) {
+            return true;
+        }
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        foreach (Format::cases() as $format) {
+            if ($format->canRead() && in_array($extension, $format->extensions(), true)) {
+                $detected = Format::detect((string)@file_get_contents($path));
+
+                return $detected !== null && $detected->canRead();
+            }
+        }
+
+        return false;
     }
 }

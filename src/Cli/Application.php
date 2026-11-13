@@ -17,6 +17,7 @@ final class Application
     public const EXIT_RESULT = 1;
     public const EXIT_USAGE  = 2;
     public const EXIT_FILE   = 3;
+    public const EXIT_SIGNAL = 130;
 
     private Console $console;
 
@@ -82,7 +83,9 @@ final class Application
             return $this->usageError("Unknown command \"$name\".", "help");
         }
 
-        $help = array_key_first(array_filter($arguments, fn (string $argument): bool => $argument === "--help" || $argument === "-h"));
+        $end     = array_search("--", $arguments, true);
+        $options = $end === false ? $arguments : array_slice($arguments, 0, $end);
+        $help    = array_key_first(array_filter($options, fn (string $argument): bool => $argument === "--help" || $argument === "-h"));
         if ($help !== null) {
             $topic = $arguments[$help + 1] ?? null;
 
@@ -171,6 +174,7 @@ final class Application
             [(string)self::EXIT_RESULT, "A file broke a validation rule, or diff found a difference."],
             [(string)self::EXIT_USAGE, "Invalid arguments."],
             [(string)self::EXIT_FILE, "A file could not be read or written."],
+            [(string)self::EXIT_SIGNAL, "SIGINT or SIGTERM stopped the run."],
         ]);
         $options   = HelpLayout::table([["-h, --help", "Show this help."], ["-V, --version", "Print the version."]]);
 
