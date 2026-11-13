@@ -11,6 +11,7 @@ use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * The section reading follows libavformat/ffmetadec.c.
@@ -94,23 +95,25 @@ final class FfMetadataChaptersParser extends SubtitleParser
         $timeBase = self::DEFAULT_TIME_BASE;
         $next     = $lines[$i + 1] ?? [0, ""];
         if (preg_match('/^TIMEBASE=(\d+)\/(\d+)/', $next[1], $matches) === 1) {
-            if ((int) $matches[1] === 0 || (int) $matches[2] === 0) {
+            $numerator   = StringHelpers::parseInt64($matches[1]);
+            $denominator = StringHelpers::parseInt64($matches[2]);
+            if ($numerator === null || $denominator === null || $numerator === 0 || $denominator === 0) {
                 throw new ParsingException("The chapter time base $matches[1]/$matches[2] is not valid.", $next[0]);
             }
-            $timeBase = "$matches[1]/$matches[2]";
+            $timeBase = "$numerator/$denominator";
             $next     = $lines[++$i + 1] ?? [0, ""];
         }
         [$numerator, $denominator] = array_map("intval", explode("/", $timeBase));
 
         $start = $previousEnd;
         if (preg_match('/^START=(-?\d+)/', $next[1], $matches) === 1) {
-            $start = self::boundedTime((int) $matches[1] * $numerator / $denominator, $matches[0], $next[0]);
+            $start = self::boundedTime(self::ticks($matches[1], $matches[0], $next[0]) * $numerator / $denominator, $matches[0], $next[0]);
             $next  = $lines[++$i + 1] ?? [0, ""];
         }
 
         $end = null;
         if (preg_match('/^END=(-?\d+)/', $next[1], $matches) === 1) {
-            $end = self::boundedTime((int) $matches[1] * $numerator / $denominator, $matches[0], $next[0]);
+            $end = self::boundedTime(self::ticks($matches[1], $matches[0], $next[0]) * $numerator / $denominator, $matches[0], $next[0]);
             $i++;
         }
 
@@ -118,11 +121,25 @@ final class FfMetadataChaptersParser extends SubtitleParser
     }
 
 
-    // ffmetadec.c ignores a line without an unescaped "=".
+    // FFmpeg reads START and END as int64 ticks.
+    private static function ticks(string $digits, string $text, int $lineNumber): int
+    {
+        return StringHelpers::parseInt64($digits)
+            ?? throw new ParsingException("The time \"$text\" is not below " . Timecode::MAX_HOURS . " hours.", $lineNumber);
+    }
+
+
+    // ffmetadec.c ignores a line without an unescaped "=". A scan finds it, because a regex fails for a key of about 50,000 bytes.
     private function readTag(string $line, array $tags): array
     {
-        if (preg_match('/^((?:[^\\\\=]|\\\\.)*)=(.*)$/s', $line, $matches) === 1) {
-            $tags[$this->unescape($matches[1])] = $this->unescape($matches[2]);
+        $length = strlen($line);
+        for ($position = 0; $position < $length; $position++) {
+            if ($line[$position] === "\\") {
+                $position++;
+            } elseif ($line[$position] === "=") {
+                $tags[$this->unescape(substr($line, 0, $position))] = $this->unescape(substr($line, $position + 1));
+                break;
+            }
         }
 
         return $tags;

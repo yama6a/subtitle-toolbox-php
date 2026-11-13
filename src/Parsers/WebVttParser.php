@@ -30,8 +30,12 @@ final class WebVttParser extends SubtitleParser
 
     private const SIGNATURE    = "WEBVTT";
 
-    // The spec needs a space, a tab or a line end after WEBVTT, as FormatDetector checks.
-    private const SIGNATURE_REGEX = '/\AWEBVTT(?:[ \t\n]|\z)/';
+    /**
+     * The spec needs a space, a tab or a line end after WEBVTT, as FormatDetector checks.
+     *
+     * @internal
+     */
+    public const SIGNATURE_REGEX = '/\AWEBVTT(?:[ \t\n]|\z)/';
 
     private const NOTE         = "NOTE";
     private const TIMING_ARROW = "-->";

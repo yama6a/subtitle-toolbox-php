@@ -71,7 +71,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
     private function readJson(string $content): array
     {
         $data = $this->decodeJsonObject($content);
-        if (!is_array($data["events"] ?? null) || !array_is_list($data["events"])) {
+        if (!is_array($data["events"] ?? null) || !array_is_list($data["events"]) || $this->isJsonObject("events")) {
             throw new ParsingException("The JSON has no \"events\" list.");
         }
 

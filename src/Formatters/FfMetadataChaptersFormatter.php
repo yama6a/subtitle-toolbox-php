@@ -32,7 +32,7 @@ final class FfMetadataChaptersFormatter extends SubtitleFormatter
             $output .= "[CHAPTER]" . LineEnding::Lf->value . "TIMEBASE=$timeBase" . LineEnding::Lf->value .
                        "START=" . $this->ticks($cue->getStart(), $numerator, $denominator) . LineEnding::Lf->value .
                        "END=" . $this->ticks($cue->getEnd(), $numerator, $denominator) . LineEnding::Lf->value .
-                       $this->tags(($title === "" ? [] : ["title" => $title]) + ($cueData["tags"] ?? []));
+                       $this->tags(($title === "" ? [] : ["title" => $title]) + array_diff_key($cueData["tags"] ?? [], ["title" => true]));
         }
 
         return $this->applyOutputOptions($output, $options);

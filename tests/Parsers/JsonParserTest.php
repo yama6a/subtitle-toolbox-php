@@ -97,4 +97,60 @@ class JsonParserTest extends TestCase
 
         (new JsonParser())->parse($json, new ReadOptions());
     }
+
+
+    public function testStrictModeRejectsANegativeEndBeforeTheStart(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The cue ends at -1 s, before it starts at 5 s.");
+
+        (new JsonParser())->parse('{"version":1,"cues":[{"start":5,"end":-1,"lines":["x"]}]}', new ReadOptions());
+    }
+
+
+    public function testLenientModeSwapsANegativeEndAndTheStart(): void
+    {
+        $parser   = new JsonParser();
+        $subtitle = $parser->parse('{"version":1,"cues":[{"start":5,"end":-1,"lines":["x"]}]}', new ReadOptions(lenient: true));
+
+        $this->assertSame([-1.0, 5.0], [$subtitle->getCues()[0]->getStart(), $subtitle->getCues()[0]->getEnd()]);
+        $this->assertCount(1, $parser->getWarnings());
+    }
+
+
+    public function testATimeThatRoundsUpToTheLimitFails(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The field cues[0].end is not below 100000 hours.");
+
+        (new JsonParser())->parse('{"version":1,"cues":[{"start":0,"end":359999999.9996,"lines":["x"]}]}', new ReadOptions());
+    }
+
+
+    public static function objectsWhereAListBelongs(): array
+    {
+        return [
+            "cues"     => ['{"version":1,"cues":{"0":{"start":0,"end":1,"lines":["a"]}}}', "The field cues must be a list."],
+            "lines"    => ['{"version":1,"cues":[{"start":0,"end":1,"lines":{"0":"a"}}]}', "The field cues[0].lines must be a list."],
+            "comments" => ['{"version":1,"cues":[],"comments":{"0":{"text":"a","beforeCueIndex":0}}}', "The field comments must be a list."],
+        ];
+    }
+
+
+    #[DataProvider("objectsWhereAListBelongs")]
+    public function testAJsonObjectWhereAListBelongsFails(string $json, string $message): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage($message);
+
+        (new JsonParser())->parse($json, new ReadOptions());
+    }
+
+
+    public function testFromArrayStillAcceptsAPhpList(): void
+    {
+        $subtitle = Subtitle::fromArray(["version" => 1, "cues" => [["start" => 0, "end" => 1, "lines" => ["a"]]]]);
+
+        $this->assertCount(1, $subtitle->getCues());
+    }
 }

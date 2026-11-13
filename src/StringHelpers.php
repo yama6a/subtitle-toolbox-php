@@ -268,6 +268,23 @@ final class StringHelpers
 
 
     /**
+     * Returns the integer of $digits, such as "007" or "-5", or null when it is beyond int64.
+     *
+     * @internal
+     */
+    public static function parseInt64(string $digits): ?int
+    {
+        $negative = str_starts_with($digits, "-");
+        $trimmed  = ltrim($digits, "-0");
+        $trimmed  = $trimmed === "" ? "0" : $trimmed;
+        $text     = $negative && $trimmed !== "0" ? "-$trimmed" : $trimmed;
+        $int      = (int) $text;
+
+        return (string) $int === $text ? $int : null;
+    }
+
+
+    /**
      * Returns the lowercase primary language subtag of a language code, for example "pt" for "pt_BR" and "" for null.
      *
      * @internal

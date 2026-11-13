@@ -18,6 +18,12 @@ final class JsonParser extends SubtitleParser
     protected function read(string $content): Subtitle
     {
         $data = $this->decodeJsonObject($content);
+        // ArrayReader rejects a value that is not a list, so a JSON object at a list field becomes false.
+        foreach (["cues", "comments"] as $field) {
+            if ($this->isJsonObject($field)) {
+                $data[$field] = false;
+            }
+        }
 
         $this->decodeFileFormatData($data);
         $skipped = $this->checkCueTimes($data, $this->decodeCueFormatData($data));
@@ -94,12 +100,15 @@ final class JsonParser extends SubtitleParser
             try {
                 foreach (["start", "end"] as $key) {
                     $time = $cue[$key] ?? null;
-                    if (is_int($time) || (is_float($time) && is_finite($time))) {
+                    if (self::isNumber($time)) {
                         self::boundedField($time, "cues[$index].$key");
                     }
                 }
                 self::checkWordTimestamps(is_array($cue["lines"] ?? null) ? array_values(array_filter($cue["lines"], "is_string")) : [], null);
-                if (self::isTime($cue["start"] ?? null) && self::isTime($cue["end"] ?? null) && $cue["end"] < $cue["start"]) {
+                if ($this->isJsonObject("cues", $index, "lines")) {
+                    throw new ParsingException("The field cues[$index].lines must be a list.");
+                }
+                if (self::isNumber($cue["start"] ?? null) && self::isNumber($cue["end"] ?? null) && $cue["end"] < $cue["start"]) {
                     [$data["cues"][$index]["start"], $data["cues"][$index]["end"]] = $this->orderedTimes($cue["start"], $cue["end"], null, $index, [RawJson::encode($cue)]);
                 }
             } catch (ParsingException $exception) {
@@ -109,6 +118,12 @@ final class JsonParser extends SubtitleParser
         }
 
         return $skipped;
+    }
+
+
+    private static function isNumber(mixed $value): bool
+    {
+        return is_int($value) || (is_float($value) && is_finite($value));
     }
 
 

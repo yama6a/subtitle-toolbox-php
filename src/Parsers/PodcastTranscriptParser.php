@@ -31,7 +31,7 @@ final class PodcastTranscriptParser extends SubtitleParser
     protected function read(string $content): Subtitle
     {
         $data = $this->decodeJsonObject($content);
-        if (!is_array($data["segments"] ?? null) || !array_is_list($data["segments"])) {
+        if (!is_array($data["segments"] ?? null) || !array_is_list($data["segments"]) || $this->isJsonObject("segments")) {
             throw new ParsingException("The JSON has no \"segments\" list.");
         }
 

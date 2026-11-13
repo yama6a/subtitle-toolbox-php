@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Streaming;
 use Closure;
 use Generator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\StringHelpers;
 
 /**
@@ -15,6 +14,9 @@ use SubtitleToolbox\StringHelpers;
  */
 final class Streams
 {
+    private const CHUNK_BYTES = 8192;
+
+
     /**
      * Yields the lines of a stream resource or file path without UTF-8 BOMs at their start and without line endings.
      * It calls $onInvalidUtf8 with the byte offset of the first byte that is not valid UTF-8.
@@ -29,30 +31,67 @@ final class Streams
         $ownsHandle = !is_resource($stream);
         $handle     = self::open($stream, "rb");
         $offset     = 0;
+        $buffer     = "";
         try {
-            while (($chunk = fgets($handle)) !== false) {
-                $badByte = $onInvalidUtf8 === null ? null : StringHelpers::findInvalidUtf8Offset($chunk);
-                if ($badByte !== null) {
-                    $onInvalidUtf8($offset + $badByte);
-                    $onInvalidUtf8 = null;
-                }
-                $offset += strlen($chunk);
+            do {
+                $chunk = fread($handle, self::CHUNK_BYTES);
+                $atEnd = $chunk === false || $chunk === "";
+                $buffer .= $chunk === false ? "" : $chunk;
+                foreach (self::split($buffer, $atEnd) as [$line, $endLength]) {
+                    $badByte = $onInvalidUtf8 === null ? null : StringHelpers::findInvalidUtf8Offset($line);
+                    if ($badByte !== null) {
+                        $onInvalidUtf8($offset + $badByte);
+                        $onInvalidUtf8 = null;
+                    }
+                    $offset += strlen($line) + $endLength;
 
-                // fgets() ends at LF only, so a chunk can still hold the CR line endings of old Mac files.
-                $lines = explode(LineEnding::Lf->value, StringHelpers::normalizeEOLs($chunk));
-                if (end($lines) === "") {
-                    array_pop($lines);
-                }
-                // Joined files keep the BOM of each part at the start of a line.
-                foreach ($lines as $line) {
+                    // Joined files keep the BOM of each part at the start of a line.
                     yield StringHelpers::removeUtf8Bom($line);
                 }
-            }
+            } while (!$atEnd);
         } finally {
             // The caller may close its stream before a stopped generator runs this block.
             if ($ownsHandle) {
                 fclose($handle);
             }
+        }
+    }
+
+
+    /**
+     * Cuts the complete lines off the front of $buffer. A line ends at LF, CR LF or CR.
+     * A CR at the end of $buffer waits for the next chunk, which may start with the LF. At the end of the stream the rest is a line.
+     *
+     * @return Generator<int, array{string, int}> the line and the length of its line ending
+     */
+    private static function split(string &$buffer, bool $atEnd): Generator
+    {
+        $length = strlen($buffer);
+        $start  = 0;
+        while ($start < $length) {
+            $end = $start + strcspn($buffer, "\r\n", $start);
+            if ($end === $length) {
+                break;
+            }
+            $endLength = 1;
+            if ($buffer[$end] === "\r") {
+                // CR CR LF is one line ending, as StringHelpers::normalizeEOLs() reads it.
+                $crCount = strspn($buffer, "\r", $end);
+                $after   = $end + $crCount;
+                if ($after === $length && !$atEnd) {
+                    break;
+                }
+                $endLength = ($buffer[$after] ?? "") === "\n" ? $crCount + 1 : 1;
+            }
+            yield [substr($buffer, $start, $end - $start), $endLength];
+            $start = $end + $endLength;
+        }
+        $buffer = (string) substr($buffer, $start);
+
+        if ($atEnd && $buffer !== "") {
+            $line   = $buffer;
+            $buffer = "";
+            yield [$line, 0];
         }
     }
 
