@@ -181,6 +181,7 @@ final class FormatDataSchema
             "header"    => self::STRINGS,
             "separator" => "string",
             "lineBreak" => "string",
+            "trailer"   => self::STRINGS,
         ],
         EbuStlParser::FORMAT_DATA_KEY             => [
             "gsi"                        => self::STRINGS,

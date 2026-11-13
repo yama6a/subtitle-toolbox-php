@@ -35,6 +35,7 @@ use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MccWriteOptions;
 use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
+use SubtitleToolbox\Formatters\Options\SpruceStlWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
@@ -484,6 +485,8 @@ class ThrowSitesTest extends TestCase
                 ->toString(Format::Scc), ...$unwritable],
             "Formatters/SccFormatter.php: no CEA-608 character" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, "\u{20AC}"))
                 ->toString(Format::Scc), ...$unwritable],
+            "Formatters/SpruceStlFormatter.php: 120 fps"    => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, "a"))
+                ->toString(Format::SpruceStl, new WriteOptions(formats: [new SpruceStlWriteOptions(frameRate: 120)])), ...$unwritable],
             "Formatters/XmlOutput.php: invalid UTF-8"       => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip, new ReadOptions(encoding: "UTF-8"))->toString(Format::Ttml),
                                                                 ...$unwritable],
             "Formatters/XmlOutput.php: not well-formed"     => [fn () => XmlOutput::load("<p>"), ...$unwritable],
