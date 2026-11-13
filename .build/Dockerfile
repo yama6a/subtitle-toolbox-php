@@ -16,6 +16,7 @@ RUN .build/build-phar.sh "$VERSION" /stbox.phar
 
 FROM public.ecr.aws/docker/library/php:8.5-cli-alpine@sha256:1ff5b45922ab30f418447c6089dbe2eba5f01e0b2742863d0327ac349305d70f
 COPY --from=build /stbox.phar /usr/local/bin/stbox.phar
+COPY --from=build /src/LICENSE /src/THIRD_PARTY_NOTICES.md /usr/share/doc/stbox/
 # OCR of a 1,500-cue PGS file peaks at about 139 MB, above the 128 MB default.
 RUN echo "memory_limit=512M" > "$PHP_INI_DIR/conf.d/stbox.ini"
 WORKDIR /work
