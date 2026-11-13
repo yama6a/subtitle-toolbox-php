@@ -45,7 +45,8 @@
                             {
                                 "text": "bring a basket"
                             }
-                        ]
+                        ],
+                        "computedEnd": 6.5
                     }
                 }
             },
@@ -84,7 +85,8 @@
                             {
                                 "text": "we close at noon"
                             }
-                        ]
+                        ],
+                        "computedEnd": 13.0
                     }
                 }
             }
