@@ -93,7 +93,7 @@ final class TtmlFormatter extends SubtitleFormatter
     {
         $identifier = $cue->findIdentifier();
 
-        return $identifier !== null && preg_match("/^[A-Za-z_][\w.-]*$/", $identifier) ? $identifier : null;
+        return $identifier !== null && preg_match("/^[A-Za-z_][\w.-]*\z/", $identifier) ? $identifier : null;
     }
 
 

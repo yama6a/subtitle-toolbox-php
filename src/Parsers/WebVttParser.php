@@ -29,6 +29,10 @@ final class WebVttParser extends SubtitleParser
     public const REGION_SETTINGS = ["id", "width", "lines", "regionanchor", "viewportanchor", "scroll"];
 
     private const SIGNATURE    = "WEBVTT";
+
+    // The spec needs a space, a tab or a line end after WEBVTT, as FormatDetector checks.
+    private const SIGNATURE_REGEX = '/\AWEBVTT(?:[ \t\n]|\z)/';
+
     private const NOTE         = "NOTE";
     private const TIMING_ARROW = "-->";
 
@@ -51,7 +55,7 @@ final class WebVttParser extends SubtitleParser
 
         // Joined files keep the BOM of each part at the start of a line.
         $lines = array_merge(array_fill(0, $leadingLines, ""), array_map(StringHelpers::removeUtf8Bom(...), $this->lines($content)));
-        if (!str_starts_with($content, self::SIGNATURE)) {
+        if (preg_match(self::SIGNATURE_REGEX, $content) !== 1) {
             if (!$this->options->lenient) {
                 throw new ParsingException("The file does not start with WEBVTT.", $leadingLines + 1);
             }
@@ -106,7 +110,7 @@ final class WebVttParser extends SubtitleParser
         $repaired  = false;
         foreach ($lines as $key => $line) {
             $firstLine ??= trim($line) !== "" ? $key + 1 : null;
-            if (str_starts_with($line, self::SIGNATURE)) {
+            if (preg_match(self::SIGNATURE_REGEX, $line) === 1) {
                 $this->warnMissingSignature($skipped, (int) $firstLine, $key + 1);
                 $repaired = true;
                 break;
@@ -405,7 +409,10 @@ final class WebVttParser extends SubtitleParser
             throw new ParsingException("The time \"$end\" is not valid.", $lineNumber);
         }
 
-        $lines      = Markup::unknownTagsAsText(array_map(self::escapeBareAmpersands(...), str_replace(array_keys(self::ENTITIES), array_values(self::ENTITIES), array_slice($rawLines, 1))));
+        $lines      = Markup::unknownTagsAsText(array_map(
+            fn (string $line): string => preg_replace("/<([0-5]\d:[0-5]\d\.\d{3})>/", "<00:$1>", self::escapeBareAmpersands($line)),
+            str_replace(array_keys(self::ENTITIES), array_values(self::ENTITIES), array_slice($rawLines, 1))
+        ));
         $looseTimes = [];
         foreach ($lines as $offset => $line) {
             self::checkWordTimestamps([$line], $lineNumber === null ? null : $lineNumber + 1 + $offset);

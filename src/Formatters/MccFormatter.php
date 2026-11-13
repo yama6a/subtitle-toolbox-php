@@ -63,12 +63,12 @@ final class MccFormatter extends SubtitleFormatter
         }
         // A packet holds a header byte and a block header byte. A cc_data triplet holds 2 bytes.
         $capacity = 2 * ($tripletCount - 2) - 2;
-        $blocks   = (new Cea708Encoder())->blocks($subtitle, fn (float $seconds): int => (int) round($seconds * $numerator / $denominator), $capacity);
+        $rate     = new FrameRate($numerator / $denominator);
+        $blocks   = (new Cea708Encoder())->blocks($subtitle, $rate->framesBelowLimit(...), $capacity);
         $frames   = array_unique([...array_keys($byFrame), ...array_keys($blocks)]);
         sort($frames);
 
         $lines    = "";
-        $rate     = new FrameRate($numerator / $denominator);
         $sequence = 0;
         foreach ($frames as $frame) {
             $triplets = [];
@@ -115,6 +115,7 @@ final class MccFormatter extends SubtitleFormatter
     /**
      * Writes the header text, then the fields of the header format data or new ones, then the time code rate.
      * A new UUID comes from the hash of the data lines, so the same captions give the same file on the same day.
+     * It leaves out a stored field whose name MccParser does not read as a header field, such as "X-Encoder".
      *
      * @param array<string, string> $fields
      */
@@ -125,7 +126,9 @@ final class MccFormatter extends SubtitleFormatter
 
         $output = sprintf(Mcc::HEADER, $version, Mcc::headerRates($version)) . LineEnding::Lf->value . LineEnding::Lf->value;
         foreach ($fields as $name => $value) {
-            $output .= "$name=$value" . LineEnding::Lf->value;
+            if (preg_match('/^' . Mcc::HEADER_FIELD_NAME . '$/', (string) $name) === 1) {
+                $output .= "$name=$value" . LineEnding::Lf->value;
+            }
         }
 
         return $output . LineEnding::Lf->value;

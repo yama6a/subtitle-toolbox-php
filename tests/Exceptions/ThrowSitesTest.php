@@ -36,6 +36,7 @@ use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MccWriteOptions;
 use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
+use SubtitleToolbox\Formatters\Options\SpruceStlWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
@@ -50,6 +51,7 @@ use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PaletteReducer;
 use SubtitleToolbox\Image\PngDecoder;
 use SubtitleToolbox\Image\PngEncoder;
+use SubtitleToolbox\Karaoke\WordHighlight;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
@@ -497,6 +499,8 @@ class ThrowSitesTest extends TestCase
                 new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: PNG decode"       => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage("GIF89a", 0, 0, 1, 1, 9, 9),
                 new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
+            "Formatters/PgsFormatter.php: image data"       => [fn () => (new Subtitle())->addCue((new SubtitleCue(1, 2))->setFormatData("image", ["png" => "x"]))
+                ->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage(self::png(), 0, 0, 1, 1, 9, 9),
                 new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/SccFormatter.php: 5 lines"          => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, ["1", "2", "3", "4", "5"]))
@@ -505,6 +509,8 @@ class ThrowSitesTest extends TestCase
                 ->toString(Format::Scc), ...$unwritable],
             "Formatters/SccFormatter.php: no CEA-608 character" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, "\u{20AC}"))
                 ->toString(Format::Scc), ...$unwritable],
+            "Formatters/SpruceStlFormatter.php: 120 fps"    => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, "a"))
+                ->toString(Format::SpruceStl, new WriteOptions(formats: [new SpruceStlWriteOptions(frameRate: 120)])), ...$unwritable],
             "Formatters/XmlOutput.php: invalid UTF-8"       => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip, new ReadOptions(encoding: "UTF-8"))->toString(Format::Ttml),
                                                                 ...$unwritable],
             "Formatters/XmlOutput.php: not well-formed"     => [fn () => XmlOutput::load("<p>"), ...$unwritable],
@@ -548,6 +554,7 @@ class ThrowSitesTest extends TestCase
                                                                 ...$invalid],
             "Karaoke/WordHighlightOptions.php: speaker style" => [fn () => new WordHighlightOptions(style: "v Ann"), ...$invalid],
             "Karaoke/WordHighlightOptions.php: 0 words"       => [fn () => new WordHighlightOptions(maxWordsPerCue: 0), ...$invalid],
+            "Karaoke/WordHighlight.php: more than 64 MiB"     => [fn () => WordHighlight::apply(TestSubtitles::fromCues([new SubtitleCue(0, 60, implode("", array_map(fn (int $second): string => sprintf("<00:00:%02d.000>w ", $second), range(0, 59))) . str_repeat("word ", 300000))])), ...$invalid],
             "MergeShortCuesOptions.php: minimum characters 0" => [fn () => new MergeShortCuesOptions(minCharacters: 0), ...$invalid],
             "Ocr/GlyphOcrOptions.php: ink threshold 0"      => [fn () => new GlyphOcrOptions(inkThreshold: 0), ...$invalid],
             "Ocr/GlyphOcrOptions.php: space width 0"        => [fn () => new GlyphOcrOptions(spaceWidth: 0), ...$invalid],
@@ -827,6 +834,7 @@ class ThrowSitesTest extends TestCase
             "Sync/SpeechReference.php: interval past the limit" => [fn () => SpeechReference::fromIntervals([[0, 1e12]]), ...$invalid],
             "TextTransforms.php: empty search"              => [fn () => self::subtitle()->replaceText("", "x"), ...$invalid],
             "TextTransforms.php: invalid regex"             => [fn () => self::subtitle()->replaceText("/[/", "x", new ReplaceTextOptions(regex: true)), ...$invalid],
+            "TextTransforms.php: regex fails on a run"      => [fn () => TestSubtitles::fromCues([[1, 2, ["caf\xe9"]]])->replaceText("/./u", "x", new ReplaceTextOptions(regex: true)), ...$invalid],
             "Timecode.php: drop frame at 25 fps"            => [fn () => Timecode::frameNumber(0, new FrameRate(25), true), ...$invalid],
             "Timecode.php: invalid timecode"                => [fn () => Timecode::parse("1:2:3:4:5"), ...$invalid],
             "Timing/ShotChangeOptions.php: negative window" => [fn () => new ShotChangeOptions(24, snapWindowFrames: -1), ...$invalid],

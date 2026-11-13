@@ -335,4 +335,52 @@ class SamiParserTest extends TestCase
         $this->assertSame(359999997.0, $cue->getStart());
         $this->assertSame(359999999.999, $cue->getEnd());
     }
+
+
+    #[DataProvider("classNamesThatPhpTreatsAsFalse")]
+    public function testAClassNamedLikeAFalseValueIsChosenWithoutStyleRules(string $name): void
+    {
+        $smi      = "<SAMI><BODY>\n<SYNC Start=1000><P Class=\"$name\">zero</P><P Class=ENCC>english</P>\n<SYNC Start=3000><P Class=\"$name\">&nbsp;</P>\n</BODY></SAMI>";
+        $subtitle = (new SamiParser())->parse($smi);
+
+        $this->assertSame(["zero"], $subtitle->getCues()[0]->getLines());
+        $this->assertSame($name, $subtitle->findFormatData(SamiParser::FORMAT_DATA_KEY)["class"]);
+    }
+
+
+    public static function classNamesThatPhpTreatsAsFalse(): array
+    {
+        return ["zero" => ["0"], "empty" => [""]];
+    }
+
+
+    public function testALineNumberDoesNotDependOnALineEndInsideAClosingSyncTag(): void
+    {
+        $smi = "<SAMI><BODY>\n<SYNC Start=1000><P Class=ENCC>one</P></SYNC\n>\n<SYNC Start=2000><P Class=ENCC>two</P></SYNC>\n<SYNC><P Class=ENCC>bad</P></SYNC>\n</BODY></SAMI>";
+
+        try {
+            (new SamiParser())->parse($smi);
+            $this->fail("Expected a ParsingException.");
+        } catch (ParsingException $exception) {
+            $this->assertSame(5, $exception->getLineNumber());
+        }
+    }
+
+
+    public function testAnUnclosedCommentOfOneMegabyteParsesInLinearTime(): void
+    {
+        $comment = str_repeat("x", 1100 * 1024);
+        $start   = microtime(true);
+
+        try {
+            (new SamiParser())->parse("<SAMI><BODY>\n<!--" . $comment);
+        } catch (ParsingException) {
+        }
+        $this->assertSame("a", (new SamiParser())->parse(
+            "<SAMI><HEAD><STYLE>/*" . $comment . "</STYLE></HEAD><BODY><SYNC Start=1><P Class=A>a</SYNC></BODY></SAMI>"
+        )->getCues()[0]->getLines()[0]);
+        $this->assertSame(1, count((new SamiParser())->parse("<SAMI><BODY>\n<SYNC Start=1><P>a</P>\n" . str_repeat("<", 200000))->getCues()));
+
+        $this->assertLessThan(5.0, microtime(true) - $start);
+    }
 }

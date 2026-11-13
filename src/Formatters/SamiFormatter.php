@@ -88,7 +88,7 @@ final class SamiFormatter extends SubtitleFormatter
         $tag = "<P" . ($class === null ? "" : " Class=$class");
         foreach ($attributes as $name => $value) {
             $tag .= " " . strtoupper($name) . "=" .
-                    (preg_match('/^[\w.-]+$/', $value) ? $value : "\"" . htmlspecialchars(XmlOutput::requireUtf8($value), ENT_QUOTES, "UTF-8") . "\"");
+                    (preg_match('/^[\w.-]+\z/', $value) ? $value : "\"" . htmlspecialchars(XmlOutput::requireUtf8($value), ENT_QUOTES, "UTF-8") . "\"");
         }
 
         return "$tag>";

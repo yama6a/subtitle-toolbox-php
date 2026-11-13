@@ -71,6 +71,16 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testReplaceTextThrowsWhenARegexFailsOnATextRun(): void
+    {
+        $subtitle = Subtitle::fromString("1\n00:00:01,000 --> 00:00:02,000\nGr\u{f6}\u{df}e colour\n\n2\n00:00:03,000 --> 00:00:04,000\nThe colour of caf\xe9 au lait.\n", Format::SubRip);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Malformed UTF-8");
+        $subtitle->replaceText('/colou?r/u', "color", new ReplaceTextOptions(regex: true));
+    }
+
+
     public function testRealCaptionFileCleanedUp(): void
     {
         $subtitle = $this->parseCaptions()

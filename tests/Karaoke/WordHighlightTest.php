@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Comment;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\AssKaraokeTag;
 use SubtitleToolbox\Formatters\Options\AssWriteOptions;
@@ -347,4 +348,22 @@ class WordHighlightTest extends TestCase
                                           $subtitle->toString(Format::Ass, new WriteOptions(formats: [new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill)])));
     }
 
+
+    public function testThrowsWhenTheNewCuesHoldMoreThan64MiB(): void
+    {
+        $words = "";
+        for ($index = 0; $index < 100; $index++) {
+            $words .= sprintf("<00:00:%06.3f>w ", $index / 100);
+        }
+        $subtitle = TestSubtitles::fromCues([new SubtitleCue(0, 10, $words . str_repeat("word ", 200000))]);
+
+        try {
+            WordHighlight::apply($subtitle);
+            $this->fail("Expected an InvalidArgumentException.");
+        } catch (InvalidArgumentException $exception) {
+            $this->assertStringContainsString("Resegmenter", $exception->getMessage());
+            $this->assertStringContainsString("maxWordsPerCue", $exception->getMessage());
+        }
+        $this->assertCount(1, $subtitle->getCues());
+    }
 }
