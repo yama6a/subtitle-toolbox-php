@@ -204,4 +204,14 @@ class TmPlayerParserTest extends TestCase
     {
         return [$cue->getStart(), $cue->getEnd(), $cue->getText()];
     }
+
+
+    public function testALastCueStopsAtTheLastMillisecondBelowTheLimit(): void
+    {
+        $subtitle = Subtitle::fromString("99999:59:59:x\n", Format::TmPlayer);
+
+        $this->assertSame(359999999.0, $subtitle->getCues()[0]->getStart());
+        $this->assertSame(359999999.999, $subtitle->getCues()[0]->getEnd());
+        $this->assertSame(359999999.999, Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt)->getCues()[0]->getEnd());
+    }
 }

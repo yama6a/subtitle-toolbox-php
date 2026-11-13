@@ -459,6 +459,8 @@ class ThrowSitesTest extends TestCase
                 new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: PNG size"         => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage(self::png(), 0, 0, 2, 1, 9, 9),
                 new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
+            "Formatters/PgsFormatter.php: PNG decode"       => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage("GIF89a", 0, 0, 1, 1, 9, 9),
+                new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue(TestSubtitles::imageCue(new CueImage(self::png(), 0, 0, 1, 1, 9, 9),
                 new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/SccFormatter.php: 5 lines"          => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, ["1", "2", "3", "4", "5"]))
@@ -472,6 +474,7 @@ class ThrowSitesTest extends TestCase
             "Formatters/XmlOutput.php: not well-formed"     => [fn () => XmlOutput::load("<p>"), ...$unwritable],
             "Formatters/TtmlHead.php: stored head"          => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT_DATA_KEY, ["head" => "<p/>"])
                 ->toString(Format::Ttml), ...$unwritable],
+            "FrameRate.php: frame beyond the int range"     => [fn () => (new FrameRate(1e12))->secondsToFrames(359999999), ...$unwritable],
             "HearingImpaired/HearingImpairedOptions.php: empty bracket"     => [fn () => new HearingImpairedOptions(customBrackets: [["{", ""]]), ...$invalid],
             "Hls/HlsSegmentOptions.php: segment duration 0" => [fn () => new HlsSegmentOptions(segmentDuration: 0), ...$invalid],
             "Hls/HlsSegmentOptions.php: no %d in pattern"   => [fn () => new HlsSegmentOptions(fileNamePattern: "sub.vtt"), ...$invalid],
@@ -611,6 +614,11 @@ class ThrowSitesTest extends TestCase
                 self::pgsSegment(0x16, "\x02\xD0\x02\x40\x10\0\1\x80\0\0\1" . "\0\7\0\0\0\0\0\0") .
                 self::pgsSegment(0x14, "\0\0\1\x10\x80\x80\xFF") .
                 self::pgsSegment(0x15, "\0\7\0\xC0\0\0\7\0\4\0\2\1\1\0\0") .
+                self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
+            "Parsers/PgsParser.php: screen size 0"          => [fn () => (new PgsParser())->parse(
+                self::pgsSegment(0x16, "\0\0\0\0\x10\0\1\x80\0\0\1" . "\0\7\0\0\0\0\0\0") .
+                self::pgsSegment(0x14, "\0\0\1\x10\x80\x80\xFF") .
+                self::pgsSegment(0x15, "\0\7\0\xC0\0\0\6\0\2\0\1\1\1") .
                 self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
             "Parsers/PgsParser.php: object too large"       => [fn () => (new PgsParser())->parse(
                 self::pgsSegment(0x15, "\0\7\0\xC0\0\0\4" . pack("nn", 8000, 1)), new ReadOptions()), ...$parsing],

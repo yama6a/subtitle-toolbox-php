@@ -270,6 +270,124 @@ class PgsParserTest extends TestCase
     }
 
 
+    /**
+     * Each case writes a damaged display set at 2 s. The parser reads the segments of the set from block index 4.
+     */
+    public static function damagedDisplaySets(): array
+    {
+        $object  = ["id" => 0, "window" => 0, "x" => 0, "y" => 900];
+        $epoch   = PgsFixtureWriter::STATE_EPOCH_START;
+        $display = fn (array $objects, int $width = 1920, int $height = 1080): PgsFixtureWriter => (new PgsFixtureWriter())
+            ->presentation(180000, $width, $height, 2, $epoch, 0, $objects)
+            ->palette(180000, 0, 0, PgsFixtures::PALETTE);
+
+        return [
+            "cut-off presentation segment" => [
+                (new PgsFixtureWriter())->segment(180000, 0x16, "\7\x80\4\x38"),
+                4, "The presentation composition segment at 2 s is cut off.",
+            ],
+            "cut-off composition object"   => [
+                (new PgsFixtureWriter())->segment(180000, 0x16, pack("nnCnCCCC", 1920, 1080, 0x10, 2, $epoch, 0, 0, 1) . "\0\0\0"),
+                4, "The composition object 0 at 2 s is cut off.",
+            ],
+            "cut-off cropping"             => [
+                (new PgsFixtureWriter())->segment(180000, 0x16, pack("nnCnCCCC", 1920, 1080, 0x10, 2, $epoch, 0, 0, 1) .
+                                                                pack("nCCnn", 0, 0, 0x80, 0, 900) . "\0\0"),
+                4, "The cropping of composition object 0 at 2 s is cut off.",
+            ],
+            "cut-off first object segment" => [
+                $display([$object])->segment(180000, 0x15, "\0\0\0\xC0\0\0\x07\0\4"),
+                6, "The first definition segment of object 0 is cut off.",
+            ],
+            "object over the size limit"   => [
+                $display([$object])->segment(180000, 0x15, "\0\0\0\xC0\0\0\4" . pack("nn", 8000, 1)),
+                6, "Cannot read object 0: an image of 8000x1 pixels is larger than the limit of 7680 pixels per side and 8294400 pixels in total.",
+            ],
+            "too few run-length pixels"    => [
+                $display([$object])->segment(180000, 0x15, "\0\0\0\xC0\0\0\x07\0\4\0\2\1\1"),
+                4, "Object 0 at 2 s has 2 pixels of run-length data, but its size of 4x2 needs 8.",
+            ],
+            "parts over the size limit"    => [
+                $display([$object, ["id" => 1, "window" => 0, "x" => 8000, "y" => 900]])
+                    ->object(180000, 0, 0, 4, 2, "\1\1\2\2\3\3\3\3")
+                    ->object(180000, 1, 0, 4, 2, "\1\1\2\2\3\3\3\3"),
+                4, "Cannot join the parts of one display set: an image of 8004x2 pixels is larger than the limit of 7680 pixels " .
+                   "per side and 8294400 pixels in total.",
+            ],
+            "screen size of 0"             => [
+                $display([$object], 0, 0)->object(180000, 0, 0, 4, 2, "\1\1\2\2\3\3\3\3"),
+                4, "Cannot create a cue image of 4x2 pixels on a screen of 0x0 pixels: every size must be at least 1.",
+            ],
+        ];
+    }
+
+
+    #[DataProvider("damagedDisplaySets")]
+    public function testLenientModeSkipsADamagedDisplaySetAndReadsOn(PgsFixtureWriter $damaged, int $blockIndex, string $message): void
+    {
+        $object = ["id" => 0, "window" => 0, "x" => 0, "y" => 900];
+        $before = (new PgsFixtureWriter())
+            ->presentation(90000, 1920, 1080, 1, PgsFixtureWriter::STATE_EPOCH_START, 0, [$object])
+            ->palette(90000, 0, 0, PgsFixtures::PALETTE)
+            ->object(90000, 0, 0, 4, 2, "\1\1\2\2\3\3\3\3")
+            ->end(90000);
+        $after  = (new PgsFixtureWriter())
+            ->presentation(270000, 1920, 1080, 3, PgsFixtureWriter::STATE_EPOCH_START, 0, [$object])
+            ->palette(270000, 0, 0, PgsFixtures::PALETTE)
+            ->object(270000, 0, 0, 4, 2, "\3\3\3\3\1\1\2\2")
+            ->end(270000);
+        $content = $before->bytes() . $damaged->end(180000)->bytes() . $after->bytes();
+
+        $subtitle = (new PgsParser())->parse($content, new ReadOptions(lenient: true, lastCueDuration: 1));
+
+        $this->assertSame([[1.0, 2.0], [3.0, 4.0]],
+                          array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertEquals([new ParseWarning($message, null, $blockIndex, [], ParseWarningAction::Skipped)], $subtitle->getParseWarnings());
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage($message);
+        (new PgsParser())->parse($content, new ReadOptions());
+    }
+
+
+    public function testAScreenSizeOf0ThrowsParsingException(): void
+    {
+        $object = ["id" => 0, "window" => 0, "x" => 0, "y" => 0];
+        $bytes  = (new PgsFixtureWriter())
+            ->presentation(90000, 0, 0, 1, PgsFixtureWriter::STATE_EPOCH_START, 0, [$object])
+            ->palette(90000, 0, 0, PgsFixtures::PALETTE)
+            ->object(90000, 0, 0, 2, 1, "\1\1")
+            ->end(90000)->bytes();
+
+        $subtitle = (new PgsParser())->parse($bytes, new ReadOptions(lenient: true));
+
+        $this->assertSame([], $subtitle->getCues());
+        $this->assertEquals([new ParseWarning("Cannot create a cue image of 2x1 pixels on a screen of 0x0 pixels: every size must be at least 1.",
+                                              null, 0, [], ParseWarningAction::Skipped)], $subtitle->getParseWarnings());
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("Cannot create a cue image of 2x1 pixels on a screen of 0x0 pixels: every size must be at least 1.");
+        (new PgsParser())->parse($bytes, new ReadOptions());
+    }
+
+
+    public function testADisplaySetWithAnEarlierTimeEndsTheCueAtItsStart(): void
+    {
+        $object = ["id" => 0, "window" => 0, "x" => 0, "y" => 0];
+        $bytes  = (new PgsFixtureWriter())
+            ->presentation(180000, 1920, 1080, 1, PgsFixtureWriter::STATE_EPOCH_START, 0, [$object])
+            ->palette(180000, 0, 0, PgsFixtures::PALETTE)
+            ->object(180000, 0, 0, 2, 1, "\1\1")
+            ->end(180000)
+            ->presentation(90000, 1920, 1080, 2, PgsFixtureWriter::STATE_EPOCH_START, 0, [])
+            ->end(90000)->bytes();
+
+        $cue = (new PgsParser())->parse($bytes, new ReadOptions())->getCues()[0];
+
+        $this->assertSame([2.0, 2.0], [$cue->getStart(), $cue->getEnd()]);
+    }
+
+
     public function testLastCueDurationIsAnOption(): void
     {
         $cues = $this->parseFile("shapes_1080p.sup", new ReadOptions(lastCueDuration: 1.5))->getCues();
