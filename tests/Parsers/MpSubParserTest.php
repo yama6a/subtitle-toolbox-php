@@ -241,4 +241,11 @@ class MpSubParserTest extends TestCase
         $this->expectExceptionMessage("The frame rate \"0\" is not valid.");
         Subtitle::fromString("FORMAT=0\n\n1 2\nHello\n", Format::MpSub);
     }
+
+
+    public function testASumOnAHalfMillisecondRoundsUpOnEveryPhpVersion(): void
+    {
+        $this->assertSame(3.676, Subtitle::fromString("FORMAT=TIME\n\n2.675 1.0005\nHello\n", Format::MpSub)->getCues()[0]->getEnd());
+        $this->assertSame(2.138, Subtitle::fromString("FORMAT=24\n\n29.72 21.58\nHello\n", Format::MpSub)->getCues()[0]->getEnd());
+    }
 }

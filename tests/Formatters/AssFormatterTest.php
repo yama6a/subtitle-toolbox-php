@@ -395,4 +395,38 @@ class AssFormatterTest extends TestCase
             $subtitle->toString(Format::Ass)
         );
     }
+
+
+    public function testAStoredAlignmentThatIsNotAnIntegerCountsAsBottomCenter(): void
+    {
+        $cue = new SubtitleCue(1, 2, "Hello");
+        $cue->setFormatData("ass", [
+            "text"      => "Hel{\\fs50}lo",
+            "lines"     => ["Hello"],
+            "alignment" => "2",
+            "fields"    => ["Style" => "Default", "Text" => "Hello"],
+        ]);
+
+        $this->assertStringEndsWith(
+            "Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hel{\\fs50}lo\n",
+            (new Subtitle())->addCue($cue)->toString(Format::Ass)
+        );
+    }
+
+
+    public function testAHalfCentisecondRoundsUpOnEveryPhpVersion(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.005, 2.005, "x"));
+
+        $this->assertStringEndsWith("Dialogue: 0,0:00:01.01,0:00:02.01,Default,,0,0,0,,x\n", $subtitle->toString(Format::Ass));
+    }
+
+
+    public function testATimeJustBelowTheLimitStaysBelowItAndReadsBack(): void
+    {
+        $output = Subtitle::fromString("WEBVTT\n\n99999:59:59.900 --> 99999:59:59.999\nx\n", Format::WebVtt)->toString(Format::Ass);
+
+        $this->assertStringEndsWith("Dialogue: 0,99999:59:59.90,99999:59:59.99,Default,,0,0,0,,x\n", $output);
+        $this->assertSame(359999999.99, Subtitle::fromString($output, Format::Ass)->getCues()[0]->getEnd());
+    }
 }

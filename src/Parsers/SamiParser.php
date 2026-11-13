@@ -16,6 +16,7 @@ use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 use SubtitleToolbox\XmlLoader;
 
 final class SamiParser extends SubtitleParser
@@ -131,7 +132,7 @@ final class SamiParser extends SubtitleParser
         }
 
         if ($openCue !== null) {
-            $parsedCues[] = $openCue->setEnd($openCue->getStart() + $this->options->lastCueDuration);
+            $parsedCues[] = $openCue->setEnd(Timecode::lastCueEnd($openCue->getStart(), $this->options->lastCueDuration));
         }
 
         return $parsedCues;

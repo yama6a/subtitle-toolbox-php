@@ -30,6 +30,12 @@ final class AribCaptionDecoder
 
     private const SPACES = [" ", "\u{3000}"];
 
+    // A row of the widest writing format, 1920 dots, holds 96 cells. The limit keeps a damaged repeat count small.
+    private const MAX_REPEAT = 1024;
+
+    // The limit of a CSI number, so that the screen coordinates stay small.
+    private const MAX_PARAMETER = 1 << 20;
+
     private int $encoding;
 
     private ?int $managementGroup = null;
@@ -440,7 +446,7 @@ final class AribCaptionDecoder
                 $parameters[] = $value;
                 $value        = 0;
             } elseif ($byte >= 0x30 && $byte <= 0x39) {
-                $value = $value * 10 + $byte - 0x30;
+                $value = min($value * 10 + $byte - 0x30, self::MAX_PARAMETER);
             }
         }
         if ($end + 1 >= strlen($bytes)) {
@@ -554,7 +560,9 @@ final class AribCaptionDecoder
         }
 
         $times        = $this->repeat > 0 ? $this->repeat : 1;
-        $times        = $this->repeat < 0 ? max(1, intdiv($this->areaX + $this->areaWidth - $this->x, max(1, $this->sectionWidth()))) : $times;
+        $times        = $this->repeat < 0
+            ? min(self::MAX_REPEAT, max(1, intdiv($this->areaX + $this->areaWidth - $this->x, max(1, $this->sectionWidth()))))
+            : $times;
         $this->repeat = 0;
         $ruby         = $this->encoding === self::JAPANESE
                         && (($this->scaleX === 0.5 && $this->scaleY === 0.5) || ($this->charWidth === 18 && $this->charHeight === 18));

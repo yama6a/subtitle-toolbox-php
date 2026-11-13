@@ -481,4 +481,10 @@ class CsvParserTest extends TestCase
 
         new CsvColumns(start: 0, header: false);
     }
+
+
+    public function testAClockFractionOfMoreThan16DigitsRoundsOnItsDigits(): void
+    {
+        $this->assertSame(1.123, Subtitle::fromString("start,text\n00:00:01.12349999999999999,a\n", Format::Csv)->getCues()[0]->getStart());
+    }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Container\MpegTs;
 
+use SubtitleToolbox\Markup;
+
 /**
  * Decodes one teletext page from the PES data of a teletext stream into the text that the page shows over time.
  *
@@ -189,7 +191,7 @@ final class TeletextDecoder
 
 
     /**
-     * Returns the text of a row with <font> tags for colors other than white. A subtitle page shows only the text in boxes.
+     * Returns the escaped text of a row with <font> tags for colors other than white. A subtitle page shows only the text in boxes.
      * Spacing attributes take a cell each and show as a space.
      *
      * @param list<string> $characters
@@ -218,9 +220,10 @@ final class TeletextDecoder
 
         $text = "";
         foreach ($runs as [$runColor, $runText]) {
-            $words = rtrim($runText, " ");
-            $text .= ($runColor === self::WHITE ? $words : "<font color=\"" . self::COLORS[$runColor] . "\">$words</font>") .
-                     substr($runText, strlen($words));
+            $words   = rtrim($runText, " ");
+            $escaped = Markup::escapeText($words);
+            $text   .= ($runColor === self::WHITE ? $escaped : "<font color=\"" . self::COLORS[$runColor] . "\">$escaped</font>") .
+                       substr($runText, strlen($words));
         }
 
         return rtrim($text, " ");

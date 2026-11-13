@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Parsers\MicroDvdParser;
@@ -224,5 +225,29 @@ class MicroDvdFormatterTest extends TestCase
             $this->assertEqualsWithDelta($cue->getStart(), $reparsed->getCues()[$index]->getStart(), 0.02);
             $this->assertEqualsWithDelta($cue->getEnd(), $reparsed->getCues()[$index]->getEnd(), 0.02);
         }
+    }
+
+
+    public function testATimeJustBelowTheLimitStaysBelowItAndReadsBack(): void
+    {
+        $subtitle = Subtitle::fromString("WEBVTT\n\n99999:59:59.900 --> 99999:59:59.999\nx\n", Format::WebVtt);
+        $output   = $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25.0)]));
+
+        $this->assertSame("{8999999998}{8999999999}x\n", $output);
+        $this->assertSame(
+            359999999.96,
+            Subtitle::fromString($output, Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 25.0)]))->getCues()[0]->getEnd()
+        );
+    }
+
+
+    public function testAFrameNumberBeyondTheIntRangeThrows(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(0, 359999999, "Hello"));
+
+        $this->expectException(UnwritableContentException::class);
+        $this->expectExceptionMessage("The time 359999999 s is frame 3.59999999E+20 at 1000000000000 fps.");
+
+        $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 1e12)]));
     }
 }
