@@ -8,6 +8,9 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\Cavena890;
+use SubtitleToolbox\Parsers\Cavena890Parser;
+use SubtitleToolbox\Parsers\Cavena890Variant;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Parsers\DcpParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
@@ -19,6 +22,9 @@ use SubtitleToolbox\Parsers\MccParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
+use SubtitleToolbox\Parsers\Pac;
+use SubtitleToolbox\Parsers\PacCodePage;
+use SubtitleToolbox\Parsers\PacParser;
 use SubtitleToolbox\Parsers\QuickTimeTextParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SccParser;
@@ -35,12 +41,13 @@ use SubtitleToolbox\Parsers\WebVttParser;
  *
  * The format data of a format is an object of fields, or "strings" for an object of strings with any keys.
  * A type is one of these. A "?" in front of a type name, such as "?string" or "?list", also allows null.
- * - "string", "int", "bool", "number", "scalar", "ttiBlock" or "timeBase"
+ * - "string", "int", "bool", "number", "scalar", "ttiBlock", "timeBase" or "hex". "hex" is bytes as pairs of hexadecimal digits.
  * - ["list", type]: an array of values of one type
  * - ["names", type]: an object whose keys are names
  * - ["object", [key => type]]: named fields. A "!" in front of a key marks a required field.
  * - ["range", min, max]: an integer in a range
- * - ["oneOf", list of strings]: one of these strings
+ * - ["oneOf", list of strings or integers]: one of these values
+ * - ["hex", length]: the hexadecimal digits of this number of bytes
  * - ["keys", list of names, type]: an object with only these keys
  *
  * @internal
@@ -63,6 +70,34 @@ final class FormatDataSchema
 
     private const TTI_BLOCKS = ["list", "ttiBlock"];
 
+    private const BYTE = ["range", 0, 0xFF];
+
+    private const CAVENA_890_VARIANTS = [
+        Cavena890Variant::Latin->value,
+        Cavena890Variant::Scandinavian->value,
+        Cavena890Variant::Hebrew->value,
+        Cavena890Variant::Russian->value,
+        Cavena890Variant::Greek->value,
+        Cavena890Variant::Arabic->value,
+        Cavena890Variant::Chinese->value,
+    ];
+
+    private const PAC_CODE_PAGES = [
+        PacCodePage::Latin->value,
+        PacCodePage::LatinCzech->value,
+        PacCodePage::LatinTurkish->value,
+        PacCodePage::Greek->value,
+        PacCodePage::Cyrillic->value,
+        PacCodePage::Arabic->value,
+        PacCodePage::Hebrew->value,
+        PacCodePage::Thai->value,
+        PacCodePage::ChineseTraditional->value,
+        PacCodePage::ChineseSimplified->value,
+        PacCodePage::Korean->value,
+        PacCodePage::Japanese->value,
+        PacCodePage::Unicode->value,
+    ];
+
     private const FILE = [
         AssParser::FORMAT_DATA_KEY                => [
             "sectionOrder"       => self::STRINGS,
@@ -74,6 +109,11 @@ final class FormatDataSchema
             "eventFormat"        => self::STRINGS,
             "commentEvents"      => ["list", self::ATTRIBUTES],
             "sections"           => ["list", self::STRINGS],
+        ],
+        Cavena890Parser::FORMAT_DATA_KEY          => [
+            "variant"  => ["oneOf", self::CAVENA_890_VARIANTS],
+            "header"   => ["hex", Cavena890::HEADER_SIZE],
+            "shortEnd" => "bool",
         ],
         CsvParser::FORMAT_DATA_KEY                => [
             "delimiter"     => ["oneOf", CsvReadOptions::DELIMITERS],
@@ -117,6 +157,13 @@ final class FormatDataSchema
             "frameRateLine" => "bool",
         ],
         MpSubParser::FORMAT_DATA_KEY              => "strings",
+        PacParser::FORMAT_DATA_KEY                => [
+            "codePage"    => ["oneOf", self::PAC_CODE_PAGES],
+            "frameRate"   => ["oneOf", [Pac::FRAME_RATE, Pac::HIGH_FRAME_RATE]],
+            "firstNumber" => ["range", 0, 0xFFFF],
+            "header"      => "hex",
+            "footer"      => "hex",
+        ],
         QuickTimeTextParser::FORMAT_DATA_KEY      => [
             "header"           => self::STRINGS,
             "pairedTimestamps" => "bool",
@@ -165,6 +212,10 @@ final class FormatDataSchema
             "fields" => self::ATTRIBUTES,
             "text"   => "string",
         ],
+        Cavena890Parser::FORMAT_DATA_KEY          => [
+            "text"   => "string",
+            "blocks" => ["list", ["hex", Cavena890::BLOCK_SIZE]],
+        ],
         CsvParser::FORMAT_DATA_KEY                => [
             "columns" => ["list", "scalar"],
         ],
@@ -191,6 +242,12 @@ final class FormatDataSchema
         ],
         MicroDvdParser::FORMAT_DATA_KEY           => [
             "lines" => ["list", ["object", ["!codes" => "string", "!color" => "?string", "!tags" => self::STRINGS, "otherCodes" => "string"]]],
+        ],
+        PacParser::FORMAT_DATA_KEY                => [
+            "verticalPosition" => self::BYTE,
+            "alignment"        => self::BYTE,
+            "text"             => "string",
+            "bytes"            => "hex",
         ],
         QuickTimeTextParser::FORMAT_DATA_KEY      => [
             "source" => self::STRINGS,
@@ -300,6 +357,7 @@ final class FormatDataSchema
             "scalar"   => is_scalar($value) || $value === null,
             "ttiBlock" => is_string($value) && preg_match('/^[0-9A-Fa-f]{256}$/', $value) === 1,
             "timeBase" => is_string($value) && preg_match('/^[1-9]\d*\/[1-9]\d*$/', $value) === 1,
+            "hex"      => is_string($value) && preg_match('/\A(?:[0-9A-Fa-f]{2})*\z/', $value) === 1 && (!is_array($type) || strlen($value) === 2 * $type[1]),
             "range"    => is_int($value) && $value >= $type[1] && $value <= $type[2],
             "oneOf"    => in_array($value, $type[1], true),
             default    => is_array($value),
@@ -307,7 +365,7 @@ final class FormatDataSchema
         if (!$valid) {
             return "The field $path must be " . self::describe($type) . ".";
         }
-        if (!is_array($type) || in_array($type[0], ["range", "oneOf"], true)) {
+        if (!is_array($type) || in_array($type[0], ["range", "oneOf", "hex"], true)) {
             return null;
         }
 
@@ -408,7 +466,8 @@ final class FormatDataSchema
             "ttiBlock" => "a TTI block of 256 hexadecimal digits",
             "timeBase" => "a time base such as \"1/1000\"",
             "range"    => "an integer from $type[1] to $type[2]",
-            "oneOf"    => "one of " . implode(", ", array_map(fn (string $value): string => json_encode($value, JSON_THROW_ON_ERROR), $type[1])),
+            "oneOf"    => "one of " . implode(", ", array_map(fn (int|string $value): string => json_encode($value, JSON_THROW_ON_ERROR), $type[1])),
+            "hex"      => is_array($type) ? "the hexadecimal digits of $type[1] bytes" : "an even number of hexadecimal digits",
             "list"     => "a list or an object",
             default    => "an object",
         };

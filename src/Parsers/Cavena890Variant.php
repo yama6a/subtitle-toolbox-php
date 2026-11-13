@@ -98,15 +98,35 @@ enum Cavena890Variant: string
 
 
     /**
-     * Returns the UTF-16 code units of Chinese text. Subtitle Edit drops the zero bytes and fillers at the end first.
+     * Returns the code points of Chinese UTF-16BE text. A lone surrogate stays a code unit, which gives no text.
+     * Subtitle Edit drops the zero bytes and fillers at the end first. An odd length then takes back the next byte,
+     * which can be the low byte 7Fh of a character such as U+5C7F.
+     *
+     * Adapted from Subtitle Edit, src/libse/SubtitleFormats/Cavena890.cs
+     * (https://github.com/SubtitleEdit/subtitleedit/blob/a0dfbfe65f0517ef85b1e69f1606bca93f68ac3c/src/libse/SubtitleFormats/Cavena890.cs#L2054-L2062), MIT.
      *
      * @return list<int>
      */
     private static function chineseCodes(string $bytes): array
     {
-        $bytes = rtrim($bytes, "\0" . Cavena890::FILLER);
+        $length  = strlen(rtrim($bytes, "\0" . Cavena890::FILLER));
+        $length += $length % 2;
+        $units   = array_values(unpack("n*", str_pad(substr($bytes, 0, $length), $length, "\0")) ?: []);
 
-        return array_values(unpack("n*", strlen($bytes) % 2 === 1 ? "$bytes\0" : $bytes) ?: []);
+        $codes = [];
+        $count = count($units);
+        for ($index = 0; $index < $count; $index++) {
+            $unit = $units[$index];
+            $next = $units[$index + 1] ?? 0;
+            if ($unit >= 0xD800 && $unit <= 0xDBFF && $next >= 0xDC00 && $next <= 0xDFFF) {
+                $codes[] = 0x10000 + (($unit - 0xD800) << 10) + ($next - 0xDC00);
+                $index++;
+                continue;
+            }
+            $codes[] = $unit;
+        }
+
+        return $codes;
     }
 
 
@@ -149,16 +169,17 @@ enum Cavena890Variant: string
         $bytes   = "";
         $characters = Markup::characters($text);
         for ($index = 0; $index < count($characters); $index++) {
-            $pair      = $characters[$index] . ($characters[$index + 1] ?? "");
             $character = $characters[$index];
+            $pair      = $character . ($characters[$index + 1] ?? "");
+            $hasPair   = isset($characters[$index + 1], $reverse[$pair]);
             $ascii     = preg_match('/\A[\x20-\x7E]\z/', $character) === 1 && !isset($table[ord($character)]);
             $encoded   = match (true) {
-                isset($reverse[$pair])      => self::code($reverse[$pair]),
+                $hasPair                    => self::code($reverse[$pair]),
                 $ascii                      => $character,
                 isset($reverse[$character]) => self::code($reverse[$character]),
                 default                     => $this->cp1252($character),
             };
-            $index += isset($reverse[$pair]) ? 1 : 0;
+            $index += $hasPair ? 1 : 0;
             $bytes .= $encoded;
         }
 
