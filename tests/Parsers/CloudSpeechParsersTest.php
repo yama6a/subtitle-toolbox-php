@@ -137,6 +137,22 @@ class CloudSpeechParsersTest extends TestCase
     }
 
 
+    public function testAwsGivesAWordThatManySegmentsNameToTheFirstSegment(): void
+    {
+        $json = '{"results": {"items": [' .
+                '{"id": 0, "type": "pronunciation", "start_time": "0", "end_time": "1", "alternatives": [{"confidence": "0.9", "content": "a"}]},' .
+                '{"id": 1, "type": "punctuation", "alternatives": [{"confidence": "0.0", "content": "."}]}], "audio_segments": [' .
+                '{"start_time": "0", "end_time": "1", "transcript": "a.", "items": [0, 1, 0]},' .
+                '{"start_time": "1", "end_time": "2", "transcript": "a.", "items": [0]}]}}';
+        $cues = (new AwsTranscribeParser())->parse($json, new ReadOptions())->getCues();
+
+        $this->assertSame([[0, 1], []], array_map(
+            fn (SubtitleCue $cue): array => array_column($cue->findFormatData("aws-transcribe")["items"], "id"),
+            $cues
+        ));
+    }
+
+
     public function testGoogleRejectsADurationWithALineBreakAtTheEnd(): void
     {
         $this->expectException(ParsingException::class);
