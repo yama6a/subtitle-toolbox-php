@@ -10,6 +10,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarningAction;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -39,6 +40,27 @@ final class SubRipParser extends SubtitleParser
         }
 
         return $subtitle->addCues($parsedCues);
+    }
+
+
+    /**
+     * Returns a Subtitle with one cue for each text, in order, with the times 0 to 0.
+     * A line of a text stays text, even when it looks like a timing line. The caller sets the cue times.
+     *
+     * @param list<string> $texts
+     *
+     * @internal
+     */
+    public function parseTexts(array $texts, ?ReadOptions $options = null): Subtitle
+    {
+        $this->useOptions($options ?? new ReadOptions());
+        $cues = [];
+        foreach ($texts as $index => $text) {
+            $lines  = array_values(array_filter(array_map("trim", $this->lines($this->cleanText($text))), fn (string $line): bool => $line !== ""));
+            $cues[] = $this->parseCueBlock(["1", "00:00:00,000 --> 00:00:00,000", ...$lines], $index);
+        }
+
+        return (new Subtitle())->addCues($cues)->setParseWarnings($this->warnings);
     }
 
 

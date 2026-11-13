@@ -33,6 +33,7 @@ use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 
 /**
  * FormatDataSchema checks the types of the format data fields that the formatters read.
@@ -272,6 +273,9 @@ final class FormatDataSchema
         TtmlParser::FORMAT_DATA_KEY               => [
             "attributes" => self::ATTRIBUTES,
             "div"        => self::ATTRIBUTES,
+        ],
+        YouTubeTimedTextParser::FORMAT_DATA_KEY   => [
+            YouTubeTimedTextParser::COMPUTED_END => "number",
         ],
         WebVttParser::FORMAT_DATA_KEY             => [
             "vertical" => "string",
