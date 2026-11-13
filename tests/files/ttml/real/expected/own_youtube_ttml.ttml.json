@@ -33,6 +33,10 @@
                 ],
                 "identifier": null,
                 "alignment": null,
+                "position": {
+                    "x": 50.0,
+                    "y": 95.0
+                },
                 "formatData": {
                     "ttml": {
                         "attributes": {
@@ -52,6 +56,10 @@
                 ],
                 "identifier": null,
                 "alignment": null,
+                "position": {
+                    "x": 50.0,
+                    "y": 95.0
+                },
                 "formatData": {
                     "ttml": {
                         "attributes": {
@@ -70,6 +78,10 @@
                 ],
                 "identifier": null,
                 "alignment": null,
+                "position": {
+                    "x": 50.0,
+                    "y": 95.0
+                },
                 "formatData": {
                     "ttml": {
                         "attributes": {
@@ -88,6 +100,10 @@
                 ],
                 "identifier": null,
                 "alignment": null,
+                "position": {
+                    "x": 50.0,
+                    "y": 95.0
+                },
                 "formatData": {
                     "ttml": {
                         "attributes": {
@@ -106,6 +122,10 @@
                 ],
                 "identifier": null,
                 "alignment": null,
+                "position": {
+                    "x": 50.0,
+                    "y": 95.0
+                },
                 "formatData": {
                     "ttml": {
                         "attributes": {

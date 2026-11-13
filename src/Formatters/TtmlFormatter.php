@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\AlignmentGrid;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\MarkupColors;
@@ -125,7 +126,10 @@ final class TtmlFormatter extends SubtitleFormatter
         }
         $forcedAttribute = $this->forcedDisplayAttributes($context, $stored, $cueData, $cue);
         $attributes     .= $this->formatWritableAttributes($context, $stored);
-        if (!isset($stored["region"]) && ($cue->getAlignment() !== Alignment::BottomCenter || $writeDefaultRegion || $realigned)) {
+        $position = $cue->findPosition();
+        if (!isset($stored["region"]) && $position !== null && AlignmentGrid::contains($cue->getAlignment(), $position)) {
+            $attributes .= $this->formatAttribute("region", TtmlHead::positionRegionId($context, $cue->getAlignment(), $position));
+        } elseif (!isset($stored["region"]) && ($cue->getAlignment() !== Alignment::BottomCenter || $writeDefaultRegion || $realigned)) {
             $attributes .= $this->formatAttribute("region", TtmlHead::regionId($context, $cue->getAlignment()));
         }
         $attributes .= $forcedAttribute;

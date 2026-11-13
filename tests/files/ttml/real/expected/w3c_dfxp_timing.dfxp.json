@@ -30,6 +30,10 @@
                 ],
                 "identifier": "p1",
                 "alignment": 8,
+                "position": {
+                    "x": 50.0,
+                    "y": 30.833
+                },
                 "formatData": {
                     "ttml": {
                         "attributes": {
@@ -47,6 +51,10 @@
                 ],
                 "identifier": "p2",
                 "alignment": null,
+                "position": {
+                    "x": 50.0,
+                    "y": 72.5
+                },
                 "formatData": {
                     "ttml": {
                         "attributes": {
@@ -64,6 +72,10 @@
                 ],
                 "identifier": "p3",
                 "alignment": null,
+                "position": {
+                    "x": 50.0,
+                    "y": 72.5
+                },
                 "formatData": {
                     "ttml": {
                         "attributes": {
@@ -81,6 +93,10 @@
                 ],
                 "identifier": "p4",
                 "alignment": 8,
+                "position": {
+                    "x": 50.0,
+                    "y": 30.833
+                },
                 "formatData": {
                     "ttml": {
                         "attributes": {
