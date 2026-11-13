@@ -24,7 +24,7 @@ final class Paragraphs
         $latestEnd  = null;
         $previous   = null;
         foreach ($items as [$start, $end, $value]) {
-            if ($latestEnd === null || $start - $latestEnd >= $gap || ($startsNew !== null && $startsNew($previous, $value))) {
+            if ($latestEnd === null || round($start - $latestEnd, 3) >= $gap || ($startsNew !== null && $startsNew($previous, $value))) {
                 $paragraphs[] = ["start" => $start, "values" => []];
             }
             $paragraphs[count($paragraphs) - 1]["values"][] = $value;

@@ -586,6 +586,24 @@ class CueEditingTest extends TestCase
     }
 
 
+    public function testRemoveDuplicateCuesIgnoresTheOrderOfTheFormatData(): void
+    {
+        $a = (new SubtitleCue(1, 2, "Hello"))
+            ->setFormatData("vtt", ["line" => "5"])
+            ->setFormatData("ass", ["text" => "Hello", "lines" => ["Hello"]]);
+        $b = (new SubtitleCue(1, 2, "Hello"))
+            ->setFormatData("ass", ["lines" => ["Hello"], "text" => "Hello"])
+            ->setFormatData("vtt", ["line" => "5"]);
+
+        $subtitle = new Subtitle();
+        $subtitle->addCue($a);
+        $subtitle->addCue($b);
+        $subtitle->removeDuplicateCues();
+
+        $this->assertCount(1, $subtitle->getCues());
+    }
+
+
     public function testSplitAndJoinKeepThePosition(): void
     {
         $subtitle = TestSubtitles::fromCues([[0, 6, "First sentence.\nSecond sentence."]]);
