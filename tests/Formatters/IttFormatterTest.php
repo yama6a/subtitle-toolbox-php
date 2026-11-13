@@ -128,6 +128,8 @@ class IttFormatterTest extends TestCase
             "23.976 fps, last frame"       => [23.976, 0.958, 1.0, "00:00:00:23", "00:00:01:00"],
             "29.97 fps, past one hour"     => [29.97, 3725.5, 3725.6, "01:02:01:23", "01:02:01:26"],
             "24000/1001 fps"               => [24000 / 1001, 0.5, 1.0, "00:00:00:12", "00:00:01:00"],
+            "end at 100000 hours"          => [25, 359999999.0, 360000000.0, "99999:59:59:00", "99999:59:59:24"],
+            "start in the last frame"      => [25, 359999999.99, 360000000.0, "99999:59:59:24", "99999:59:59:24"],
         ];
     }
 
@@ -141,6 +143,16 @@ class IttFormatterTest extends TestCase
             ["<p begin=\"$begin\" end=\"$expectedEnd\" region=\"bottom\">a</p>"],
             $this->paragraphs($subtitle->toString(Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: $fps)])))
         );
+    }
+
+
+    public function testTimesAtTheLimitReadBack(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(359999999.0, 360000000.0, "last"));
+        $output   = $subtitle->toString(Format::Itt, new WriteOptions(formats: [new IttWriteOptions(frameRate: 25.0)]));
+
+        $cue = Subtitle::fromString($output, Format::Itt)->getCues()[0];
+        $this->assertSame([359999999.0, 359999999.96], [$cue->getStart(), $cue->getEnd()]);
     }
 
 

@@ -68,11 +68,12 @@ final class IttFormatter extends SubtitleFormatter
         $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:frameRateMultiplier", $multiplier);
         $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:dropMode", "nonDrop");
 
+        $lastFrame  = $frameRate->framesBelowLimit(Timecode::LAST_TIME);
         $cues       = $ttml->getCues();
         $paragraphs = $document->getElementsByTagNameNS(TtmlNamespaces::TTML, "p");
         foreach ($paragraphs as $index => $paragraph) {
-            $begin = $frameRate->secondsToFrames(max(0.0, $cues[$index]->getStart()));
-            $end   = max($begin + 1, $frameRate->secondsToFrames(max(0.0, $cues[$index]->getEnd())));
+            $begin = $frameRate->framesBelowLimit($cues[$index]->getStart());
+            $end   = max(min($begin + 1, $lastFrame), $frameRate->framesBelowLimit($cues[$index]->getEnd()));
             $paragraph->setAttribute("begin", sprintf(self::TIME_PATTERN, ...Timecode::frameNumber($begin, $frameRate)));
             $paragraph->setAttribute("end", sprintf(self::TIME_PATTERN, ...Timecode::frameNumber($end, $frameRate)));
         }
