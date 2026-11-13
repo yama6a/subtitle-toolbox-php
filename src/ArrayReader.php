@@ -187,6 +187,7 @@ final class ArrayReader
         $cue = (new SubtitleCue($cueData["start"], $cueData["end"], $cueData["lines"]))
             ->setIdentifier($identifier)
             ->setAlignment($alignment)
+            ->setPosition(self::position($cueData["position"] ?? null, "$path.position"))
             ->setForced($forced);
         foreach (self::map($cueData, "formatData", "$path.") as $format => $formatData) {
             self::checkFormatData($format, $formatData, "$path.formatData.$format", true);
@@ -199,6 +200,25 @@ final class ArrayReader
         }
 
         return $cue;
+    }
+
+
+    private static function position(mixed $position, string $path): ?CuePosition
+    {
+        if ($position === null) {
+            return null;
+        }
+        if (!is_array($position)) {
+            throw new ParsingException("The field $path must be an object or null.");
+        }
+        foreach (["x", "y"] as $key) {
+            $value = $position[$key] ?? null;
+            if (!is_int($value) && !is_float($value) || !($value >= 0 && $value <= 100)) {
+                throw new ParsingException("The field $path.$key must be a number from 0 to 100.");
+            }
+        }
+
+        return new CuePosition($position["x"], $position["y"]);
     }
 
 

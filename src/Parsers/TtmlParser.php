@@ -11,6 +11,7 @@ use DOMXPath;
 use LibXMLError;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\AlignmentGrid;
+use SubtitleToolbox\CuePosition;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
@@ -391,6 +392,7 @@ final class TtmlParser extends SubtitleParser
         $textAlign = $this->styles->ownProperties($paragraph)["textAlign"] ?? $scope->textAlign;
         $alignment = $this->alignment($region, $textAlign);
         $cue->setAlignment($alignment ?? Alignment::BottomCenter);
+        $cue->setPosition($alignment === null ? null : $this->position($region, $alignment));
         $cue->setFormatData(self::FORMAT_DATA_KEY, array_filter(["attributes" => $attributes, "alignment" => $alignment?->value], fn (mixed $value): bool => $value !== [] && $value !== null));
 
         $forced = $this->forcedDisplay($paragraph) ?? $scope->forced ?? $this->regionForcedDisplay($region) ?? false;
@@ -730,8 +732,8 @@ final class TtmlParser extends SubtitleParser
             "right"  => AlignmentGrid::RIGHT,
             default  => null,
         };
-        $origin = $this->verticalLength($properties["origin"] ?? "auto", 0.0);
-        $extent = $this->verticalLength($properties["extent"] ?? "auto", 1.0);
+        $origin = $this->axisLength($properties["origin"] ?? "auto", 1, 0.0);
+        $extent = $this->axisLength($properties["extent"] ?? "auto", 1, 1.0);
         if ($column === null || $origin === null || $extent === null) {
             return null;
         }
@@ -755,15 +757,45 @@ final class TtmlParser extends SubtitleParser
 
 
     /**
-     * Returns the second length of an origin or extent value as a fraction of the root container height.
+     * Returns the anchor point of the region in percent of the root container, or null. The region needs a tts:origin.
+     * The height is the anchor that alignment() uses. The width is the origin, the middle or the far edge of the
+     * region, by the column of $alignment.
      */
-    private function verticalLength(string $value, float $auto): ?float
+    private function position(?string $regionId, Alignment $alignment): ?CuePosition
+    {
+        $properties = $this->styles->regionProperties($regionId);
+        if (trim($properties["origin"] ?? "auto") === "auto") {
+            return null;
+        }
+
+        $point = [];
+        foreach ([0, 1] as $axis) {
+            $origin = $this->axisLength($properties["origin"], $axis, 0.0);
+            $extent = $this->axisLength($properties["extent"] ?? "auto", $axis, 1.0);
+            $share  = $axis === 0
+                ? [0, 0.5, 1][AlignmentGrid::column($alignment) - 1]
+                : ["before" => 0, "center" => 0.5, "after" => 1][trim($properties["displayAlign"] ?? "before")] ?? null;
+            if ($origin === null || $extent === null || $share === null || is_nan($origin + $extent * $share)) {
+                return null;
+            }
+            $point[] = min(max(($origin + $extent * $share) * 100, 0), 100);
+        }
+
+        return AlignmentGrid::positionAt($alignment, $point[0], $point[1]);
+    }
+
+
+    /**
+     * Returns a length of an origin or extent value as a fraction of the root container: the first length and the
+     * width for $axis 0, the second length and the height for $axis 1.
+     */
+    private function axisLength(string $value, int $axis, float $auto): ?float
     {
         $parts = preg_split("/\s+/", trim($value), -1, PREG_SPLIT_NO_EMPTY);
         if ($parts === ["auto"]) {
             return $auto;
         }
-        if (count($parts) !== 2 || !preg_match("/^([+-]?\d+(?:\.\d+)?)(%|px|c)$/", $parts[1], $matches)) {
+        if (count($parts) !== 2 || !preg_match("/^([+-]?\d+(?:\.\d+)?)(%|px|c)$/", $parts[$axis], $matches)) {
             return null;
         }
 
@@ -774,18 +806,18 @@ final class TtmlParser extends SubtitleParser
         if ($matches[2] === "c") {
             $resolution = preg_split("/\s+/", trim($this->attribute($this->root, "ttp", "cellResolution") ?? "32 15"));
 
-            return count($resolution) === 2 && (int) $resolution[1] > 0 ? $length / (int) $resolution[1] : null;
+            return count($resolution) === 2 && (int) $resolution[$axis] > 0 ? $length / (int) $resolution[$axis] : null;
         }
 
         $body       = $this->firstChild($this->root, "body");
         $rootExtent = TtmlStyles::stylingAttributes($this->root)["extent"]
                       ?? ($body === null ? null : TtmlStyles::stylingAttributes($body)["extent"] ?? null);
-        if ($rootExtent === null || !preg_match("/^\s*\d+(?:\.\d+)?px\s+(\d+(?:\.\d+)?)px\s*$/", $rootExtent, $matches)
-            || (float) $matches[1] <= 0) {
+        if ($rootExtent === null || !preg_match("/^\s*(\d+(?:\.\d+)?)px\s+(\d+(?:\.\d+)?)px\s*$/", $rootExtent, $matches)
+            || (float) $matches[1 + $axis] <= 0) {
             return null;
         }
 
-        return $length / (float) $matches[1];
+        return $length / (float) $matches[1 + $axis];
     }
 
 
