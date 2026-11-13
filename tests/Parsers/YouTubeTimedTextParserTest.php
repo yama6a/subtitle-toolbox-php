@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
+use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
@@ -218,6 +219,15 @@ class YouTubeTimedTextParserTest extends TestCase
         $this->assertSame("b", $subtitle->getCues()[0]->getText());
         $this->assertCount(1, $subtitle->getParseWarnings());
         $this->assertStringContainsString("events[0].tStartMs", $subtitle->getParseWarnings()[0]->message);
+    }
+
+
+    public function testAJsonObjectWhereTheEventListBelongsFails(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage('The JSON has no "events" list.');
+
+        (new YouTubeTimedTextParser())->parse('{"events":{"0":{"tStartMs":0,"dDurationMs":1000,"segs":[{"utf8":"a"}]}}}', new ReadOptions());
     }
 
 

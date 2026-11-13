@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
+use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Tests\Support\TestSubtitles;
 
@@ -130,5 +131,14 @@ class PodcastTranscriptParserTest extends TestCase
             [["The field segments[1].body must be a string.", 1, '{"startTime":1,"body":7}'], ["The field segments[2] must be an object.", 2, '"x"']],
             array_map(fn (ParseWarning $warning): array => [$warning->message, $warning->blockIndex, $warning->block[0]], $subtitle->getParseWarnings())
         );
+    }
+
+
+    public function testAJsonObjectWhereTheSegmentListBelongsFails(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage('The JSON has no "segments" list.');
+
+        (new PodcastTranscriptParser())->parse('{"version":"1.0.0","segments":{"0":{"startTime":0,"endTime":1,"body":"a"}}}', new ReadOptions());
     }
 }

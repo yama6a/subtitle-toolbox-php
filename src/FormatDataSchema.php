@@ -361,7 +361,8 @@ final class FormatDataSchema
             "number"   => is_int($value) || (is_float($value) && is_finite($value)),
             "scalar"   => is_scalar($value) || $value === null,
             "ttiBlock" => is_string($value) && preg_match('/^[0-9A-Fa-f]{256}$/', $value) === 1,
-            "timeBase" => is_string($value) && preg_match('/^[1-9]\d*\/[1-9]\d*$/', $value) === 1,
+            "timeBase" => is_string($value) && preg_match('/^[1-9]\d*\/[1-9]\d*$/', $value) === 1
+                          && !in_array(null, array_map(StringHelpers::parseInt64(...), explode("/", $value)), true),
             "hex"      => is_string($value) && preg_match('/\A(?:[0-9A-Fa-f]{2})*\z/', $value) === 1 && (!is_array($type) || strlen($value) === 2 * $type[1]),
             "range"    => is_int($value) && $value >= $type[1] && $value <= $type[2],
             "oneOf"    => in_array($value, $type[1], true),

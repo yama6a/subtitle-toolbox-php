@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
+use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -54,10 +55,12 @@ final class OgmChaptersParser extends SubtitleParser
         if (preg_match(self::TIMESTAMP_LINE, $line, $matches) !== 1) {
             throw new ParsingException("The line \"$line\" is not a CHAPTERxx= line.", $lineNumber);
         }
-        if ((int) $matches[2] > 59 || (int) $matches[3] > 59) {
+        // A number beyond int64 stands for the largest integer, which is past every limit below.
+        [$hours, $minutes, $seconds] = array_map(fn (string $digits): int => StringHelpers::parseInt64($digits) ?? PHP_INT_MAX, array_slice($matches, 1, 3));
+        if ($minutes > 59 || $seconds > 59) {
             throw new ParsingException("The line \"$line\" has a minute or second above 59.", $lineNumber);
         }
 
-        return self::boundedTime(Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]), $line, $lineNumber);
+        return self::boundedTime(Timecode::toSeconds($hours, $minutes, $seconds, $matches[4]), $line, $lineNumber);
     }
 }
