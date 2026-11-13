@@ -58,6 +58,11 @@ final class YouTubeCaptionTimes
             $timed[]  = [$start, $source === null ? max($start, $cue->getEnd()) : ($duration === null ? null : $start + $duration), $window];
         }
         $ends = YouTubeTimedTextParser::captionEnds($timed, (new ReadOptions())->lastCueDuration);
+        foreach ($cueData as $index => $data) {
+            if (isset($timed[$index]) && !isset($data[$this->durationKey]) && is_numeric($data[YouTubeTimedTextParser::COMPUTED_END] ?? null)) {
+                $ends[$index] = (float) $data[YouTubeTimedTextParser::COMPUTED_END];
+            }
+        }
 
         $captions = [];
         foreach ($cues as $index => $cue) {
@@ -65,6 +70,7 @@ final class YouTubeCaptionTimes
             $start  = $timed[$index][0];
             $end    = max($start, $cue->getEnd());
             $source = $this->seconds($data[$this->startKey] ?? null);
+            unset($data[YouTubeTimedTextParser::COMPUTED_END]);
             $fields = array_replace($data + [$this->startKey => null, $this->durationKey => null], [
                 $this->startKey => TranscriptWords::sameTime($source, $start) ? $data[$this->startKey] : $this->value($start),
             ]);
