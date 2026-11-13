@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
@@ -43,8 +44,8 @@ final class LyricsParser extends SubtitleParser
             $this->warnBrokenTimeTags($this->lines($content));
         }
         $content = StringHelpers::normalizeSpaces($content);
-        $content = StringHelpers::removeEmptyLines($content);
         $content = StringHelpers::trimEachLine($content);
+        $content = trim(StringHelpers::removeEmptyLines($content), LineEnding::Lf->value);
 
         $lines      = $this->lines($content);
         $subtitle   = new Subtitle();

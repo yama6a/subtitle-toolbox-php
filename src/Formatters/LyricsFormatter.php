@@ -17,6 +17,9 @@ final class LyricsFormatter extends SubtitleFormatter
 {
     protected const DEFAULT_BOM = true;
 
+    /** The last centisecond the parser reads in the mm:ss.cc form: 999:59.99. */
+    private const LAST_UNIT = 999 * 6000 + 5999;
+
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
@@ -53,6 +56,11 @@ final class LyricsFormatter extends SubtitleFormatter
 
         $output = "";
         foreach ($tags as $tag => $value) {
+            // The parser reads a tag only with this key. It takes a numeric offset as a shift of the times, which the written times hold already.
+            if (preg_match("/^[A-Za-z][A-Za-z0-9_]*$/D", (string) $tag) !== 1
+                || (strtolower((string) $tag) === "offset" && preg_match("/^[+-]?\\d+$/D", trim((string) $value)) === 1)) {
+                continue;
+            }
             $output .= "[" . $tag . ":" . Markup::toSingleLine($value) . "]" . LineEnding::Lf->value;
         }
 
@@ -82,17 +90,24 @@ final class LyricsFormatter extends SubtitleFormatter
         $timestamp = "[" . $this->stamp($cue->getStart()) . "]";
 
         $parts = preg_split(Markup::WORD_TIMESTAMP_REGEX, Markup::rubyAsText(str_replace(LineEnding::Lf->value, " ", implode(" ", $cue->getLines()))), -1, PREG_SPLIT_DELIM_CAPTURE);
-        $lines = "";
+        $lines  = "";
+        $latest = 0.0;
         foreach ($parts as $index => $part) {
             if ($index % 2 === 0) {
                 $lines .= Markup::plainText($part);
                 continue;
             }
 
+            $seconds = Markup::wordTimestampSeconds($part) ?? $latest;
+            if ($seconds < $latest) {
+                continue;
+            }
+            $latest = $seconds;
+
             $next   = Markup::plainText($parts[$index + 1]);
             $before = $spaced && $index === count($parts) - 2 && $next === "" && $lines !== "" && trim(substr($lines, -1)) !== "" ? " " : "";
             $after  = $spaced && $next !== "" && ltrim($next) === $next ? " " : "";
-            $lines .= $before . "<" . $this->stamp(Markup::wordTimestampSeconds($part)) . ">" . $after;
+            $lines .= $before . "<" . $this->stamp($seconds) . ">" . $after;
         }
 
         return $timestamp . " " . $lines;
@@ -104,8 +119,8 @@ final class LyricsFormatter extends SubtitleFormatter
      */
     private function stamp(float $seconds): string
     {
-        [$hours, $minutes, $wholeSeconds, $centiseconds] = Timecode::centiseconds($seconds);
+        $units = min(Timecode::unitsBelowLimit($seconds, 100), self::LAST_UNIT);
 
-        return sprintf("%02d:%02d.%02d", 60 * $hours + $minutes, $wholeSeconds, $centiseconds);
+        return sprintf("%02d:%02d.%02d", intdiv($units, 6000), intdiv($units, 100) % 60, $units % 100);
     }
 }
