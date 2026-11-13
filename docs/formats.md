@@ -70,7 +70,7 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 - **CSV and TSV**: TSV output has tabs. CSV output from a TSV input has commas. A `CsvWriteOptions::$delimiter` wins.
 
 ## Write options
-`WriteOptions` holds the write settings for all formats. Its `format` field takes the options class of one format, such as `MicroDvdWriteOptions`.
+`WriteOptions` holds the write settings for all formats. Its `formats` field is a list of options objects, at most one per format class, such as `MicroDvdWriteOptions`.
 
 ```php
 use SubtitleToolbox\Format;
@@ -462,7 +462,7 @@ $subtitle->toString(Format::TmPlayer);                                     // 00
 
 - **MPL2 times**: tenths of a second.
 - **Italics**: the MPL2 formatter writes `/` for a line whose whole text is inside `<i>`. Both formatters strip all other tags.
-- **TMPlayer end times**: a cue ends at the next later time in the file, also when a line comes out of time order. For example, `00:00:07:B` before `00:00:04:A` gives A from 4 s to 7 s. A line without text only ends the cue before it. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md).
+- **TMPlayer end times**: a cue ends at the next entry in time order, also when that entry has the same time. For example, `00:00:07:B` before `00:00:04:A` gives A from 4 s to 7 s, and `00:00:04:A` followed by `00:00:04:C` gives A from 4 s to 4 s. A line without text only ends the cue before it. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **TMPlayer gaps**: TMPlayer counts whole seconds, so the formatter rounds each time to the second. A cue that ends before the next cue starts gets a line without text at its end. For a cue shorter than 1 s, that line comes 1 s after the start.
 - **`.txt` files**: see [cli.md](cli.md#formats-and-file-extensions).
 - **Escapes**: neither format has an escape for `|`. The formatters write a `|` in the text as U+00A6 BROKEN BAR. A line feed inside a cue line becomes the `|` line break.
@@ -783,7 +783,7 @@ $subtitle->toString(Format::Ttml);
 - **YouTube automatic captions**: yt-dlp `--write-auto-subs` saves rolling cues. Each cue repeats the line before it above a new line with `<c>` word timestamps, and a 10 ms cue repeats the new line. The parser and `WebVttStreamReader` drop the 10 ms cues and the repeated lines, so each spoken line becomes one cue with its word timestamps. The next cue starts where the dropped 10 ms cue started. A file without `<c>` word timestamps or without the 10 ms repeat cues stays as it is.
 - **Cues without text**: a timing line without text gives a cue with no lines. The formatter writes such a cue as its identifier and its timing line.
 - **Output**: the formatter writes the header, comments, styles, regions and cue settings back. It numbers cues without an identifier and always writes hours. It writes `REGION` blocks before `STYLE` blocks, and both before the comments that come before the first cue.
-- **Markup**: the formatter keeps `<b>`, `<i>`, `<u>`, `<v>`, `<lang>`, `<c>`, `<ruby>`, `<rt>` and word timestamps. It keeps classes such as `<c.yellow>` and strips all other tags.
+- **Markup**: the formatter keeps `<strong>`, `<b>`, `<i>`, `<u>`, `<v>`, `<lang>`, `<c>`, `<ruby>`, `<rt>` and word timestamps. It keeps classes such as `<c.yellow>` and strips all other tags.
 - **Colors**: the formatter writes `<font color>` as a [color class](markup.md) when the color is one of the 8 WebVTT colors. `#FFFF00`, `#ff0` and `yellow` all become `<c.yellow>`. WebVTT has no class for other colors, so the formatter drops them. `WebVttFormatter::formatWithReport()` returns the output and a `WebVttDroppedColor` for each dropped color. `WebVttStreamWriter::findDroppedColors()` returns the same list for the cues it wrote. The CLI prints each one on standard error.
 
   ```php

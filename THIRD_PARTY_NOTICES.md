@@ -723,7 +723,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 - Project: <https://github.com/SubtitleEdit/subtitleedit>
 - Licence: MIT
-- Checked at: the `LICENSE` file is MIT at every commit that the code cites, `5b9ee8baf08c472c7a74fbc337446b656dedabb4`, `e1b854665b40bf6e04271c2ec64084947060e632`, `58fad713d9c2b322784bc2fa52148e078dbc8759` and `a0dfbfe65f0517ef85b1e69f1606bca93f68ac3c`. Subtitle Edit replaced its GPL-3.0 `LICENSE.txt` with this MIT `LICENSE` in commit `771236c5` of 2026-02-28. Nothing comes from older commits.
+- Checked at: the `LICENSE` file is MIT at every commit that the code cites, `5b9ee8baf08c472c7a74fbc337446b656dedabb4`, `e1b854665b40bf6e04271c2ec64084947060e632`, `ffefc2f410ba584a9a34dd87e9d2ccb5a8939781`, `2dc7ebda900489e2dea80c36220bcc2b86205aac`, `58fad713d9c2b322784bc2fa52148e078dbc8759` and `a0dfbfe65f0517ef85b1e69f1606bca93f68ac3c`. Subtitle Edit replaced its GPL-3.0 `LICENSE.txt` with this MIT `LICENSE` in commit `771236c5` of 2026-02-28. Nothing comes from older commits.
 - Code adapted from it:
   - `src/Fixing/OcrReplaceList.php` and `src/Fixing/OcrReplaceListFixer.php`: the OCR replace list sections and rules, from `src/libuilogic/Ocr/FixEngine/OcrFixReplaceList2.cs` at `e1b854665b40bf6e04271c2ec64084947060e632`
   - `src/HearingImpaired/HearingImpairedRemover.php`: the hearing-impaired removal rules, from `src/libse/Forms/RemoveTextForHI.cs` at `5b9ee8baf08c472c7a74fbc337446b656dedabb4`
@@ -731,6 +731,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   - `src/Encoding/Cea708.php`: the G2 character table, from `src/libse/Cea708/Cea708.cs`
   - `src/Parsers/Pac.php`, `src/Parsers/PacCodePage.php`, `src/Parsers/PacCodeTables.php`, `src/Parsers/PacCodePageDetector.php`, `src/Parsers/PacParser.php` and `src/Formatters/PacFormatter.php`: the PAC record layout, control codes, character tables and the script checks of the code page detection, from `src/libse/SubtitleFormats/Pac.cs` at `a0dfbfe65f0517ef85b1e69f1606bca93f68ac3c`, which has the same MIT licence
   - `src/Parsers/Cavena890.php`, `src/Parsers/Cavena890Variant.php`, `src/Parsers/Cavena890Parser.php` and `src/Formatters/Cavena890Formatter.php`: the Cavena 890 header and block layout and the text tables, from `src/libse/SubtitleFormats/Cavena890.cs` at `a0dfbfe65f0517ef85b1e69f1606bca93f68ac3c`, which has the same MIT licence
+- Files written for this repository in the shape of its output:
+  - `tests/files/mpl2/real/subtitle_edit_shape.txt`
+  - `tests/files/tmplayer/real/tmplayer_crlf.txt`
+  - `tests/files/sami/real/own_subtitle_edit_modern.smi`
 - Files written for this repository in the shape that its PAC code reads, with the bytes of its PAC character tables:
   - `tests/files/pac/real/*.pac`, `tests/files/pac/real/bakery_unicode.fpc`
 - Files written for this repository in the shape that its Cavena 890 code reads, with the bytes of its text tables:

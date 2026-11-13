@@ -10,7 +10,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\XmlLoader;
 
 /**
- * The sections and their rules follow OcrFixReplaceList2.cs of Subtitle Edit, MIT license, at commit e1b8546:
+ * Adapted from Subtitle Edit, src/libuilogic/Ocr/FixEngine/OcrFixReplaceList2.cs, MIT, at commit e1b8546:
  * https://github.com/SubtitleEdit/subtitleedit/blob/e1b854665b40bf6e04271c2ec64084947060e632/src/libuilogic/Ocr/FixEngine/OcrFixReplaceList2.cs
  */
 final class OcrReplaceList

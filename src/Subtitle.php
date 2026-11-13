@@ -183,7 +183,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Returns what the parser skipped or repaired in lenient mode. A subtitle that no parser read has none.
+     * Returns what the parser skipped or repaired. Lenient mode records a warning for each such block, and a strict CSV read warns about repaired column names and times. A subtitle that no parser read has none.
      *
      * @return list<ParseWarning>
      */

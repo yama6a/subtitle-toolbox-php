@@ -12,7 +12,7 @@ Cue lines hold HTML-like inline tags, the **core markup**. Parsers convert the s
 | `<v Fred>` | speaker, see [text.md](text.md#speakers) |
 | `<00:01:02.500>` | word timestamp, the time a word is spoken |
 
-- **Escaping**: text that is not markup keeps `<`, `>` and `&` escaped as `&lt;`, `&gt;` and `&amp;`.
+- **Escaping**: text that is not markup keeps `<`, `>` and `&` escaped as `&lt;`, `&gt;` and `&amp;`. The WebVTT reader keeps a raw `>` and a `<` before white space, so `5 > 3 and 2 < 4 & so` reads as `5 > 3 and 2 < 4 &amp; so`. `Markup::escapeTextLike()` keeps such runs raw when an edit rewrites the text.
 - **Speaker names**: a quote in a name stays a raw character, for example `<v O'Neil>`.
 - **Font colors**: `<font color='#FF0000'>`, `<font color=#ff0000>` and `<FONT COLOR="#FF0000">` give the same color. The formatters read the `color` attribute with double quotes, single quotes or no quotes, in any case and next to other attributes.
 - **Color values**: formatters that convert a color, such as the ASS, SCC and WebVTT formatters, read the value with one rule. They accept `#rgb`, `#rrggbb`, `#rrggbbaa`, `rgb(r, g, b)`, `rgba(r, g, b, a)` and the 18 TTML color names, such as `yellow`, `aqua` or `navy`, in any case. So `#FF0`, `yellow` and `Yellow` all give `#ffff00`. Each formatter then writes the colors that its format has, see [formats.md](formats.md). TTML and iTT output keep a valid TTML color as it is and keep an alpha channel. The other formatters drop it.

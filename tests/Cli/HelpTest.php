@@ -193,7 +193,7 @@ class HelpTest extends TestCase
     public static function optionDescriptions(): array
     {
         return [
-            "convert --lenient"       => [["convert"], '/^  --lenient +Skip or repair broken cues and print a warning for each\. SCC, PGS, VobSub and chapter input ignore it\.$/m'],
+            "convert --lenient"       => [["convert"], '/^  --lenient +Skip or repair broken cues and print a warning for each\. Chapter input ignores it. A bad .idx file of VobSub always fails\.$/m'],
             "convert --encoding"      => [["convert"], '/^  --encoding NAME +.*It replaces code page detection\. A BOM, valid UTF-8 and UTF-16 input win over it\.$/m'],
             "convert --input-fps"     => [["convert"], '/^  --input-fps RATE +Frame rate of a MicroDVD input without a \{1\}\{1\}<fps> first line, of Spruce STL timecodes, and of CSV or TSV times in hh:mm:ss:ff\.$/m'],
             "convert --output-fps"    => [["convert"], '/^  --output-fps RATE +Frame rate of MicroDVD, Spruce STL, iTT and MCC output\..*$/m'],
