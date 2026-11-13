@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\FileFailure;
+use SubtitleToolbox\Container\Containers;
 use SubtitleToolbox\Container\DvbSubtitleDecoder;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
@@ -340,6 +341,8 @@ class ThrowSitesTest extends TestCase
             "Cli/Command.php: file failure"                 => [fn () => Command::failFile("Cannot read x."), \RuntimeException::class, FileFailure::class],
             "Container/DvbSubtitleDecoder.php: region too large" => [fn () => (new DvbSubtitleDecoder())->add("\x0F\x11\0\1\0\x0A\0\0" . pack("nn", 8000, 1) . "\x0C\0\0\0", 0.0),
                                                                      ...$parsing],
+            "Container/Containers.php: no container"        => [fn () => Containers::open(self::stream("1\n00:00:01,000 --> 00:00:02,000\nHi\n")),
+                                                                ...$unsupported],
             "Container/Matroska/EbmlReader.php: invalid element header" => [fn () => MatroskaReader::open(self::stream("\0\0\0\0")), ...$parsing],
             "Container/Matroska/EbmlReader.php: cut off element data" => [fn () => self::mkv("", ["codecPrivate" => "abc"], "c"), ...$parsing],
             "Container/Matroska/EbmlReader.php: unsigned integer of 2^63" => [fn () => self::mkv(MkvFixtureWriter::cluster(0, [

@@ -41,6 +41,7 @@ try {
 - `save()` without a format and with an unknown extension, such as `out.unknown`.
 - An MKV, WebM, MP4 or MPEG-TS file in `load()` or `fromString()` with a format. Call `loadTrack()` instead.
 - An MKV, WebM, MP4 or MPEG-TS file without exactly 1 subtitle track in `load()` or `fromString()` without a format.
+- A file that is no MKV, WebM, MP4 or MPEG-TS file in `tracks()` or `loadTrack()`, for example a SubRip file. A damaged MKV, WebM, MP4 or MPEG-TS file throws `ParsingException`.
 - Detection that finds no format. This throws the subclass `UnknownFormatException`.
 
 ## Invalid arguments
