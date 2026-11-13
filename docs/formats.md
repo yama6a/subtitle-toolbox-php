@@ -365,6 +365,7 @@ $subtitle->toString(Format::Lyrics);                                       // ID
 - **Text on the next line**: a timestamp line without text takes the next line as its text, if that line has no timestamp and is no ID tag. So `[00:02:35]` and then `Hello` on the next line give one cue at 2 min 35 s.
 - **End times**: a cue ends at the next timestamp in time order. A timestamp without text, such as `[00:17.20]` before another timestamp line, only ends the cue before it. The formatter writes such a line back. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **Output**: times in centiseconds. The formatter strips all tags. Text with `<`, `>` and `&` round-trips.
+- **Line feeds**: the formatter writes a line feed inside a cue line as a space, because an LRC cue has no line break.
 
 ## MCC
 MCC (MacCaption) is the closed caption file of Telestream MacCaption and CaptionMaker. Broadcasters and caption services deliver it next to the video. Each line holds a time code and the caption data of one frame as hex: a SMPTE 334-2 caption distribution packet with CEA-608 byte pairs and CEA-708 data.
@@ -434,6 +435,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWri
 - **Frame rate line**: the format data holds `frameRateLine: true` when the file starts with `{1}{1}<fps>`. The formatter then writes that line with the frame rate of the output, so the file reads back at the same frame rate. `MicroDvdWriteOptions(writeFrameRateLine: true)` writes the line for any input. To drop the line of a MicroDVD input, remove `frameRateLine` from the format data.
 - **Control codes**: `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` become core markup. The parser reads the codes at the start of each `|`-separated line. A code later in the line stays text. A lower-case code styles one line. An upper-case code styles the whole cue. The `microdvd` format data keeps other control codes.
 - **Output**: the formatter writes control codes only for tags that wrap a whole line. It strips other tags. A tag that spans lines wraps each of its lines, so `<i>` around 2 lines gives `{y:i}` on both lines. A `<v>` tag does not hide the styles inside it. An unchanged cue keeps its original control codes. With `stripTags`, the formatter writes no control codes, also not the stored font and size codes such as `{f:Arial}` and `{s:30}`.
+- **Bar in text**: the formatter writes a `|` in the text as U+00A6 BROKEN BAR, because the parser reads `|` as a line break.
 
 ## MPL2 and TMPlayer
 Both formats are common in Polish subtitle downloads and use the `.txt` extension.
@@ -461,6 +463,7 @@ $subtitle->toString(Format::TmPlayer);                                     // 00
 - **TMPlayer end times**: a cue ends at the next later time in the file, also when a line comes out of time order. For example, `00:00:07:B` before `00:00:04:A` gives A from 4 s to 7 s. A line without text only ends the cue before it. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **TMPlayer gaps**: TMPlayer counts whole seconds, so the formatter rounds each time to the second. A cue that ends before the next cue starts gets a line without text at its end. For a cue shorter than 1 s, that line comes 1 s after the start.
 - **`.txt` files**: see [cli.md](cli.md#formats-and-file-extensions).
+- **Escapes**: neither format has an escape for `|`. The formatters write a `|` in the text as U+00A6 BROKEN BAR. A line feed inside a cue line becomes the `|` line break.
 
 ## MPSub
 ```php
@@ -579,6 +582,7 @@ SBV is the YouTube caption format `0:00:01.500,0:00:04.000`.
 - **Parser**: accepts any number of hour digits below the [time limit](#the-format-enum). A timing line without text gives a cue with no lines. A timing line starts a new cue, also without an empty line before it. Text after an empty line stays in the cue before it, as long as no timing line follows, see [lenient-parsing.md](lenient-parsing.md).
 - **Lenient mode**: also reads `0:00:07.980.0:00:11.300`, `0:00:07,980,0:00:11,300` and `0:00:07.98,0:00:11.3`, and warns. A time has 1 or 2 minute and second digits, `.`, `,` or `:` before the fraction, and 1 to 4 fraction digits.
 - **Formatter**: writes one hour digit below 10 hours, and no UTF-8 BOM. It strips all tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips. It skips a cue with no lines.
+- **Text that looks like a timing line**: the formatter puts U+2060 WORD JOINER in front of a text line that the parser reads as a timing line, such as `0:00:03.500,0:00:03.800`. The line has no width and reads back as text.
 
 ## SCC
 SCC (Scenarist Closed Captions) is the closed caption format of US broadcast. Many streaming services also take it. Each line of an SCC file is a time code and CEA-608 byte pairs, one pair per frame at 29.97 fps.
@@ -684,6 +688,8 @@ $subtitle->toString(Format::SpruceStl, new WriteOptions(formats: [new SpruceStlW
 - A tag is `<b>`, `<i>`, `<u>`, `<s>`, `<font>` or `<v>`, or a name with only `name=value` attributes, such as `<foo>` or `<span class="x">`. Other text in angle brackets, such as `<a sentence in brackets>`, is cue text.
 - A tag of another name without attributes is cue text when the cue has no end tag for it, so `<today>` stays text and `<foo>a</foo>` is a tag. FFmpeg writes such text from ASS unchanged. `<br>` and the WebVTT tags `<c>`, `<lang>`, `<ruby>` and `<rt>` are always tags.
 - The formatter keeps `<b>`, `<i>`, `<u>`, `<s>` and `<font>`, and strips all other tags.
+- The formatter writes a time of 1000 hours or more as `999:59:59,999`, the last time that the parser reads.
+- The formatter puts U+2060 WORD JOINER in front of a text line that the parser reads as a timing line, such as `00:00:03,500 --> 00:00:03,800` or `10:30 -> 11:00`. The line has no width and reads back as text.
 
 ## SubViewer
 SubViewer 1 and 2 are `.sub` formats from older DivX releases and DVD rippers. One parser reads both versions.
@@ -711,6 +717,9 @@ $old->toString(Format::SubViewer);             // SubViewer 1
 - **Delay**: the parser adds the SubViewer 1 `[DELAY]` seconds to every time, as FFmpeg does, and stores `[DELAY]` as 0. It keeps the SubViewer 2 `[DELAY]` value and does not apply it.
 - **SubViewer 2 text**: `[br]` and each text line become a cue line. The formatter writes all lines of a cue on one line, joined by `[br]`.
 - **SubViewer 1 cues**: a `[00:00:01]` line with text below starts a cue. A time line with an empty line below ends the cue before it. A cue without such an end line ends where the next cue starts. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md). `|` is a line break. As in FFmpeg, the parser reads only the first text line after a time line.
+- **Cue without an end line**: in SubViewer 1, the cue ends at the next cue that does not start before it. Without such a cue, it lasts `lastCueDuration`.
+- **Text the parser reads as structure**: the formatter writes a `|` as U+00A6 BROKEN BAR in SubViewer 1, and `[br]` as `[`, U+2060 WORD JOINER and `br]` in SubViewer 2. It puts U+2060 in front of a text line that looks like a time line, a timing line, a style line or the script line. A line feed inside a cue line becomes the `|` of SubViewer 1.
+- **Header repairs**: the formatter writes each CR and LF of a header value as a space. It skips a header key that the parser reads as another key, such as an empty key, a key with `]`, a key with a lower-case letter or, in SubViewer 2, `COLF`. It writes a value empty when the line would look like a timing line or a style line in SubViewer 2. In SubViewer 1, a value that starts with `[` stays on the tag line.
 - **Output**: times in centiseconds for version 2 and in seconds for version 1. The formatter strips all tags and decodes HTML entities. It skips cues without text, because an empty line ends a cue.
 
 ## TTML
