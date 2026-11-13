@@ -217,4 +217,37 @@ class YouTubeTimedTextFormatterTest extends TestCase
             self::write($subtitle)
         );
     }
+
+
+    public function testAJson3EventWithoutADurationStaysWithoutIt(): void
+    {
+        $source = '{"events":[{"tStartMs":0,"segs":[{"utf8":"a"}]}]}';
+
+        $this->assertStringContainsString(
+            '"events":[{"tStartMs":0,"segs":[{"utf8":"a"}]}]',
+            Subtitle::fromString($source, Format::YouTubeTimedText)->toString(Format::YouTubeTimedText)
+        );
+    }
+
+
+    public function testASrv3SpanWithPenZeroKeepsItsElement(): void
+    {
+        $source = '<timedtext format="3"><head><pen id="1" b="1"/></head><body><p t="0" d="1000" p="1"><s p="0">Hi</s></p></body></timedtext>';
+
+        $this->assertStringContainsString(
+            '<p t="0" d="1000" p="1"><s p="0">Hi</s></p>',
+            Subtitle::fromString($source, Format::YouTubeTimedText)->toString(Format::YouTubeTimedText)
+        );
+    }
+
+
+    public function testASrv3WindowPositionWithAFractionalAnchorPointKeepsItsReference(): void
+    {
+        $source = '<timedtext format="3"><head><wp id="1" ap="4.5"/></head><body><p t="0" d="1000" wp="1">Hi</p></body></timedtext>';
+
+        $this->assertStringContainsString(
+            '<p t="0" d="1000" wp="1">Hi</p>',
+            Subtitle::fromString($source, Format::YouTubeTimedText)->toString(Format::YouTubeTimedText)
+        );
+    }
 }
