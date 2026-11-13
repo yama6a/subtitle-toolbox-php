@@ -695,11 +695,16 @@ use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::SubViewer);
 $subtitle->findFormatData('subviewer');  // ['version' => 2, 'header' => ['DELAY' => '0', 'CD TRACK' => '0'], 'style' => '[COLF]&HFFFFFF,[STYLE]bd,[SIZE]18,[FONT]Arial']
-$subtitle->toString(Format::SubViewer);                                             // SubViewer 2
+$subtitle->toString(Format::SubViewer);                                             // SubViewer 2, the stored version
 $subtitle->toString(Format::SubViewer, new WriteOptions(formats: [new SubViewerWriteOptions(version: SubViewerVersion::V1)]));  // SubViewer 1
+
+$old = Subtitle::fromString("[TITLE]\nBakery\n******** START SCRIPT ********\n[00:00:01]\nHello\n[00:00:02]\n", Format::SubViewer);
+$old->findFormatData('subviewer')['version'];  // 1
+$old->toString(Format::SubViewer);             // SubViewer 1
 ```
 
-- **Version**: a `******** START SCRIPT ********` line makes a file SubViewer 1. All other files are SubViewer 2.
+- **Version**: a `******** START SCRIPT ********` line makes a file SubViewer 1. All other files are SubViewer 2. The parser stores the version as `version` in the `subviewer` format data.
+- **Written version**: the `version` option of `SubViewerWriteOptions` wins. Without it, the formatter writes the stored version, so a SubViewer 1 file stays SubViewer 1. A subtitle from another format becomes SubViewer 2.
 - **Header**: `[TITLE]` and `[AUTHOR]` become the metadata keys `title` and `author`. The parser keeps the other header tags and the `[COLF]` style line in the `subviewer` format data. The formatter writes them back after `[TITLE]` and `[AUTHOR]`. For a subtitle from another format, it writes the tags that Subtitle Edit writes.
 - **Delay**: the parser adds the SubViewer 1 `[DELAY]` seconds to every time, as FFmpeg does, and stores `[DELAY]` as 0. It keeps the SubViewer 2 `[DELAY]` value and does not apply it.
 - **SubViewer 2 text**: `[br]` and each text line become a cue line. The formatter writes all lines of a cue on one line, joined by `[br]`.
