@@ -119,7 +119,7 @@ final class SccParser extends SubtitleParser
      */
     private static function readTimeCode(string $rawLine, int $lineNumber): array
     {
-        if (!preg_match("/^(\d{2}):(\d{2}):(\d{2})([:;])(\d{2})(?:\s+(.*))?$/", $rawLine, $matches)) {
+        if (!preg_match("/^(\d{2,6}):(\d{2}):(\d{2})([:;])(\d{2})(?:\s+(.*))?$/", $rawLine, $matches)) {
             throw new ParsingException("The SCC line \"$rawLine\" does not start with a time code.", $lineNumber);
         }
 
