@@ -40,7 +40,7 @@ final class MccParser extends SubtitleParser
             if ($line === "" || str_starts_with($line, "//") || str_starts_with($line, self::FILE_FORMAT)) {
                 continue;
             }
-            if (preg_match('/^([A-Za-z][A-Za-z ]*)=(.*)$/', $line, $matches) === 1) {
+            if (preg_match('/^(' . Mcc::HEADER_FIELD_NAME . ')=(.*)$/', $line, $matches) === 1) {
                 $header[trim($matches[1])] = trim($matches[2]);
                 continue;
             }

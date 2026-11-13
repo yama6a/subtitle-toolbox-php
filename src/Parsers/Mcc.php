@@ -22,6 +22,9 @@ final class Mcc
 {
     public const VERSIONS = ["1.0", "2.0"];
 
+    // The pattern of a header field name. A header line is the name, "=" and the value.
+    public const HEADER_FIELD_NAME = "[A-Za-z][A-Za-z ]*";
+
     // Frame rate => frame labels per second, frames per second as a fraction, CDP frame rate code and cc_data triplets per CDP.
     // The codes come from SMPTE 334-2 and the triplet counts from CEA-708 table 3.
     public const FRAME_RATES = [

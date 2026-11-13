@@ -154,6 +154,31 @@ class MccFormatterTest extends TestCase
     }
 
 
+    public static function unreadableFieldNames(): array
+    {
+        return [
+            "hyphen"     => ["X-Encoder"],
+            "digit"      => ["Encoder2"],
+            "underscore" => ["Creation_Date"],
+            "empty"      => [""],
+            "number"     => ["7"],
+        ];
+    }
+
+
+    #[DataProvider("unreadableFieldNames")]
+    public function testLeavesOutAStoredHeaderFieldThatTheParserCannotRead(string $name): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "HELLO"));
+        $subtitle->setFormatData("mcc", ["header" => [$name => "v2", "Encoder Name" => "v3"]]);
+
+        $output = $subtitle->toString(Format::Mcc);
+
+        $this->assertStringNotContainsString("=v2\n", $output);
+        $this->assertSame("v3", Subtitle::fromString($output)->findFormatData("mcc")["header"]["Encoder Name"]);
+    }
+
+
     public function testWritesOnlyTheHeaderForASubtitleWithoutCues(): void
     {
         $this->assertStringEndsWith("Time Code Rate=30DF\n\n", (new Subtitle())->toString(Format::Mcc));
