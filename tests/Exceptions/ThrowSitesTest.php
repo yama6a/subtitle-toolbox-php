@@ -42,6 +42,7 @@ use SubtitleToolbox\Hls\TimestampMap;
 use SubtitleToolbox\Http\CurlHttpClient;
 use SubtitleToolbox\Http\FakeHttpClient;
 use SubtitleToolbox\Http\WithoutCurl;
+use SubtitleToolbox\Http\LocalServer;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PaletteReducer;
 use SubtitleToolbox\Image\PngDecoder;
@@ -127,6 +128,7 @@ use SubtitleToolbox\WriteOptions;
 require_once __DIR__ . "/../files/mkv/generator/MkvFixtureWriter.php";
 require_once __DIR__ . "/../files/mp4/generator/Mp4FixtureWriter.php";
 require_once __DIR__ . "/../Http/FakeHttpClient.php";
+require_once __DIR__ . "/../Http/LocalServer.php";
 require_once __DIR__ . "/../Http/WithoutCurl.php";
 
 class ThrowSitesTest extends TestCase
@@ -795,6 +797,14 @@ class ThrowSitesTest extends TestCase
             "Http/CurlHttpClient.php: no curl extension"    => [fn () => throw WithoutCurl::exception("new " . CurlHttpClient::class . "();"),
                                                                 ...$invalid],
             "Http/CurlHttpClient.php: no connection"        => [fn () => (new CurlHttpClient())->post(self::closedPortUrl(), [], ""), ...$translation],
+            "Http/CurlHttpClient.php: answer too long"      => [function () {
+                $server = LocalServer::start(__DIR__ . "/../files/translation/fake-server.php");
+                try {
+                    (new CurlHttpClient())->post("$server->url/echo?pad=1100000", [], "");
+                } finally {
+                    $server->stop();
+                }
+            }, ...$translation],
             "Translation/DeepLEngine.php: HTTP 403"         => [fn () => (new DeepLEngine(new DeepLOptions("key", httpClient: new FakeHttpClient([[403, ""]]))))
                                                                 ->translate(["a"], "en", "de"), ...$translation],
             "Translation/DeepLEngine.php: no translations"  => [fn () => (new DeepLEngine(new DeepLOptions("key", httpClient: new FakeHttpClient([[200, "{}"]]))))
@@ -832,7 +842,13 @@ class ThrowSitesTest extends TestCase
                 {
                     return [];
                 }
-            }))->translate(self::subtitle(), "en", "de"), ...$invalid],
+            }))->translate(self::subtitle(), "en", "de"), ...$translation],
+            "Translation/TranslationRunner.php: empty target language" => [fn () => (new TranslationRunner(new class implements TranslationEngine {
+                public function translate(array $texts, string $sourceLanguage, string $targetLanguage): array
+                {
+                    return $texts;
+                }
+            }))->translate(self::subtitle(), "en", " "), ...$invalid],
             "Validation/ValidationRules.php: invalid character class" => [fn () => new ValidationRules(allowedCharacters: "[z-a]"),
                 ...$invalid],
             "WriteDefaults.php: MicroDVD without a frame rate" => [fn () => self::subtitle()->toString(Format::MicroDvd), ...$invalid],
