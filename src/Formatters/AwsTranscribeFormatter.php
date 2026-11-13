@@ -78,7 +78,7 @@ final class AwsTranscribeFormatter extends SubtitleFormatter
             $sameStart && $sameEnd,
             $sameText,
             fn (array $word): array => [self::wordText($word), self::seconds(self::wordStart($word)), self::seconds(self::wordEnd($word))],
-            fn (string $text, float $wordStart, float $wordEnd): array => self::newItems($text, $wordStart, $wordEnd, $speaker),
+            fn (string $text, float $wordStart, float $wordEnd, mixed $from): array => self::newItems($text, $wordStart, $wordEnd, $speaker, $from),
         ) ?? [];
 
         $items = [];
@@ -148,14 +148,14 @@ final class AwsTranscribeFormatter extends SubtitleFormatter
     /**
      * Returns a pronunciation item for a word, and a punctuation item for the punctuation at its end.
      */
-    private static function newItems(string $text, float $start, float $end, ?string $speaker): array
+    private static function newItems(string $text, float $start, float $end, ?string $speaker, mixed $from): array
     {
         preg_match('/\A(.*?)(\p{P}*)\z/su', $text, $parts);
         $speakerLabel = $speaker === null ? [] : ["speaker_label" => $speaker];
         $items        = [];
         if ($parts[1] !== "" || $parts[2] === "") {
             $items[] = ["start_time" => self::time($start)] + $speakerLabel + ["end_time" => self::time($end)]
-                + ["alternatives" => [["confidence" => self::confidence(TranscriptWords::NEW_WORD_CONFIDENCE), "content" => $parts[1]]], "type" => "pronunciation"];
+                + ["alternatives" => [["confidence" => $from[0]["alternatives"][0]["confidence"] ?? self::confidence(TranscriptWords::NEW_WORD_CONFIDENCE), "content" => $parts[1]]], "type" => "pronunciation"];
         }
         if ($parts[2] !== "") {
             $items[] = $speakerLabel + ["alternatives" => [["confidence" => "0.0", "content" => $parts[2]]], "type" => "punctuation"];

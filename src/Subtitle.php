@@ -98,6 +98,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
     /**
      * Reads the subtitle track with the number $trackNumber of an MKV, WebM, MP4 or MPEG-TS file.
      * The codec of the track picks the parser. tracks() lists the track numbers.
+     *
+     * @throws UnsupportedFormatException for a file that is no MKV, WebM, MP4 or MPEG-TS file.
      */
     public static function loadTrack(string $path, int $trackNumber, ?ReadOptions $options = null): self
     {
@@ -109,6 +111,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
      * Returns the subtitle tracks of an MKV, WebM, MP4 or MPEG-TS file.
      *
      * @return list<SubtitleTrack>
+     * @throws UnsupportedFormatException for a file that is no MKV, WebM, MP4 or MPEG-TS file.
      */
     public static function tracks(string $path): array
     {

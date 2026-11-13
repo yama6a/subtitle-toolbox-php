@@ -21,6 +21,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
 require_once __DIR__ . "/../../files/mpegts/generator/TsFixtures.php";
+require_once __DIR__ . "/../../files/mpegts/generator/AribFixtures.php";
 
 class MpegTsReaderTest extends TestCase
 {
@@ -103,6 +104,38 @@ class MpegTsReaderTest extends TestCase
         $writer->teletextPes(self::PID, 90000, [TsFixtureWriter::header(888, true), TsFixtureWriter::row(888, 22, "\x0B\x0BBye.")]);
 
         $this->assertSame([[0.0, 2.5, ["Bye."]]], self::cues(MpegTsReader::open(self::stream($writer->bytes()))->extract(888, new ReadOptions(lastCueDuration: 2.5))));
+    }
+
+
+    public function testALastPageWithoutALaterPacketStopsBelow100000Hours(): void
+    {
+        $writer = self::writer([["eng", TsFixtureWriter::SUBTITLE_PAGE, 888]]);
+        $writer->teletextPes(self::PID, 90000, [TsFixtureWriter::header(888, true), TsFixtureWriter::row(888, 22, "\x0B\x0BBye.")]);
+
+        $this->assertSame([[0.0, 359999999.999, ["Bye."]]],
+                          self::cues(MpegTsReader::open(self::stream($writer->bytes()))->extract(888, new ReadOptions(lastCueDuration: 400000 * 3600))));
+    }
+
+
+    /**
+     * @return array<string, array{\Closure, int, string}>
+     */
+    public static function textPastTheTimeLimit(): array
+    {
+        return [
+            "teletext"     => [fn (): string => TsFixtures::teletextPastTheTimeLimit(), 888, "360025633.587"],
+            "ARIB caption" => [fn (): string => AribFixtures::captionsPastTheTimeLimit(), 304, "360025633.587"],
+        ];
+    }
+
+
+    #[DataProvider("textPastTheTimeLimit")]
+    public function testThrowsForATextCueTimeOf100000HoursOrLater(\Closure $file, int $track, string $seconds): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The cue times of track $track reach $seconds s. Times must be below 100000 hours.");
+
+        MpegTsReader::open(self::stream($file()))->extract($track);
     }
 
 

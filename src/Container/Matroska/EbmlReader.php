@@ -40,9 +40,15 @@ final class EbmlReader
     }
 
 
+    /**
+     * Moves to $offset. An offset past the end of the stream moves to its end, where no element starts.
+     */
     public function seek(int $offset): void
     {
-        fseek($this->stream, $offset);
+        // fseek() fails for an offset past the largest file size of the file system, and then keeps the old position.
+        if ($offset > $this->streamSize || fseek($this->stream, $offset) !== 0) {
+            fseek($this->stream, 0, SEEK_END);
+        }
     }
 
 
@@ -100,6 +106,7 @@ final class EbmlReader
      */
     public function readUnsigned(array $element): int
     {
+        self::requireSize($element);
         $bytes = $this->readBytes($element["size"]);
         if (strlen($bytes) > 8 || (strlen($bytes) === 8 && ord($bytes[0]) >= 0x80)) {
             throw new ParsingException(sprintf("The unsigned integer of the element 0x%X at byte %d is longer than 8 bytes or not below 2^63.",
@@ -112,6 +119,20 @@ final class EbmlReader
         }
 
         return $value;
+    }
+
+
+    /**
+     * Throws for an element of unknown size. Only Segment and Cluster may have one.
+     *
+     * @param array{id: int, size: int, offset: int} $element
+     */
+    public static function requireSize(array $element): void
+    {
+        if ($element["size"] === self::UNKNOWN_SIZE) {
+            $id = sprintf("0x%X", $element["id"]);
+            throw new ParsingException("The element $id at byte {$element['offset']} has an unknown size, which only Segment and Cluster may have.");
+        }
     }
 
 
