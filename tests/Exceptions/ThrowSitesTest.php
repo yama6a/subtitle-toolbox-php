@@ -464,6 +464,7 @@ class ThrowSitesTest extends TestCase
             "Formatters/XmlOutput.php: not well-formed"     => [fn () => XmlOutput::load("<p>"), ...$unwritable],
             "Formatters/TtmlHead.php: stored head"          => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT_DATA_KEY, ["head" => "<p/>"])
                 ->toString(Format::Ttml), ...$unwritable],
+            "FrameRate.php: frame beyond the int range"     => [fn () => (new FrameRate(1e12))->secondsToFrames(359999999), ...$unwritable],
             "HearingImpaired/HearingImpairedOptions.php: empty bracket"     => [fn () => new HearingImpairedOptions(customBrackets: [["{", ""]]), ...$invalid],
             "Hls/HlsSegmentOptions.php: segment duration 0" => [fn () => new HlsSegmentOptions(segmentDuration: 0), ...$invalid],
             "Hls/HlsSegmentOptions.php: no %d in pattern"   => [fn () => new HlsSegmentOptions(fileNamePattern: "sub.vtt"), ...$invalid],

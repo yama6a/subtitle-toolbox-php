@@ -197,9 +197,11 @@ final class AssFormatter extends SubtitleFormatter
         $cueData = $cue->findFormatData(AssParser::FORMAT_DATA_KEY);
         $fields  = $cueData["fields"] ?? [];
 
-        $unchanged = !$context->stripTags && isset($cueData["text"]) &&
-                     ($cueData["lines"] ?? null) === $cue->getLines() &&
-                     ($cueData["alignment"] ?? Alignment::BottomCenter->value) === $cue->getAlignment()->value;
+        // A stored alignment that is not an integer, such as "2" from library JSON, counts as missing.
+        $storedAlignment = is_int($cueData["alignment"] ?? null) ? $cueData["alignment"] : Alignment::BottomCenter->value;
+        $unchanged       = !$context->stripTags && isset($cueData["text"]) &&
+                           ($cueData["lines"] ?? null) === $cue->getLines() &&
+                           $storedAlignment === $cue->getAlignment()->value;
         [$text, $name] = $unchanged
             ? [$cueData["text"], $this->fieldValue($fields, "Name") ?? ""]
             : $this->convertLines($cue, $context, AssStyles::forEvent($context->styles, $this->fieldValue($fields, "Style") ?? "Default"));

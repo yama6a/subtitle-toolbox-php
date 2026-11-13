@@ -397,10 +397,12 @@ abstract class SubtitleParser
 
     /**
      * Returns $seconds, or throws when the time $text reaches MAX_HOURS.
+     * The check runs on the time rounded to milliseconds, as a cue holds it. So 359999999.9999 s fails too.
+     * The result stays exact, so that a sum such as a TTML begin plus the begin of its div rounds only once.
      */
     protected static function boundedTime(float $seconds, string $text, ?int $lineNumber): float
     {
-        if ($seconds >= Timecode::MAX_HOURS * 3600) {
+        if (Timecode::roundToMilliseconds($seconds) >= Timecode::MAX_HOURS * 3600) {
             throw new ParsingException("The time \"$text\" is not below " . Timecode::MAX_HOURS . " hours.", $lineNumber);
         }
 
@@ -469,7 +471,7 @@ abstract class SubtitleParser
 
     /**
      * Returns the end of the cue at $index: the first later start in $starts.
-     * Without one, the end is the start plus ReadOptions::$lastCueDuration.
+     * Without one, the end is Timecode::lastCueEnd() of the start and ReadOptions::$lastCueDuration.
      *
      * @param list<float> $starts
      */
@@ -481,7 +483,7 @@ abstract class SubtitleParser
             }
         }
 
-        return Timecode::roundToMilliseconds($starts[$index] + $this->options->lastCueDuration);
+        return Timecode::roundToMilliseconds(Timecode::lastCueEnd($starts[$index], $this->options->lastCueDuration));
     }
 
 

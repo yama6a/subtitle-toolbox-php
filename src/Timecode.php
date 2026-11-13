@@ -29,6 +29,21 @@ final class Timecode
      */
     public const MAX_HOURS = 100000;
 
+    /**
+     * The last whole millisecond below MAX_HOURS, 99999:59:59.999, in seconds. A last cue without an end stops here.
+     *
+     * @internal
+     */
+    public const LAST_TIME = 359999999.999;
+
+    private const LIMIT_SECONDS = self::MAX_HOURS * self::SECONDS_PER_HOUR;
+
+    // The nanoseconds of a time below this many seconds fit in an int.
+    private const NANOSECOND_RANGE = 9e9;
+
+    // A fraction with more digits than a float can tell apart rounds to milliseconds on its digits.
+    private const MAX_FLOAT_FRACTION_DIGITS = 16;
+
     private const CLOCK_REGEX  = '/^(?:(\d+):([0-5]\d)|(\d+)):([0-5]\d)(?:[.,](\d+))?$/';
     private const FRAMES_REGEX = '/^(\d+):([0-5]\d):([0-5]\d):(\d{2,})$/';
 
@@ -38,6 +53,8 @@ final class Timecode
 
     // A dropping minute skips 1 label for each 15 labels per second: 2 labels at 30, 4 at 60.
     private const LABELS_PER_DROPPED_LABEL = 15;
+
+    private const DROP_FRAME_RATE_TOLERANCE = 0.001;
 
     /**
      * Returns the seconds of a timecode string. It accepts 3 shapes:
@@ -107,7 +124,7 @@ final class Timecode
      */
     public static function centiseconds(float $seconds): array
     {
-        return self::split((int) round($seconds * 100), 100);
+        return self::split(self::unitsBelowLimit($seconds, 100), 100);
     }
 
 
@@ -123,21 +140,65 @@ final class Timecode
 
     /**
      * Rounds seconds to whole milliseconds, the precision of cue times. For example 0.8333 becomes 0.833.
+     * A time on a half millisecond in decimal rounds away from zero, as totalMilliseconds() does.
      *
      * @internal
      */
     public static function roundToMilliseconds(float $seconds): float
     {
-        return round($seconds, 3);
+        return abs($seconds) < self::NANOSECOND_RANGE ? self::totalMilliseconds($seconds) / 1000 : round($seconds, 3);
     }
 
 
     /**
+     * Returns $seconds in whole milliseconds, half away from zero.
+     * It rounds to whole nanoseconds first and then divides in integers. So the float error of a sum such as
+     * 2.675 + 1.0005 = 3.6754999999999995 does not decide the result, and every PHP version gives 3676.
+     * round() of PHP 8.4 and later rounds that float down, PHP 8.3 rounds it up.
+     *
      * @internal
      */
     public static function totalMilliseconds(float $seconds): int
     {
-        return (int) round($seconds * 1000);
+        if (!(abs($seconds) < self::NANOSECOND_RANGE)) {
+            return (int) round($seconds * 1000);
+        }
+
+        $nanoseconds = (int) round($seconds * 1e9);
+
+        return intdiv($nanoseconds + ($nanoseconds < 0 ? -500000 : 500000), 1000000);
+    }
+
+
+    /**
+     * Returns $seconds as a count of units of 1 / $unitsPerSecond s, for a writer that stores times in such units.
+     * For example, ASS writes centiseconds (100), MPL2 tenths of a second (10) and TMPlayer whole seconds (1).
+     * The count rounds once from whole milliseconds, half up, so 1.005 s is 101 centiseconds on every PHP version.
+     * It stays between 0 and the last unit below MAX_HOURS, because every parser rejects a time of MAX_HOURS.
+     * So 359999999.999 s is 35999999999 centiseconds, which reads back as 99999:59:59.99, not 100000:00:00.00.
+     * Use it in every writer that rounds a time to a unit. FrameRate::framesBelowLimit() is the same rule for frames.
+     *
+     * @internal
+     */
+    public static function unitsBelowLimit(float $seconds, int $unitsPerSecond): int
+    {
+        $milliseconds = self::totalMilliseconds(min(max(0.0, $seconds), self::LIMIT_SECONDS));
+        // Whole seconds and the milliseconds after them, so that the product stays far inside the int range.
+        $units = intdiv($milliseconds, 1000) * $unitsPerSecond + intdiv(2 * ($milliseconds % 1000) * $unitsPerSecond + 1000, 2000);
+
+        return min($units, self::LIMIT_SECONDS * $unitsPerSecond - 1);
+    }
+
+
+    /**
+     * Returns the end of a last cue that has no end in the file: $duration after $start, but at most LAST_TIME.
+     * So the cue reads back in every format, also when it starts less than $duration before MAX_HOURS.
+     *
+     * @internal
+     */
+    public static function lastCueEnd(float $start, float $duration): float
+    {
+        return max($start, min($start + $duration, self::LAST_TIME));
     }
 
 
@@ -145,7 +206,7 @@ final class Timecode
      * Returns the SMPTE time code of the frame nearest to $seconds.
      *
      * @return array{int, int, int, int} hours, minutes, seconds, frames
-     * @throws InvalidArgumentException when $dropFrame is true and the frame rate is not about 29.97 or 59.94 fps.
+     * @throws InvalidArgumentException when $dropFrame is true and the frame rate is not 29.97 or 59.94 fps.
      * @internal
      */
     public static function frames(float $seconds, FrameRate $frameRate, bool $dropFrame = false): array
@@ -161,14 +222,14 @@ final class Timecode
      * So it stays in step with the clock. It skips 2 labels at 29.97 fps and 4 at 59.94 fps.
      *
      * @return array{int, int, int, int} hours, minutes, seconds, frames
-     * @throws InvalidArgumentException when $dropFrame is true and the frame rate is not about 29.97 or 59.94 fps.
+     * @throws InvalidArgumentException when $dropFrame is true and the frame rate is not 29.97 or 59.94 fps.
      * @internal
      */
     public static function frameNumber(int $frame, FrameRate $frameRate, bool $dropFrame = false): array
     {
         $labels = self::labels($frameRate);
         if ($dropFrame) {
-            if ($labels !== 30 && $labels !== 60) {
+            if (!self::isDropFrameRate($frameRate)) {
                 throw new InvalidArgumentException("Drop-frame time code needs 29.97 or 59.94 fps, got {$frameRate->getFramesPerSecond()}.");
             }
 
@@ -208,12 +269,17 @@ final class Timecode
     /**
      * Returns the seconds of a time in parts. $fraction holds the decimal digits after the point.
      * So "5" adds 0.5 s and "005" adds 0.005 s. The result is the float nearest to the decimal value.
+     * A fraction of more than 16 digits first rounds to milliseconds on its digits, half up.
+     * A float cannot tell 1.12349999999999999 from 1.1235, so it would round that time up to 1.124 s.
      *
      * @internal
      */
     public static function toSeconds(int $hours, int $minutes, int $seconds, string $fraction = ""): float
     {
         $whole = self::wholeSeconds($hours, $minutes, $seconds);
+        if (strlen($fraction) > self::MAX_FLOAT_FRACTION_DIGITS) {
+            return ($whole * 1000 + intdiv((int) substr($fraction, 0, 4) + 5, 10)) / 1000;
+        }
 
         return $fraction === "" ? (float) $whole : (float) "$whole.$fraction";
     }
@@ -249,6 +315,19 @@ final class Timecode
         [$hours, $minutes, $wholeSeconds] = self::seconds(floor($seconds));
 
         return $hours > 0 ? sprintf("%d:%02d:%02d", $hours, $minutes, $wholeSeconds) : sprintf("%d:%02d", $minutes, $wholeSeconds);
+    }
+
+
+    /**
+     * Drop-frame time code stays in step with the clock only at 30000/1001 and 60000/1001 fps.
+     * The tolerance accepts the rounded rates 29.97 and 59.94.
+     */
+    private static function isDropFrameRate(FrameRate $frameRate): bool
+    {
+        $framesPerSecond = $frameRate->getFramesPerSecond();
+
+        return abs($framesPerSecond - 30000 / 1001) < self::DROP_FRAME_RATE_TOLERANCE
+               || abs($framesPerSecond - 60000 / 1001) < self::DROP_FRAME_RATE_TOLERANCE;
     }
 
 
