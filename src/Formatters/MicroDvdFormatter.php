@@ -29,7 +29,7 @@ final class MicroDvdFormatter extends SubtitleFormatter
         $fileData      = $subtitle->findFormatData(MicroDvdParser::FORMAT_DATA_KEY);
         $frameRate     = new FrameRate($formatOptions->frameRate
             ?? $fileData["frameRate"]
-            ?? throw new InvalidArgumentException("The MicroDVD formatter needs a frame rate. Set MicroDvdWriteOptions::\$frameRate."));
+            ?? throw new InvalidArgumentException(MicroDvdWriteOptions::MISSING_FRAME_RATE));
         $stripTags     = $options->stripTags;
 
         $output = "";
@@ -112,7 +112,7 @@ final class MicroDvdFormatter extends SubtitleFormatter
         return [
             "color" => $color,
             "tags"  => array_values(array_intersect(self::STYLE_TAGS, $tags)),
-            "text"  => str_replace("|", "\u{00A6}", Markup::plainText($line)),
+            "text"  => self::replaceBar(Markup::plainText($line)),
         ];
     }
 }

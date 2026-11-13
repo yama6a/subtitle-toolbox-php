@@ -91,18 +91,17 @@ final class LyricsFormatter extends SubtitleFormatter
 
         $parts = preg_split(Markup::WORD_TIMESTAMP_REGEX, Markup::rubyAsText(str_replace(LineEnding::Lf->value, " ", implode(" ", $cue->getLines()))), -1, PREG_SPLIT_DELIM_CAPTURE);
         $lines  = "";
-        $latest = 0.0;
+        $latest = null;
         foreach ($parts as $index => $part) {
             if ($index % 2 === 0) {
                 $lines .= Markup::plainText($part);
                 continue;
             }
 
-            $seconds = Markup::wordTimestampSeconds($part) ?? $latest;
-            if ($seconds < $latest) {
+            $seconds = Markup::wordTimestampSeconds($part) ?? $latest ?? 0.0;
+            if (!Markup::keepsWordTimeOrder($seconds, $latest)) {
                 continue;
             }
-            $latest = $seconds;
 
             $next   = Markup::plainText($parts[$index + 1]);
             $before = $spaced && $index === count($parts) - 2 && $next === "" && $lines !== "" && trim(substr($lines, -1)) !== "" ? " " : "";

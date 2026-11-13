@@ -114,7 +114,16 @@ abstract class SubtitleFormatter
      */
     protected static function joinWithBars(array $lines): string
     {
-        return implode("|", str_replace("|", "\u{00A6}", self::splitAtLineFeeds($lines)));
+        return implode("|", array_map(self::replaceBar(...), self::splitAtLineFeeds($lines)));
+    }
+
+
+    /**
+     * Replaces each "|" in $text with U+00A6 BROKEN BAR, for a format that reads "|" as a line break and has no escape.
+     */
+    protected static function replaceBar(string $text): string
+    {
+        return str_replace("|", "\u{00A6}", $text);
     }
 
 

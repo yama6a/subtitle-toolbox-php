@@ -44,7 +44,10 @@ final class CliMessages
             $message .= " Leave out $track for a subtitle file.";
         }
 
+        $message = preg_replace('/^(.*The MicroDVD frame rate must be greater than 0, got [^ ]+\.)$/s', '$1 Pass --fps or --output-fps.', $message) ?? $message;
+
         return strtr($message, [
+            "Set the mediaDuration option to segment it."                              => "Pass --media-duration to segment it.",
             "Call loadTrack() with one of them:"                                => $pickTrack,
             "Call load() with a format. Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram."       => $pickFormat,
             "Call fromString() with a format. Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram." => $pickFormat,

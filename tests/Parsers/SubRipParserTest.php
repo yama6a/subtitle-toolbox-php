@@ -433,4 +433,47 @@ class SubRipParserTest extends TestCase
 
         return $stream;
     }
+
+
+    public function testALenientWarningForABlockWithoutACueNumberNamesOnlyTheLinesOfTheFile(): void
+    {
+        $content  = "1\n00:00:01,000 --> 00:00:02,000\nHi\n\n00:00:03,000 -> 00:00:04,000\nThere\n";
+        $warnings = Subtitle::fromString($content, Format::SubRip, new ReadOptions(lenient: true))->getParseWarnings();
+
+        $this->assertSame(["00:00:03,000 -> 00:00:04,000", "There"], $warnings[0]->block);
+        $this->assertSame(["00:00:03,000 -> 00:00:04,000", "There"], $warnings[1]->block);
+    }
+
+
+    public function testALenientReadOfOnlyControlCharactersKeepsTheWarning(): void
+    {
+        $subtitle = Subtitle::fromString("\x01\x02\n", Format::SubRip, new ReadOptions(lenient: true));
+
+        $this->assertSame([], $subtitle->getCues());
+        $this->assertSame(
+            ["The file has control characters, the first on line 1. The parser removed them."],
+            array_map(fn ($warning): string => $warning->message, $subtitle->getParseWarnings())
+        );
+    }
+
+
+    public function testAQuotedLineOfMoreThan60CharactersKeepsInvalidBytes(): void
+    {
+        $messages = [];
+        foreach (["b" => 15, "c" => 5] as $tail => $count) {
+            try {
+                Subtitle::fromString(str_repeat("a", 50) . "\xff\xfe" . str_repeat($tail, $count) . "\n00:00:01,000 --> 00:00:02,000\nx\n", Format::SubRip);
+            } catch (ParsingException $exception) {
+                $messages[] = $exception->getMessage();
+            }
+        }
+
+        $this->assertSame(
+            [
+                "Block #0 has no cue number on its first line. The line is \"" . str_repeat("a", 50) . "\xff\xfe" . str_repeat("b", 5) . "...\".",
+                "Block #0 has no cue number on its first line. The line is \"" . str_repeat("a", 50) . "\xff\xfe" . str_repeat("c", 5) . "\".",
+            ],
+            array_map(fn (string $message): string => preg_replace("/^ParsingException \\(Error #\\d+\\): | \\(line 1\\)$/", "", $message), $messages)
+        );
+    }
 }

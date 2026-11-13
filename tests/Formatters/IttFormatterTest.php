@@ -323,4 +323,12 @@ class IttFormatterTest extends TestCase
         $this->assertStringNotContainsString("\n", str_replace("\r\n", "", $output));
         $this->assertStringContainsString("<p begin=\"00:00:01:00\" end=\"00:00:02:00\" region=\"bottom\">a<br/>b</p>\r\n", $output);
     }
+
+
+    public function testTheFormatterAndTheSubtitleGiveTheSameMessageWithoutAFrameRate(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("iTT output needs the frame rate of the video. Set IttWriteOptions::\$frameRate.");
+        (new IttFormatter())->format((new Subtitle())->addCue(new SubtitleCue(1, 2, "x")));
+    }
 }

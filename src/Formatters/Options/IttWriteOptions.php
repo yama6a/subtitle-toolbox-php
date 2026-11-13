@@ -10,6 +10,10 @@ use SubtitleToolbox\OptionChecks;
 
 final class IttWriteOptions implements FormatWriteOptions
 {
+    /** @internal */
+    public const MISSING_FRAME_RATE = "iTT output needs the frame rate of the video. Set IttWriteOptions::\$frameRate.";
+
+
     /**
      * @param ?float $frameRate 23.976, 24, 25, 29.97 or 30. Null takes the frame rate that IttParser stored.
      */

@@ -232,6 +232,24 @@ class BinaryInputTest extends CliTestCase
     }
 
 
+    public function testAStoredFrameRateOf0GetsTheFpsAdvice(): void
+    {
+        file_put_contents("$this->dir/f0.json", '{"version":1,"formatData":{"microdvd":{"frameRate":0}},"cues":[{"start":1,"end":2,"lines":["Hello"]}]}');
+
+        $this->assertSame([3, "", "f0.json: The MicroDVD frame rate must be greater than 0, got 0. Pass --fps or --output-fps.\n"],
+                          $this->runCli(["convert", "f0.json", "--to", "microdvd", "-o", "-"]));
+    }
+
+
+    public function testHlsOfASubtitleWithoutCuesNamesTheMediaDurationOption(): void
+    {
+        file_put_contents("$this->dir/empty.vtt", "WEBVTT\n");
+
+        $this->assertSame([3, "", "empty.vtt: The subtitle has no cue that ends after 0 s. Pass --media-duration to segment it.\n"],
+                          $this->runCli(["hls", "empty.vtt", "--output-dir", "out"]));
+    }
+
+
     public function testFromAndToAlwaysNameFormats(): void
     {
         $this->assertSame(

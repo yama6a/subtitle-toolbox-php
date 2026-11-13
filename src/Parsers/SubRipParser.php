@@ -103,7 +103,7 @@ final class SubRipParser extends SubtitleParser
                 }
 
                 // The added cue number has no line of its own, so the timing line keeps its line number.
-                $cue = $this->parseCueBlock(array_merge(["0"], $part), $index, $partLine - 1);
+                $cue = $this->readCueBlock(["0", ...$part], $part, $index, $partLine - 1);
                 $this->warn(
                     "Block #$index has no cue number on line $partLine. The parser read the cue without it.",
                     $partLine,
@@ -152,6 +152,16 @@ final class SubRipParser extends SubtitleParser
      */
     public function parseCueBlock(array $rawLines, int $index, ?int $lineNumber = null): SubtitleCue
     {
+        return $this->readCueBlock($rawLines, $rawLines, $index, $lineNumber);
+    }
+
+
+    /**
+     * @param list<string> $rawLines Cue number, timing line and text lines.
+     * @param list<string> $block    The lines that a warning names. They differ from $rawLines when the parser added a cue number.
+     */
+    private function readCueBlock(array $rawLines, array $block, int $index, ?int $lineNumber): SubtitleCue
+    {
         if (!is_numeric($rawLines[0])) {
             throw new ParsingException("Block #$index has no cue number on its first line. The line is " . self::quote($rawLines[0]) . ".", $lineNumber);
         }
@@ -166,23 +176,23 @@ final class SubRipParser extends SubtitleParser
             $this->secondsFromString($timing["end"], $lineNumber, $looseTimes),
             $lineNumber,
             $index,
-            $rawLines
+            $block
         );
         $cue       = new SubtitleCue($start, $end, Markup::unknownTagsAsText(array_map($this->escapeText(...), array_slice($rawLines, 2))));
         $alignment = $this->convertOverrideTags($cue);
-        $this->applyTextAfterEndTime($cue, $timing["textAfterEndTime"], $alignment, $index, $lineNumber, $rawLines);
+        $this->applyTextAfterEndTime($cue, $timing["textAfterEndTime"], $alignment, $index, $lineNumber, $block);
 
         foreach ($looseTimes as $time => $seconds) {
             $message = "Block #$index has the time \"$time\", which is not in the form hh:mm:ss,mmm. The parser read it as $seconds s.";
-            $this->warnRepairedTimingLine($message, $index, $lineNumber, $rawLines);
+            $this->warnRepairedTimingLine($message, $index, $lineNumber, $block);
         }
         if ($timing["hasFullWidthDelimiters"]) {
             $message = "Block #$index has full-width delimiters in its timing line. The parser read them as ASCII.";
-            $this->warnRepairedTimingLine($message, $index, $lineNumber, $rawLines);
+            $this->warnRepairedTimingLine($message, $index, $lineNumber, $block);
         }
         if ($timing["arrow"] !== "-->") {
             $message = "Block #$index has the arrow \"{$timing["arrow"]}\" in its timing line. The parser read it as \"-->\".";
-            $this->warnRepairedTimingLine($message, $index, $lineNumber, $rawLines);
+            $this->warnRepairedTimingLine($message, $index, $lineNumber, $block);
         }
 
         return $cue;

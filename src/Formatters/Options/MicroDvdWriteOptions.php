@@ -8,6 +8,10 @@ use SubtitleToolbox\FrameRate;
 
 final class MicroDvdWriteOptions implements FormatWriteOptions
 {
+    /** @internal */
+    public const MISSING_FRAME_RATE = "MicroDVD output needs the frame rate of the video. Set MicroDvdWriteOptions::\$frameRate.";
+
+
     /**
      * @param ?float $frameRate          Frames per second of the video. Null takes the frame rate that MicroDvdParser stored.
      * @param bool   $writeFrameRateLine Write the frame rate as the first line, such as {1}{1}23.976. A file that MicroDvdParser read with this line gets it anyway.

@@ -349,7 +349,7 @@ class BinaryOutputTest extends CliTestCase
             $this->markTestSkipped("The user of the test can read a file without permissions.");
         }
 
-        $this->assertSame([3, "", "trip.srt: Cannot read the file trip.srt.\n"],
+        $this->assertSame([3, "", "trip.srt: Cannot read the file.\n"],
                           $this->runCli(["convert", "trip.srt", "--shift", "1", "--output-dir", "out"]));
         $this->assertFileDoesNotExist("$this->dir/out");
     }

@@ -519,4 +519,12 @@ class ValidationTest extends TestCase
             [0, ValidationRule::NoAllCapsLines, 1, null],
         ], $this->toArrays($subtitle->validate($rules)));
     }
+
+
+    public function testNetflixEnglishNamesTheGapRuleForABadFrameRate(): void
+    {
+        $this->expectException(\SubtitleToolbox\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage("The frame rate of the Netflix gap rule must be greater than 0, got 0.");
+        ValidationRules::netflixEnglish(0);
+    }
 }
