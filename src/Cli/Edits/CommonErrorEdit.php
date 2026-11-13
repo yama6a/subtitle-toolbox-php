@@ -63,7 +63,7 @@ final class CommonErrorEdit extends Edit
         $rules   = self::optionalRules();
         $byName  = array_combine(array_map(strtolower(...), $rules), $rules);
         $enabled = [];
-        foreach (array_filter(array_map("trim", explode(",", $arguments->value("errors-enable") ?? ""))) as $name) {
+        foreach (array_filter(array_map("trim", explode(",", $arguments->value("errors-enable") ?? "")), fn (string $name): bool => $name !== "") as $name) {
             $rule = $byName[strtolower($name)]
                 ?? Command::fail("Unknown rule \"$name\" in --errors-enable. The valid names are " . implode(", ", $rules) . ".");
             $enabled[$rule] = true;

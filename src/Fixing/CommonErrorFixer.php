@@ -15,8 +15,8 @@ use SubtitleToolbox\TextCase;
 
 final class CommonErrorFixer
 {
-    // A next cue that starts within 0.6 s and with a lowercase letter continues the sentence of the cue before it.
-    private const CONTINUATION_GAP = 0.6;
+    // A next cue that starts within 600 ms and with a lowercase letter continues the sentence of the cue before it.
+    private const CONTINUATION_GAP_MS = 600;
 
     private const NOT_IN_WORD  = '(?<![\p{L}\p{N}\'\x{2019}])';
     private const WORD_ENDS    = '(?![\p{L}\p{N}\'\x{2019}])';
@@ -72,7 +72,7 @@ final class CommonErrorFixer
             }
 
             $next      = $cues[$indexes[$positions[$index] + 1] ?? -1] ?? null;
-            $continues = $next !== null && $next->getStart() - $cue->getEnd() <= self::CONTINUATION_GAP
+            $continues = $next !== null && round(($next->getStart() - $cue->getEnd()) * 1000) <= self::CONTINUATION_GAP_MS
                          && preg_match('/^\p{Ll}/u', implode("\n", Markup::plainLines($next->getLines()))) === 1;
             $startsSentence = $positions[$index] === 0 || ($ends[$indexes[$positions[$index] - 1]] ?? false);
             $context        = new CueFixContext($language, $turkic, $continues, $startsSentence);
@@ -286,8 +286,8 @@ final class CommonErrorFixer
             $before = substr($text, 0, $offset);
             $after  = substr($text, $offset + 1);
             $letter = match (true) {
-                preg_match('/\p{Ll}$/u', $before) === 1                   => "l",
-                preg_match('/\p{L}$/u', $before) === 1,
+                preg_match('/\p{Ll}\z/u', $before) === 1                  => "l",
+                preg_match('/\p{L}\z/u', $before) === 1,
                 preg_match('/^\p{L}/u', $after) === 1                     => "I",
                 preg_match('/^[\'\x{2019}]\p{L}/u', $after) === 1         => ["en" => "I", "fr" => "l"][$language ?? ""] ?? "|",
                 $language === "en" && preg_match('/(?:^|[\s"\'(' . DialogueDash::CHARACTERS . '])$/u', $before) === 1
@@ -374,7 +374,7 @@ final class CommonErrorFixer
             if (!$first && $previousSpace) {
                 $text = self::replace('/^' . self::SPACES . '+/u', "", $text);
             }
-            $previousSpace = preg_match('/' . self::SPACES . '$/u', $text) === 1 || ($previousSpace && $text === "");
+            $previousSpace = preg_match('/' . self::SPACES . '\z/u', $text) === 1 || ($previousSpace && $text === "");
 
             return $text;
         });

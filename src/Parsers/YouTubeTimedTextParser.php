@@ -471,7 +471,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
             for ($next = $index + 1; $end === null && $next < count($captions); $next++) {
                 $end = $captions[$next][0] > $start ? $captions[$next][0] : null;
             }
-            $end ??= Timecode::roundToMilliseconds($start + $lastCueDuration);
+            $end ??= Timecode::roundToMilliseconds(Timecode::lastCueEnd($start, $lastCueDuration));
             for ($next = $index + 1; $window !== null && $next < count($captions); $next++) {
                 if ($captions[$next][2] === $window && $captions[$next][0] > $start) {
                     $end = min($end, $captions[$next][0]);

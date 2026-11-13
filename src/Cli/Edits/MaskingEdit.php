@@ -119,7 +119,7 @@ final class MaskingEdit extends Edit
      */
     private static function readWordFile(string $path): array
     {
-        $lines = preg_split('/\R/', StringHelpers::removeUtf8Bom(SideFile::read($path)));
+        $lines = preg_split('/\r\n?|\n/', StringHelpers::removeUtf8Bom(SideFile::read($path)));
 
         return array_values(array_filter(array_map("trim", $lines), fn (string $line): bool => $line !== ""));
     }

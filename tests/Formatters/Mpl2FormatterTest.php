@@ -52,4 +52,13 @@ class Mpl2FormatterTest extends TestCase
             $subtitle->toString(Format::Mpl2, new WriteOptions(lineEnding: LineEnding::Crlf, bom: true))
         );
     }
+
+
+    public function testATimeJustBelowTheLimitStaysBelowItAndReadsBack(): void
+    {
+        $output = Subtitle::fromString("WEBVTT\n\n99999:59:59.900 --> 99999:59:59.999\nx\n", Format::WebVtt)->toString(Format::Mpl2);
+
+        $this->assertSame("[3599999999][3599999999]x\n", $output);
+        $this->assertSame(359999999.9, Subtitle::fromString($output, Format::Mpl2)->getCues()[0]->getEnd());
+    }
 }

@@ -55,4 +55,13 @@ class TmPlayerFormatterTest extends TestCase
 
         $this->assertSame("\xEF\xBB\xBF00:00:00:Hello\r\n", $subtitle->toString(Format::TmPlayer, new WriteOptions(lineEnding: LineEnding::Crlf, bom: true)));
     }
+
+
+    public function testATimeJustBelowTheLimitStaysBelowItAndReadsBack(): void
+    {
+        $output = Subtitle::fromString("WEBVTT\n\n99999:59:59.900 --> 99999:59:59.999\nx\n", Format::WebVtt)->toString(Format::TmPlayer);
+
+        $this->assertSame("99999:59:59:x\n", $output);
+        $this->assertSame(359999999.0, Subtitle::fromString($output, Format::TmPlayer)->getCues()[0]->getStart());
+    }
 }
