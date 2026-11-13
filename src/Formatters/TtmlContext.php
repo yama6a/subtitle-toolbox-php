@@ -17,7 +17,7 @@ final class TtmlContext
     /** @var array<string, string> agent name => xml:id */
     public array $agentIds = [];
 
-    /** @var array<int, string> alignment => region xml:id */
+    /** @var array<string, string> region name, such as "bottomCenter" or "bottomCenter-45-95" => region xml:id */
     public array $regionIds = [];
 
     /** @var array<string, true> */

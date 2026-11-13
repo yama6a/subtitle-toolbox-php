@@ -19,6 +19,8 @@ final class SubtitleCue
 
     private Alignment $alignment = Alignment::BottomCenter;
 
+    private ?CuePosition $position = null;
+
     private bool $forced = false;
 
     /** @var array<string, array> */
@@ -158,9 +160,35 @@ final class SubtitleCue
     }
 
 
+    /**
+     * Also clears the position, because an alignment that a caller sets wins over a position that a parser stored.
+     */
     public function setAlignment(Alignment $alignment): self
     {
         $this->alignment = $alignment;
+        $this->position  = null;
+
+        return $this;
+    }
+
+
+    /**
+     * Returns the exact point of the cue that the WebVTT or TTML parser read, or null. getAlignment() says which point
+     * of the cue box sits there.
+     */
+    public function findPosition(): ?CuePosition
+    {
+        return $this->position;
+    }
+
+
+    /**
+     * The WebVTT and TTML formatters write the position. All other formatters write only the alignment.
+     * Call it after setAlignment(), which clears the position.
+     */
+    public function setPosition(?CuePosition $position): self
+    {
+        $this->position = $position;
 
         return $this;
     }
