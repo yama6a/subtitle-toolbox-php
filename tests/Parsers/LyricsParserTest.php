@@ -511,4 +511,14 @@ class LyricsParserTest extends TestCase
             $subtitle->getComments(),
         ];
     }
+
+
+    public function testLineOfSpacesAfterATimeTagDoesNotHideTheNextLine(): void
+    {
+        $cues = Subtitle::fromString("[00:01.00]\n \nHello\n", Format::Lyrics)->getCues();
+
+        $this->assertCount(1, $cues);
+        $this->assertSame(1.0, $cues[0]->getStart());
+        $this->assertSame(6.0, $cues[0]->getEnd());
+    }
 }

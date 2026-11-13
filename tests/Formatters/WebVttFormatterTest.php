@@ -386,4 +386,13 @@ class WebVttFormatterTest extends TestCase
 
         $this->assertSame("WEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000\nHello\n", $output);
     }
+
+
+    public function testWordTimestampEarlierThanTheOneBeforeItIsLeftOut(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(0, 5, "<00:00:03.000>a <00:00:02.000>b <00:00:04.000>c"));
+
+        $this->assertStringContainsString("<00:00:03.000>a b <00:00:04.000>c", (new WebVttFormatter())->format($subtitle));
+    }
 }
