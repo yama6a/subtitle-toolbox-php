@@ -219,7 +219,7 @@ final class ValidateCommand extends ReportCommand
             return null;
         }
 
-        return DialogueDashStyle::tryFrom($style) ?? self::fail("The option --dialogue-dash must be a hyphen, an en " .
-            "dash or an em dash, with or without one space after it, got \"$style\".");
+        return DialogueDashStyle::tryFrom($style) ?? self::fail("The option --dialogue-dash must be a hyphen, a Unicode " .
+            "hyphen, an en dash or an em dash, with or without one space after it, got \"$style\".");
     }
 }

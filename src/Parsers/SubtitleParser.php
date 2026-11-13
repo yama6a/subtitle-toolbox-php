@@ -78,7 +78,7 @@ abstract class SubtitleParser
         if (!static::BINARY) {
             $content = $this->cleanText($content);
             if (trim($content, self::WHITE_SPACE) === "") {
-                return new Subtitle();
+                return (new Subtitle())->setParseWarnings($this->warnings);
             }
         }
 
@@ -353,7 +353,14 @@ abstract class SubtitleParser
      */
     protected static function quote(string $text): string
     {
-        return '"' . (mb_strlen($text, "UTF-8") > 60 ? mb_substr($text, 0, 57, "UTF-8") . "..." : $text) . '"';
+        if (mb_strlen($text, "UTF-8") <= 60) {
+            return '"' . $text . '"';
+        }
+        // mb_substr() would write "?" for each byte that is not valid UTF-8, and a short line keeps its bytes.
+        $unit = '[\x00-\x7F]|[\xC2-\xDF][\x80-\xBF]|[\xE0-\xEF][\x80-\xBF]{2}|[\xF0-\xF4][\x80-\xBF]{3}|.';
+        preg_match("/^(?:$unit){57}/s", $text, $cut);
+
+        return '"' . ($cut[0] ?? $text) . '..."';
     }
 
 

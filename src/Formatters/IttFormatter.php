@@ -97,7 +97,7 @@ final class IttFormatter extends SubtitleFormatter
         }
 
         if ($fps === null) {
-            return $stored[1] ?? throw new InvalidArgumentException("The ITT formatter needs a frame rate. Set IttWriteOptions::\$frameRate.");
+            return $stored[1] ?? throw new InvalidArgumentException(IttWriteOptions::MISSING_FRAME_RATE);
         }
         $optionKey = IttFrameRates::key($fps);
 
