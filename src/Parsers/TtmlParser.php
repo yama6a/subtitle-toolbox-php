@@ -154,17 +154,17 @@ final class TtmlParser extends SubtitleParser
      */
     private function replaceHtmlEntities(string $xml): array
     {
-        $characters = array_flip(get_html_translation_table(HTML_ENTITIES, ENT_HTML5 | ENT_QUOTES));
-        $first      = null;
-        $replaced   = preg_replace_callback(
+        $first    = null;
+        $replaced = preg_replace_callback(
             "/&([A-Za-z][A-Za-z0-9]*);/",
-            function (array $match) use ($characters, &$first): string {
-                if (in_array($match[1], self::XML_ENTITIES, true) || !isset($characters[$match[0]])) {
+            function (array $match) use (&$first): string {
+                $characters = html_entity_decode($match[0], ENT_HTML5 | ENT_QUOTES, "UTF-8");
+                if (in_array($match[1], self::XML_ENTITIES, true) || $characters === $match[0]) {
                     return $match[0];
                 }
                 $first ??= $match[0];
 
-                $codePoints = array_map(fn (string $char): int => mb_ord($char, "UTF-8"), mb_str_split($characters[$match[0]], 1, "UTF-8"));
+                $codePoints = array_map(fn (string $char): int => mb_ord($char, "UTF-8"), mb_str_split($characters, 1, "UTF-8"));
 
                 return implode("", array_map(fn (int $codePoint): string => "&#$codePoint;", $codePoints));
             },
@@ -375,6 +375,10 @@ final class TtmlParser extends SubtitleParser
             $spans = $this->timedSpansInterval($runs);
             $open  = $spans === null && $this->options->lenient;
             [$begin, $end] = $spans ?? ($open ? [$begin, $begin] : throw new ParsingException("The paragraph that begins at {$begin}s has no end time.", $paragraph->getLineNo()));
+        }
+        // The check keeps xmlLines() off the path of a valid paragraph.
+        if ($end < $begin) {
+            [$begin, $end] = $this->orderedTimes($begin, $end, $paragraph->getLineNo(), $this->paragraphIndex, $this->xmlLines($paragraph));
         }
         $runs = array_values(array_filter(
             $runs,

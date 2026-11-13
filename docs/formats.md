@@ -226,7 +226,7 @@ $csv = $english->toString(Format::Csv, new WriteOptions(formats: [new CsvWriteOp
 | Column role | Parser | Formatter |
 |:--- |:--- |:--- |
 | `start`, `end` | the cue times | the cue times |
-| `duration` | the end is start plus duration | the end minus the start |
+| `duration` | the end is start plus duration, at most 99999:59:59.999 | the end minus the start |
 | `text` | the cue lines, one per line break in the cell | the text without tags and entities, lines joined by a line break |
 | `speaker` | `<v Name>` at the start of the first line | the name of the leading `<v>` tag |
 | `identifier` | the cue identifier | the cue identifier |
@@ -242,7 +242,7 @@ $csv = $english->toString(Format::Csv, new WriteOptions(formats: [new CsvWriteOp
   | `duration` | `length` |
   | `speaker` | `name`, `character` |
   | `text` | `subtitle`, `caption`, `dialogue`, `transcript` |
-- **Required columns**: a table without `start` or `text` throws `ParsingException`. So does a mapped header that the table lacks. `header: false` needs a column index for each mapped role, and at least for `start` and `text`.
+- **Required columns**: a table without `start` or `text` throws `ParsingException`. So does a mapped header that the table lacks. The message names the line of the header row, or line 1 without one. `header: false` needs a column index for each mapped role, and at least for `start` and `text`. A table has at most 1000 columns, so an index of 1000 or more is a missing column too.
 - **Column limit**: a table has at most 1,000 columns. For a wider table, `CsvParser` throws `ParsingException` with the line of the first wide row, also in lenient mode.
 - **Delimiter**: `,`, `;` or a tab. Without `CsvReadOptions::$delimiter`, the parser takes the one that occurs most often in the first line that has one. A comma wins a tie.
 - **Times**: seconds such as `62.5`, `00:01:02.500`, `00:01:02,500`, `01:02.500` (minutes and seconds), `0:06` and `00:00:1` (one digit of seconds), and `00:01:02:12` with frames. Frames need `frameRate`. The parser does not guess it.
@@ -525,7 +525,7 @@ $subtitle->toString(Format::Pac);
 - **Alignment**: the alignment byte of the first line gives the column. The vertical position gives the row: 0 to 4 is the top, 5 to 8 the middle, 9 to 11 the bottom. The formatter writes row 1 for the top, row 6 for the middle and the bottom row 11 minus the extra lines for the bottom.
 - **Right to left**: Subtitle Edit stores the Latin letters and digits of Arabic and Hebrew lines in display order. The parser and the formatter turn them around.
 - **Story record**: a first record with `STORY:` holds the programme data and is no cue. The format data keeps it in `header`.
-- **Format data**: the subtitle keeps `codePage`, `frameRate`, the number of the first subtitle in `firstNumber`, and the bytes before the first and after the last subtitle in `header` and `footer`. Each cue keeps its vertical position, the alignment byte, its text and the original text bytes. A stored `header` that does not start with 01h and 19 zero bytes counts as missing, so the formatter writes the default header.
+- **Format data**: the subtitle keeps `codePage`, `frameRate`, the number of the first subtitle in `firstNumber`, and the bytes before the first and after the last subtitle in `header` and `footer`. Each cue keeps its vertical position, the alignment byte, its text and the original text bytes. A stored `header` that does not start with 01h and 19 zero bytes counts as missing, so the formatter writes the default header. A stored `footer` that does not start with FFh counts as missing too, so the formatter writes the default footer.
 - **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text and alignment keeps its text bytes, also after retiming. New text keeps the code page of the file and gets `?` for a character outside it. In the Chinese and Korean code pages, a character whose double-byte code holds the byte FEh also gets `?`, because FEh starts a new line. For example, `全` is A5FEh in CP950.
 - **New files**: Latin when Latin holds all the text, else PAC Unicode. 25 fps, subtitle numbers from 0, and the end block of Subtitle Edit.
 - **Limits**: the parser does not read colors, and it reads lines that Screen marks for a second code page with the code page of the file.
@@ -546,17 +546,19 @@ $subtitle->toString(Format::QuickTimeText);
 | Input | Parser result |
 |:--- |:--- |
 | `{timeScale:600}` and `[00:00:07.300]` | 7.5 s. The fraction counts units of the time scale |
-| `[00:00:07.25]` without `{timeScale}` | 7.25 s. The fraction is a decimal fraction |
+| `[00:00:07.25]` without `{timeScale}` | 7.25 s. The fraction is a decimal fraction of any length |
 | `[00:00:01.00]`, `One`, `[00:00:04.00]`, `[00:00:05.00]`, `Two` | `One` from 1 s to 4 s, `Two` from 5 s for [`ReadOptions::$lastCueDuration`](read-options.md) |
 | `{italic}Sung`, then `{plain}Spoken` in a later sample | `<i>Sung</i>`, then `Spoken` |
 
 - **Samples**: each timestamp starts a sample, and the next timestamp ends it. A sample without text is a gap. Text after the `]` on the timestamp line belongs to the sample.
-- **Relative timestamps**: with `{timeStamps:relative}`, each timestamp counts from the one before it.
+- **Relative timestamps**: with `{timeStamps:relative}`, each timestamp counts from the one before it. The sum must stay below 100000 hours.
 - **Styles**: `{bold}`, `{italic}` and `{underline}` become `<b>`, `<i>` and `<u>`. They apply to the rest of the sample and to all later samples, until `{plain}` resets them. The parser drops the other descriptors from the text, such as `{font:Geneva}` or `{justify:center}`.
 - **Strict mode**: a file must start with `{QTtext}`, and a fraction must be below the time scale. Lenient mode reads both with a `ParseWarning`.
 - **Format data**: the `qttext` data keeps the lines before the first timestamp in `header`. `pairedTimestamps` is `true` when each cue has its own end timestamp and an empty line after it, as Subtitle Edit writes. A cue whose text holds descriptors keeps the text in `source`.
 - **Round trip**: an unchanged file comes out byte for byte, except for empty lines between samples in the QuickTime layout.
 - **Output**: the formatter writes the header of the input, or the 5 header lines of Subtitle Edit with `{timeScale:30}` for a new file. Subtitle Edit reads only 2 fraction digits. Without `{timeScale}`, the formatter writes milliseconds. It writes `<b>`, `<i>` and `<u>` as descriptors, with `{plain}` to end a style, and strips all other tags.
+- **Output header**: the formatter writes each CR and LF of a stored header line as a space, and drops a stored header line that reads as a timestamp. It writes `{QTtext}` first when the stored header does not start with it. So the output always reads back.
+- **Output times**: the formatter rounds each time from whole milliseconds to units of the time scale, half up. A time stays below 100000 hours: at `{timeScale:30}`, 359999999.999 s writes `[99999:59:59.29]`. A relative timestamp counts from the time that the parser reaches after the timestamps before it. So a rounding error stays below half a unit, and a cue that starts before the end of the cue before it moves only itself. Above 12.8 million units per second, the count of units must fit in an int. So the latest time that the formatter writes is 4.6 * 10^18 ms divided by the time scale.
 
 ## SAMI
 ```php
@@ -665,9 +667,10 @@ $subtitle->toString(Format::SpruceStl, new WriteOptions(formats: [new SpruceStlW
 - **Frame rate**: the file does not give it. `SpruceStlReadOptions::$frameRate` sets it. Without it, a frame number from 25 to 29 means 30 fps, as on NTSC DVDs. Otherwise the parser takes 25 fps, as on PAL DVDs. Lenient mode adds a `ParseWarning` for the guess. A frame number at or above the frame rate throws `ParsingException`, and lenient mode skips the subtitle.
 - **Commands**: a `$` line, such as `$FontSize = 42`, applies to all later subtitles. `$Bold`, `$Italic` and `$Underlined` set the style, and `$HorzAlign` and `$VertAlign` set the alignment. The parser reads the other commands, such as fonts and colors, but they do not change the cues.
 - **Style toggles**: `^B`, `^I` and `^U` switch bold, italics and underline on or off. Each subtitle starts with the style of the commands.
-- **Format data**: the `spruce-stl` data keeps `frameRate`, the lines before the first subtitle in `header`, the text between the fields in `separator`, such as ` , ` or `,`, and the text around `|` in `lineBreak`. Each cue keeps the commands before it in `commands`.
-- **Round trip**: an unchanged file comes out byte for byte, except that the formatter ends the last line with a line end. It drops empty lines after the first subtitle.
-- **Output**: the formatter writes `<b>`, `<i>` and `<u>` as toggles and strips all other tags. It writes `$HorzAlign` and `$VertAlign` before a cue whose alignment differs from the commands so far. A new file gets a header of 17 commands, as DVD Studio Pro can fail to import a file without them, ` , ` between the fields and 25 fps. `SpruceStlWriteOptions::$frameRate` wins over the stored frame rate.
+- **Format data**: the `spruce-stl` data keeps `frameRate`, the lines before the first subtitle in `header`, the text between the fields in `separator`, such as ` , ` or `,`, and the text around `|` in `lineBreak`. Each cue keeps the commands before it in `commands`. The `$` lines after the last cue stay in `trailer`.
+- **Round trip**: an unchanged file comes out byte for byte, except that the formatter ends the last line with a line end. It drops empty lines after the first subtitle. A header-only file comes back unchanged.
+- **Output**: the formatter writes `<b>`, `<i>` and `<u>` as toggles and strips all other tags. It writes `$HorzAlign` and `$VertAlign` before a cue whose alignment differs from the commands so far. A new file gets a header of 17 commands, as DVD Studio Pro can fail to import a file without them, ` , ` between the fields and 25 fps. `SpruceStlWriteOptions::$frameRate` wins over the stored frame rate. A frame rate above 100 fps throws `UnwritableContentException`, because the frame number has 2 digits. The formatter writes the stored `trailer` after the last cue and its comments.
+- **Text that the parser reads as structure**: the formatter writes a `|` in the text as U+00A6 BROKEN BAR. It writes U+2060 WORD JOINER after a `^` that comes before `B`, `I` or `U`. It writes each CR and LF of a stored header, command or trailer line as a space. It skips a stored header line that is not blank, `$` or `//`, and a stored command or trailer line that does not start with `$`.
 - **Images**: a subtitle such as `<<Graphic>>logo.tif` after a `$SetFilePathToken` command stays text.
 
 ## SubRip
@@ -790,3 +793,6 @@ $subtitle->toString(Format::Ttml);
   ```
 - **Colors in other formats**: the SubRip, ASS, TTML, iTunes Timed Text, MicroDVD, SAMI, EBU STL and SCC formatters write a color class as a text color. TTML also writes a background class such as `bg_black` as `tts:backgroundColor`. SubRip, ASS, TTML, iTunes Timed Text, MicroDVD and SAMI keep colors that have no WebVTT class.
 - **Timing arrow in text**: the formatter writes `-->` in cue text as `--&gt;`. A raw `-->` would start a new cue.
+- **Comments and identifiers**: the formatter writes `-->` in a comment as `->`, and repeats this until no `-->` is left, so `a ---> b` becomes `a -> b`. It trims each comment line and drops empty lines. It writes the cue number when an identifier holds `-->`, a carriage return or a line feed.
+- **Inline timestamps**: the parser reads a timestamp without hours in cue text, such as `<00:02.000>`, as `<00:00:02.000>`. So `shift()` and the word timestamp code see it.
+- **Signature**: the first line must be `WEBVTT` alone or followed by a space or a tab. `WEBVTTX` is not a signature.

@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
+use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -191,5 +192,38 @@ class WhisperJsonFormatterTest extends TestCase
             '{"word":" bald.","start":4.5,"end":5.0,"probability":1.0}]}],"language":"de"}',
             $subtitle->toString(Format::Whisper)
         );
+    }
+
+
+    public function testWritesAChangedSpeakerForWhisperCpp(): void
+    {
+        $json     = file_get_contents(__DIR__ . "/../files/speakers/whisper_cpp_diarize.json");
+        $subtitle = (new WhisperJsonParser())->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(speakerVoices: true)]));
+        $subtitle->getCues()[0]->setLines("<v Zoe>Did you lock the back door?");
+
+        $this->assertSame("Zoe", json_decode($subtitle->toString(Format::Whisper), true)["transcription"][0]["speaker"]);
+    }
+
+
+    public function testAnEmptySourceWordDoesNotJoinTheWordAfterIt(): void
+    {
+        $json     = '{"segments": [{"start": 1.0, "end": 3.0, "text": " x 15.", "words": [{"word": " ", "start": 1.0, "end": 1.2, "score": 0.9}, {"word": "15."}]}], "word_segments": []}';
+        $subtitle = (new WhisperJsonParser())->parse($json, new ReadOptions());
+        $subtitle->getCues()[0]->setLines("<00:00:01.000>15.");
+
+        $this->assertSame(
+            [["word" => "15.", "start" => 1.0, "end" => 3.0, "score" => 1.0]],
+            json_decode($subtitle->toString(Format::Whisper), true)["segments"][0]["words"]
+        );
+    }
+
+
+    public function testAShiftedCueKeepsTheScoreOfItsWords(): void
+    {
+        $json     = '{"segments": [{"start": 0.0, "end": 1.0, "text": " Hello there", "words": [{"word": "Hello", "start": 0.0, "end": 0.3, "score": 0.9}, {"word": "there", "start": 0.4, "end": 0.7, "score": 0.8}]}], "word_segments": []}';
+        $subtitle = (new WhisperJsonParser())->parse($json, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
+        $subtitle->shift(1.0);
+
+        $this->assertSame([0.9, 0.8], array_column(json_decode($subtitle->toString(Format::Whisper), true)["segments"][0]["words"], "score"));
     }
 }

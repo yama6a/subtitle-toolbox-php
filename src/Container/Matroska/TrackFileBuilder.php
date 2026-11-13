@@ -130,24 +130,28 @@ final class TrackFileBuilder
 
     /**
      * Puts the PG magic bytes, the PTS from the block timestamp and a DTS of 0 before each segment of each block.
+     * The 32-bit PTS field wraps after about 13.25 hours, so the method also returns the whole PTS of each segment.
      *
      * @param list<array{start: int, data: string}> $blocks start in TimestampScale ticks
+     * @return array{string, list<int>} the stream and the PTS of each segment in ticks of 90 kHz
      */
-    public static function pgsStream(array $blocks, int $timestampScale): string
+    public static function pgsStream(array $blocks, int $timestampScale): array
     {
         $stream = "";
+        $times  = [];
         foreach ($blocks as $block) {
-            $pts    = intdiv($block["start"] * $timestampScale * self::PTS_TICKS, self::PTS_NANOSECONDS) & 0xFFFFFFFF;
+            $pts    = max(0, intdiv($block["start"] * $timestampScale * self::PTS_TICKS, self::PTS_NANOSECONDS));
             $data   = $block["data"];
             $offset = 0;
             while ($offset < strlen($data)) {
                 $size    = strlen($data) - $offset >= self::PGS_SEGMENT_HEADER ? unpack("n", $data, $offset + 1)[1] : 0;
-                $stream .= "PG" . pack("NN", $pts, 0) . substr($data, $offset, self::PGS_SEGMENT_HEADER + $size);
+                $stream .= "PG" . pack("NN", $pts & 0xFFFFFFFF, 0) . substr($data, $offset, self::PGS_SEGMENT_HEADER + $size);
+                $times[] = $pts;
                 $offset += self::PGS_SEGMENT_HEADER + $size;
             }
         }
 
-        return $stream;
+        return [$stream, $times];
     }
 
 

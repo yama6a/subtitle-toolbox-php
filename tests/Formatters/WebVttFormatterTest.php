@@ -351,4 +351,39 @@ class WebVttFormatterTest extends TestCase
             $subtitle->toString(Format::WebVtt, new WriteOptions(stripTags: true, bom: false))
         );
     }
+
+
+    public static function commentsThatReadBack(): array
+    {
+        return [
+            "three dashes"        => ["a ---> b", "a -> b"],
+            "five dashes"         => ["a -----> b", "a -> b"],
+            "line of spaces"      => ["a\n \nb", "a\nb"],
+            "line of a tab"       => ["a\n\t\nb", "a\nb"],
+            "padded lines"        => [" a \n b ", "a\nb"],
+        ];
+    }
+
+
+    #[DataProvider("commentsThatReadBack")]
+    public function testCommentsWriteWithoutArrowsAndEmptyLinesAndReadBack(string $comment, string $expected): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "Hello"));
+        $subtitle->addComment($comment, 0);
+
+        $output = $subtitle->toString(Format::WebVtt, new WriteOptions(bom: false));
+
+        $this->assertSame($expected, Subtitle::fromString($output, Format::WebVtt)->getComments()[0]->text);
+    }
+
+
+    public function testCueIdentifierWithACarriageReturnIsReplacedByTheCueNumber(): void
+    {
+        $cue = new SubtitleCue(1, 2, "Hello");
+        $cue->setIdentifier("a\rb");
+
+        $output = (new Subtitle())->addCue($cue)->toString(Format::WebVtt, new WriteOptions(bom: false));
+
+        $this->assertSame("WEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000\nHello\n", $output);
+    }
 }

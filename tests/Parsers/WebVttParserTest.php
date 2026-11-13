@@ -409,10 +409,10 @@ class WebVttParserTest extends TestCase
 
     public function testInlineTimestampsAreKept(): void
     {
-        $raw = "WEBVTT\n\n00:01.000 --> 00:04.000\nOne <00:00:02.500>two <00:03.000>three\n";
+        $raw = "WEBVTT\n\n00:01.000 --> 00:04.000\nOne <00:00:02.500>two <00:00:03.000>three\n";
 
         $this->assertSame(
-            "One <00:00:02.500>two <00:03.000>three",
+            "One <00:00:02.500>two <00:00:03.000>three",
             Subtitle::fromString($raw, Format::WebVtt)->getCues()[0]->getText()
         );
     }
@@ -440,5 +440,29 @@ class WebVttParserTest extends TestCase
 
         $this->assertSame(2, count($cues));
         $this->assertSame("Second", $cues[1]->getText());
+    }
+
+
+    public function testInlineTimestampWithoutHoursIsReadWithHours(): void
+    {
+        $cue = Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:04.000\nOne <00:02.000>two <00:00:03.000>three\n", Format::WebVtt)->getCues()[0];
+
+        $this->assertSame(["One <00:00:02.000>two <00:00:03.000>three"], $cue->getLines());
+    }
+
+
+    public function testShiftMovesAnInlineTimestampWithoutHours(): void
+    {
+        $subtitle = Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:04.000\nOne <00:02.000>two <00:00:03.000>three\n", Format::WebVtt)->shift(10);
+
+        $this->assertSame(["One <00:00:12.000>two <00:00:13.000>three"], $subtitle->getCues()[0]->getLines());
+    }
+
+
+    public function testWebVttxFirstLineThrowsInStrictMode(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The file does not start with WEBVTT.");
+        Subtitle::fromString("WEBVTTX\n\n00:01.000 --> 00:04.000\nHello\n", Format::WebVtt);
     }
 }

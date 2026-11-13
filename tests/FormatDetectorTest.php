@@ -145,6 +145,7 @@ class FormatDetectorTest extends TestCase
             "JSON with cues first"       => ["{\"cues\": [], \"metadata\": {\"title\": \"version\"}, \"version\": 1}", Format::Json],
             "JSON with spaces"           => ["{\n  \"version\" : 1 ,\n  \"cues\" : [ ]\n}\n", Format::Json],
             "EBU STL at 30 fps"          => [str_pad("865STL30.011", 1024), Format::EbuStl],
+            "PAC with 0D 0A in its first subtitle number" => ["\x01" . str_repeat("\0", 20) . "\x0D\x0A\x60", Format::Pac],
             "PGS with 0D 0A in its PTS"  => ["PG\x00\x0D\x0A\x00\0\0\0\0\x16\0\0", Format::Pgs],
             "JSON with a segments key"   => ["{\"version\": 1, \"formatData\": {\"x\": {\"segments\": [1]}}, \"cues\": []}", Format::Json],
             "Whisper JSON"               => ["{\"text\": \" Hello\", \"segments\": [{\"id\": 0, \"start\": 0.0, \"end\": 2.0, \"text\": \" Hello\"}], \"language\": \"en\"}",

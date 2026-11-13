@@ -166,6 +166,32 @@ class MarkupTest extends TestCase
     }
 
 
+    public function testCountCharactersCountsARegionalIndicatorWithAMarkOrJoinerAsTwo(): void
+    {
+        $this->assertSame(2, Markup::countCharacters("\u{1F1E9}\u{0301}"));
+        $this->assertSame(2, Markup::countCharacters("\u{1F1E9}\u{200D}"));
+        $this->assertSame(1, Markup::countCharacters("\u{1F1E9}\u{1F1EA}"));
+    }
+
+
+    public function testEmbedRightToLeftKeepsATrailingLineFeed(): void
+    {
+        $word = "\u{05E9}\u{05DC}\u{05D5}\u{05DD}";
+
+        $this->assertSame("\u{202B}$word\u{202C}\n", Markup::embedRightToLeft("$word\n"));
+        $this->assertSame("<i>\u{202B}$word\u{202C}</i>\n", Markup::embedRightToLeft("<i>$word</i>\n"));
+        $this->assertSame("\u{202B}$word\u{202C}", Markup::embedRightToLeft($word));
+    }
+
+
+    public function testEmbedRightToLeftReturnsInvalidUtf8Unchanged(): void
+    {
+        $line = "\xe2\x80\u{202C}\xab\u{05DC}";
+
+        $this->assertSame($line, Markup::embedRightToLeft($line));
+    }
+
+
     public function testWordTimestampRegexSplitsOnCoreWordTimestamps(): void
     {
         $this->assertSame(

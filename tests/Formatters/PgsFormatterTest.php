@@ -486,4 +486,18 @@ class PgsFormatterTest extends TestCase
 
         (new Subtitle())->addCue($cue)->toString(Format::Pgs);
     }
+
+
+    public function testBrokenImageDataThrowsUnwritableContentWithTheMessageOfTheImage(): void
+    {
+        $cue = new SubtitleCue(1, 2);
+        $cue->setFormatData("image", ["png" => "x"]);
+
+        try {
+            (new Subtitle())->addCue($cue)->toString(Format::Pgs);
+            $this->fail("No exception");
+        } catch (UnwritableContentException $exception) {
+            $this->assertSame("Cannot read the image of cue 1 to 2: the image data has no integer \"x\".", $exception->getMessage());
+        }
+    }
 }

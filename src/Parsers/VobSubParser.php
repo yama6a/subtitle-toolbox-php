@@ -102,7 +102,7 @@ final class VobSubParser extends SubtitleParser
 
     /**
      * Reads the subpicture units of a Matroska S_VOBSUB track. $codecPrivate holds the .idx header lines.
-     * A unit without a stop command ends at the end of its block.
+     * A unit without a stop command ends at the end of its block. Lenient mode skips a block that fails to decode.
      *
      * @param list<array{start: float, end: float, data: string}> $blocks times in seconds
      *
@@ -118,8 +118,14 @@ final class VobSubParser extends SubtitleParser
         $this->readIndex(str_contains(explode("\n", $header, 2)[0], "VobSub index file") ? $header : self::INDEX_FIRST_LINE . "\n" . $header);
 
         $units = [];
-        foreach ($blocks as $block) {
-            $unit          = $this->decodeUnit($block["data"]);
+        foreach ($blocks as $index => $block) {
+            try {
+                $unit = $this->decodeUnit($block["data"]);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, null, $index, []);
+                continue;
+            }
+
             $unit["start"] = $block["start"] + $unit["startDelay"];
             $unit["stop"]  = $unit["stopDelay"] === null ? max($block["end"], $unit["start"]) : $block["start"] + $unit["stopDelay"];
             $units[]       = $unit;

@@ -149,6 +149,17 @@ class DcpParserTest extends TestCase
     }
 
 
+    public function testReadsRawIso88591BytesWithAMatchingDeclaration(): void
+    {
+        $content = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n"
+                   . sprintf(self::SMPTE, "<Subtitle TimeIn=\"00:00:01:00\" TimeOut=\"00:00:02:00\"><Text Valign=\"bottom\" Vposition=\"8\">Caf\u{e9} cr\u{e8}me</Text></Subtitle>");
+
+        $subtitle = (new DcpParser())->parse(mb_convert_encoding($content, "ISO-8859-1", "UTF-8"));
+
+        $this->assertSame([[1.0, 2.0, ["Caf\u{e9} cr\u{e8}me"]]], self::describe($subtitle));
+    }
+
+
     public function testLenientModeSkipsAnImageSubtitleAndABadTime(): void
     {
         $subtitles = '<Subtitle TimeIn="00:00:01:00" TimeOut="00:00:02:00"><Image Valign="bottom">urn:uuid:1</Image></Subtitle>' .

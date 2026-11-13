@@ -258,7 +258,7 @@ final class MkvFixtures
      *
      * @return list<array{int, string}> start in milliseconds and the subpicture unit
      */
-    private static function vobSubUnits(string $idx, string $sub, string $language): array
+    public static function vobSubUnits(string $idx, string $sub, string $language): array
     {
         preg_match('/^id: ' . $language . ', index: (\d+)\r?\n(.*?)(?:^id:|\z)/ms', $idx, $track);
         preg_match_all('/^timestamp: (\d+):(\d+):(\d+):(\d+), filepos: ([0-9a-f]+)/m', $track[2], $entries, PREG_SET_ORDER);

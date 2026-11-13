@@ -116,8 +116,9 @@ final class MarkupColors
                 default                    => (float) $rgb[4],
             };
 
-            return max((int) $rgb[1], (int) $rgb[2], (int) $rgb[3], (int) round($alpha ?? 0)) > 255 ? null
-                : sprintf("#%02x%02x%02x", $rgb[1], $rgb[2], $rgb[3]) . ($alpha === null ? "" : sprintf("%02x", round($alpha)));
+            // The comparison stays on the float, because a cast of a float above PHP_INT_MAX wraps around.
+            return max((int) $rgb[1], (int) $rgb[2], (int) $rgb[3]) > 255 || round($alpha ?? 0) > 255 ? null
+                : sprintf("#%02x%02x%02x", $rgb[1], $rgb[2], $rgb[3]) . ($alpha === null ? "" : sprintf("%02x", (int) round($alpha)));
         }
 
         return self::NAMED_COLORS[$color] ?? null;

@@ -109,12 +109,14 @@ final class TranscriptWords
      * Returns the words to write for the cue.
      * With word timestamps, a word of the markup that has the start and the text of source words is those source
      * words, and $newWord builds the others. A word without a start starts at the cue start.
+     * A built word whose start is not the start of any source word, and whose text is the text of a source word, is a
+     * moved word. $newWord gets that source word as its fourth argument, so the word keeps its confidence.
      * Without word timestamps, a cue with its source times keeps $sourceWords. When its text changed but has as many
      * words, each changed word gets the times of its source word from $newWord. Else the cue has no words.
      *
      * @param list<mixed>                                    $sourceWords the words that the parser stored for the cue
      * @param callable(mixed): array{string, ?float, ?float} $readWord    returns the text, the start and the end of a source word as the parser reads them
-     * @param callable(string, float, float): mixed          $newWord     builds a word from its text, start and end
+     * @param callable(string, float, float, mixed): mixed    $newWord     builds a word from its text, start and end, and the source word that it moved from or null
      *
      * @return ?list<mixed> null when the cue has no words
      */
@@ -126,7 +128,9 @@ final class TranscriptWords
         }
 
         $source = array_map($readWord, $sourceWords);
+        $starts = array_map(fn (array $word): ?float => $word[1] === null ? null : Timecode::roundToMilliseconds($word[1]), $source);
         $next   = 0;
+        $origin = 0;
         $result = [];
         foreach ($words as $word) {
             $match = null;
@@ -135,7 +139,15 @@ final class TranscriptWords
             }
 
             if ($match === null) {
-                $result[] = $newWord($word["text"], $word["start"] ?? max(0.0, $cue->getStart()), $word["end"]);
+                $from = null;
+                for ($index = $word["start"] === null || in_array($word["start"], $starts, true) ? count($source) : $origin; $index < count($source); $index++) {
+                    if (self::sameWordText($word["text"], $source[$index][0])) {
+                        $from   = $sourceWords[$index];
+                        $origin = $index + 1;
+                        break;
+                    }
+                }
+                $result[] = $newWord($word["text"], $word["start"] ?? max(0.0, $cue->getStart()), $word["end"], $from);
                 continue;
             }
             array_push($result, ...array_slice($sourceWords, $match[0], $match[1] - $match[0]));
@@ -164,7 +176,7 @@ final class TranscriptWords
             [$text, $start, $end] = $readWord($word) + [null, null, null];
             $result[]             = self::sameWordText($texts[$index], $text)
                 ? $word
-                : $newWord($texts[$index], $start ?? max(0.0, $cue->getStart()), $end ?? $start ?? max(0.0, $cue->getStart()));
+                : $newWord($texts[$index], $start ?? max(0.0, $cue->getStart()), $end ?? $start ?? max(0.0, $cue->getStart()), null);
         }
 
         return $result;
@@ -189,7 +201,7 @@ final class TranscriptWords
 
         $text = "";
         for ($end = $first; $end < count($source) && ($end === $first || $source[$end][1] === null); $end++) {
-            $text = ltrim("$text {$source[$end][0]}");
+            $text = $end === $first ? $source[$end][0] : "$text {$source[$end][0]}";
             if (self::sameWordText($word["text"], $text)) {
                 return [$first, $end + 1];
             }

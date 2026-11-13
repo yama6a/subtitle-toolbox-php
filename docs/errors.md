@@ -41,6 +41,7 @@ try {
 - `save()` without a format and with an unknown extension, such as `out.unknown`.
 - An MKV, WebM, MP4 or MPEG-TS file in `load()` or `fromString()` with a format. Call `loadTrack()` instead.
 - An MKV, WebM, MP4 or MPEG-TS file without exactly 1 subtitle track in `load()` or `fromString()` without a format.
+- A file that is no MKV, WebM, MP4 or MPEG-TS file in `tracks()` or `loadTrack()`, for example a SubRip file. A damaged MKV, WebM, MP4 or MPEG-TS file throws `ParsingException`.
 - Detection that finds no format. This throws the subclass `UnknownFormatException`.
 
 ## Invalid arguments
@@ -61,7 +62,7 @@ try {
 
 - More than 4 lines or 32 characters per line in SCC.
 - A character that CEA-608 cannot show in SCC, for example `日`.
-- A cue without an image in PGS.
+- A cue without an image in PGS, or with image data that `CueImage::fromCue()` cannot read. The message is the one of the `InvalidArgumentException`, which `getPrevious()` returns.
 - An image cue without text in `toString()` or `save()` with a text format, unless `WriteOptions::$skipImageCues` is set. Run OCR first or write a bitmap format.
 - An image position or size above 65535 in PGS.
 - A PNG in PGS output whose size differs from the size in the image data of its cue, for example a 2x2 PNG for a 720x80 image.

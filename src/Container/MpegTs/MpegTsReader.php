@@ -182,7 +182,7 @@ final class MpegTsReader implements ContainerReader
         if ($track->codecId === self::CODEC_ARIB_CAPTION) {
             $decoder       = new AribCaptionDecoder($track->language);
             [$zero, $last] = $this->readPes($page, $decoder->add(...));
-            $cues          = $this->textCues($decoder->finish(), $zero, $last, $options);
+            $cues          = $this->textCues($trackNumber, $decoder->finish(), $zero, $last, $options);
             foreach ($decoder->warnings() as [$time, $message]) {
                 $seconds    = number_format(max(0, $time - $zero) / self::CLOCK_RATE, 3, ".", "");
                 $warnings[] = new ParseWarning("At $seconds s: $message", null, null, [], ParseWarningAction::Repaired);
@@ -200,7 +200,7 @@ final class MpegTsReader implements ContainerReader
         } else {
             $decoder       = new TeletextDecoder($page["page"], $trackNumber % 1000, TeletextCharacters::languageGroup($track->language));
             [$zero, $last] = $this->readPes($page, $decoder->add(...));
-            $cues          = $this->textCues($decoder->finish(), $zero, $last, $options);
+            $cues          = $this->textCues($trackNumber, $decoder->finish(), $zero, $last, $options);
         }
 
         $subtitle = (new Subtitle())->addCues($cues)->setParseWarnings($warnings);
@@ -239,12 +239,16 @@ final class MpegTsReader implements ContainerReader
 
 
     /**
+     * A state ends at the next state, else at the last PTS of the stream. A last state without a later PTS lasts
+     * ReadOptions::$lastCueDuration, at most up to Timecode::LAST_TIME.
+     *
      * @param list<array{0: int, 1: list<string>, 2?: Alignment}> $screenStates the PTS, the lines and the alignment of each state
      *                                                                          of the teletext page or the caption screen
      * @return list<SubtitleCue>
      */
-    private function textCues(array $screenStates, int $zero, int $last, ReadOptions $options): array
+    private function textCues(int $trackNumber, array $screenStates, int $zero, int $last, ReadOptions $options): array
     {
+        self::checkTime($trackNumber, max([$last, ...array_column($screenStates, 0)]) - $zero);
         $states = [];
         foreach ($screenStates as $state) {
             if ($states === [] || array_slice($states[array_key_last($states)], 1) !== array_slice($state, 1)) {
@@ -256,8 +260,10 @@ final class MpegTsReader implements ContainerReader
         foreach ($states as $index => $state) {
             [$start, $lines] = $state;
             if ($lines !== []) {
-                $end    = $states[$index + 1][0] ?? ($last > $start ? $last : $start + (int) ($options->lastCueDuration * self::CLOCK_RATE));
-                $cue    = new SubtitleCue(max(0, $start - $zero) / self::CLOCK_RATE, max(0, $end - $zero) / self::CLOCK_RATE, $lines);
+                $time   = max(0, $start - $zero) / self::CLOCK_RATE;
+                $next   = $states[$index + 1][0] ?? ($last > $start ? $last : null);
+                $end    = $next === null ? Timecode::lastCueEnd($time, $options->lastCueDuration) : max(0, $next - $zero) / self::CLOCK_RATE;
+                $cue    = new SubtitleCue($time, $end, $lines);
                 $cues[] = isset($state[2]) ? $cue->setAlignment($state[2]) : $cue;
             }
         }

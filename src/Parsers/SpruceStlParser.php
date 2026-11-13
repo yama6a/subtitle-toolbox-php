@@ -35,7 +35,10 @@ final class SpruceStlParser extends SubtitleParser
 
     protected function read(string $content): Subtitle
     {
-        $lines     = $this->lines($content);
+        $lines = $this->lines($content);
+        if (end($lines) === "") {
+            array_pop($lines);
+        }
         $frameRate = $this->frameRate($lines);
         $state     = SpruceStl::DEFAULT_STATE;
         $fileData  = ["frameRate" => $frameRate, "header" => []];
@@ -85,6 +88,9 @@ final class SpruceStlParser extends SubtitleParser
             }
         }
 
+        if ($commands !== []) {
+            $fileData["trailer"] = $commands;
+        }
         $subtitle = (new Subtitle())->setFormatData(self::FORMAT_DATA_KEY, $fileData);
 
         return CommentAnchors::addParsed($subtitle, $cues, $comments);

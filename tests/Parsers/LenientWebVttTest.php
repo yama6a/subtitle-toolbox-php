@@ -117,4 +117,14 @@ class LenientWebVttTest extends TestCase
         $this->assertSame([["One"], ["Two"]], array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $cues));
         $this->assertSame([6, 9], array_map(fn ($warning): ?int => $warning->lineNumber, $reader->getWarnings()));
     }
+
+
+    public function testWebVttxFirstLineIsRepairedWithAWarning(): void
+    {
+        $subtitle = (new WebVttParser())->parse("WEBVTTX\n\n00:01.000 --> 00:04.000\nHello\n", new ReadOptions(lenient: true));
+
+        $this->assertCount(1, $subtitle->getParseWarnings());
+        $this->assertSame("Hello", $subtitle->getCues()[0]->getText());
+        $this->assertSame([], $subtitle->findFormatData("vtt"));
+    }
 }
