@@ -479,4 +479,23 @@ class BinaryEditTest extends CliTestCase
     {
         $this->assertSame(self::usageError($command, $message), $this->runCli($arguments));
     }
+
+
+    public function testMaskWordsSplitsTheWordFileOnlyAtLineBreaks(): void
+    {
+        file_put_contents("$this->dir/words.txt", "\u{0445}\u{0440}\u{0435}\u{043D}\r\n\u{00C5}sa\rbad\n");
+        file_put_contents("$this->dir/in.srt", "1\n00:00:01,000 --> 00:00:02,000\n\u{041A}\u{0430}\u{043A}\u{043E}\u{0439} \u{0445}\u{0440}\u{0435}\u{043D}, \u{00C5}sa!\n");
+
+        $this->assertSame([0, "1\n00:00:01,000 --> 00:00:02,000\n\u{041A}\u{0430}\u{043A}\u{043E}\u{0439} ****, ***!\n", ""],
+                          $this->runCli(["convert", "in.srt", "--to", "srt", "-o", "-", "--no-bom", "--mask-words", "words.txt"]));
+    }
+
+
+    public function testErrorsEnableRejectsTheRuleNameZero(): void
+    {
+        file_put_contents("$this->dir/a.srt", "1\n00:00:01,000 --> 00:00:02,000\nlt is l.\n");
+
+        $this->assertSame(self::usageError("convert", "Unknown rule \"0\" in --errors-enable. The valid names are adCues, doubleApostrophes, loneLowercaseI, unneededPeriods, dialogueOnOneLine, musicNotes, sentenceStartCase."),
+                          $this->runCli(["convert", "a.srt", "--errors-fix", "--language", "en", "--errors-enable", "0", "--to", "srt"]));
+    }
 }

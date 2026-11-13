@@ -8,6 +8,7 @@ use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
 final class Mpl2Formatter extends SubtitleFormatter
@@ -17,7 +18,8 @@ final class Mpl2Formatter extends SubtitleFormatter
         $options ??= new WriteOptions();
         $output = "";
         foreach ($subtitle->getCues() as $cue) {
-            $output .= "[" . (int) round(max(0.0, $cue->getStart()) * Mpl2Parser::DECISECONDS_PER_SECOND) . "][" . (int) round(max(0.0, $cue->getEnd()) * Mpl2Parser::DECISECONDS_PER_SECOND) . "]" .
+            $output .= "[" . Timecode::unitsBelowLimit($cue->getStart(), Mpl2Parser::DECISECONDS_PER_SECOND) . "]" .
+                       "[" . Timecode::unitsBelowLimit($cue->getEnd(), Mpl2Parser::DECISECONDS_PER_SECOND) . "]" .
                        implode("|", $this->linesWithItalics(array_map(Markup::rubyAsText(...), $cue->getLines()))) .
                        LineEnding::Lf->value;
         }
