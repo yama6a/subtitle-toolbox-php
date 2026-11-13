@@ -108,6 +108,19 @@ class DvbSubtitleDecoderTest extends TestCase
     }
 
 
+    /**
+     * The limit applies to the time from $zero, so the cue at 1000 s of the clock starts at 10 s.
+     */
+    public function testALastCueWithoutAPageTimeOutStopsBelow100000Hours(): void
+    {
+        $decoder = new DvbSubtitleDecoder();
+        $decoder->add(self::page(0, [[0, 0, 0]]) . self::region(0, 2, 1, 2, [[1, 0, 0]]) . self::object(1, "\x11\x11\x00\x00\xF0") . self::end(), 1000.0);
+
+        $this->assertSame([[10.0, 359999999.999]],
+                          array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $decoder->finish(400000 * 3600, 990.0)));
+    }
+
+
     public function testThrowsForRegionsWithMorePixelsInTotalThanTheImageLimit(): void
     {
         $this->expectException(ParsingException::class);

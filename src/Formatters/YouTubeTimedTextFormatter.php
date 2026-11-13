@@ -227,7 +227,7 @@ final class YouTubeTimedTextFormatter extends SubtitleFormatter
             $source[] = [
                 "text"   => Markup::decodeEntities(is_string($segment["text"] ?? null) ? $segment["text"] : ""),
                 "offset" => is_numeric($segment["t"] ?? null) ? (float) $segment["t"] / 1000 : null,
-                "style"  => self::penStyle($penStyles, $segment["p"] ?? $paragraphPen),
+                "style"  => self::penStyle($penStyles, (is_scalar($segment["p"] ?? null) ? (string) $segment["p"] : "") ?: $paragraphPen),
                 "fields" => $segment,
             ];
         }
@@ -347,7 +347,8 @@ final class YouTubeTimedTextFormatter extends SubtitleFormatter
     {
         $alignments = [];
         foreach ($positions as $position) {
-            $alignments[(string) ($position["id"] ?? "")] = is_numeric($position["ap"] ?? null) ? (int) $position["ap"] : null;
+            $anchor                                       = is_string($position["ap"] ?? null) ? $position["ap"] : "";
+            $alignments[(string) ($position["id"] ?? "")] = preg_match('/^[0-9]+$/D', $anchor) === 1 ? (int) $anchor : null;
         }
 
         $id = self::findWindowPosition($alignments, $cue->getAlignment(), is_scalar($fields["wp"] ?? null) ? (string) $fields["wp"] : null);

@@ -11,6 +11,7 @@ use SubtitleToolbox\Image\PgsColors;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * Decodes the segments of DVB bitmap subtitles. Each display set that shows pixels becomes an image cue.
@@ -129,21 +130,22 @@ final class DvbSubtitleDecoder
 
 
     /**
-     * Returns the cues with times from $zero seconds. A last cue without a page time-out lasts $lastCueDuration. A cue never ends
-     * before it starts, also when the PTS goes back, for example after a PTS discontinuity.
+     * Returns the cues with times from $zero seconds. A last cue without a page time-out lasts $lastCueDuration, at most up to
+     * Timecode::LAST_TIME. A cue never ends before it starts, also when the PTS goes back, for example after a PTS discontinuity.
      *
      * @return list<SubtitleCue>
      */
     public function finish(float $lastCueDuration, float $zero = 0.0): array
     {
         if ($this->shown !== null) {
-            $this->endCue(is_finite($this->shown["expires"]) ? $this->shown["expires"] : $this->shown["start"] + $lastCueDuration);
+            $this->endCue($this->shown["expires"]);
         }
 
-        return array_map(function (array $cue) use ($zero): SubtitleCue {
+        return array_map(function (array $cue) use ($zero, $lastCueDuration): SubtitleCue {
             $start = max(0, $cue[0] - $zero);
+            $end   = is_finite($cue[1]) ? max($start, $cue[1] - $zero) : Timecode::lastCueEnd($start, $lastCueDuration);
 
-            return IndexedImages::cue($start, max($start, $cue[1] - $zero), $cue[2]);
+            return IndexedImages::cue($start, $end, $cue[2]);
         }, $this->cues);
     }
 

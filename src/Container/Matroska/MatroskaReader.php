@@ -149,6 +149,10 @@ final class MatroskaReader implements ContainerReader
     // A full-screen 4K PGS display set holds about 8 MB and a VobSub unit 64 KB. A block that inflates to more is a zip bomb.
     private const MAX_INFLATED_SIZE = 64 << 20;
 
+    // Many small zlib blocks of one track must not fill the memory either. A property, not a constant, so that a test can
+    // lower the limit below the memory limit of the tests.
+    private static int $maxInflatedTotal = 1 << 30;
+
     // The WebVTT BlockAdditional of a cue has the BlockAddID 1, the default value.
     private const WEBVTT_ADD_ID = 1;
 
@@ -172,6 +176,9 @@ final class MatroskaReader implements ContainerReader
     private bool $writtenByMkvmerge = false;
 
     private int $timestampScale = self::DEFAULT_TIMESTAMP_SCALE;
+
+    // The bytes that the zlib data of the blocks of the track in extract() inflated to.
+    private int $inflatedTotal = 0;
 
     /** @var array<int, SubtitleTrack> */
     private array $tracks = [];
@@ -259,7 +266,7 @@ final class MatroskaReader implements ContainerReader
 
         $subtitle = match (true) {
             $track->codecId === self::CODEC_DVBSUB => $this->dvbSubtitle($codecPrivate, $blocks, $options),
-            $format === Format::Pgs                => (new PgsParser())->parse(TrackFileBuilder::pgsStream($blocks, $this->timestampScale), $options),
+            $format === Format::Pgs                => (new PgsParser())->parseTrack(...TrackFileBuilder::pgsStream($blocks, $this->timestampScale), options: $options),
             $format === Format::WebVtt             => (new WebVttParser())->parse(TrackFileBuilder::webVttFile($track, $codecPrivate, $blocks), $options),
             $format === Format::SubRip             => (new SubRipParser())->parse(TrackFileBuilder::subRipFile($blocks), $options),
             $format === Format::Ass                => (new AssParser())->parse(TrackFileBuilder::assFile($track, $codecPrivate, $blocks), $options),
@@ -289,13 +296,13 @@ final class MatroskaReader implements ContainerReader
     private function dvbSubtitle(string $codecPrivate, array $blocks, ReadOptions $options): Subtitle
     {
         [$composition, $ancillary] = strlen($codecPrivate) >= 4 ? array_values(unpack("n2", $codecPrivate)) : [null, null];
-        $decoder                   = new DvbSubtitleDecoder($composition, $ancillary);
+        $decoder                   = new DvbSubtitleDecoder($composition, $ancillary, $options->lenient);
         foreach ($blocks as $block) {
             $start = $block["start"] * $this->timestampScale / 1e9;
             $decoder->add($block["data"], $start, $block["duration"] === null ? null : $start + $block["duration"] * $this->timestampScale / 1e9);
         }
 
-        return (new Subtitle())->addCues($decoder->finish($options->lastCueDuration));
+        return (new Subtitle())->addCues($decoder->finish($options->lastCueDuration))->setParseWarnings($decoder->warnings());
     }
 
 
@@ -340,10 +347,10 @@ final class MatroskaReader implements ContainerReader
         }
 
         if (isset($positions[self::ID_CUES])) {
-            $this->cuesOffset ??= $segment["offset"] + $positions[self::ID_CUES];
+            $this->cuesOffset ??= self::position($segment["offset"], $positions[self::ID_CUES]);
         }
         if (isset($positions[self::ID_TAGS])) {
-            $this->tagsOffset ??= $segment["offset"] + $positions[self::ID_TAGS];
+            $this->tagsOffset ??= self::position($segment["offset"], $positions[self::ID_TAGS]);
         }
 
         $info   ??= $this->elementAt($segment["offset"], $positions[self::ID_INFO] ?? null);
@@ -419,9 +426,19 @@ final class MatroskaReader implements ContainerReader
             return null;
         }
 
-        $this->ebml->seek($segmentOffset + $position);
+        $this->ebml->seek(self::position($segmentOffset, $position));
 
         return $this->ebml->readElementHeader();
+    }
+
+
+    /**
+     * Adds a position from the file to $offset. A damaged position that the sum would take past PHP_INT_MAX gives PHP_INT_MAX,
+     * which lies past the end of the file, where seek() finds no element.
+     */
+    private static function position(int $offset, int $position): int
+    {
+        return $position > PHP_INT_MAX - $offset ? PHP_INT_MAX : $offset + $position;
     }
 
 
@@ -542,7 +559,15 @@ final class MatroskaReader implements ContainerReader
      */
     private function readBlocks(int $trackNumber): array
     {
-        return $this->readListedBlocks($trackNumber) ?? $this->walkBlocks($trackNumber);
+        $this->inflatedTotal = 0;
+        $blocks              = $this->readListedBlocks($trackNumber);
+        if ($blocks !== null) {
+            return $blocks;
+        }
+
+        $this->inflatedTotal = 0;
+
+        return $this->walkBlocks($trackNumber);
     }
 
 
@@ -572,7 +597,7 @@ final class MatroskaReader implements ContainerReader
                 if ($clusters[$cluster] === null) {
                     return null;
                 }
-                $this->ebml->seek($clusters[$cluster]["dataOffset"] + $relative);
+                $this->ebml->seek(self::position($clusters[$cluster]["dataOffset"], $relative));
                 $element = $this->ebml->readElementHeader();
                 $block   = match ($element["id"] ?? null) {
                     self::ID_SIMPLE_BLOCK => $this->readBlock($element, $trackNumber),
@@ -622,7 +647,7 @@ final class MatroskaReader implements ContainerReader
                     return [];
                 }
                 $positions[$fields[self::ID_CUE_CLUSTER] . ":" . $fields[self::ID_CUE_RELATIVE]] = [
-                    $this->segmentOffset + $fields[self::ID_CUE_CLUSTER],
+                    self::position($this->segmentOffset, $fields[self::ID_CUE_CLUSTER]),
                     $fields[self::ID_CUE_RELATIVE],
                 ];
             }
@@ -812,6 +837,7 @@ final class MatroskaReader implements ContainerReader
      */
     private function readBlock(array $block, int $trackNumber): ?array
     {
+        EbmlReader::requireSize($block);
         $header = $this->ebml->readBytes(min($block["size"], self::MAX_BLOCK_HEADER));
         [$blockTrack, $trackVintLength] = EbmlReader::readVint($header, 0, false) ?? [null, 0];
         if ($blockTrack === null || strlen($header) < $trackVintLength + self::BLOCK_HEADER_TAIL) {
@@ -859,6 +885,10 @@ final class MatroskaReader implements ContainerReader
                 throw new ParsingException("The zlib data of track $trackNumber is not valid or inflates to more than " .
                                            (self::MAX_INFLATED_SIZE >> 20) . " MB.");
             }
+            $this->inflatedTotal += strlen($inflated);
+            if ($this->inflatedTotal > self::$maxInflatedTotal) {
+                throw new ParsingException("The zlib data of track $trackNumber inflates to more than " . (self::$maxInflatedTotal >> 20) . " MB in total.");
+            }
             $data = $inflated;
         }
 
@@ -869,7 +899,7 @@ final class MatroskaReader implements ContainerReader
     /**
      * Converts the block times from ticks to milliseconds and sets the end of each block.
      * A block without BlockDuration and DefaultDuration ends at the start of the next block.
-     * The last such block ends after $lastDuration seconds.
+     * The last such block ends after $lastDuration seconds, at most at Timecode::LAST_TIME.
      *
      * @param list<array{start: int, duration: ?int, data: string, additional: ?string}> $blocks times in TimestampScale ticks
      * @return list<array{startMs: int, endMs: int, data: string, additional: ?string}>
@@ -884,7 +914,7 @@ final class MatroskaReader implements ContainerReader
                 $block["duration"] !== null            => $this->milliseconds($startTime + $block["duration"] * $this->timestampScale),
                 $trackData["defaultDuration"] !== null => $this->milliseconds($startTime + $trackData["defaultDuration"]),
                 isset($blocks[$index + 1])             => $this->milliseconds($blocks[$index + 1]["start"] * $this->timestampScale),
-                default                                => $start + Timecode::totalMilliseconds($lastDuration),
+                default                                => Timecode::totalMilliseconds(Timecode::lastCueEnd($start / 1000, $lastDuration)),
             };
 
             $cues[] = ["startMs" => $start, "endMs" => $end, "data" => $block["data"], "additional" => $block["additional"]];
@@ -925,7 +955,7 @@ final class MatroskaReader implements ContainerReader
      */
     private function children(array $parent): Generator
     {
-        $this->requireSize($parent);
+        EbmlReader::requireSize($parent);
         $end      = $parent["offset"] + $parent["size"];
         $position = $parent["offset"];
         while ($position < $end) {
@@ -943,16 +973,7 @@ final class MatroskaReader implements ContainerReader
 
     private function skip(array $element): void
     {
-        $this->requireSize($element);
+        EbmlReader::requireSize($element);
         $this->ebml->seek($element["offset"] + $element["size"]);
-    }
-
-
-    private function requireSize(array $element): void
-    {
-        if ($element["size"] === EbmlReader::UNKNOWN_SIZE) {
-            $id = sprintf("0x%X", $element["id"]);
-            throw new ParsingException("The element $id at byte {$element['offset']} has an unknown size, which only Segment and Cluster may have.");
-        }
     }
 }

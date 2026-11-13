@@ -138,6 +138,23 @@ final class TsFixtures
     }
 
 
+    /**
+     * A teletext page 888 with PID 0x200 whose PES packets count the PTS as dvbSubtitlesPastTheTimeLimit() does. The packets hold
+     * no teletext data. It is no file in tests/files/.
+     */
+    public static function teletextPastTheTimeLimit(): string
+    {
+        $writer = new TsFixtureWriter();
+        $writer->tables(1, self::PMT_PID, self::TELETEXT_PID,
+                        [[self::TELETEXT_PID, 0x06, TsFixtureWriter::teletextDescriptor([["eng", TsFixtureWriter::SUBTITLE_PAGE, 888]])]]);
+        for ($packet = 0; $packet <= 10059; $packet++) {
+            $writer->teletextPes(self::TELETEXT_PID, $packet * (3 << 30) % (1 << 33), []);
+        }
+
+        return $writer->bytes();
+    }
+
+
     private static function pts(float $seconds): int
     {
         return (int) round((10 + $seconds) * 90000);

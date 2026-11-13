@@ -10,6 +10,7 @@ use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Mp4\Mp4Reader;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
 use SubtitleToolbox\Exceptions\UnsupportedFormatException;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
@@ -148,6 +149,44 @@ class LoadSaveTest extends TestCase
         $this->expectException(UnsupportedFormatException::class);
         $this->expectExceptionMessage("Call loadTrack()");
         Subtitle::load($mkv, Format::SubRip);
+    }
+
+
+    public static function tracksCalls(): array
+    {
+        return [
+            "tracks()"    => [fn (string $path) => Subtitle::tracks($path)],
+            "loadTrack()" => [fn (string $path) => Subtitle::loadTrack($path, 3)],
+        ];
+    }
+
+
+    #[DataProvider("tracksCalls")]
+    public function testTrackCallsThrowUnsupportedFormatExceptionForAFileThatIsNoContainer(\Closure $call): void
+    {
+        $this->expectException(UnsupportedFormatException::class);
+        $this->expectExceptionMessage("The file is not an MKV, WebM, MP4 or MPEG-TS file.");
+
+        $call(self::FILES . "cli/trip.srt");
+    }
+
+
+    /**
+     * A file that starts with the EBML bytes of Matroska and then breaks is a damaged Matroska file.
+     */
+    #[DataProvider("tracksCalls")]
+    public function testTrackCallsThrowParsingExceptionForADamagedMatroskaFile(\Closure $call): void
+    {
+        $path = tempnam(sys_get_temp_dir(), "mkv");
+        file_put_contents($path, substr(file_get_contents(self::FILES . "mkv/seek_head.mkv"), 0, 30));
+        try {
+            $this->expectException(ParsingException::class);
+            $this->expectExceptionMessage("The EBML element header at byte 28 is not valid.");
+
+            $call($path);
+        } finally {
+            unlink($path);
+        }
     }
 
 

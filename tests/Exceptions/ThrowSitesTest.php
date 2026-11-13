@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\FileFailure;
+use SubtitleToolbox\Container\Containers;
 use SubtitleToolbox\Container\DvbSubtitleDecoder;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
@@ -266,6 +267,21 @@ class ThrowSitesTest extends TestCase
     /**
      * Opens an MKV file with one S_TEXT/UTF8 track 2, the given track fields and the given segment data after the Tracks element.
      */
+    /**
+     * 1 GiB of inflated data does not fit into the memory limit of the tests.
+     */
+    private static function inflateWithALimitOf1MiB(Closure $read): void
+    {
+        $limit = new \ReflectionProperty(MatroskaReader::class, "maxInflatedTotal");
+        $limit->setValue(null, 1 << 20);
+        try {
+            $read();
+        } finally {
+            $limit->setValue(null, 1 << 30);
+        }
+    }
+
+
     private static function mkv(string $clusters, array $track = [], string $cut = ""): MatroskaReader
     {
         $tracks = MkvFixtureWriter::element(MkvFixtureWriter::TRACKS, MkvFixtureWriter::trackEntry($track + [
@@ -342,6 +358,11 @@ class ThrowSitesTest extends TestCase
             "Cli/Command.php: file failure"                 => [fn () => Command::failFile("Cannot read x."), \RuntimeException::class, FileFailure::class],
             "Container/DvbSubtitleDecoder.php: region too large" => [fn () => (new DvbSubtitleDecoder())->add("\x0F\x11\0\1\0\x0A\0\0" . pack("nn", 8000, 1) . "\x0C\0\0\0", 0.0),
                                                                      ...$parsing],
+            "Container/Containers.php: no container"        => [fn () => Containers::open(self::stream("1\n00:00:01,000 --> 00:00:02,000\nHi\n")),
+                                                                ...$unsupported],
+            "Container/Matroska/MatroskaReader.php: zlib data of a track past the limit" => [fn () => self::inflateWithALimitOf1MiB(
+                fn () => self::mkv(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 0, gzcompress(str_repeat("a", 3 << 19)), 1000)]),
+                                   ["encodings" => MkvFixtureWriter::compression(0, 0)])->extract(2)), ...$parsing],
             "Container/Matroska/EbmlReader.php: invalid element header" => [fn () => MatroskaReader::open(self::stream("\0\0\0\0")), ...$parsing],
             "Container/Matroska/EbmlReader.php: cut off element data" => [fn () => self::mkv("", ["codecPrivate" => "abc"], "c"), ...$parsing],
             "Container/Matroska/EbmlReader.php: unsigned integer of 2^63" => [fn () => self::mkv(MkvFixtureWriter::cluster(0, [
@@ -405,7 +426,7 @@ class ThrowSitesTest extends TestCase
                                                                 ["encodings" => MkvFixtureWriter::compression(0, 0)])->extract(2), ...$parsing],
             "Container/Matroska/MatroskaReader.php: child larger than its parent" => [fn () => MatroskaReader::open(self::stream(
                                                                 "\x1A\x45\xDF\xA3\x84\x42\x82\x88matroska")), ...$parsing],
-            "Container/Matroska/MatroskaReader.php: unknown size of Tracks" => [fn () => MatroskaReader::open(self::stream(
+            "Container/Matroska/EbmlReader.php: unknown size" => [fn () => MatroskaReader::open(self::stream(
                                                                 MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT,
                                                                 MkvFixtureWriter::unknownSizeElement(MkvFixtureWriter::TRACKS, "")))), ...$parsing],
             "CueLimits.php: maximum lines 0"                => [fn () => new CueLimits(maxLinesPerCue: 0), ...$invalid],
