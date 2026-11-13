@@ -512,11 +512,15 @@ final class Markup
      */
     public static function embedRightToLeft(string $line): string
     {
+        if (!mb_check_encoding($line, "UTF-8")) {
+            return $line;
+        }
+
         $tag  = self::TAG . '|\{\\\\[^{}]*\}';
         $text = str_replace(["\u{202B}", "\u{202C}"], "", $line);
         if (preg_match('/\{[^{}]*\\\\p[1-9]/', $text) === 1
             || preg_match('/(?=\p{L})[\p{Arabic}\p{Hebrew}\p{Syriac}\p{Thaana}\p{Nko}]/u', self::visibleText($text)) !== 1
-            || preg_match("/^((?:$tag)*)(.*?)((?:$tag)*)\$/su", $text, $matches) !== 1) {
+            || preg_match("/^((?:$tag)*)(.*?)((?:$tag)*)(\n?)\z/su", $text, $matches) !== 1) {
             return $line;
         }
 
@@ -524,10 +528,10 @@ final class Markup
         if (preg_match("/^([" . DialogueDash::CHARACTERS . "][ \\t]*)?(?!\\.\\.)($end+)[ \\t]*(.*\\S)(\\s*)\$/su", $matches[2], $start) === 1
             && preg_match("/$end\$/u", $start[3]) !== 1) {
             // The second pass puts a tag at the start of the moved text outside the marks.
-            return self::embedRightToLeft($matches[1] . $start[1] . $start[3] . $start[2] . $start[4] . $matches[3]);
+            return self::embedRightToLeft($matches[1] . $start[1] . $start[3] . $start[2] . $start[4] . $matches[3] . $matches[4]);
         }
 
-        return "$matches[1]\u{202B}$matches[2]\u{202C}$matches[3]";
+        return "$matches[1]\u{202B}$matches[2]\u{202C}$matches[3]$matches[4]";
     }
 
 
@@ -553,6 +557,7 @@ final class Markup
     /**
      * Counts the characters a reader sees, the extended grapheme clusters of UAX #29, or bytes for invalid UTF-8 such as the Latin-1 bytes that MicroDVD keeps.
      * Invisible format characters and the soft hyphen count 0.
+     * PCRE2 does not join a regional indicator with a following combining mark or zero width joiner, so U+1F1E9 U+0301 counts as 2 and UAX #29 rule GB9 says 1.
      *
      * @internal
      */

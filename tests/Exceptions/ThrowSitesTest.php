@@ -811,6 +811,7 @@ class ThrowSitesTest extends TestCase
             "Sync/SpeechReference.php: interval past the limit" => [fn () => SpeechReference::fromIntervals([[0, 1e12]]), ...$invalid],
             "TextTransforms.php: empty search"              => [fn () => self::subtitle()->replaceText("", "x"), ...$invalid],
             "TextTransforms.php: invalid regex"             => [fn () => self::subtitle()->replaceText("/[/", "x", new ReplaceTextOptions(regex: true)), ...$invalid],
+            "TextTransforms.php: regex fails on a run"      => [fn () => TestSubtitles::fromCues([[1, 2, ["caf\xe9"]]])->replaceText("/./u", "x", new ReplaceTextOptions(regex: true)), ...$invalid],
             "Timecode.php: drop frame at 25 fps"            => [fn () => Timecode::frameNumber(0, new FrameRate(25), true), ...$invalid],
             "Timecode.php: invalid timecode"                => [fn () => Timecode::parse("1:2:3:4:5"), ...$invalid],
             "Timing/ShotChangeOptions.php: negative window" => [fn () => new ShotChangeOptions(24, snapWindowFrames: -1), ...$invalid],
