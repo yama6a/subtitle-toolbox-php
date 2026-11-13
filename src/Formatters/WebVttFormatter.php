@@ -135,7 +135,10 @@ final class WebVttFormatter extends SubtitleFormatter
      */
     private function formatComment(string $text): string
     {
-        $text = StringHelpers::cleanString(str_replace("-->", "->", $text));
+        while (str_contains($text, "-->")) {
+            $text = str_replace("-->", "->", $text);
+        }
+        $text = StringHelpers::removeEmptyLines(StringHelpers::trimEachLine(StringHelpers::cleanString($text)));
         if ($text === "") {
             return "NOTE";
         }
@@ -149,7 +152,7 @@ final class WebVttFormatter extends SubtitleFormatter
     private function formatIdentifier(?string $identifier, int $cueIndex): string
     {
         if ($identifier === null || trim($identifier) === "" || str_contains($identifier, "-->")
-            || str_contains($identifier, LineEnding::Lf->value)) {
+            || str_contains($identifier, LineEnding::Lf->value) || str_contains($identifier, "\r")) {
             return (string) ($cueIndex + 1);
         }
 

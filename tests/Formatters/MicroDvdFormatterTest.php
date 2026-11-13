@@ -250,4 +250,15 @@ class MicroDvdFormatterTest extends TestCase
 
         $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 1e12)]));
     }
+
+
+    public function testABarInsideALineReadsBackAsText(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["Rock | Pop", "|"]));
+        $output   = $subtitle->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(frameRate: 25)]));
+
+        $this->assertSame("{25}{50}Rock \u{00A6} Pop|\u{00A6}\n", $output);
+        $read = new ReadOptions(formats: [new MicroDvdReadOptions(frameRate: 25)]);
+        $this->assertSame(["Rock \u{00A6} Pop", "\u{00A6}"], Subtitle::fromString($output, Format::MicroDvd, $read)->getCues()[0]->getLines());
+    }
 }

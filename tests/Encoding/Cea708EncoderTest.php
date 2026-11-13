@@ -71,6 +71,16 @@ class Cea708EncoderTest extends TestCase
     }
 
 
+    public function testReadsACapacityBelowTheLongestCommandAs7Bytes(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "Hi"));
+
+        $blocks = (new Cea708Encoder())->blocks($subtitle, fn (float $seconds): int => (int) round($seconds * self::FRAMES_PER_SECOND), 6);
+
+        $this->assertSame(7, max(array_map(strlen(...), $blocks)));
+    }
+
+
     /**
      * Returns the frames of the service 1 blocks as packets, as Mcc::readCdp() returns them.
      *

@@ -253,7 +253,7 @@ final class YouTubeTimedTextFormatter extends SubtitleFormatter
             $attributes  = array_diff_key($segment["fields"], ["text" => true, "t" => true, "p" => true]);
             $offset      = (int) round(($segment["offset"] ?? 0.0) * 1000);
             $attributes  = ($offset > 0 || isset($segment["fields"]["t"]) ? ["t" => (string) $offset] : []) + ($pen === null ? [] : ["p" => $pen]) + $attributes;
-            $content    .= $attributes === [] ? self::escape(self::segmentText($segment)) : "<s" . self::attributes($attributes) . ">" . self::segmentText($segment) . "</s>";
+            $content    .= $attributes === [] ? self::segmentText($segment) : "<s" . self::attributes($attributes) . ">" . self::segmentText($segment) . "</s>";
         }
 
         return "<p" . self::attributes($fields) . ">$content</p>";

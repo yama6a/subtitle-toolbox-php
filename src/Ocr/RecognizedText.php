@@ -22,8 +22,8 @@ final class RecognizedText
                 throw new InvalidArgumentException("Every line of a RecognizedText must be a string.");
             }
         }
-        if ($confidence !== null && ($confidence < 0 || $confidence > 1)) {
-            throw new InvalidArgumentException("The confidence must be from 0 to 1, got $confidence.");
+        if ($confidence !== null && !($confidence >= 0 && $confidence <= 1)) {
+            throw new InvalidArgumentException("The confidence must be from 0 to 1, got " . (is_nan($confidence) ? "NAN" : $confidence) . ".");
         }
     }
 }

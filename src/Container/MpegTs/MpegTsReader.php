@@ -19,6 +19,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Streaming\Streams;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * Reads the teletext subtitle pages and the DVB subtitle streams of MPEG transport streams, such as DVB recordings, and the
@@ -43,7 +44,7 @@ final class MpegTsReader implements ContainerReader
 
     public const CODEC_ARIB_CAPTION = "arib_caption";
 
-    // A file with the PAT or a PMT more than 32 MB into it is not a recording that starts at a packet.
+    // A PAT or a PMT in a packet that starts 32 MiB or more into the file is not part of a recording that starts at a packet.
     private const TABLE_SCAN_BYTES = 32 << 20;
 
     private const CHUNK_SIZE = self::PACKET_SIZE << 11;
@@ -187,9 +188,15 @@ final class MpegTsReader implements ContainerReader
                 $warnings[] = new ParseWarning("At $seconds s: $message", null, null, [], ParseWarningAction::Repaired);
             }
         } elseif ($track->codecId === self::CODEC_DVB_SUBTITLE) {
-            $decoder = new DvbSubtitleDecoder($page["page"], $page["ancillaryPage"]);
-            [$zero]  = $this->readPes($page, fn (string $data, int $pts) => $decoder->add($data, $pts / self::CLOCK_RATE));
-            $cues    = $decoder->finish($options->lastCueDuration, $zero / self::CLOCK_RATE);
+            $decoder = new DvbSubtitleDecoder($page["page"], $page["ancillaryPage"], $options->lenient);
+            $latest  = null;
+            [$zero]  = $this->readPes($page, function (string $data, int $pts) use ($decoder, &$latest): void {
+                $latest = max($latest ?? $pts, $pts);
+                $decoder->add($data, $pts / self::CLOCK_RATE);
+            });
+            self::checkTime($trackNumber, ($latest ?? $zero) - $zero);
+            $cues     = $decoder->finish($options->lastCueDuration, $zero / self::CLOCK_RATE);
+            $warnings = $decoder->warnings();
         } else {
             $decoder       = new TeletextDecoder($page["page"], $trackNumber % 1000, TeletextCharacters::languageGroup($track->language));
             [$zero, $last] = $this->readPes($page, $decoder->add(...));
@@ -256,6 +263,19 @@ final class MpegTsReader implements ContainerReader
         }
 
         return $cues;
+    }
+
+
+    /**
+     * Throws when $ticks of the 90 kHz clock reach MAX_HOURS. The time in the message is in whole milliseconds, half up.
+     */
+    private static function checkTime(int $trackNumber, int $ticks): void
+    {
+        $milliseconds = intdiv(max(0, $ticks) + 45, 90);
+        if ($milliseconds >= Timecode::MAX_HOURS * 3600 * 1000) {
+            $seconds = rtrim(rtrim(sprintf("%d.%03d", intdiv($milliseconds, 1000), $milliseconds % 1000), "0"), ".");
+            throw new ParsingException("The cue times of track $trackNumber reach $seconds s. Times must be below " . Timecode::MAX_HOURS . " hours.");
+        }
     }
 
 
@@ -366,10 +386,14 @@ final class MpegTsReader implements ContainerReader
             if ($type !== self::STREAM_TYPE_PES_PRIVATE_DATA) {
                 continue;
             }
-            $entries = str_split(implode("", iterator_to_array(self::descriptors($descriptors, [self::SUBTITLING_DESCRIPTOR]), false)), 8);
+            // An entry never crosses the end of its descriptor, so a short entry does not take bytes of the next descriptor.
+            $entries = [];
+            foreach (self::descriptors($descriptors, [self::SUBTITLING_DESCRIPTOR]) as $data) {
+                $entries = [...$entries, ...array_filter(str_split($data, 8), fn (string $entry): bool => strlen($entry) === 8)];
+            }
             foreach ($entries as $index => $entry) {
                 $number = $index === 0 && !isset($this->tracks[$pid]) ? $pid : $pid * 1000 + $index;
-                if (strlen($entry) < 8 || isset($this->tracks[$number])) {
+                if (isset($this->tracks[$number])) {
                     continue;
                 }
 
@@ -474,8 +498,9 @@ final class MpegTsReader implements ContainerReader
         $data   = null;
         foreach ($this->payloads($wanted) as [$packetPid, $start, $payload]) {
             if ($packetPid !== $pid) {
-                unset($wanted[$packetPid]);
+                // A packet that does not start a PES packet has no PTS, so the reader waits for the first one that does.
                 if ($start) {
+                    unset($wanted[$packetPid]);
                     yield [$packetPid, self::pesHeader($payload)[0], ""];
                 }
             } elseif ($start || $data !== null) {
@@ -517,7 +542,12 @@ final class MpegTsReader implements ContainerReader
     /**
      * Yields the PID, the payload unit start flag and the payload of each packet of a PID in $wanted, from the start of the file.
      * The caller may remove PIDs from $wanted. A byte other than the sync byte at a packet start skips to the next sync byte.
-     * An M2TS packet holds the transport stream packet after its 4-byte time stamp.
+     * An M2TS packet holds the transport stream packet after its 4-byte time stamp. A packet that starts at byte $maxBytes
+     * or later ends the read.
+     *
+     * ISO/IEC 13818-1 section 2.4.3.3 lets a multiplexer send a packet twice in a row, with the same continuity counter and
+     * the same bytes, except for a PCR in the adaptation field. The reader drops the copy. A packet with the same counter and
+     * another header or payload is data, for example after damage.
      *
      * @param array<int, true> $wanted
      * @return Generator<int, array{int, bool, string}>
@@ -525,11 +555,11 @@ final class MpegTsReader implements ContainerReader
     private function payloads(array &$wanted, int $maxBytes = PHP_INT_MAX): Generator
     {
         fseek($this->stream, 0);
-        $chunk = "";
-        $read  = 0;
-        $sync  = $this->packetSize - self::PACKET_SIZE;
-        while ($read < $maxBytes && ($data = fread($this->stream, self::CHUNK_SIZE)) !== false && $data !== "") {
-            $read  += strlen($data);
+        $chunk    = "";
+        $position = 0;
+        $sync     = $this->packetSize - self::PACKET_SIZE;
+        $previous = [];
+        while ($position < $maxBytes && ($data = fread($this->stream, self::CHUNK_SIZE)) !== false && $data !== "") {
             $chunk .= $data;
             $length = strlen($chunk);
             $offset = 0;
@@ -540,6 +570,10 @@ final class MpegTsReader implements ContainerReader
                     continue;
                 }
 
+                if ($position + $offset >= $maxBytes) {
+                    return;
+                }
+
                 $packet = $offset + $sync;
                 $flags  = ord($chunk[$packet + 1]);
                 $pid    = ($flags & 0x1F) << 8 | ord($chunk[$packet + 2]);
@@ -547,12 +581,18 @@ final class MpegTsReader implements ContainerReader
                     $control = ord($chunk[$packet + 3]) >> 4 & 0x03;
                     $at      = 4 + (($control & 0x02) !== 0 ? 1 + ord($chunk[$packet + 4]) : 0);
                     if (($control & 0x01) !== 0 && $at < self::PACKET_SIZE) {
-                        yield [$pid, ($flags & 0x40) !== 0, substr($chunk, $packet + $at, self::PACKET_SIZE - $at)];
+                        $header  = substr($chunk, $packet + 1, 3);
+                        $payload = substr($chunk, $packet + $at, self::PACKET_SIZE - $at);
+                        if (($previous[$pid] ?? null) !== [$header, $payload]) {
+                            $previous[$pid] = [$header, $payload];
+                            yield [$pid, ($flags & 0x40) !== 0, $payload];
+                        }
                     }
                 }
                 $offset += $this->packetSize;
             }
-            $chunk = substr($chunk, $offset);
+            $position += $offset;
+            $chunk     = substr($chunk, $offset);
         }
     }
 
