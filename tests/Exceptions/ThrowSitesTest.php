@@ -606,6 +606,11 @@ class ThrowSitesTest extends TestCase
                 self::pgsSegment(0x14, "\0\0\1\x10\x80\x80\xFF") .
                 self::pgsSegment(0x15, "\0\7\0\xC0\0\0\7\0\4\0\2\1\1\0\0") .
                 self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
+            "Parsers/PgsParser.php: screen size 0"          => [fn () => (new PgsParser())->parse(
+                self::pgsSegment(0x16, "\0\0\0\0\x10\0\1\x80\0\0\1" . "\0\7\0\0\0\0\0\0") .
+                self::pgsSegment(0x14, "\0\0\1\x10\x80\x80\xFF") .
+                self::pgsSegment(0x15, "\0\7\0\xC0\0\0\6\0\2\0\1\1\1") .
+                self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
             "Parsers/PgsParser.php: object too large"       => [fn () => (new PgsParser())->parse(
                 self::pgsSegment(0x15, "\0\7\0\xC0\0\0\4" . pack("nn", 8000, 1)), new ReadOptions()), ...$parsing],
             "Parsers/PodcastChaptersParser.php: no chapters" => [fn () => (new PodcastChaptersParser())->parse('{"version": "1.2.0"}', new ReadOptions()), ...$parsing],
