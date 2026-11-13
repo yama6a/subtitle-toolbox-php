@@ -184,4 +184,53 @@ class TimesPastTheLimitTest extends TestCase
         $this->expectExceptionMessage($message);
         (new $parserClass())->parse($content, new ReadOptions());
     }
+
+
+    /**
+     * Each case holds the parser, the content and the message. The time is below the limit until it rounds to milliseconds.
+     */
+    public static function timesThatRoundToTheLimit(): array
+    {
+        return [
+            "TTML begin 99999:59:59.9999" => [
+                TtmlParser::class,
+                '<?xml version="1.0" encoding="UTF-8"?><tt xmlns="http://www.w3.org/ns/ttml"><body><div>' .
+                '<p begin="99999:59:59.9999" end="99999:59:59.9999">x</p></div></body></tt>',
+                "The time \"99999:59:59.9999\" is not below 100000 hours.",
+            ],
+            "YouTube srv3 t of 359999999999.9 ms" => [
+                YouTubeTimedTextParser::class,
+                '<?xml version="1.0" encoding="utf-8"?><timedtext format="3"><body><p t="359999999999.9" d="0">x</p></body></timedtext>',
+                "The time \"359999999999.9\" is not below 100000 hours.",
+            ],
+            "YouTube srv1 start of 359999999.9999 s" => [
+                YouTubeTimedTextParser::class,
+                '<?xml version="1.0" encoding="utf-8"?><transcript><text start="359999999.9999" dur="0">x</text></transcript>',
+                "The time \"359999999.9999\" is not below 100000 hours.",
+            ],
+        ];
+    }
+
+
+    #[DataProvider("timesThatRoundToTheLimit")]
+    public function testATimeThatRoundsTo100000HoursThrows(string $parserClass, string $content, string $message): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage($message);
+
+        (new $parserClass())->parse($content, new ReadOptions());
+    }
+
+
+    /**
+     * 719999999999 / 2000 s is the float just below 359999999.9995, so it rounds down to the last millisecond below the limit.
+     */
+    public function testATimeThatRoundsBelowTheLimitStaysBelowIt(): void
+    {
+        $chapters = (new FfMetadataChaptersParser())->parse(";FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/2000\nSTART=719999999999\nEND=719999999999\n", new ReadOptions());
+        $microDvd = (new MicroDvdParser())->parse("{1}{1}2000\n{719999999999}{719999999999}x\n", new ReadOptions());
+
+        $this->assertSame(359999999.999, $chapters->getCues()[0]->getStart());
+        $this->assertSame(359999999.999, $microDvd->getCues()[0]->getStart());
+    }
 }
