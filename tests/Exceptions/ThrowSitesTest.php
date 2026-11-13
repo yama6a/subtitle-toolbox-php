@@ -352,6 +352,12 @@ class ThrowSitesTest extends TestCase
             "Container/Mp4/Mp4Reader.php: unknown track" => [fn () => self::mp4()->extract(9), ...$invalid],
             "Container/Mp4/Mp4Reader.php: not MP4" => [fn () => Mp4Reader::open(self::stream(str_repeat("\0", 16))), ...$parsing],
             "Container/Mp4/Mp4Reader.php: no moov" => [fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp())), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: no sample entry" => [fn () => self::mp4(["boxes" => [
+                                                                "stsd" => Mp4FixtureWriter::fullBox("stsd", 0, 0, pack("N", 0))]])->extract(1), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: moof before moov" => [fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp() . Mp4FixtureWriter::box("moof", ""))),
+                                                                ...$parsing],
+            "Container/Mp4/Mp4Reader.php: mvex in moov" => [fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp() .
+                                                                Mp4FixtureWriter::box("moov", Mp4FixtureWriter::box("mvex", "")))), ...$parsing],
             "Container/Mp4/Mp4Reader.php: timescale 0" => [fn () => self::mp4(["timescale" => 0]), ...$parsing],
             "Container/Mp4/Mp4Reader.php: stts too short" => [fn () => self::mp4(["boxes" => [
                                                                 "stts" => Mp4FixtureWriter::fullBox("stts", 0, 0, pack("N", 0))]])->extract(1), ...$parsing],
