@@ -127,7 +127,7 @@ class PodcastTranscriptFormatterTest extends TestCase
     }
 
 
-    public function testWordsEndAtTheNextStartWhenTheWordTimestampsNoLongerHaveTheStoredStarts(): void
+    public function testStoredWordEndsMoveWithRetimingAndStopCountingAfterAnEdit(): void
     {
         $cue = new SubtitleCue(0, 4, "<00:00:00.000>a <00:00:02.000>b <00:00:03.000>c");
         $cue->setFormatData("words", ["times" => [["start" => 0, "end" => 1.5], ["start" => 2, "end" => 2.5], ["start" => 3, "end" => 3.5]]]);
@@ -136,7 +136,7 @@ class PodcastTranscriptFormatterTest extends TestCase
         $this->assertSame([[0.0, 1.5, "a"], [2.0, 2.5, "b"], [3.0, 3.5, "c"]], self::wordSegments($subtitle));
 
         $subtitle->shift(1);
-        $this->assertSame([[1.0, 3.0, "a"], [3.0, 4.0, "b"], [4.0, 5.0, "c"]], self::wordSegments($subtitle));
+        $this->assertSame([[1.0, 2.5, "a"], [3.0, 3.5, "b"], [4.0, 4.5, "c"]], self::wordSegments($subtitle));
 
         $cue->setLines("<00:00:00.000>a <00:00:02.000>b <00:00:03.000>c <00:00:03.500>d")->setStart(0)->setEnd(4);
         $this->assertSame([[0.0, 2.0, "a"], [2.0, 3.0, "b"], [3.0, 3.5, "c"], [3.5, 4.0, "d"]], self::wordSegments($subtitle));

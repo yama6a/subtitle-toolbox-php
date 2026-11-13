@@ -10,7 +10,8 @@ use SubtitleToolbox\Timecode;
 
 /**
  * Keeps the start and the end of each word timestamp of a transcript cue in its format data, because a word timestamp
- * holds only the start. The transcript parsers store them, and PodcastTranscriptFormatter ends a word segment at the end of its word.
+ * holds only the start. The transcript parsers store them, retiming moves them with the word timestamps, and
+ * PodcastTranscriptFormatter ends a word segment at the end of its word.
  *
  * @internal
  */
@@ -70,6 +71,29 @@ final class WordTimes
         }
 
         return $ends;
+    }
+
+
+    /**
+     * Returns the word times format data $data with each start and end moved to $map(seconds), as the word timestamps move.
+     * A time below 0 becomes 0.
+     *
+     * @param callable(float): float $map
+     */
+    public static function mapTimes(array $data, callable $map): array
+    {
+        if (!is_array($data["times"] ?? null)) {
+            return $data;
+        }
+        foreach ($data["times"] as $index => $time) {
+            foreach (["start", "end"] as $key) {
+                if (isset($time[$key])) {
+                    $data["times"][$index][$key] = Timecode::roundToMilliseconds(max(0.0, $map((float) $time[$key])));
+                }
+            }
+        }
+
+        return $data;
     }
 
 

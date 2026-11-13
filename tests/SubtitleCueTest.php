@@ -234,6 +234,18 @@ class SubtitleCueTest extends TestCase
     }
 
 
+    public function testMapWordTimestampsMovesTheStoredWordTimes(): void
+    {
+        $cue = (new SubtitleCue(1, 3, "<00:00:01.000>two <00:00:02.500>three"))
+            ->setFormatData("words", ["times" => [["start" => 1, "end" => 1.25], ["start" => 2.5]]]);
+
+        $cue->mapWordTimestamps(fn (float $time): float => $time * 2 - 2.2);
+
+        $this->assertSame([["start" => 0.0, "end" => 0.3], ["start" => 2.8]], $cue->findFormatData("words")["times"]);
+        $this->assertSame(["<00:00:00.000>two <00:00:02.800>three"], $cue->getLines());
+    }
+
+
     public function testSetAlignmentClearsThePosition(): void
     {
         $cue = (new SubtitleCue())->setAlignment(Alignment::TopCenter)->setPosition(new CuePosition(50, 5));
