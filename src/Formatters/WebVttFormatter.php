@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\AlignmentGrid;
+use SubtitleToolbox\CuePosition;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\MarkupColors;
@@ -182,25 +183,78 @@ final class WebVttFormatter extends SubtitleFormatter
     }
 
 
+    /**
+     * Writes the stored settings while the alignment is unchanged. Else it writes the position of the cue when the
+     * position lies in the cell of the alignment, and the settings of the alignment otherwise.
+     */
     private function formatSettings(SubtitleCue $cue): string
     {
         $cueData   = $cue->findFormatData(WebVttParser::FORMAT_DATA_KEY);
-        $unchanged = ($cueData["alignment"] ?? Alignment::BottomCenter->value) === $cue->getAlignment()->value;
-        $names     = $unchanged ? WebVttParser::CUE_SETTINGS : array_diff(WebVttParser::CUE_SETTINGS, self::POSITION_SETTINGS);
-        $settings  = [];
+        $alignment = $cue->getAlignment();
+        $unchanged = ($cueData["alignment"] ?? Alignment::BottomCenter->value) === $alignment->value;
+        $kept      = array_diff(WebVttParser::CUE_SETTINGS, self::POSITION_SETTINGS);
+        $placed    = $unchanged && array_intersect(array_keys($cueData), self::POSITION_SETTINGS) !== [];
+        $position  = $cue->findPosition();
+        // A stored vertical setting swaps the axes of line and position, so the position cannot use them.
+        if (!$placed && !isset($cueData["vertical"]) && $position !== null && AlignmentGrid::contains($alignment, $position)) {
+            return implode(" ", [...$this->storedSettings($cueData, $kept), ...$this->positionSettings($alignment, $position)]);
+        }
+
+        $settings = $this->storedSettings($cueData, $unchanged ? WebVttParser::CUE_SETTINGS : $kept);
+        if ($unchanged && $settings !== [] || $alignment === Alignment::BottomCenter) {
+            return implode(" ", $settings);
+        }
+
+        $settings = [...$settings, self::ALIGNMENT_ROWS[AlignmentGrid::row($alignment)], self::ALIGNMENT_COLUMNS[AlignmentGrid::column($alignment)]];
+
+        return implode(" ", array_filter($settings, fn (string $setting): bool => $setting !== ""));
+    }
+
+
+    /**
+     * @return list<string> the stored settings in $names as "name:value", in stored order
+     */
+    private function storedSettings(array $cueData, array $names): array
+    {
+        $settings = [];
         foreach ($cueData as $name => $value) {
             if (in_array($name, $names, true)) {
                 $settings[] = "$name:$value";
             }
         }
-        if ($unchanged && $settings !== [] || $cue->getAlignment() === Alignment::BottomCenter) {
-            return implode(" ", $settings);
+
+        return $settings;
+    }
+
+
+    /**
+     * Returns the settings that put the point of the cue box that $alignment names at $position.
+     * Only a bottom center cue gets an exact height, because WebVttParser reads every other line percentage as a
+     * bottom center cue. The other rows keep the line setting of the alignment.
+     *
+     * @return list<string>
+     */
+    private function positionSettings(Alignment $alignment, CuePosition $position): array
+    {
+        $settings = [];
+        $y        = AlignmentGrid::roundPercent($position->y);
+        if ($alignment === Alignment::BottomCenter && $y !== 100.0) {
+            $settings[] = "line:" . AlignmentGrid::formatPercent($y) . "%,end";
+        } elseif (self::ALIGNMENT_ROWS[AlignmentGrid::row($alignment)] !== "") {
+            $settings[] = self::ALIGNMENT_ROWS[AlignmentGrid::row($alignment)];
         }
 
-        $alignment = $cue->getAlignment();
-        $settings  = [...$settings, self::ALIGNMENT_ROWS[AlignmentGrid::row($alignment)], self::ALIGNMENT_COLUMNS[AlignmentGrid::column($alignment)]];
+        $column = AlignmentGrid::column($alignment);
+        $x      = AlignmentGrid::roundPercent($position->x);
+        if ($x !== [0.0, 50.0, 100.0][$column - 1]) {
+            $settings[] = "position:" . AlignmentGrid::formatPercent($x) . "%," . ["line-left", "center", "line-right"][$column - 1];
+        }
 
-        return implode(" ", array_filter($settings, fn (string $setting): bool => $setting !== ""));
+        if (self::ALIGNMENT_COLUMNS[$column] !== "") {
+            $settings[] = self::ALIGNMENT_COLUMNS[$column];
+        }
+
+        return $settings;
     }
 
 
