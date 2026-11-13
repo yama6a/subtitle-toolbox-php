@@ -30,24 +30,13 @@ class BinaryOptionCoverageTest extends CliTestCase
 {
     private const STATION = __DIR__ . "/../files/translation/own_station.srt";
 
-    private const URL_VARIABLE = "SUBTITLE_TOOLBOX_TRANSLATE_URL";
-
     private ?LocalServer $server = null;
-
-    private string|false $savedUrl = false;
-
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->savedUrl = getenv(self::URL_VARIABLE);
-    }
 
 
     protected function tearDown(): void
     {
         $this->server?->stop();
-        putenv($this->savedUrl === false ? self::URL_VARIABLE : self::URL_VARIABLE . "=$this->savedUrl");
+        TranslateCommand::$testBaseUrl = null;
         parent::tearDown();
     }
 
@@ -617,7 +606,7 @@ class BinaryOptionCoverageTest extends CliTestCase
             $this->markTestSkipped("translate needs the PHP extension curl.");
         }
         $this->server = LocalServer::start(self::FILES . "translation/fake-server.php");
-        putenv(self::URL_VARIABLE . "=" . $this->server->url);
+        TranslateCommand::$testBaseUrl = $this->server->url;
     }
 
 

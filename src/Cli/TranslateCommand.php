@@ -22,11 +22,10 @@ final class TranslateCommand extends WriteCommand
 
     private const OPENAI_DEFAULT_URL = "https://api.openai.com/v1";
 
-    // Points the engines at a local fake server in the tests. The help does not list it.
-    private const URL_VARIABLE = "SUBTITLE_TOOLBOX_TRANSLATE_URL";
-
-    // The variable must not send the key to another machine.
-    private const LOCAL_HOSTS = ["127.0.0.1", "localhost", "[::1]"];
+    /**
+     * Points the engines at a fake server. Only the tests set it, in the same process. The binary has no way to set it.
+     */
+    public static ?string $testBaseUrl = null;
 
     private ?TranslationRunner $runner = null;
 
@@ -80,7 +79,7 @@ final class TranslateCommand extends WriteCommand
 
         $engine   = $arguments->choice("engine", array_keys(self::KEY_VARIABLES)) ?? self::fail("Pass --engine deepl, google or openai.");
         $variable = self::KEY_VARIABLES[$engine];
-        $apiKey   = $arguments->value("api-key") ?? (getenv($variable) ?: null);
+        $apiKey   = $arguments->value("api-key") ?? self::environment($variable);
 
         if ($apiKey === null && $engine !== "openai") {
             self::fail("Pass --api-key or set the environment variable $variable.");
@@ -95,7 +94,7 @@ final class TranslateCommand extends WriteCommand
         $this->targetLanguage = $arguments->value("target-language") ?? self::fail("Pass --target-language, for example --target-language fr.");
         $this->sourceLanguage = $arguments->value("source-language") ?? "";
 
-        $baseUrl      = self::localTestUrl();
+        $baseUrl      = self::$testBaseUrl;
         $this->runner = new TranslationRunner(match ($engine) {
             "deepl"  => new DeepLEngine(new DeepLOptions(apiKey: $apiKey, baseUrl: $baseUrl)),
             "google" => new GoogleTranslateEngine(new GoogleTranslateOptions(apiKey: $apiKey, baseUrl: $baseUrl)),
@@ -104,34 +103,29 @@ final class TranslateCommand extends WriteCommand
     }
 
 
+    /**
+     * Returns the value of an environment variable, or null when it is unset or empty. The value 0 is a value.
+     */
+    private static function environment(string $variable): ?string
+    {
+        $value = getenv($variable);
+
+        return $value === false || $value === "" ? null : $value;
+    }
+
+
     private static function openAiEngine(?string $apiKey, ?string $testUrl): OpenAiCompatibleEngine
     {
-        $model = getenv("OPENAI_MODEL") ?: self::fail("Set the environment variable OPENAI_MODEL, for example OPENAI_MODEL=gpt-4o-mini.");
+        $model = self::environment("OPENAI_MODEL") ?? self::fail("Set the environment variable OPENAI_MODEL, for example OPENAI_MODEL=gpt-4o-mini.");
         if (trim($model) === "") {
             self::fail("The environment variable OPENAI_MODEL is empty. Set it to a model name, for example gpt-4o-mini.");
         }
-        $baseUrl = $testUrl !== null ? "$testUrl/v1" : (getenv("OPENAI_BASE_URL") ?: self::OPENAI_DEFAULT_URL);
+        $baseUrl = $testUrl !== null ? "$testUrl/v1" : (self::environment("OPENAI_BASE_URL") ?? self::OPENAI_DEFAULT_URL);
         if (preg_match('#^https?://[^/]#i', $baseUrl) !== 1) {
             self::fail("The environment variable OPENAI_BASE_URL must start with http:// or https://, got \"$baseUrl\".");
         }
 
         return new OpenAiCompatibleEngine(new OpenAiCompatibleOptions($baseUrl, $model, $apiKey));
-    }
-
-
-    /**
-     * Returns the scheme, host and port of SUBTITLE_TOOLBOX_TRANSLATE_URL when the host is this machine, else null.
-     */
-    public static function localTestUrl(): ?string
-    {
-        $parts = parse_url((string)getenv(self::URL_VARIABLE));
-        if (!is_array($parts) || !in_array(strtolower($parts["scheme"] ?? ""), ["http", "https"], true)
-            || !in_array(strtolower($parts["host"] ?? ""), self::LOCAL_HOSTS, true)) {
-            return null;
-        }
-
-        // Only the parsed parts go to curl, so that curl cannot read another host from the URL.
-        return "{$parts["scheme"]}://{$parts["host"]}" . (isset($parts["port"]) ? ":{$parts["port"]}" : "");
     }
 
 
