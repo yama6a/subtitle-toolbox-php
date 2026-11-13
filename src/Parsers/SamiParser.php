@@ -62,14 +62,102 @@ final class SamiParser extends SubtitleParser
             return null;
         }
 
-        $markup = preg_replace_callback(
-            '/<HEAD\b.*?<\/HEAD\s*>|<!--.*?-->|<[^>]*>|&nbsp;/is',
-            fn (array $match): string => str_repeat("\n", substr_count($match[0], "\n")),
-            StringHelpers::normalizeEOLs($content)
-        );
-        $text = ltrim($markup);
+        $markup = self::blankMarkup(StringHelpers::normalizeEOLs($content));
+        $text   = ltrim($markup);
 
         return $text === "" ? null : 1 + substr_count($markup, "\n", 0, strlen($markup) - strlen($text));
+    }
+
+
+    /**
+     * Replaces the HEAD block, comments, tags and &nbsp; with the line feeds they hold.
+     * The scan uses strpos() because a lazy regex quantifier rescans to the end of the input for each opener without a closer.
+     */
+    private static function blankMarkup(string $content): string
+    {
+        $markup        = "";
+        $pos           = 0;
+        $headCloses    = true;
+        $commentCloses = true;
+        while (($open = strpos($content, "<", $pos)) !== false) {
+            $markup .= str_ireplace("&nbsp;", "", substr($content, $pos, $open - $pos));
+
+            $end = null;
+            if ($headCloses && preg_match('/<HEAD\b/Ai', $content, $match, 0, $open) === 1) {
+                for ($from = $open + 5; ($close = stripos($content, "</head", $from)) !== false; $from = $close + 6) {
+                    if (preg_match('/<\/HEAD\s*>/Ai', $content, $match, 0, $close) === 1) {
+                        $end = $close + strlen($match[0]);
+                        break;
+                    }
+                }
+                $headCloses = $end !== null;
+            }
+            if ($end === null && $commentCloses && substr_compare($content, "<!--", $open, 4) === 0) {
+                $close         = strpos($content, "-->", $open + 4);
+                $commentCloses = $close !== false;
+                $end           = $close === false ? null : $close + 3;
+            }
+            if ($end === null) {
+                $close = strpos($content, ">", $open + 1);
+                if ($close === false) {
+                    $pos = $open;
+                    break;
+                }
+                $end = $close + 1;
+            }
+
+            $markup .= str_repeat("\n", substr_count($content, "\n", $open, $end - $open));
+            $pos     = $end;
+        }
+
+        return $markup . str_ireplace("&nbsp;", "", substr($content, $pos));
+    }
+
+
+    /**
+     * Removes the CSS comments and the HTML comment markers of a STYLE block. A "/*" without a closing "*" "/" stays.
+     * The scan uses strpos() for the same reason as blankMarkup().
+     */
+    private static function stripStyleComments(string $style): string
+    {
+        $css    = "";
+        $pos    = 0;
+        $next   = ["/*" => null, "<!--" => null, "-->" => null];
+        $closes = true;
+        while (true) {
+            $marker = null;
+            $at     = PHP_INT_MAX;
+            foreach ($next as $candidate => $found) {
+                if ($found === false || ($candidate === "/*" && !$closes)) {
+                    continue;
+                }
+                if ($found === null || $found < $pos) {
+                    $found = strpos($style, $candidate, $pos);
+                    $next[$candidate] = $found;
+                }
+                if ($found !== false && $found < $at) {
+                    $marker = $candidate;
+                    $at     = $found;
+                }
+            }
+            if ($marker === null) {
+                return $css . substr($style, $pos);
+            }
+
+            $css .= substr($style, $pos, $at - $pos);
+            $pos  = $at;
+            if ($marker !== "/*") {
+                $pos += strlen($marker);
+                continue;
+            }
+
+            $close = strpos($style, "*/", $at + 2);
+            if ($close === false) {
+                $closes = false;
+                continue;
+            }
+            $pos = $close + 2;
+        }
     }
 
 
@@ -146,7 +234,7 @@ final class SamiParser extends SubtitleParser
      */
     private function readClasses(string $style): array
     {
-        $css = preg_replace('/\/\*.*?\*\/|<!--|-->/s', "", $style);
+        $css = self::stripStyleComments($style);
         preg_match_all('/\.([A-Za-z_][\w-]*)\s*\{([^}]*)\}/', $css, $rules, PREG_SET_ORDER);
 
         $classes = [];
@@ -175,7 +263,11 @@ final class SamiParser extends SubtitleParser
         if (preg_match('/<\/BODY\s*>/i', $body, $end, PREG_OFFSET_CAPTURE) === 1) {
             $body = substr($body, 0, $end[0][1]);
         }
-        $body = preg_replace('/<\/SYNC\s*>/i', "", $body);
+        $body = preg_replace_callback(
+            '/<\/SYNC\s*>/i',
+            fn (array $match): string => str_repeat("\n", substr_count($match[0], "\n")),
+            $body
+        );
 
         $syncs      = [];
         $lineNumber = 1 + substr_count($content, "\n", 0, $bodyStart);
@@ -372,7 +464,9 @@ final class SamiParser extends SubtitleParser
 
         $first = reset($classes);
         if ($first === false) {
-            return reset($used) ?: null;
+            $firstUsed = reset($used);
+
+            return $firstUsed === false ? null : $firstUsed;
         }
         if ($used === []) {
             return $first["name"];
