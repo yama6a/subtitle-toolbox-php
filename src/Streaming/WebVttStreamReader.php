@@ -58,7 +58,7 @@ final class WebVttStreamReader implements CueStreamReader
         if (!$lines->valid()) {
             return;
         }
-        if (!str_starts_with($lines->current() ?? "", "WEBVTT")) {
+        if (preg_match(WebVttParser::SIGNATURE_REGEX, $lines->current() ?? "") !== 1) {
             if (!$this->options->lenient) {
                 throw new ParsingException("The file does not start with WEBVTT.", ($lines->key() ?? 0) + 1);
             }

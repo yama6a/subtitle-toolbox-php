@@ -616,11 +616,15 @@ class ThrowSitesTest extends TestCase
             "Parsers/FfMetadataChaptersParser.php: no header" => [fn () => (new FfMetadataChaptersParser())->parse("title=x", new ReadOptions()), ...$parsing],
             "Parsers/FfMetadataChaptersParser.php: time base 0" => [fn () => (new FfMetadataChaptersParser())->parse(
                 ";FFMETADATA1\n[CHAPTER]\nTIMEBASE=0/1\n", new ReadOptions()), ...$parsing],
+            "Parsers/FfMetadataChaptersParser.php: ticks beyond int64" => [fn () => (new FfMetadataChaptersParser())->parse(
+                ";FFMETADATA1\n[CHAPTER]\nSTART=99999999999999999999\n", new ReadOptions()), ...$parsing],
             "Parsers/HtmlTranscriptParser.php: no time"     => [fn () => (new HtmlTranscriptParser())->parse("<p>Hi</p>", new ReadOptions()), ...$parsing],
             "Parsers/HtmlTranscriptParser.php: bad time"    => [fn () => (new HtmlTranscriptParser())->parse("<time>x</time><p>Hi</p>", new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/JsonParser.php: invalid base64"        => [fn () => (new JsonParser())->parse(
                 '{"version": 1, "cues": [], "formatData": {"stl": {"base64": "!"}}}', new ReadOptions()), ...$parsing],
+            "Parsers/JsonParser.php: lines as object"       => [fn () => (new JsonParser())->parse(
+                '{"version": 1, "cues": [{"start": 0, "end": 1, "lines": {"0": "a"}}]}', new ReadOptions()), ...$parsing],
             "Parsers/Mcc.php: invalid character"            => [fn () => self::mcc("00:00:00:00\tT5V"), ...$parsing],
             "Parsers/Mcc.php: half a byte"                  => [fn () => self::mcc("00:00:00:00\tT5"), ...$parsing],
             "Parsers/Mcc.php: no CDP"                       => [fn () => self::mcc("00:00:00:00\tT09ZZZZZZZZZZZZZZZZZZ"), ...$parsing],

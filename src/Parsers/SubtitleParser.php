@@ -59,6 +59,9 @@ abstract class SubtitleParser
 
     private bool $removedControlCharacters = false;
 
+    // The JSON of decodeJsonObject() with objects as stdClass, because the array form cannot tell {"0": 1} from [1].
+    private ?object $jsonObjects = null;
+
 
     /**
      * Reads $content, which must be UTF-8 for a text format.
@@ -73,7 +76,7 @@ abstract class SubtitleParser
         $this->useOptions($options);
 
         if (!static::BINARY) {
-            $content = $this->removeControlCharacters(StringHelpers::removeUtf8Bom($this->checkUtf8($content)));
+            $content = $this->cleanText($content);
             if (trim($content, self::WHITE_SPACE) === "") {
                 return new Subtitle();
             }
@@ -93,6 +96,15 @@ abstract class SubtitleParser
 
 
     abstract protected function read(string $content): Subtitle;
+
+
+    /**
+     * Checks the UTF-8 of $content, then removes the BOM and the control characters, as parse() does for a text format.
+     */
+    protected function cleanText(string $content): string
+    {
+        return $this->removeControlCharacters(StringHelpers::removeUtf8Bom($this->checkUtf8($content)));
+    }
 
 
     /**
@@ -402,7 +414,7 @@ abstract class SubtitleParser
      */
     protected static function boundedTime(float $seconds, string $text, ?int $lineNumber): float
     {
-        if (Timecode::roundToMilliseconds($seconds) >= Timecode::MAX_HOURS * 3600) {
+        if (!Timecode::isBelowLimit($seconds)) {
             throw new ParsingException("The time \"$text\" is not below " . Timecode::MAX_HOURS . " hours.", $lineNumber);
         }
 
@@ -415,7 +427,7 @@ abstract class SubtitleParser
      */
     protected static function boundedField(float $seconds, string $path): float
     {
-        if ($seconds >= Timecode::MAX_HOURS * 3600) {
+        if (!Timecode::isBelowLimit($seconds)) {
             throw new ParsingException("The field $path is not below " . Timecode::MAX_HOURS . " hours.");
         }
 
@@ -455,8 +467,28 @@ abstract class SubtitleParser
         if (!is_array($data) || ($data !== [] && array_is_list($data))) {
             throw new ParsingException("The JSON root must be an object.");
         }
+        $this->jsonObjects = json_decode($content, false, 512, JSON_INVALID_UTF8_SUBSTITUTE);
 
         return $data;
+    }
+
+
+    /**
+     * Returns true when the source JSON holds an object, not an array, under the keys $path of the last decodeJsonObject() call.
+     * An object with the keys 0 to n-1 reads as a PHP list, so a list field needs this check too.
+     */
+    protected function isJsonObject(string|int ...$path): bool
+    {
+        $node = $this->jsonObjects;
+        foreach ($path as $key) {
+            $node = match (true) {
+                is_array($node)  => $node[$key] ?? null,
+                is_object($node) => $node->$key ?? null,
+                default          => null,
+            };
+        }
+
+        return $node instanceof \stdClass;
     }
 
 

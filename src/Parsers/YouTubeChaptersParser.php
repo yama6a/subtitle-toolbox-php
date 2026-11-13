@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
+use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -37,8 +38,12 @@ final class YouTubeChaptersParser extends SubtitleParser
             } else {
                 continue;
             }
-            $time = Timecode::toSeconds((int) $hours, (int) $minutes, (int) $seconds);
-            if ((int) $seconds > 59 || ($hours !== "" && (int) $minutes > 59) || $time >= Timecode::MAX_HOURS * 3600) {
+            // A number beyond int64 stands for the largest integer, which is past every limit below.
+            $hasHours = $hours !== "";
+            $hours    = StringHelpers::parseInt64($hours) ?? PHP_INT_MAX;
+            $minutes  = StringHelpers::parseInt64($minutes) ?? PHP_INT_MAX;
+            $time     = Timecode::toSeconds($hours, $minutes, (int) $seconds);
+            if ((int) $seconds > 59 || ($hasHours && $minutes > 59) || $time >= Timecode::MAX_HOURS * 3600) {
                 continue;
             }
 

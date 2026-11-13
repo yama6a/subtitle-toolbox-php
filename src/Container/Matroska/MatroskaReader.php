@@ -268,7 +268,7 @@ final class MatroskaReader implements ContainerReader
             $track->codecId === self::CODEC_DVBSUB => $this->dvbSubtitle($codecPrivate, $blocks, $options),
             $format === Format::Pgs                => (new PgsParser())->parseTrack(...TrackFileBuilder::pgsStream($blocks, $this->timestampScale), options: $options),
             $format === Format::WebVtt             => (new WebVttParser())->parse(TrackFileBuilder::webVttFile($track, $codecPrivate, $blocks), $options),
-            $format === Format::SubRip             => (new SubRipParser())->parse(TrackFileBuilder::subRipFile($blocks), $options),
+            $format === Format::SubRip             => $this->subRipSubtitle($blocks, $options),
             $format === Format::Ass                => (new AssParser())->parse(TrackFileBuilder::assFile($track, $codecPrivate, $blocks), $options),
             default                                => (new VobSubParser())->parseBlocks($codecPrivate, array_map(
                 fn (array $block): array => ["start" => $block["startMs"] / 1000, "end" => $block["endMs"] / 1000, "data" => $block["data"]],
@@ -282,6 +282,22 @@ final class MatroskaReader implements ContainerReader
             foreach ($subtitle->getCues() as $cue) {
                 $cue->setForced(true);
             }
+        }
+
+        return $subtitle;
+    }
+
+
+    /**
+     * Reads the text of each block of an S_TEXT/UTF8 track as one cue, and takes the cue times from the block times.
+     *
+     * @param list<array{startMs: int, endMs: int, data: string}> $blocks
+     */
+    private function subRipSubtitle(array $blocks, ReadOptions $options): Subtitle
+    {
+        $subtitle = (new SubRipParser())->parseTexts(array_column($blocks, "data"), $options);
+        foreach ($subtitle->getCues() as $index => $cue) {
+            $cue->setEnd($blocks[$index]["endMs"] / 1000)->setStart($blocks[$index]["startMs"] / 1000);
         }
 
         return $subtitle;

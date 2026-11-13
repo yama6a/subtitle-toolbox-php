@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Chapters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
@@ -243,6 +244,154 @@ class ChapterFormatsTest extends TestCase
     }
 
 
+    public function testFfMetadataParserStoresTheTimeBaseWithoutLeadingZeros(): void
+    {
+        $content  = ";FFMETADATA1\n[CHAPTER]\nTIMEBASE=01/001000\nSTART=0\nEND=60000\ntitle=Intro\n";
+        $subtitle = (new FfMetadataChaptersParser())->parse($content, new ReadOptions());
+
+        $this->assertSame("1/1000", $subtitle->getCues()[0]->findFormatData("ffmeta-chapters")["timeBase"]);
+        $this->assertSame(60.0, $subtitle->getCues()[0]->getEnd());
+    }
+
+
+    public static function badTimeBases(): array
+    {
+        return [
+            "numerator beyond int64"   => ["99999999999999999999/5", "The chapter time base 99999999999999999999/5 is not valid. (line 3)"],
+            "denominator beyond int64" => ["1/9223372036854775808", "The chapter time base 1/9223372036854775808 is not valid. (line 3)"],
+            "zero with zeros"          => ["000/5", "The chapter time base 000/5 is not valid. (line 3)"],
+        ];
+    }
+
+
+    #[DataProvider("badTimeBases")]
+    public function testFfMetadataParserRejectsATimeBaseBeyondInt64(string $timeBase, string $message): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage($message);
+
+        (new FfMetadataChaptersParser())->parse(";FFMETADATA1\n[CHAPTER]\nTIMEBASE=$timeBase\nSTART=1\ntitle=x\n", new ReadOptions());
+    }
+
+
+    public static function ticksBeyondInt64(): array
+    {
+        $nines = str_repeat("9", 309);
+
+        return [
+            "20 digits"       => ["TIMEBASE=1/1000000000000000000\nSTART=99999999999999999999\nEND=99999999999999999999\n", 'START=99999999999999999999'],
+            "309 digits"      => ["START=$nines\n", "START=$nines"],
+            "negative"        => ["START=-$nines\n", "START=-$nines"],
+            "end 20 digits"   => ["START=0\nEND=99999999999999999999\n", "END=99999999999999999999"],
+        ];
+    }
+
+
+    #[DataProvider("ticksBeyondInt64")]
+    public function testFfMetadataParserRejectsTicksBeyondInt64(string $times, string $text): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The time \"$text\" is not below 100000 hours.");
+
+        (new FfMetadataChaptersParser())->parse(";FFMETADATA1\n[CHAPTER]\n$times", new ReadOptions());
+    }
+
+
+    public static function badOgmTimes(): array
+    {
+        $nines = str_repeat("9", 309);
+
+        return [
+            "309 digit minutes" => ["CHAPTER01=00:$nines:00.000\nCHAPTER01NAME=x\n", "The line \"CHAPTER01=00:$nines:00.000\" has a minute or second above 59."],
+            "309 digit seconds" => ["CHAPTER01=00:00:$nines.000\nCHAPTER01NAME=x\n", "The line \"CHAPTER01=00:00:$nines.000\" has a minute or second above 59."],
+            "309 digit hours"   => ["CHAPTER01=$nines:00:00.000\nCHAPTER01NAME=x\n", "The time \"CHAPTER01=$nines:00:00.000\" is not below 100000 hours."],
+            "20 digit hours"    => ["CHAPTER01=99999999999999999999:00:00.000\nCHAPTER01NAME=x\n", "The time \"CHAPTER01=99999999999999999999:00:00.000\" is not below 100000 hours."],
+        ];
+    }
+
+
+    #[DataProvider("badOgmTimes")]
+    public function testOgmParserRejectsTimeDigitsBeyondInt64(string $content, string $message): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage($message);
+
+        (new OgmChaptersParser())->parse($content, new ReadOptions());
+    }
+
+
+    public static function youTubeTimesPastTheLimit(): array
+    {
+        $nines = str_repeat("9", 309);
+
+        return [
+            "309 digit minutes" => ["$nines:00 Late"],
+            "309 digit hours"   => ["0:$nines:00 Late"],
+            "308 digit minutes" => [str_repeat("9", 308) . ":00 Late"],
+            "20 digit hours"    => ["99999999999999999999:00:00 Late"],
+        ];
+    }
+
+
+    #[DataProvider("youTubeTimesPastTheLimit")]
+    public function testYouTubeChaptersParserIgnoresTimesPastTheLimit(string $content): void
+    {
+        $this->assertSame([], (new YouTubeChaptersParser())->parse($content, new ReadOptions())->getCues());
+    }
+
+
+    public function testFfMetadataParserReadsATagKeyOfAnyLength(): void
+    {
+        $key      = str_repeat("k", 200000);
+        $subtitle = (new FfMetadataChaptersParser())->parse(";FFMETADATA1\n$key=1\na\\=b=c\n", new ReadOptions());
+
+        $this->assertSame([$key => "1", "a=b" => "c"], $subtitle->findFormatData("ffmeta-chapters")["tags"]);
+    }
+
+
+    public function testFfMetadataFormatterWritesTheTitleFromTheCueTextOnly(): void
+    {
+        $subtitle = (new FfMetadataChaptersParser())->parse(";FFMETADATA1\n[CHAPTER]\nSTART=0\nEND=5\ntitle=Intro\n", new ReadOptions());
+        $cue      = $subtitle->getCues()[0];
+        $cue->setFormatData("ffmeta-chapters", ["timeBase" => "1/1000000000", "tags" => ["title" => "Intro", "genre" => "x"]]);
+        $cue->setLines([]);
+
+        $this->assertSame(
+            ";FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000000000\nSTART=0\nEND=0\ngenre=x\n",
+            $subtitle->toString(Format::FfMetadataChapters)
+        );
+    }
+
+
+    public function testFfMetadataTimeBaseBeyondInt64FailsTheFormatDataCheck(): void
+    {
+        $cue = new SubtitleCue(1.0, 2.0, "A");
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("must be a time base");
+
+        $cue->setFormatData("ffmeta-chapters", ["timeBase" => "1/99999999999999999999"]);
+    }
+
+
+    public function testFfMetadataTimeBaseOfInt64IsAccepted(): void
+    {
+        $cue = new SubtitleCue(1.0, 2.0, "A");
+        $cue->setFormatData("ffmeta-chapters", ["timeBase" => "1/9223372036854775807"]);
+
+        $this->assertSame(["timeBase" => "1/9223372036854775807"], $cue->findFormatData("ffmeta-chapters"));
+    }
+
+
+    public function testPodcastChaptersParserRejectsAJsonObjectWhereTheChapterListBelongs(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage('The JSON has no "chapters" list.');
+
+        (new PodcastChaptersParser())->parse('{"version":"1.2.0","chapters":{"0":{"startTime":0,"title":"a"}}}', new ReadOptions());
+    }
+
+
     private function chapters(array $chapters): Subtitle
     {
         $subtitle = new Subtitle();
@@ -254,5 +403,4 @@ class ChapterFormatsTest extends TestCase
 
         return $subtitle;
     }
-
 }
