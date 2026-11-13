@@ -9,8 +9,10 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\IndexedImages;
 use SubtitleToolbox\Image\PgsColors;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * Reads Blu-ray PGS (Presentation Graphic Stream, .sup) files. Each display set that shows objects becomes one image cue.
@@ -71,6 +73,28 @@ final class PgsParser extends SubtitleParser
     /** @var list<SubtitleCue> */
     private array $cues = [];
 
+    /** @var list<int> the PTS of each segment in an MKV track, which wins over the 32-bit PTS field */
+    private array $segmentTimes = [];
+
+
+    /**
+     * Reads the PGS stream of a Matroska S_HDMV/PGS track. $pts holds the PTS of each segment in ticks of 90 kHz,
+     * from the block times. The 32-bit PTS field of a segment wraps after about 13.25 hours, and Matroska block times do not.
+     *
+     * @param list<int> $pts
+     *
+     * @internal
+     */
+    public function parseTrack(string $content, array $pts, ReadOptions $options): Subtitle
+    {
+        $this->segmentTimes = $pts;
+        try {
+            return $this->parse($content, $options);
+        } finally {
+            $this->segmentTimes = [];
+        }
+    }
+
 
     protected function read(string $content): Subtitle
     {
@@ -94,6 +118,7 @@ final class PgsParser extends SubtitleParser
             }
 
             ["pts" => $pts, "type" => $type, "size" => $size] = unpack("Npts/Ndts/Ctype/nsize", $content, $offset + 2);
+            $pts     = $this->segmentTimes[$segment] ?? $pts;
             $data    = substr($content, $offset + self::HEADER_LENGTH, $size);
             $offset += self::HEADER_LENGTH + $size;
 
@@ -114,7 +139,7 @@ final class PgsParser extends SubtitleParser
 
         $this->endDisplaySet();
         if ($this->shownImage !== null) {
-            $this->addCue($this->shownImage["start"] + $this->options->lastCueDuration);
+            $this->addCue(Timecode::lastCueEnd($this->shownImage["start"], $this->options->lastCueDuration));
         }
 
         return (new Subtitle())->addCues($this->cues);
