@@ -304,4 +304,19 @@ class DualSubtitleTest extends TestCase
         $this->assertSame(["first", "<i>erste</i>"], $italic->getCues()[0]->getLines());
         $this->assertSame(["first", '<font color="#ffff00">erste</font>'], $font->getCues()[0]->getLines());
     }
+
+
+    public function testStackedSecondaryCueKeepsItsPositionAndPlacedCueLosesIt(): void
+    {
+        $primary   = TestSubtitles::fromCues([[1, 2, "Hello"]]);
+        $secondary = TestSubtitles::fromCues([[5, 6, "Hallo"]]);
+        $primary->getCues()[0]->setPosition(new CuePosition(45, 95));
+        $secondary->getCues()[0]->setPosition(new CuePosition(55, 95));
+
+        $stacked = DualSubtitle::fromPair($primary, $secondary);
+        $apart   = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions(mode: DualSubtitleMode::TopBottom));
+
+        $this->assertEquals([new CuePosition(45, 95), new CuePosition(55, 95)], array_map(fn (SubtitleCue $cue): ?CuePosition => $cue->findPosition(), $stacked->getCues()));
+        $this->assertEquals([new CuePosition(45, 95), null], array_map(fn (SubtitleCue $cue): ?CuePosition => $cue->findPosition(), $apart->getCues()));
+    }
 }

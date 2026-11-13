@@ -180,6 +180,7 @@ final class DualSubtitle
 
         return (new SubtitleCue($cue->getStart(), $cue->getEnd(), $lines))
             ->setAlignment($cue->getAlignment())
+            ->setPosition($cue->findPosition())
             ->setForced($cue->isForced());
     }
 }

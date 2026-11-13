@@ -326,6 +326,8 @@ class ThrowSitesTest extends TestCase
             "ArrayReader.php: cue identifier"               => [fn () => self::fromArray(["cues" => [["identifier" => 5] + $cue]]), ...$parsing],
             "ArrayReader.php: cue alignment"                => [fn () => self::fromArray(["cues" => [["alignment" => 10] + $cue]]), ...$parsing],
             "ArrayReader.php: cue forced"                   => [fn () => self::fromArray(["cues" => [["forced" => 1] + $cue]]), ...$parsing],
+            "ArrayReader.php: cue position no object"       => [fn () => self::fromArray(["cues" => [["position" => 5] + $cue]]), ...$parsing],
+            "ArrayReader.php: cue position range"           => [fn () => self::fromArray(["cues" => [["position" => ["x" => 101, "y" => 5]] + $cue]]), ...$parsing],
             "ArrayReader.php: format data no object"        => [fn () => self::fromArray(["formatData" => ["srt" => 5]]), ...$parsing],
             "ArrayReader.php: format data field type"       => [fn () => self::fromArray(["formatData" => ["scc" => ["dropFrame" => "x"]]]), ...$parsing],
             "ArrayReader.php: map no object"                => [fn () => self::fromArray(["metadata" => 5]), ...$parsing],

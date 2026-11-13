@@ -23,7 +23,8 @@ $copy  = Subtitle::fromString($json, Format::Json);
     "comments": [{"text": "Translated by Jane Doe", "beforeCueIndex": 0}],
     "formatData": {"ass": {"scriptInfo": {"PlayResX": "1920"}}},
     "cues": [
-        {"start": 1.5, "end": 4.0, "lines": ["Hello", "<i>world</i>"], "identifier": "intro", "alignment": 8, "forced": true, "formatData": {}},
+        {"start": 1.5, "end": 4.0, "lines": ["Hello", "<i>world</i>"], "identifier": "intro", "alignment": 8, "position": {"x": 50.0, "y": 5.0},
+         "forced": true, "formatData": {}},
         {"start": 5.0, "end": 6.5, "lines": [], "identifier": null, "alignment": null,
          "formatData": {"image": {"png": {"base64": "iVBORw0KGgo..."}, "x": 640, "y": 940, "width": 2, "height": 1,
                                   "screenWidth": 1920, "screenHeight": 1080, "forced": false}}}
@@ -42,6 +43,7 @@ $copy  = Subtitle::fromString($json, Format::Json);
 | `cues[].lines` | list of strings | yes | the lines with core markup and escaped `&lt;`, `&gt;` and `&amp;` |
 | `cues[].identifier` | string or null | no | the cue identifier |
 | `cues[].alignment` | integer or null | no | the value of the `Alignment` case, 1 to 9. `null` and 2 read as `Alignment::BottomCenter`, which is written as `null` |
+| `cues[].position` | object or null | no | `x` and `y`, numbers from 0 to 100, the `CuePosition` of the cue. Written only for a cue with a position. `null` reads as no position |
 | `cues[].forced` | boolean | no | written only for a forced cue |
 | `cues[].formatData` | object of objects | no | the format data of the cue by format key |
 
