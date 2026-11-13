@@ -177,12 +177,32 @@ final class WebVttFormatter extends SubtitleFormatter
                 $this->droppedColors[] = new WebVttDroppedColor($cueIndex, $color, "Cue #$cueIndex at {$cue->getStart()} s: "
                     . "dropped the color \"$color\", because WebVTT has classes for 8 colors only.");
             }
-            $lines = $this->keepVttTags($lines);
+            $lines = $this->dropEarlierWordTimestamps($this->keepVttTags($lines));
         }
 
         $lines = str_replace("-->", "--&gt;", $lines);
 
         return $lines === "" ? $timeStamps : $timeStamps . LineEnding::Lf->value . $lines;
+    }
+
+
+    /**
+     * Leaves out each word timestamp that is earlier than the one before it, because the WebVTT cue text rules
+     * need each timestamp to be later. The text after the left out timestamp joins the word before it.
+     */
+    private function dropEarlierWordTimestamps(string $text): string
+    {
+        $latest = 0.0;
+
+        return preg_replace_callback(Markup::WORD_TIMESTAMP_REGEX, function (array $match) use (&$latest): string {
+            $seconds = Markup::wordTimestampSeconds($match[1]) ?? $latest;
+            if ($seconds < $latest) {
+                return "";
+            }
+            $latest = $seconds;
+
+            return $match[1];
+        }, $text) ?? $text;
     }
 
 
