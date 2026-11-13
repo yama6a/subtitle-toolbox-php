@@ -8,6 +8,7 @@ use Generator;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\AlignmentGrid;
 use SubtitleToolbox\CommentAnchors;
+use SubtitleToolbox\CuePosition;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
@@ -432,6 +433,7 @@ final class WebVttParser extends SubtitleParser
         $alignment = $this->settingsToAlignment($settings);
         $cue->setFormatData(self::FORMAT_DATA_KEY, $alignment === null ? $settings : [...$settings, "alignment" => $alignment->value]);
         $cue->setAlignment($alignment ?? Alignment::BottomCenter);
+        $cue->setPosition($this->settingsToPosition($settings, $cue->getAlignment()));
 
         return $cue;
     }
@@ -525,6 +527,82 @@ final class WebVttParser extends SubtitleParser
         }
 
         return AlignmentGrid::of($row, $column);
+    }
+
+
+    /**
+     * Returns the point of the settings line and position, or null. An axis counts only when its setting anchors the
+     * same point of the cue box as $alignment. The point needs both axes and at least one percentage.
+     * A line number counts lines of text, not percent of the height, so only the line numbers of the alignment rows count.
+     */
+    private function settingsToPosition(array $settings, Alignment $alignment): ?CuePosition
+    {
+        if (isset($settings["vertical"])) {
+            return null;
+        }
+
+        $y = self::positionY($settings["line"] ?? null, AlignmentGrid::row($alignment));
+        $x = self::positionX($settings["position"] ?? null, $settings["align"] ?? null, AlignmentGrid::column($alignment));
+        if ($y === null || $x === null || !$y[1] && !$x[1]) {
+            return null;
+        }
+
+        return AlignmentGrid::positionAt($alignment, $x[0], $y[0]);
+    }
+
+
+    /**
+     * @return ?array{float, bool} the height in percent and whether the setting gave a percentage, or null
+     */
+    private static function positionY(?string $line, int $row): ?array
+    {
+        [$value, $lineRow] = match ($line) {
+            null, "-1"     => [100.0, AlignmentGrid::BOTTOM_ROW],
+            "0", "0,start" => [0.0, AlignmentGrid::TOP_ROW],
+            "50%,center"   => [50.0, AlignmentGrid::MIDDLE_ROW],
+            default        => [null, null],
+        };
+        if ($lineRow !== null) {
+            return $lineRow === $row ? [$value, false] : null;
+        }
+
+        $parts   = explode(",", $line, 2);
+        $lineRow = ["" => AlignmentGrid::TOP_ROW, "start" => AlignmentGrid::TOP_ROW, "center" => AlignmentGrid::MIDDLE_ROW, "end" => AlignmentGrid::BOTTOM_ROW][$parts[1] ?? ""] ?? null;
+        $value   = self::percentage($parts[0]);
+
+        return $lineRow === $row && $value !== null ? [$value, true] : null;
+    }
+
+
+    /**
+     * @return ?array{float, bool} the width in percent and whether the setting gave a percentage, or null
+     */
+    private static function positionX(?string $position, ?string $align, int $column): ?array
+    {
+        if ($position === null) {
+            return [[0.0, 50.0, 100.0][$column - 1], false];
+        }
+
+        $parts  = explode(",", $position, 2);
+        $anchor = $parts[1] ?? "";
+        if ($anchor === "" || $anchor === "auto") {
+            $anchor = match ($align) {
+                "left"         => "line-left",
+                null, "center" => "center",
+                "right"        => "line-right",
+                default        => "",
+            };
+        }
+        $anchorColumn = ["line-left" => AlignmentGrid::LEFT, "center" => AlignmentGrid::CENTER, "line-right" => AlignmentGrid::RIGHT][$anchor] ?? null;
+        $value        = self::percentage($parts[0]);
+
+        return $anchorColumn === $column && $value !== null ? [$value, true] : null;
+    }
+
+
+    private static function percentage(string $value): ?float
+    {
+        return preg_match('/^\d+(?:\.\d+)?%$/', $value) === 1 && (float) $value <= 100 ? (float) $value : null;
     }
 
 
