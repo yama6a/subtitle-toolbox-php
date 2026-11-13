@@ -63,6 +63,7 @@ try {
 - An image cue without text in `toString()` or `save()` with a text format, unless `WriteOptions::$skipImageCues` is set. Run OCR first or write a bitmap format.
 - An image position or size above 65535 in PGS.
 - A PNG in PGS output whose size differs from the size in the image data of its cue, for example a 2x2 PNG for a 720x80 image.
+- A PNG in PGS output that does not decode, for example data without the PNG signature or with a cut-off chunk. `getPrevious()` returns the `InvalidArgumentException` of the PNG decoder.
 - A cue time after 13:15:21.858 in PGS, the limit of its 32-bit time stamps of 90 kHz.
 - A subtitle number over 65535 in EBU STL.
 - Cue text that needs more than 241 TTI blocks of 112 bytes in EBU STL.
