@@ -216,4 +216,24 @@ class SpruceStlParserTest extends TestCase
         );
         $this->assertSame("\t,\t", $subtitle->findFormatData("spruce-stl")["separator"]);
     }
+
+
+    public function testKeepsTheCommandLinesAfterTheLastCueInTheTrailer(): void
+    {
+        $content  = "00:00:01:00 , 00:00:02:00 , One\n\$VertAlign = Top\n";
+        $subtitle = Subtitle::fromString($content, Format::SpruceStl);
+
+        $this->assertSame(["\$VertAlign = Top"], $subtitle->findFormatData("spruce-stl")["trailer"]);
+        $this->assertSame($content, $subtitle->toString(Format::SpruceStl));
+    }
+
+
+    public function testAHeaderOnlyFileComesBackUnchanged(): void
+    {
+        $subtitle = Subtitle::fromString("\$A = 1\n", Format::SpruceStl);
+
+        $this->assertSame(["\$A = 1"], $subtitle->findFormatData("spruce-stl")["header"]);
+        $this->assertSame("\$A = 1\n", $subtitle->toString(Format::SpruceStl));
+        $this->assertSame("\$A = 1\n", Subtitle::fromString($subtitle->toString(Format::SpruceStl), Format::SpruceStl)->toString(Format::SpruceStl));
+    }
 }

@@ -10,6 +10,7 @@ use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\ReadOptions;
@@ -393,5 +394,46 @@ class SpeakerLabelsTest extends TestCase
     {
         $this->assertSame(["prefix", "dialogueDashes", "colors"], array_map(fn (SpeakerStyle $style): string => $style->value, SpeakerStyle::cases()));
         $this->assertSame(SpeakerStyle::DialogueDashes, SpeakerStyle::from("dialogueDashes"));
+    }
+
+
+    public function testStyleLeavesNoVoiceTagThatARemovalJoins(): void
+    {
+        $subtitle = self::apply(TestSubtitles::fromTexts(["<v </v>Anna>Hi"]), new SpeakerLabelOptions(style: SpeakerStyle::Prefix));
+
+        $this->assertSame([], preg_grep('/' . Markup::VOICE_TAG . '/', self::lines($subtitle)[0]));
+        $this->assertSame("<v Anna>Hi", Markup::visibleText(implode("", self::lines($subtitle)[0])));
+    }
+
+
+    public function testNoBreakSpaceBeforeADialogueDashIsSpace(): void
+    {
+        $nbsp = "\u{A0}";
+
+        $labels = self::apply(TestSubtitles::fromTexts(["$nbsp- JOHN: Hi."]), new SpeakerLabelOptions(speakerLabels: true));
+        $this->assertSame([["<v John>Hi."]], self::lines($labels));
+
+        $dashes = self::apply(TestSubtitles::fromTexts(["<v A>$nbsp-Where?\n<v B>Home."]), new SpeakerLabelOptions(style: SpeakerStyle::DialogueDashes));
+        $this->assertSame([["$nbsp-Where?", "- Home."]], self::lines($dashes));
+    }
+
+
+    public function testLabelAloneOnALineKeepsItsStyleTagsBeforeANextLabel(): void
+    {
+        $subtitle = self::apply(TestSubtitles::fromTexts(["<i>JOHN:\nMARY: Hi.</i>"]), new SpeakerLabelOptions(speakerLabels: true));
+
+        $this->assertSame([["<v Mary><i>Hi.</i>"]], self::lines($subtitle));
+    }
+
+
+    public function testStyleTagsThatNeverCloseTakeLinearTime(): void
+    {
+        $subtitle = TestSubtitles::fromTexts([str_repeat("<i>x<v A>y<v B>", 2000)]);
+
+        $start = microtime(true);
+        SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(style: SpeakerStyle::Prefix));
+
+        $this->assertLessThan(1.0, microtime(true) - $start);
+        $this->assertLessThan(500000, strlen(implode("", self::lines($subtitle)[0])));
     }
 }

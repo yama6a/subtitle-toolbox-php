@@ -122,6 +122,22 @@ final class TsFixtures
     }
 
 
+    /**
+     * A DVB subtitle stream with PID 0x801 whose PTS counts through 3,772 wraps of the 33-bit clock, in steps of 3 x 2^30 ticks.
+     * Its last PES packet is at 360,025,633.587 s, after the time limit of 100,000 hours. It is no file in tests/files/.
+     */
+    public static function dvbSubtitlesPastTheTimeLimit(): string
+    {
+        $writer = new TsFixtureWriter();
+        $writer->tables(1, self::PMT_PID, 0x0801, [[0x0801, 0x06, TsFixtureWriter::subtitlingDescriptor([["eng", 0x10, 1, 1]])]]);
+        for ($packet = 0; $packet <= 10059; $packet++) {
+            $writer->subtitlePes(0x0801, $packet * (3 << 30) % (1 << 33), "");
+        }
+
+        return $writer->bytes();
+    }
+
+
     private static function pts(float $seconds): int
     {
         return (int) round((10 + $seconds) * 90000);

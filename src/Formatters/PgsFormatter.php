@@ -65,7 +65,12 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
             $output .= $this->endShownCues($context, $shown, $start);
             // A cue that ends before it starts clears at its start, so the time stamps of the file do not go back.
             $end     = $this->pts($cue, max($cue->getStart(), $cue->getEnd()));
-            $shown[] = ["cue" => $cue, "image" => CueImage::fromCue($cue), "end" => $end];
+            try {
+                $image = CueImage::fromCue($cue);
+            } catch (InvalidArgumentException $exception) {
+                throw new UnwritableContentException($exception->getMessage(), $exception);
+            }
+            $shown[] = ["cue" => $cue, "image" => $image, "end" => $end];
             if (count($shown) > self::MAX_SHOWN) {
                 array_shift($shown);
             }

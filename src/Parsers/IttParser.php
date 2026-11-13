@@ -29,7 +29,8 @@ final class IttParser extends SubtitleParser
             $namespace            = $ttmlData["namespaces"][$prefix] ?? null;
             if (in_array($localName, self::TIMING_PARAMETERS, true)
                 && (in_array($namespace, TtmlNamespaces::PARAMETER, true) || $namespace === null && $prefix === "ttp")) {
-                $parameters[$localName] = trim($value);
+                // TtmlParser reads the times with the first of 2 same-name parameters, such as ttp:frameRate in 2 namespaces.
+                $parameters[$localName] ??= trim($value);
             }
         }
         $parameters = array_intersect_key(array_replace(array_flip(self::TIMING_PARAMETERS), $parameters), $parameters);
