@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\CuePosition;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
@@ -259,6 +260,39 @@ class TtmlParserTest extends TestCase
         );
 
         $this->assertSame($alignment, $subtitle->getCues()[0]->getAlignment());
+    }
+
+
+    /**
+     * @return array<string, array{string, Alignment, ?CuePosition}>
+     */
+    public static function positionProvider(): array
+    {
+        return [
+            "issue 1149 region"        => ["tts:origin=\"10% 10%\" tts:extent=\"80% 85%\" tts:displayAlign=\"after\" tts:textAlign=\"center\"", Alignment::BottomCenter, new CuePosition(50, 95)],
+            "default bottom region"    => ["tts:origin=\"10% 10%\" tts:extent=\"80% 80%\" tts:displayAlign=\"after\" tts:textAlign=\"center\"", Alignment::BottomCenter, null],
+            "default top region"       => ["tts:origin=\"10% 10%\" tts:extent=\"80% 80%\" tts:displayAlign=\"before\" tts:textAlign=\"center\"", Alignment::TopCenter, null],
+            "small region at 80%"      => ["tts:origin=\"10% 80%\" tts:extent=\"80% 10%\" tts:displayAlign=\"before\" tts:textAlign=\"center\"", Alignment::BottomCenter, new CuePosition(50, 80)],
+            "right edge of the region" => ["tts:origin=\"60% 70%\" tts:extent=\"35% 20%\" tts:displayAlign=\"after\" tts:textAlign=\"right\"", Alignment::BottomRight, new CuePosition(95, 90)],
+            "pixels"                   => ["tts:origin=\"0px 400px\" tts:extent=\"640px 80px\" tts:textAlign=\"center\"", Alignment::BottomCenter, new CuePosition(50, 83.333)],
+            "cells"                    => ["tts:origin=\"0c 13c\" tts:extent=\"32c 2c\" tts:textAlign=\"center\"", Alignment::BottomCenter, new CuePosition(50, 86.667)],
+            "no origin"                => ["tts:displayAlign=\"before\" tts:textAlign=\"left\"", Alignment::TopLeft, null],
+            "no alignment"             => ["tts:origin=\"10% 10%\" tts:extent=\"80% 85%\" tts:displayAlign=\"after\"", Alignment::BottomCenter, null],
+        ];
+    }
+
+
+    #[DataProvider("positionProvider")]
+    public function testRegionGivesThePosition(string $regionAttributes, Alignment $alignment, ?CuePosition $position): void
+    {
+        $cue = $this->parse(
+            "<div><p region=\"r1\" end=\"1s\">x</p></div>",
+            "tts:extent=\"640px 480px\"",
+            "<layout><region xml:id=\"r1\" $regionAttributes/></layout>"
+        )->getCues()[0];
+
+        $this->assertSame($alignment, $cue->getAlignment());
+        $this->assertEquals($position, $cue->findPosition());
     }
 
 

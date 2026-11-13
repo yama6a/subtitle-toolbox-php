@@ -8,6 +8,7 @@ use DOMElement;
 use DOMNode;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\AlignmentGrid;
+use SubtitleToolbox\CuePosition;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\TtmlNamespaces;
@@ -126,8 +127,46 @@ final class TtmlHead
      */
     public static function regionId(TtmlContext $context, Alignment $alignment): string
     {
-        if (isset($context->regionIds[$alignment->value])) {
-            return $context->regionIds[$alignment->value];
+        return self::addRegion($context, lcfirst($alignment->name), "10% 10%", "80% 80%", $alignment);
+    }
+
+
+    /**
+     * Adds a region whose anchor for the alignment is the point $position. The region reaches from the point to the
+     * edges of the screen, so it stays inside the root container.
+     */
+    public static function positionRegionId(TtmlContext $context, Alignment $alignment, CuePosition $position): string
+    {
+        [$originX, $extentX] = self::span(AlignmentGrid::roundPercent($position->x), AlignmentGrid::column($alignment) - 1);
+        [$originY, $extentY] = self::span(AlignmentGrid::roundPercent($position->y), AlignmentGrid::TOP_ROW - AlignmentGrid::row($alignment));
+        $name = lcfirst($alignment->name) . "-" . AlignmentGrid::formatPercent($position->x) . "-" . AlignmentGrid::formatPercent($position->y);
+
+        return self::addRegion($context, $name, "$originX $originY", "$extentX $extentY", $alignment);
+    }
+
+
+    /**
+     * Returns the origin and the extent of a region on one axis, with the anchor at $value percent. $side 0 anchors
+     * the start of the region, 1 its middle and 2 its end.
+     *
+     * @return array{string, string}
+     */
+    private static function span(float $value, int $side): array
+    {
+        [$start, $length] = match ($side) {
+            0       => [$value, 100 - $value],
+            1       => [$value - min($value, 100 - $value), 2 * min($value, 100 - $value)],
+            default => [0.0, $value],
+        };
+
+        return [AlignmentGrid::formatPercent($start) . "%", AlignmentGrid::formatPercent($length) . "%"];
+    }
+
+
+    private static function addRegion(TtmlContext $context, string $name, string $origin, string $extent, Alignment $alignment): string
+    {
+        if (isset($context->regionIds[$name])) {
+            return $context->regionIds[$name];
         }
 
         $layout = null;
@@ -141,19 +180,19 @@ final class TtmlHead
             self::insertChild($context->head, $layout, null, 2);
         }
 
-        $id     = self::unusedId($context, lcfirst($alignment->name));
+        $id     = self::unusedId($context, $name);
         $region = $context->headDocument->createElementNS($context->namespace, "region");
         $region->setAttributeNS(TtmlNamespaces::XML, "xml:id", $id);
         $uri = $context->namespaces[$context->tts];
-        $region->setAttributeNS($uri, "$context->tts:origin", "10% 10%");
-        $region->setAttributeNS($uri, "$context->tts:extent", "80% 80%");
+        $region->setAttributeNS($uri, "$context->tts:origin", $origin);
+        $region->setAttributeNS($uri, "$context->tts:extent", $extent);
         $displayAlign = [AlignmentGrid::BOTTOM_ROW => "after", AlignmentGrid::MIDDLE_ROW => "center", AlignmentGrid::TOP_ROW => "before"];
         $textAlign    = [AlignmentGrid::LEFT => "left", AlignmentGrid::CENTER => "center", AlignmentGrid::RIGHT => "right"];
         $region->setAttributeNS($uri, "$context->tts:displayAlign", $displayAlign[AlignmentGrid::row($alignment)]);
         $region->setAttributeNS($uri, "$context->tts:textAlign", $textAlign[AlignmentGrid::column($alignment)]);
         self::insertChild($layout, $region, null, 3);
 
-        return $context->regionIds[$alignment->value] = $id;
+        return $context->regionIds[$name] = $id;
     }
 
 

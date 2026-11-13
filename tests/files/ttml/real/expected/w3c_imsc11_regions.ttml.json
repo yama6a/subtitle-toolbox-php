@@ -33,6 +33,10 @@
                 ],
                 "identifier": null,
                 "alignment": 8,
+                "position": {
+                    "x": 50.0,
+                    "y": 15.0
+                },
                 "formatData": {
                     "ttml": {
                         "attributes": {
@@ -50,6 +54,10 @@
                 ],
                 "identifier": null,
                 "alignment": null,
+                "position": {
+                    "x": 50.0,
+                    "y": 85.0
+                },
                 "formatData": {
                     "ttml": {
                         "attributes": {
@@ -67,6 +75,10 @@
                 ],
                 "identifier": null,
                 "alignment": null,
+                "position": {
+                    "x": 50.0,
+                    "y": 95.0
+                },
                 "formatData": {
                     "ttml": {
                         "attributes": {
