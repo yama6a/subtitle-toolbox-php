@@ -522,4 +522,48 @@ class CommonErrorFixerTest extends TestCase
         $this->assertSame([], CommonErrorFixer::apply($subtitle, new CommonErrorOptions())->fixes);
         $this->assertCount(1, $subtitle->getCues());
     }
+
+
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function lineFeedCases(): array
+    {
+        return [
+            "pipe after a line feed, fr" => ["fr", "Oui\n| dit", "Oui\n| dit"],
+            "pipe after a line feed, it" => ["it", "si\n|o", "si\nIo"],
+            "space before a tag"         => ["en", "a \n<i> b</i>", "a \n<i> b</i>"],
+        ];
+    }
+
+
+    #[DataProvider("lineFeedCases")]
+    public function testALineFeedInsideALineIsNotTheEndOfTheText(string $language, string $line, string $expected): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, [$line]));
+        CommonErrorFixer::apply($subtitle, new CommonErrorOptions($language));
+
+        $this->assertSame([$expected], $subtitle->getCues()[0]->getLines());
+    }
+
+
+    /**
+     * @return array<string, array{float, float}>
+     */
+    public static function gapsOf600Milliseconds(): array
+    {
+        return ["2.0 to 2.6" => [2.0, 2.6], "4.0 to 4.6" => [4.0, 4.6], "1.5 to 2.1" => [1.5, 2.1]];
+    }
+
+
+    #[DataProvider("gapsOf600Milliseconds")]
+    public function testAGapOf600MillisecondsContinuesTheSentence(float $end, float $nextStart): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, $end, "Meet me on the deck'"))
+                                    ->addCue(new SubtitleCue($nextStart, 9, "and bring a coat."));
+        $list     = new OcrReplaceList(endLines: [" deck'" => " deck."]);
+        CommonErrorFixer::apply($subtitle, new CommonErrorOptions("en", replaceList: $list));
+
+        $this->assertSame(["Meet me on the deck'"], $subtitle->getCues()[0]->getLines());
+    }
 }

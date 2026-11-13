@@ -407,7 +407,7 @@ final class CsvParser extends SubtitleParser
                     break;
                 }
             }
-            $cue->setEnd($next ?? $cue->getStart() + $this->options->lastCueDuration);
+            $cue->setEnd($next ?? Timecode::lastCueEnd($cue->getStart(), $this->options->lastCueDuration));
         }
     }
 }

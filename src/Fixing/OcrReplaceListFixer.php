@@ -17,6 +17,9 @@ use SubtitleToolbox\Markup;
  */
 final class OcrReplaceListFixer
 {
+    // An escaped backslash or dollar sign, $n, ${n}, \n, or a .NET substitution: $`, $', $+, $_ or ${name}.
+    private const SUBSTITUTION = '/\\\\[\\\\$]|\\\\(\d{1,2})|\$\{(\d{1,2})\}|\$(\d{1,2})|\$([`\'+_])|\$\{(\w+)\}/';
+
     private const BOUNDARY = '/^[\p{P}\s<>`\x{00B4}\x{266A}]$/u';
 
 
@@ -59,7 +62,7 @@ final class OcrReplaceListFixer
     {
         foreach ($endLines as $from => $to) {
             $from = (string)$from;
-            if (str_ends_with($text, $from) && !($continues && str_ends_with($to, ".") && !str_ends_with($from, "."))) {
+            if ($from !== "" && str_ends_with($text, $from) && !($continues && str_ends_with($to, ".") && !str_ends_with($from, "."))) {
                 $text = substr($text, 0, -strlen($from)) . $to;
             }
         }
@@ -80,7 +83,7 @@ final class OcrReplaceListFixer
             $text = str_replace((string)$from, $to, $text);
         }
         foreach ($list->regularExpressions as $pattern => $replacement) {
-            $text = self::replace((string)$pattern, $replacement, $text);
+            $text = self::replaceRegex((string)$pattern, $replacement, $text);
         }
 
         return $text;
@@ -131,6 +134,9 @@ final class OcrReplaceListFixer
         $rest   = substr($text, strlen($prefix));
         foreach ($beginLines as $from => $to) {
             $from = (string)$from;
+            if ($from === "") {
+                continue;
+            }
             if (str_starts_with($rest, $from)) {
                 $rest = $to . substr($rest, strlen($from));
             }
@@ -180,10 +186,57 @@ final class OcrReplaceListFixer
 
 
     /**
+     * Replaces every match of $pattern. The replacement is a preg_replace() replacement that may also hold the
+     * .NET substitutions $`, $', $+, $_ and ${name}, which preg_replace() does not know.
      * Returns $text unchanged when it is not valid UTF-8.
      */
-    private static function replace(string $pattern, string $replacement, string $text): string
+    private static function replaceRegex(string $pattern, string $replacement, string $text): string
     {
-        return preg_replace($pattern, $replacement, $text) ?? $text;
+        $expand = fn (array $match): string => preg_replace_callback(self::SUBSTITUTION,
+            function (array $token) use ($match, $text): string {
+                $group = static fn (int|string $key): string => ($match[$key][0] ?? null) ?? "";
+                if ($token[0] === "\\\\" || $token[0] === "\\$") {
+                    return $token[0][1];
+                }
+                if (($token[1] ?? "") !== "") {
+                    return $group((int)$token[1]);
+                }
+                if (($token[2] ?? "") !== "") {
+                    return $group((int)$token[2]);
+                }
+                if (($token[3] ?? "") !== "") {
+                    return $group((int)$token[3]);
+                }
+                $before = substr($text, 0, $match[0][1]);
+                $after  = substr($text, $match[0][1] + strlen($match[0][0]));
+
+                return match ($token[4] ?? "") {
+                    "`"     => $before,
+                    "'"     => $after,
+                    "_"     => $text,
+                    "+"     => self::lastGroup($match),
+                    default => isset($match[$token[5] ?? ""]) ? $group($token[5]) : $token[0],
+                };
+            },
+            $replacement) ?? $replacement;
+
+        return preg_replace_callback($pattern, $expand, $text, -1, $count, PREG_OFFSET_CAPTURE | PREG_UNMATCHED_AS_NULL) ?? $text;
+    }
+
+
+    /**
+     * The text of the numbered group with the highest number that took part in the match, as $+ does in .NET.
+     *
+     * @param array<int|string, array{0: string|null, 1: int}> $match
+     */
+    private static function lastGroup(array $match): string
+    {
+        for ($index = count(array_filter(array_keys($match), is_int(...))) - 1; $index > 0; $index--) {
+            if ($match[$index][0] !== null) {
+                return $match[$index][0];
+            }
+        }
+
+        return "";
     }
 }

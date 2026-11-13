@@ -92,7 +92,9 @@ final class ProfanityFilter
                     continue;
                 }
 
-                $ranges[] = [$starts[$lineIndex][$tokenIndex] ?? $cue->getStart(), $ends[$lineIndex][$tokenIndex] ?? $cue->getEnd()];
+                $start    = $starts[$lineIndex][$tokenIndex] ?? $cue->getStart();
+                $end      = $ends[$lineIndex][$tokenIndex] ?? $cue->getEnd();
+                $ranges[] = [min($start, $end), max($start, $end)];
                 if ($masked !== $text) {
                     $tokens[$lineIndex][$tokenIndex] = Markup::escapeTextLike($masked, $token);
                     $changed = true;

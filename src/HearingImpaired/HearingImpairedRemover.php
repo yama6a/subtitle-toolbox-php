@@ -265,7 +265,7 @@ final class HearingImpairedRemover
         $anyRemoved = false;
         foreach ($lines as $index => $line) {
             $wasText = self::visibleLine($original[$index]);
-            if (preg_match('/^\h*-/', $wasText) === 1) {
+            if (preg_match('/^\h*-/u', $wasText) === 1) {
                 $dashLines++;
             }
             if ($line === $original[$index]) {
@@ -277,7 +277,7 @@ final class HearingImpairedRemover
             // Any tag pair, such as <c.loud></c>, goes when the removed text was all it held.
             do {
                 $before = $line;
-                $line   = preg_replace('/<([a-zA-Z][a-zA-Z0-9]*)(?:[\s.][^<>]*)?>\h*<\/\1\s*>/', "", $line) ?? $line;
+                $line   = preg_replace('/<([a-zA-Z][a-zA-Z0-9]*)(?:[\s.][^<>]*)?>\h*<\/\1\s*>/u', "", $line) ?? $line;
             } while ($line !== $before);
 
             if (trim($wasText) !== "" && in_array(trim(self::visibleLine($line)), ["", "-"], true)) {
@@ -306,9 +306,9 @@ final class HearingImpairedRemover
      */
     private static function removeLastDash(array $lines): array
     {
-        $dashLines = array_keys(array_filter($lines, fn (string $line): bool => preg_match('/^\h*-/', self::visibleLine($line)) === 1));
+        $dashLines = array_keys(array_filter($lines, fn (string $line): bool => preg_match('/^\h*-/u', self::visibleLine($line)) === 1));
         if (count($dashLines) === 1) {
-            $lines[$dashLines[0]] = self::removeMatches([$lines[$dashLines[0]]], ['/^\h*-\h*/'], false)[0];
+            $lines[$dashLines[0]] = self::removeMatches([$lines[$dashLines[0]]], ['/^\h*-\h*/u'], false)[0];
         }
 
         return $lines;
