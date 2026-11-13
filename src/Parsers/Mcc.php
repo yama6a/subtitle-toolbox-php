@@ -168,6 +168,8 @@ final class Mcc
             }
             $alias = self::ALIASES[$character] ?? null;
             if ($alias === null || $digit !== null) {
+                // The whole character, so that the message stays valid UTF-8. The position counts bytes.
+                $character = mb_substr(substr($text, $index), 0, 1, "UTF-8");
                 throw new ParsingException("The MCC data has the invalid character \"$character\" at position " . ($index + 1) . ".", $lineNumber);
             }
             $bytes .= $alias;
