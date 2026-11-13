@@ -10,6 +10,7 @@ use SubtitleToolbox\Parsers\Options\MccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * Turns the cc_data triplets of caption distribution packets into cues. MCC files and MP4 c708 tracks hold them.
@@ -54,7 +55,7 @@ final class CaptionDataCues
             if ($state["lines"] === []) {
                 continue;
             }
-            $end = isset($states[$index + 1]) ? $states[$index + 1]["time"] : $state["time"] + $lastCueDuration;
+            $end = isset($states[$index + 1]) ? $states[$index + 1]["time"] : Timecode::lastCueEnd($state["time"], $lastCueDuration);
             if ($end > $state["time"]) {
                 $cues[] = (new SubtitleCue($state["time"], $end, $state["lines"]))->setAlignment($state["alignment"]);
             }

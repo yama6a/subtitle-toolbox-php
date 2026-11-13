@@ -9,6 +9,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * Turns CEA-608 byte pairs into cues with the scc format data. SCC files and MP4 c608 tracks use it.
@@ -42,7 +43,7 @@ final class Cea608Cues
 
             $start = self::frameToSeconds($state["frame"]);
             if (!isset($states[$index + 1])) {
-                $end = $start + $lastCueDuration;
+                $end = Timecode::lastCueEnd($start, $lastCueDuration);
             } else {
                 $end = self::frameToSeconds($states[$index + 1]["frame"]);
                 if ($end <= $start) {
@@ -55,7 +56,7 @@ final class Cea608Cues
         if ($byLine) {
             foreach ($decoder->rollUpLines() as $line) {
                 $start = self::frameToSeconds($line["start"]);
-                $end   = $line["end"] === null ? $start + $lastCueDuration : self::frameToSeconds($line["end"]);
+                $end   = $line["end"] === null ? Timecode::lastCueEnd($start, $lastCueDuration) : self::frameToSeconds($line["end"]);
                 if ($end > $start) {
                     $cues[] = self::cue($start, $end, [$line], Cea608Decoder::MODE_ROLL_UP);
                 }

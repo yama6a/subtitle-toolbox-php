@@ -128,6 +128,23 @@ class AribCaptionDecoderTest extends TestCase
     }
 
 
+    public function testStopsARepeatToTheEndOfAHugeRowAt1024Cells(): void
+    {
+        // CS, SDF with a display area of 999999999 by 540 dots, RPC 0 to repeat to the end of the row, LS1 and A.
+        $states = self::states(self::decode([[0.0, W::statement(W::text("\x0C\x9B999999999;540 \x56\x98\x00\x0EA"))]]));
+
+        $this->assertSame([[0.0, [str_repeat("Ａ", 1024)], Alignment::TopRight]], $states);
+    }
+
+
+    public function testLimitsTheNumbersOfAControlSequence(): void
+    {
+        $body = W::CS . "\x9B99999999999999999999;540 \x56" . W::position(6, 3) . W::LS1 . "A";
+
+        $this->assertSame([[0.0, ["Ａ"], Alignment::BottomLeft]], self::states(self::decode([[0.0, W::statement(W::text($body))]])));
+    }
+
+
     public function testReadsTheLatinSetsOfBrazilianCaptions(): void
     {
         // SS3 takes one character from G3, the Latin special set: 0x21 is the music note.

@@ -249,6 +249,7 @@ class ProfanityFilterTest extends TestCase
             "star in the middle" => [fn () => new ProfanityOptions(["f*ck"])],
             "only a star"        => [fn () => new ProfanityOptions(["*"])],
             "space at the end"   => [fn () => new ProfanityOptions(["hell "])],
+            "line feed at the end" => [fn () => new ProfanityOptions(["hell\n"])],
             "no string"          => [fn () => new ProfanityOptions([5])],
             "invalid UTF-8"      => [fn () => new ProfanityOptions(["h\xE9ll"])],
             "negative padding"   => [fn () => new ProfanityOptions(["hell"], padding: -0.1)],
@@ -262,5 +263,15 @@ class ProfanityFilterTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $create();
+    }
+
+
+    public function testMuteRangeHoldsTheTwoTimesInOrderWhenAWordTimestampLiesAfterTheCueEnd(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(10, 13.2, "<00:00:10.000>What <00:00:13.500>hell"));
+        $ranges   = ProfanityFilter::apply($subtitle, new ProfanityOptions(["hell"]))->muteRanges;
+
+        $this->assertEquals([new MuteRange(13.2, 13.5)], $ranges);
+        $this->assertSame("13.200 13.500 1\n", MuteRange::toEdl($ranges));
     }
 }
