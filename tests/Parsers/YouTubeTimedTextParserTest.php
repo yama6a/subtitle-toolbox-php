@@ -219,4 +219,12 @@ class YouTubeTimedTextParserTest extends TestCase
         $this->assertCount(1, $subtitle->getParseWarnings());
         $this->assertStringContainsString("events[0].tStartMs", $subtitle->getParseWarnings()[0]->message);
     }
+
+
+    public function testASrv3CommentAndProcessingInstructionGiveNoText(): void
+    {
+        $source = '<timedtext format="3"><body><p t="0" d="1000">hi<!-- secret --><?x data?></p></body></timedtext>';
+
+        $this->assertSame("hi", (new YouTubeTimedTextParser())->parse($source, new ReadOptions())->getCues()[0]->getText());
+    }
 }

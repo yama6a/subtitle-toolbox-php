@@ -15,6 +15,8 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\PgsFixtures;
 use SubtitleToolbox\Parsers\PgsParser;
+use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -204,6 +206,21 @@ class MatroskaReaderTest extends TestCase
     }
 
 
+    /**
+     * A WebVTT track, because SubRip times have at most 3 digits of hours.
+     */
+    public function testTheLastBlockWithoutDurationEndsBelow100000Hours(): void
+    {
+        $stream = self::stream(MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, MkvFixtureWriter::element(
+            MkvFixtureWriter::TRACKS,
+            MkvFixtureWriter::trackEntry(["number" => 2, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_TEXT/WEBVTT"]),
+        ) . MkvFixtureWriter::cluster(0, [MkvFixtureWriter::simpleBlock(2, 3000, "Mind the gap.")])));
+
+        $this->assertSame([[3.0, 359999999.999, ["Mind the gap."], false]],
+                          $this->cues(MatroskaReader::open($stream)->extract(2, new ReadOptions(lastCueDuration: 400000 * 3600))));
+    }
+
+
     public static function compressedTracks(): array
     {
         return [
@@ -265,6 +282,30 @@ class MatroskaReaderTest extends TestCase
     }
 
 
+    /**
+     * The 32-bit PTS of a PGS segment wraps after 2^32 ticks of 90 kHz, about 13 h 15 min. The block times of Matroska do not.
+     */
+    public function testKeepsPgsTimesAfter13Hours(): void
+    {
+        $sup      = PgsFixtures::shapes1080p();
+        $shift    = 50400;
+        $clusters = "";
+        for ($offset = 0, $displaySet = ""; $offset < strlen($sup); $offset += 13 + $size) {
+            ["pts" => $pts, "type" => $type, "size" => $size] = unpack("Npts/Ndts/Ctype/nsize", $sup, $offset + 2);
+            $displaySet .= substr($sup, $offset + 10, 3 + $size);
+            if ($type === 0x80) {
+                $clusters  .= MkvFixtureWriter::cluster($shift * 1000 + intdiv($pts, 90), [MkvFixtureWriter::simpleBlock(2, 0, $displaySet)]);
+                $displaySet = "";
+            }
+        }
+        $toArray  = fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getAllFormatData()];
+        $expected = array_map(fn (SubtitleCue $cue): array => [$cue->getStart() + $shift, $cue->getEnd() + $shift, $cue->getAllFormatData()],
+                              (new PgsParser())->parse($sup)->getCues());
+
+        $this->assertSame($expected, array_map($toArray, self::brokenFile($clusters, ["codecId" => "S_HDMV/PGS"])->getCues()));
+    }
+
+
     public function testExtractsVobSubAsTheVobSubParserReadsTheIdxFile(): void
     {
         $mkv      = MatroskaReader::open(self::DIR . "vobsub.mkv");
@@ -291,6 +332,30 @@ class MatroskaReaderTest extends TestCase
     }
 
 
+    /**
+     * Bytes 2 and 3 of a subpicture unit hold the offset of its control sequence. 0xFFFF lies past the end of the unit.
+     */
+    public function testLenientModeSkipsADamagedVobSubBlock(): void
+    {
+        $vobSub   = __DIR__ . "/../../files/vobsub/two-tracks-pal";
+        $unit     = MkvFixtures::vobSubUnits(file_get_contents("$vobSub.idx"), file_get_contents("$vobSub.sub"), "en")[3][1];
+        $file     = file_get_contents(self::DIR . "vobsub.mkv");
+        $at       = strpos($file, $unit);
+        $file     = substr_replace($file, "\xFF\xFF", $at + 2, 2);
+        $toArray  = fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getAllFormatData()];
+        $expected = array_map($toArray, MatroskaReader::open(self::DIR . "vobsub.mkv")->extract(3)->getCues());
+        array_splice($expected, 3, 1);
+
+        $subtitle = MatroskaReader::open(self::stream($file))->extract(3, new ReadOptions(lenient: true));
+        $this->assertSame($expected, array_map($toArray, $subtitle->getCues()));
+        $this->assertSame([[3, ParseWarningAction::Skipped]],
+                          array_map(fn (ParseWarning $w): array => [$w->blockIndex, $w->action], $subtitle->getParseWarnings()));
+
+        $this->expectException(ParsingException::class);
+        MatroskaReader::open(self::stream($file))->extract(3);
+    }
+
+
     public function testExtractsDvbSubtitlesAsTheMpegTsReaderReadsTheSourceFile(): void
     {
         $mkv = MatroskaReader::open(self::DIR . "dvbsub.mkv");
@@ -300,6 +365,27 @@ class MatroskaReaderTest extends TestCase
                           array_map(fn (SubtitleTrack $t): array => [$t->number, $t->codecId, $t->format, $t->language], $mkv->getSubtitleTracks()));
         $this->assertEquals($ts->extract(257)->getCues(), $mkv->extract(2)->getCues());
         $this->assertSame(Format::Pgs, $mkv->extract(3)->findFormat());
+    }
+
+
+    public function testLenientModeSkipsADvbSubtitleRegionPastThePixelLimitOfTheRegions(): void
+    {
+        $regions = "\x0F\x11\0\1\0\x0A" . pack("CCnnCCCC", 0, 0x0F, 3840, 2160, 0x6C, 0, 0, 0)
+                   . "\x0F\x11\0\1\0\x0A" . pack("CCnnCCCC", 1, 0x0F, 1, 1, 0x68, 0, 0, 0);
+        $file    = MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, MkvFixtureWriter::element(
+            MkvFixtureWriter::TRACKS,
+            MkvFixtureWriter::trackEntry(["number" => 2, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_DVBSUB"]),
+        ) . MkvFixtureWriter::cluster(0, [MkvFixtureWriter::simpleBlock(2, 1000, $regions)]));
+        $message = "Cannot read region 1: the regions hold more than 8294400 pixels in total.";
+
+        $subtitle = MatroskaReader::open(self::stream($file))->extract(2, new ReadOptions(lenient: true));
+        $this->assertSame([], $subtitle->getCues());
+        $this->assertSame([[$message, ParseWarningAction::Skipped]],
+                          array_map(fn (ParseWarning $w): array => [$w->message, $w->action], $subtitle->getParseWarnings()));
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage($message);
+        MatroskaReader::open(self::stream($file))->extract(2);
     }
 
 
@@ -413,12 +499,41 @@ class MatroskaReaderTest extends TestCase
                 fn () => self::brokenFile("", self::hugeCodecPrivate()),
                 "The element data at byte 89 needs 1099511627776 bytes, but the file ends before.",
             ],
+            "SimpleBlock of unknown size"   => [
+                fn () => self::brokenFile(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::unknownSizeElement(0xA3, "\x82\x00\x00\x00ab")])),
+                "The element 0xA3 at byte 93 has an unknown size, which only Segment and Cluster may have.",
+            ],
+            "cluster Timestamp of unknown size" => [
+                fn () => self::brokenFile(MkvFixtureWriter::element(MkvFixtureWriter::CLUSTER, MkvFixtureWriter::unknownSizeElement(0xE7, "\x01"))),
+                "The element 0xE7 at byte 90 has an unknown size, which only Segment and Cluster may have.",
+            ],
             "zlib block that inflates past 64 MB" => [
                 fn () => self::brokenFile(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 0, self::zlibZeros((64 << 20) + 1), 1000)]),
                                           ["encodings" => MkvFixtureWriter::compression(0, 0)]),
                 "The zlib data of track 2 is not valid or inflates to more than 64 MB.",
             ],
         ];
+    }
+
+
+    /**
+     * 1 GiB of inflated blocks does not fit into the memory limit of the tests, so the test lowers the limit to 3 MiB.
+     */
+    public function testThrowsWhenTheZlibBlocksOfATrackInflateToMoreThanTheLimitInTotal(): void
+    {
+        $limit = new \ReflectionProperty(MatroskaReader::class, "maxInflatedTotal");
+        $block = MkvFixtureWriter::blockGroup(2, 0, gzcompress(str_repeat("a", 1 << 20)), 1000);
+        $limit->setValue(null, 3 << 20);
+        try {
+            $this->assertCount(3, self::brokenFile(MkvFixtureWriter::cluster(0, array_fill(0, 3, $block)), ["encodings" => MkvFixtureWriter::compression(0, 0)])
+                ->getCues());
+
+            $this->expectException(ParsingException::class);
+            $this->expectExceptionMessage("The zlib data of track 2 inflates to more than 3 MB in total.");
+            self::brokenFile(MkvFixtureWriter::cluster(0, array_fill(0, 4, $block)), ["encodings" => MkvFixtureWriter::compression(0, 0)]);
+        } finally {
+            $limit->setValue(null, 1 << 30);
+        }
     }
 
 
@@ -429,6 +544,57 @@ class MatroskaReaderTest extends TestCase
         $this->expectExceptionMessage($message);
 
         $read();
+    }
+
+
+    /**
+     * Byte 847 of compressed.mkv is the 1-byte size of a SimpleBlock of track 3. 0xFF is the unknown size.
+     */
+    public function testThrowsForABlockOfUnknownSizeInAFile(): void
+    {
+        $file      = file_get_contents(self::DIR . "compressed.mkv");
+        $file[847] = "\xFF";
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The element 0xA3 at byte 848 has an unknown size, which only Segment and Cluster may have.");
+
+        MatroskaReader::open(self::stream($file))->extract(3);
+    }
+
+
+    /**
+     * @return array<string, array{int, string}>
+     */
+    public static function seekPositionsPastTheEnd(): array
+    {
+        return ["Info" => [61, "\x27"], "Info, 2^63 - 1" => [60, "\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF"]];
+    }
+
+
+    /**
+     * Bytes 60 to 67 of seek_head.mkv hold the SeekPosition of Info. A position past the end of the file finds no Info element.
+     */
+    #[DataProvider("seekPositionsPastTheEnd")]
+    public function testIgnoresASeekPositionPastTheEndOfTheFile(int $byte, string $bytes): void
+    {
+        $file = substr_replace(file_get_contents(self::DIR . "seek_head.mkv"), $bytes, $byte, strlen($bytes));
+        $mkv  = MatroskaReader::open(self::stream($file));
+
+        $this->assertSame([[1.0, 3.0, ["The library opens at nine."], false]], $this->cues($mkv->extract(2)));
+    }
+
+
+    public function testThrowsWhenTheSeekPositionOfTracksIsPastTheEndOfTheFile(): void
+    {
+        $file = file_get_contents(self::DIR . "seek_head.mkv");
+        $at   = strpos($file, "\x53\xAB\x84\x16\x54\xAE\x6B") + 7;
+        $this->assertSame("\x53\xAC", substr($file, $at, 2));
+        $file[$at + 4] = "\x27";
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The file has no Tracks element.");
+
+        MatroskaReader::open(self::stream($file));
     }
 
 

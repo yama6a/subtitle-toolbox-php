@@ -8,6 +8,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\SubtitleCue;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
 
 class LyricsFormatterTest extends TestCase
 {
@@ -141,5 +142,33 @@ class LyricsFormatterTest extends TestCase
 
         $this->assertSame(["a b"], $cues[0]->getLines());
         $this->assertSame(["c"], $cues[1]->getLines());
+    }
+
+
+    public function testWordTimestampEarlierThanTheOneBeforeItIsLeftOut(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(0, 5, "<00:00:03.000>a <00:00:02.000>b <00:00:04.000>c"));
+
+        $this->assertSame("[00:00.00] <00:03.00>a b <00:04.00>c\n", $subtitle->toString(Format::Lyrics, new WriteOptions(bom: false)));
+    }
+
+
+    public function testTimesAreClampedToTheLastTimeTheParserReads(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(72000, 72001, "late <20:00:00.500>w"));
+        $lrc      = $subtitle->toString(Format::Lyrics, new WriteOptions(bom: false));
+
+        $this->assertSame("[999:59.99] late <999:59.99>w\n", $lrc);
+        $this->assertCount(1, Subtitle::fromString($lrc, Format::Lyrics)->getCues());
+    }
+
+
+    public function testStoredIdTagsThatDoNotReadBackAreSkipped(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "First"))->addCue(new SubtitleCue(3, 4, "Second"));
+        $subtitle->setFormatData("lrc", ["idTags" => ["offset" => "500", "a]\n[00:05.00]Injected\n[b" => "x", "my tag" => "y", "12" => "z", "by" => "me"]]);
+        $lrc = $subtitle->toString(Format::Lyrics, new WriteOptions(bom: false));
+
+        $this->assertSame("[by:me]\n[00:01.00] First\n[00:03.00] Second\n", $lrc);
     }
 }

@@ -85,6 +85,21 @@ final class AribFixtures
     }
 
 
+    /**
+     * A caption stream whose PES packets count the PTS as TsFixtures::dvbSubtitlesPastTheTimeLimit() does. The packets hold
+     * no caption data. It is no file in tests/files/.
+     */
+    public static function captionsPastTheTimeLimit(): string
+    {
+        $writer = self::writer();
+        for ($packet = 0; $packet <= 10059; $packet++) {
+            $writer->privatePes(self::CAPTION_PID, $packet * (3 << 30) % (1 << 33), "");
+        }
+
+        return $writer->bytes();
+    }
+
+
     private static function writer(): TsFixtureWriter
     {
         // The stream identifier descriptor with the component tag 0x30 and the data component descriptor of captions, 0x0008,

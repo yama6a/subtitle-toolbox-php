@@ -67,7 +67,7 @@ final class WhisperJsonFormatter extends SubtitleFormatter
             $sameStart && $sameEnd,
             $sameText,
             fn (mixed $word): array => [trim(is_string($word["word"] ?? null) ? $word["word"] : ""), self::seconds($word["start"] ?? null), self::seconds($word["end"] ?? null)],
-            fn (string $text, float $wordStart, float $wordEnd): array => self::newWord($variant, $text, $wordStart, $wordEnd, $speaker),
+            fn (string $text, float $wordStart, float $wordEnd, mixed $from): array => self::newWord($variant, $text, $wordStart, $wordEnd, $speaker, $from),
         );
 
         $segment = array_replace(
@@ -98,14 +98,14 @@ final class WhisperJsonFormatter extends SubtitleFormatter
     }
 
 
-    private static function newWord(Variant $variant, string $text, float $start, float $end, ?string $speaker): array
+    private static function newWord(Variant $variant, string $text, float $start, float $end, ?string $speaker, mixed $from): array
     {
         $times = ["start" => $start, "end" => $end];
 
         return match ($variant) {
             Variant::OpenAiApi => ["word" => $text] + $times,
-            Variant::WhisperX  => ["word" => $text] + $times + ["score" => TranscriptWords::NEW_WORD_CONFIDENCE] + ($speaker === null ? [] : ["speaker" => $speaker]),
-            default            => ["word" => " $text"] + $times + ["probability" => TranscriptWords::NEW_WORD_CONFIDENCE],
+            Variant::WhisperX  => ["word" => $text] + $times + ["score" => $from["score"] ?? TranscriptWords::NEW_WORD_CONFIDENCE] + ($speaker === null ? [] : ["speaker" => $speaker]),
+            default            => ["word" => " $text"] + $times + ["probability" => $from["probability"] ?? TranscriptWords::NEW_WORD_CONFIDENCE],
         };
     }
 
@@ -138,6 +138,10 @@ final class WhisperJsonFormatter extends SubtitleFormatter
         ]);
         if (!$sameTimes || !$sameText || !$sameWords) {
             unset($segment["tokens"]);
+        }
+        $speaker = TranscriptWords::speaker($cue);
+        if ($speaker !== null && $speaker !== ($cueData["speaker"] ?? null)) {
+            $segment["speaker"] = $speaker;
         }
 
         return $segment;

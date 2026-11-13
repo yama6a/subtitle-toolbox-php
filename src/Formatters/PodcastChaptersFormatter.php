@@ -40,7 +40,7 @@ final class PodcastChaptersFormatter extends SubtitleFormatter
             $document["chapters"][] = $chapter + $cue->findFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
         }
 
-        $json = JsonOutput::document($document, true, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $json = JsonOutput::document($document, true);
 
         return $this->applyOutputOptions($json, $options);
     }

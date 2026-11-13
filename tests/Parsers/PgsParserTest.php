@@ -396,6 +396,14 @@ class PgsParserTest extends TestCase
     }
 
 
+    public function testALastCueWithoutAnEndStopsBelow100000Hours(): void
+    {
+        $cues = $this->parseFile("shapes_1080p.sup", new ReadOptions(lastCueDuration: 400000 * 3600))->getCues();
+
+        $this->assertSame(359999999.999, end($cues)->getEnd());
+    }
+
+
     public function testALastCueDurationOf0EndsTheLastCueAtItsStart(): void
     {
         $cues = $this->parseFile("shapes_1080p.sup", new ReadOptions(lastCueDuration: 0))->getCues();

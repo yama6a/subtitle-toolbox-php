@@ -207,4 +207,11 @@ class LineWrapperTest extends TestCase
         $this->assertTrue(LineWrapper::fitsCharactersPerSecond(["<i></i>"], 0.0, 1.0));
         $this->assertFalse(LineWrapper::fitsCharactersPerSecond(["Hi"], 0.0, 1000.0));
     }
+
+
+    public function testJoiningLinesNeverMakesATagOfABracketPair(): void
+    {
+        $this->assertSame("5 <x y> 2", Markup::visibleText(implode("", LineWrapper::wrap(["5 <x", "y> 2"], 42, 2))));
+        $this->assertSame("aa <b cc> dd.", Markup::visibleText(implode("", LineWrapper::wrapToFit(["aa <b", "cc> dd."], 20, 1))));
+    }
 }

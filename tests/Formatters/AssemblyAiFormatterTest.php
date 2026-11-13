@@ -127,4 +127,25 @@ class AssemblyAiFormatterTest extends TestCase
             $subtitle->toString(Format::AssemblyAi)
         );
     }
+
+
+    public function testShiftedCueKeepsTheConfidenceOfItsWords(): void
+    {
+        $json     = '{"words": [{"text": "Hello", "start": 0, "end": 300, "confidence": 0.9}, {"text": "there", "start": 400, "end": 700, "confidence": 0.8}]}';
+        $subtitle = Subtitle::fromString($json, Format::AssemblyAi, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
+        $subtitle->shift(1.0);
+
+        $this->assertSame([0.9, 0.8], array_column(json_decode($subtitle->toString(Format::AssemblyAi), true)["words"], "confidence"));
+    }
+
+
+    public function testEditedWordGetsFullConfidenceAfterAShift(): void
+    {
+        $json     = '{"words": [{"text": "Hello", "start": 0, "end": 300, "confidence": 0.9}, {"text": "there", "start": 400, "end": 700, "confidence": 0.8}]}';
+        $subtitle = Subtitle::fromString($json, Format::AssemblyAi, new ReadOptions(formats: [new TranscriptReadOptions(wordTimestamps: true)]));
+        $subtitle->shift(1.0);
+        $subtitle->getCues()[0]->setLines("<00:00:01.000>Hello <00:00:01.400>friend");
+
+        $this->assertSame([0.9, 1.0], array_column(json_decode($subtitle->toString(Format::AssemblyAi), true)["words"], "confidence"));
+    }
 }

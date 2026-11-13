@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Karaoke;
 
 use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\CueList;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -13,8 +14,15 @@ use SubtitleToolbox\Timecode;
 
 final class WordHighlight
 {
+    private const MAX_NEW_BYTES = 64 * 1024 * 1024;
+
+
     /**
      * Replaces each cue with one cue per timed word, in which the style marks the active word.
+     * Each new cue holds the text of the cue, so the new cues of a cue with many words hold about the number of
+     * words times the length of the text. The method throws when the lines of all new cues hold more than 64 MiB.
+     *
+     * @throws InvalidArgumentException
      */
     public static function apply(Subtitle $subtitle, ?WordHighlightOptions $options = null): WordHighlightReport
     {
@@ -22,8 +30,9 @@ final class WordHighlight
         $anchors  = CommentAnchors::of($subtitle->getCues(), $subtitle->getComments());
         $firstNew = new \SplObjectStorage();
         $groups   = [];
+        $bytes    = 0;
         foreach ($subtitle->getCues() as $cue) {
-            $group          = self::expandCue($cue, $options);
+            $group          = self::expandCue($cue, $options, $bytes);
             $groups[]       = $group;
             $firstNew[$cue] = $group[0];
         }
@@ -40,7 +49,7 @@ final class WordHighlight
     /**
      * @return list<SubtitleCue>
      */
-    private static function expandCue(SubtitleCue $cue, WordHighlightOptions $options): array
+    private static function expandCue(SubtitleCue $cue, WordHighlightOptions $options, int &$bytes): array
     {
         [$lines, $times] = self::splitWords($cue);
         if ($times === []) {
@@ -64,10 +73,19 @@ final class WordHighlight
                 continue;
             }
 
+            $highlighted = self::highlight($lines, $word, count($times), $options);
+            $bytes      += array_sum(array_map(strlen(...), $highlighted));
+            if ($bytes > self::MAX_NEW_BYTES) {
+                throw new InvalidArgumentException(
+                    "The cue at " . Timecode::shortClock(max(0.0, $start)) . " has " . count($times) . " words and " .
+                    "makes cues with more than 64 MiB of text. Split the cue with Resegmenter, or show fewer words with maxWordsPerCue."
+                );
+            }
+
             $cues[] = (clone $cue)
                 ->setStart($wordStart)
                 ->setEnd($wordEnd)
-                ->setLines(self::highlight($lines, $word, count($times), $options))
+                ->setLines($highlighted)
                 ->setIdentifier($cues === [] ? $cue->findIdentifier() : null);
         }
 
