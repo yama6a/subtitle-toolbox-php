@@ -66,6 +66,34 @@ class LenientTtmlTest extends TestCase
     }
 
 
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function html5EntityNames(): array
+    {
+        return [
+            "&nbsp;"             => ["&nbsp;", "a\u{a0}b"],
+            "&NonBreakingSpace;" => ["&NonBreakingSpace;", "a\u{a0}b"],
+            "&AMP;"              => ["&AMP;", "a&amp;b"],
+            "&COPY;"             => ["&COPY;", "a\u{a9}b"],
+            "&mldr;"             => ["&mldr;", "a\u{2026}b"],
+            "unknown name"       => ["&nope;", "a&amp;nope;b"],
+        ];
+    }
+
+
+    #[DataProvider("html5EntityNames")]
+    public function testLenientModeReadsEveryHtml5NameOfACharacter(string $entity, string $text): void
+    {
+        $subtitle = (new TtmlParser())->parse(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div><p begin=\"1s\" end=\"2s\">a{$entity}b</p></div></body></tt>",
+            new ReadOptions(lenient: true)
+        );
+
+        $this->assertSame($text, $subtitle->getCues()[0]->getText());
+    }
+
+
     #[DataProvider("unrecoverableTtml")]
     public function testTtmlThatLibxmlCannotRepairToATtRootStillThrows(string $content): void
     {
