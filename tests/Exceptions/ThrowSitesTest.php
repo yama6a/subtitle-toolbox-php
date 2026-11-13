@@ -707,6 +707,8 @@ class ThrowSitesTest extends TestCase
             "Parsers/VobSubParser.php: no palette"          => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions("# VobSub index file\nsize: 720x576\n")])),
                                                                 ...$parsing],
             "Parsers/VobSubParser.php: short palette"       => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(self::IDX . "palette: 000000\n")])), ...$parsing],
+            "Parsers/VobSubParser.php: time below -100000 hours" => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(
+                self::IDX . "id: en, index: 0\ndelay: -99999:00:00:000\ntimestamp: -99999:00:00:000, filepos: 0\n")])), ...$parsing],
             "Parsers/VobSubParser.php: invalid time"        => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(self::IDX . "delay: soon\n")])), ...$parsing],
             "Parsers/VobSubParser.php: no start code"       => [fn () => (new VobSubParser())->parse("text", new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
             "Parsers/VobSubParser.php: cut off pack header" => [fn () => (new VobSubParser())->parse("\0\0\1\xBA\x44\0", new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])),
