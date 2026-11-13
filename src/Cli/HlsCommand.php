@@ -66,7 +66,7 @@ final class HlsCommand extends FileCommand
     {
         parent::prepare($arguments);
 
-        $this->directory = $arguments->value("output-dir") ?? self::fail("Pass --output-dir DIR.");
+        $this->directory = $arguments->value("output-dir") ?: self::fail("Pass --output-dir DIR.");
         $this->playlist  = $arguments->value("playlist") ?? self::DEFAULT_PLAYLIST;
         self::checkOutputDirectory($this->directory);
 
