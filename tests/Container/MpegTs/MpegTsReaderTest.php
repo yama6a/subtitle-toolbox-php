@@ -13,6 +13,8 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngDecoder;
+use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -191,6 +193,117 @@ class MpegTsReaderTest extends TestCase
                           array_map(fn (SubtitleTrack $t): array => [$t->number, $t->language, $t->name], $reader->getSubtitleTracks()));
         $this->assertSame([[0.0, 5.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $reader->extract(150001)->getCues()));
         $this->assertSame([], $reader->extract(150000)->getCues());
+    }
+
+
+    /**
+     * @return array<string, array{int}>
+     */
+    public static function repeatedPackets(): array
+    {
+        return ["the first teletext packet" => [3], "a packet inside a PES packet" => [4]];
+    }
+
+
+    /**
+     * ISO/IEC 13818-1 section 2.4.3.3: a packet sent twice in a row has the same continuity counter, and the receiver drops the copy.
+     */
+    #[DataProvider("repeatedPackets")]
+    public function testDropsAPacketThatRepeatsThePreviousPacketOfItsPid(int $index): void
+    {
+        $file     = file_get_contents(self::DIR . "teletext.ts");
+        $repeated = substr($file, 0, ($index + 1) * 188) . substr($file, $index * 188, 188) . substr($file, ($index + 1) * 188);
+
+        $this->assertSame(self::cues(MpegTsReader::open(self::DIR . "teletext.ts")->extract(888)),
+                          self::cues(MpegTsReader::open(self::stream($repeated))->extract(888)));
+    }
+
+
+    public function testKeepsAPacketWithTheCounterOfThePreviousPacketAndAnotherPayload(): void
+    {
+        $writer = self::writer([["eng", TsFixtureWriter::SUBTITLE_PAGE, 888]]);
+        $writer->teletextPes(self::PID, 90000, [TsFixtureWriter::header(888, true), TsFixtureWriter::row(888, 22, "\x0B\x0BFirst.")]);
+        $writer->teletextPes(self::PID, 180000, [TsFixtureWriter::header(888, true), TsFixtureWriter::row(888, 22, "\x0B\x0BSecond.")]);
+        $file          = $writer->bytes();
+        $file[564 + 3] = chr(ord($file[564 + 3]) & 0xF0 | ord($file[376 + 3]) & 0x0F);
+
+        $this->assertSame([[0.0, 1.0, ["First."]], [1.0, 6.0, ["Second."]]], self::cues(MpegTsReader::open(self::stream($file))->extract(888)));
+    }
+
+
+    /**
+     * A recording that starts in the middle of a video PES packet has a video packet without the payload unit start flag first.
+     */
+    public function testTakesTheZeroPointFromTheFirstPesPacketOfAnotherStream(): void
+    {
+        $file     = file_get_contents(self::DIR . "teletext.ts");
+        $video    = substr($file, 2 * 188, 188);
+        $video[1] = chr(ord($video[1]) & ~0x40);
+        $file     = substr($file, 0, 2 * 188) . $video . substr($file, 2 * 188);
+
+        $cues = self::cues(MpegTsReader::open(self::stream($file))->extract(888));
+        $this->assertSame([0.5, 3.0], array_slice($cues[0], 0, 2));
+        $this->assertSame(self::cues(MpegTsReader::open(self::DIR . "teletext.ts")->extract(888)), $cues);
+    }
+
+
+    /**
+     * @return array<string, array{int, list<int>}>
+     */
+    public static function tableScanEnds(): array
+    {
+        return ["a PMT that starts at byte 33,554,428" => [178480, [888]], "a PMT that starts at byte 33,554,616" => [178481, []]];
+    }
+
+
+    #[DataProvider("tableScanEnds")]
+    public function testEndsTheTableScanAtAPacketThatStartsAt32MiB(int $nullPackets, array $numbers): void
+    {
+        $tables = self::writer([["eng", TsFixtureWriter::SUBTITLE_PAGE, 888]])->bytes();
+        $stream = fopen("php://temp", "w+b");
+        fwrite($stream, substr($tables, 0, 188) . str_repeat("\x47\x1F\xFF\x10" . str_repeat("\xFF", 184), $nullPackets) . substr($tables, 188));
+        rewind($stream);
+
+        $this->assertSame($numbers, array_map(fn (SubtitleTrack $track): int => $track->number, MpegTsReader::open($stream)->getSubtitleTracks()));
+    }
+
+
+    public function testEndsADvbSubtitlingEntryAtTheEndOfItsDescriptor(): void
+    {
+        $writer = new TsFixtureWriter();
+        $writer->tables(1, TsFixtures::PMT_PID, 0x0801, [[0x0801, 0x06, "\x59\x06eng\x20\x00\x02" . TsFixtureWriter::subtitlingDescriptor([["fra", 0x10, 2, 2]])]]);
+        $writer->subtitlePes(0x0801, 90000, "");
+
+        $this->assertSame([[2049, "fra", null]], array_map(fn (SubtitleTrack $t): array => [$t->number, $t->language, $t->name],
+                                                           MpegTsReader::open(self::stream($writer->bytes()))->getSubtitleTracks()));
+    }
+
+
+    public function testThrowsForADvbSubtitleTimeOf100000HoursOrLater(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The cue times of track 2049 reach 360025633.587 s. Times must be below 100000 hours.");
+
+        MpegTsReader::open(self::stream(TsFixtures::dvbSubtitlesPastTheTimeLimit()))->extract(2049);
+    }
+
+
+    public function testLenientModeSkipsADvbSubtitleRegionPastThePixelLimitOfTheRegions(): void
+    {
+        $writer = new TsFixtureWriter();
+        $writer->tables(1, TsFixtures::PMT_PID, 0x0801, [[0x0801, 0x06, TsFixtureWriter::subtitlingDescriptor([["eng", 0x10, 1, 1]])]]);
+        $writer->subtitlePes(0x0801, 90000, "\x0F\x11\0\1\0\x0A" . pack("CCnnCCCC", 0, 0x0F, 3840, 2160, 0x6C, 0, 0, 0)
+                                             . "\x0F\x11\0\1\0\x0A" . pack("CCnnCCCC", 1, 0x0F, 1, 1, 0x68, 0, 0, 0));
+        $message = "Cannot read region 1: the regions hold more than 8294400 pixels in total.";
+
+        $subtitle = MpegTsReader::open(self::stream($writer->bytes()))->extract(2049, new ReadOptions(lenient: true));
+        $this->assertSame([], $subtitle->getCues());
+        $this->assertSame([[$message, null, 1, ParseWarningAction::Skipped]],
+                          array_map(fn (ParseWarning $w): array => [$w->message, $w->lineNumber, $w->blockIndex, $w->action], $subtitle->getParseWarnings()));
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage($message);
+        MpegTsReader::open(self::stream($writer->bytes()))->extract(2049);
     }
 
 

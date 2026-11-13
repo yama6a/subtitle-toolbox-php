@@ -17,6 +17,7 @@ use SubtitleToolbox\Container\Mp4\Mp4FixtureWriter;
 use SubtitleToolbox\Container\Mp4\Mp4Reader;
 use SubtitleToolbox\Container\MpegTs\MpegTsReader;
 use SubtitleToolbox\Container\MpegTs\TeletextCharacters;
+use SubtitleToolbox\Container\MpegTs\TsFixtures;
 use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\Dependency;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
@@ -128,6 +129,7 @@ use SubtitleToolbox\WriteOptions;
 
 require_once __DIR__ . "/../files/mkv/generator/MkvFixtureWriter.php";
 require_once __DIR__ . "/../files/mp4/generator/Mp4FixtureWriter.php";
+require_once __DIR__ . "/../files/mpegts/generator/TsFixtures.php";
 require_once __DIR__ . "/../Http/FakeHttpClient.php";
 require_once __DIR__ . "/../Http/LocalServer.php";
 require_once __DIR__ . "/../Http/WithoutCurl.php";
@@ -348,6 +350,8 @@ class ThrowSitesTest extends TestCase
             "Container/MpegTs/MpegTsReader.php: stream not seekable" => [fn () => MpegTsReader::open(fopen("php://output", "wb")), ...$invalid],
             "Container/MpegTs/MpegTsReader.php: unknown track" => [fn () => MpegTsReader::open(self::FILES . "mpegts/one_page.ts")->extract(100), ...$invalid],
             "Container/MpegTs/MpegTsReader.php: not MPEG-TS" => [fn () => MpegTsReader::open(self::stream(str_repeat("\0", 400))), ...$parsing],
+            "Container/MpegTs/MpegTsReader.php: cue time limit" => [fn () => MpegTsReader::open(self::stream(TsFixtures::dvbSubtitlesPastTheTimeLimit()))->extract(2049),
+                                                                    ...$parsing],
             "Container/MpegTs/TeletextCharacters.php: Arabic set" => [fn () => TeletextCharacters::g0(10, 7, 888), ...$parsing],
             "Container/Mp4/Mp4Reader.php: stream not seekable" => [fn () => Mp4Reader::open(fopen("php://output", "wb")), ...$invalid],
             "Container/Mp4/Mp4Reader.php: encrypted track" => [fn () => Mp4Reader::open(self::FILES . "mp4/text_tracks.mp4")->extract(5), ...$parsing],
