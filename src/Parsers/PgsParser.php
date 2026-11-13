@@ -84,33 +84,35 @@ final class PgsParser extends SubtitleParser
         $length  = strlen($content);
         $offset  = 0;
         $segment = 0;
-        $cutOff  = false;
         while ($offset < $length) {
             try {
                 self::checkSegment($content, $offset);
             } catch (ParsingException $exception) {
                 // Lenient mode keeps the cues before the damage, which is usually the end of a cut-off file.
-                $this->fail($exception, null, $segment, []);
-                $cutOff = true;
+                $this->skipDisplaySet($exception, $segment);
                 break;
             }
 
             ["pts" => $pts, "type" => $type, "size" => $size] = unpack("Npts/Ndts/Ctype/nsize", $content, $offset + 2);
             $data    = substr($content, $offset + self::HEADER_LENGTH, $size);
-            $segment++;
             $offset += self::HEADER_LENGTH + $size;
 
-            match ($type) {
-                self::SEGMENT_PRESENTATION => $this->readPresentation($pts, $data),
-                self::SEGMENT_WINDOW       => $this->readWindows($data),
-                self::SEGMENT_PALETTE      => $this->readPalette($data),
-                self::SEGMENT_OBJECT       => $this->readObject($data),
-                self::SEGMENT_END          => $this->endDisplaySet(),
-                default                    => null,
-            };
+            try {
+                match ($type) {
+                    self::SEGMENT_PRESENTATION => $this->readPresentation($pts, $data, $segment),
+                    self::SEGMENT_WINDOW       => $this->readWindows($data),
+                    self::SEGMENT_PALETTE      => $this->readPalette($data),
+                    self::SEGMENT_OBJECT       => $this->readObject($data),
+                    self::SEGMENT_END          => $this->endDisplaySet(),
+                    default                    => null,
+                };
+            } catch (ParsingException $exception) {
+                $this->skipDisplaySet($exception, $segment);
+            }
+            $segment++;
         }
 
-        $this->endDisplaySet($cutOff);
+        $this->endDisplaySet();
         if ($this->shownImage !== null) {
             $this->addCue($this->shownImage["start"] + $this->options->lastCueDuration);
         }
@@ -139,9 +141,24 @@ final class PgsParser extends SubtitleParser
     }
 
 
-    private function readPresentation(int $pts, string $data): void
+    /**
+     * Throws in strict mode. In lenient mode it records the warning, and the open display set ends the shown cue and
+     * shows nothing.
+     */
+    private function skipDisplaySet(ParsingException $exception, int $segment): void
+    {
+        $this->fail($exception, null, $segment, []);
+        if ($this->presentation !== null) {
+            $this->presentation["damaged"] = true;
+        }
+    }
+
+
+    private function readPresentation(int $pts, string $data, int $segment): void
     {
         $this->endDisplaySet();
+        // Damage in the rest of the segment skips the display set, which then still ends the shown cue at this time.
+        $this->presentation = ["time" => $this->seconds($pts), "segment" => $segment, "damaged" => false];
 
         if (strlen($data) < self::PRESENTATION_HEADER) {
             throw new ParsingException("The presentation composition segment at " . $this->seconds($pts) . " s is cut off.");
@@ -173,8 +190,7 @@ final class PgsParser extends SubtitleParser
             $references[] = $reference;
         }
 
-        $this->presentation = [
-            "time"         => $this->seconds($pts),
+        $this->presentation += [
             "screenWidth"  => $header["screenWidth"],
             "screenHeight" => $header["screenHeight"],
             "paletteId"    => $header["paletteId"],
@@ -226,18 +242,26 @@ final class PgsParser extends SubtitleParser
 
 
     /**
-     * Shows the image of the display set. A display set that the damage cut off ends the shown cue and shows nothing,
-     * as a decoder shows a display set at its end segment.
+     * Shows the image of the display set. A damaged display set ends the shown cue and shows nothing,
+     * as a decoder shows a display set only at its end segment.
      */
-    private function endDisplaySet(bool $cutOff = false): void
+    private function endDisplaySet(): void
     {
         if ($this->presentation === null) {
             return;
         }
 
-        $time               = $this->presentation["time"];
-        $image              = $cutOff ? null : $this->render($this->presentation);
+        $presentation       = $this->presentation;
+        $time               = $presentation["time"];
+        $image              = null;
         $this->presentation = null;
+        if (!$presentation["damaged"]) {
+            try {
+                $image = $this->render($presentation);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, null, $presentation["segment"], []);
+            }
+        }
 
         if ($this->shownImage !== null) {
             if ($image == $this->shownImage["image"]) {
@@ -252,7 +276,9 @@ final class PgsParser extends SubtitleParser
 
     private function addCue(float $end): void
     {
-        $this->cues[]     = IndexedImages::cue($this->shownImage["start"], $end, $this->shownImage["image"]);
+        $start            = $this->shownImage["start"];
+        // A display set with an earlier time, from damage or a muxer that restarts the clock, ends the cue at its start.
+        $this->cues[]     = IndexedImages::cue($start, max($start, $end), $this->shownImage["image"]);
         $this->shownImage = null;
     }
 
@@ -296,7 +322,12 @@ final class PgsParser extends SubtitleParser
             return null;
         }
 
-        return IndexedImages::cueImage($parts, $presentation["screenWidth"], $presentation["screenHeight"], $forced);
+        try {
+            return IndexedImages::cueImage($parts, $presentation["screenWidth"], $presentation["screenHeight"], $forced);
+        } catch (InvalidArgumentException $exception) {
+            // The CueImage constructor rejects a screen size of 0. Here the file is wrong, not the call.
+            throw new ParsingException($exception->getMessage(), null, $exception);
+        }
     }
 
 

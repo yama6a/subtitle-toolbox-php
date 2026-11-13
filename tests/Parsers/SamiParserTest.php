@@ -326,4 +326,13 @@ class SamiParserTest extends TestCase
         $this->assertGreaterThan(1_000_000, strlen($large));
         $this->assertSame($read($content), $read($large));
     }
+
+
+    public function testALastCueStopsAtTheLastMillisecondBelowTheLimit(): void
+    {
+        $cue = Subtitle::fromString("<SAMI><BODY><SYNC Start=359999997000><P>x</BODY></SAMI>", Format::Sami)->getCues()[0];
+
+        $this->assertSame(359999997.0, $cue->getStart());
+        $this->assertSame(359999999.999, $cue->getEnd());
+    }
 }
