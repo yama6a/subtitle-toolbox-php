@@ -21,6 +21,11 @@ final class QuickTimeTextParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::QuickTimeText->value;
 
+    /**
+     * @internal
+     */
+    public const HEADER_REGEX = '/^\s*\{QTtext\}/i';
+
 
     protected function read(string $content): Subtitle
     {
@@ -40,9 +45,14 @@ final class QuickTimeTextParser extends SubtitleParser
         $previous = 0.0;
         $paired   = false;
         $blank    = false;
+        // The text after a skipped timestamp belongs to no sample, so lenient mode skips it up to the next timestamp.
+        $skipping = false;
         foreach ($lines as $offset => $line) {
             $lineNumber = count($header) + $offset + 1;
             if (!preg_match(QuickTimeText::TIMESTAMP_REGEX, trim($line), $matches)) {
+                if ($skipping) {
+                    continue;
+                }
                 $blank = $blank || (trim($line) === "" && count($samples) > 1 && end($samples)["lines"] === []);
                 if (trim($line) !== "" && $samples !== []) {
                     $samples[array_key_last($samples)]["lines"][] = $line;
@@ -52,11 +62,16 @@ final class QuickTimeTextParser extends SubtitleParser
             }
 
             try {
-                $time = $this->time($matches, $timeScale, $lineNumber) + ($relative ? $previous : 0.0);
+                $time = $this->time($matches, $timeScale, $lineNumber);
+                if ($relative) {
+                    $time = self::boundedTime(Timecode::roundToMilliseconds($previous + $time), trim($matches[0], "[]"), $lineNumber);
+                }
             } catch (ParsingException $exception) {
                 $this->fail($exception, $lineNumber, null, [$line]);
+                $skipping = true;
                 continue;
             }
+            $skipping  = false;
             // Subtitle Edit writes an empty line after the end timestamp of each cue.
             $paired    = $paired || $blank;
             $blank     = false;
@@ -99,7 +114,7 @@ final class QuickTimeTextParser extends SubtitleParser
      */
     private function checkHeader(array $header): void
     {
-        if (preg_match('/^\s*\{QTtext\}/i', $header[0] ?? "")) {
+        if (preg_match(self::HEADER_REGEX, $header[0] ?? "")) {
             return;
         }
 
@@ -127,22 +142,43 @@ final class QuickTimeTextParser extends SubtitleParser
 
 
     /**
+     * Without a time scale, the fraction is a decimal fraction of any length, so 0.9999999999999999999 s reads as 1 s.
+     *
      * @param array<int, string> $matches the groups of TIMESTAMP_REGEX
      */
     private function time(array $matches, ?int $timeScale, int $lineNumber): float
     {
+        $text     = trim($matches[0], "[]");
         $fraction = $matches[4] ?? "";
-        $units    = $timeScale ?? 10 ** strlen($fraction);
-        if ($fraction !== "" && (int) $fraction >= $units) {
-            $message = "The timestamp \"$matches[0]\" counts $fraction units, but the time scale is $units per second.";
+        if ($timeScale === null) {
+            $seconds = Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $fraction);
+
+            return self::boundedTime(Timecode::roundToMilliseconds($seconds), $text, $lineNumber);
+        }
+
+        if ((int) $fraction >= $timeScale) {
+            $message = "The timestamp \"$matches[0]\" counts $fraction units, but the time scale is $timeScale per second.";
             if (!$this->options->lenient) {
                 throw new ParsingException($message, $lineNumber);
             }
             $this->warn("$message The parser added them to the seconds.", $lineNumber, null, [$matches[0]], ParseWarningAction::Repaired);
         }
 
-        $seconds = (int) $matches[1] * 3600 + (int) $matches[2] * 60 + (int) $matches[3] + ($fraction === "" ? 0 : (int) $fraction / $units);
+        // A huge hour count overflows the int to a float, and boundedTime() rejects it.
+        $wholeSeconds = (int) $matches[1] * 3600 + (int) $matches[2] * 60 + (int) $matches[3];
 
-        return self::boundedTime(Timecode::roundToMilliseconds($seconds), trim($matches[0], "[]"), $lineNumber);
+        return self::boundedTime(self::scaledSeconds($wholeSeconds, (int) $fraction, $timeScale), $text, $lineNumber);
+    }
+
+
+    /**
+     * Returns the time of a timestamp that counts $units of the time scale after $wholeSeconds, in whole milliseconds.
+     * The formatter uses it to know the time that the parser reads for a timestamp it writes.
+     *
+     * @internal
+     */
+    public static function scaledSeconds(int|float $wholeSeconds, int $units, int $timeScale): float
+    {
+        return Timecode::roundToMilliseconds($wholeSeconds + $units / $timeScale);
     }
 }

@@ -117,4 +117,11 @@ class SubViewerParserTest extends TestCase
         (new SubViewerParser())->parse("Ferry times\n******** START SCRIPT ********\n[00:00:02]\nHello\n", new ReadOptions());
     }
 
+
+    public function testSubViewer1CueWithoutEndLineEndsAtTheNextCueThatDoesNotStartBeforeIt(): void
+    {
+        $subtitle = (new SubViewerParser())->parse("******** START SCRIPT ********\n[00:00:05]\nA\n[00:00:03]\nB\n[00:00:09]\n\n", new ReadOptions());
+
+        $this->assertSame([[3.0, 9.0], [5.0, 10.0]], TestSubtitles::times($subtitle));
+    }
 }

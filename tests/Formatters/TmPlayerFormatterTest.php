@@ -64,4 +64,18 @@ class TmPlayerFormatterTest extends TestCase
         $this->assertSame("99999:59:59:x\n", $output);
         $this->assertSame(359999999.0, Subtitle::fromString($output, Format::TmPlayer)->getCues()[0]->getStart());
     }
+
+
+    public function testALineFeedAndABarInsideALineReadBackAsOneLineEach(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 2, ["a\nb", "Rock | Pop"]))
+            ->addCue(new SubtitleCue(3, 4, ["|"]));
+        $output = $subtitle->toString(Format::TmPlayer);
+
+        $this->assertSame("00:00:01:a|b|Rock \u{00A6} Pop\n00:00:02:\n00:00:03:\u{00A6}\n", $output);
+        $cues = Subtitle::fromString($output, Format::TmPlayer)->getCues();
+        $this->assertCount(2, $cues);
+        $this->assertSame(["a", "b", "Rock \u{00A6} Pop"], $cues[0]->getLines());
+    }
 }

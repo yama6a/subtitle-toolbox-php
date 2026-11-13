@@ -10,6 +10,7 @@ use SubtitleToolbox\Parsers\QuickTimeText;
 use SubtitleToolbox\Parsers\QuickTimeTextParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
 final class QuickTimeTextFormatter extends SubtitleFormatter
@@ -23,63 +24,122 @@ final class QuickTimeTextFormatter extends SubtitleFormatter
         "{timestamps:absolute} {language:0}",
     ];
 
+    private const LIMIT_MILLISECONDS = Timecode::MAX_HOURS * 3600 * 1000;
+
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
         $fileData  = $subtitle->findFormatData(QuickTimeTextParser::FORMAT_DATA_KEY);
-        $header    = $fileData["header"] ?? self::DEFAULT_HEADER;
+        $header    = isset($fileData["header"]) ? self::readableHeader($fileData["header"]) : self::DEFAULT_HEADER;
         $paired    = !isset($fileData["header"]) || ($fileData["pairedTimestamps"] ?? false);
-        $timeScale = QuickTimeTextParser::timeScale($header);
+        $perSecond = QuickTimeTextParser::timeScale($header) ?? 1000;
         $relative  = strtolower(QuickTimeText::findDescriptor($header, "timeStamps") ?? "") === "relative";
         $style     = QuickTimeText::PLAIN;
         QuickTimeText::readLines($header, $style);
 
         $output   = implode("", array_map(fn (string $line): string => $line . LineEnding::Lf->value, $header));
+        $position = 0;
+        $started  = false;
         // QuickTime writes samples from the start of the track, so a gap before the first cue is an empty sample.
-        $previous = $paired || ($subtitle->getCues()[0] ?? null)?->getStart() <= 0 ? null : 0.0;
-        $output  .= $previous === null ? "" : $this->timestamp(0.0, $timeScale) . LineEnding::Lf->value;
+        if (!$paired && ($subtitle->getCues()[0] ?? null)?->getStart() > 0) {
+            [$timestamp, $position] = $this->timestamp(0.0, $perSecond, $relative, $position);
+            $output .= $timestamp;
+            $started = true;
+        }
         foreach ($subtitle->getCues() as $cue) {
             $start = max(0.0, $cue->getStart());
             $end   = max($start, $cue->getEnd());
-            if ($paired || $previous === null || $this->units($start, $timeScale) !== $this->units($previous, $timeScale)) {
-                $output  .= $this->timestamp($start - ($relative ? $previous ?? 0.0 : 0.0), $timeScale) . LineEnding::Lf->value;
-                $previous = $start;
+            [$timestamp, $startPosition] = $this->timestamp($start, $perSecond, $relative, $position);
+            // Without its own timestamp, the sample starts at the end timestamp of the cue before it.
+            if ($paired || !$started || $startPosition !== $position) {
+                $output  .= $timestamp;
+                $position = $startPosition;
             }
+            $started = true;
             foreach ($this->textLines($cue, $style) as $line) {
                 $output .= $line . LineEnding::Lf->value;
             }
-            $output  .= $this->timestamp($end - ($relative ? $previous : 0.0), $timeScale) . LineEnding::Lf->value;
-            $output  .= $paired ? LineEnding::Lf->value : "";
-            $previous = $end;
+            [$timestamp, $position] = $this->timestamp($end, $perSecond, $relative, $position);
+            $output .= $timestamp . ($paired ? LineEnding::Lf->value : "");
         }
 
         return $this->applyOutputOptions($output, $options);
     }
 
 
-    private function units(float $seconds, ?int $timeScale): int
+    /**
+     * Returns the stored header in a form that the parser reads back: a CR or LF becomes a space, a line that reads as
+     * a timestamp drops out, and {QTtext} comes first.
+     *
+     * @param list<string> $header
+     *
+     * @return list<string>
+     */
+    private static function readableHeader(array $header): array
     {
-        return (int) round($seconds * ($timeScale ?? 1000));
+        $lines = [];
+        foreach ($header as $line) {
+            $line = str_replace(["\r", "\n"], " ", $line);
+            if (!preg_match(QuickTimeText::TIMESTAMP_REGEX, trim($line))) {
+                $lines[] = $line;
+            }
+        }
+
+        return preg_match(QuickTimeTextParser::HEADER_REGEX, $lines[0] ?? "") ? $lines : ["{QTtext}", ...$lines];
     }
 
 
     /**
-     * Writes [hh:mm:ss.ff], where ff counts units of the time scale. Without a time scale, it writes milliseconds.
+     * Returns the timestamp line of $seconds, [hh:mm:ss.ff] where ff counts units of the time scale, and the
+     * milliseconds that the parser reaches with it. $position is the time that the parser reaches after the timestamps
+     * before it. A relative timestamp counts from $position, so a rounding error or an overlap of cues does not move
+     * the later cues.
+     *
+     * @return array{string, int}
      */
-    private function timestamp(float $seconds, ?int $timeScale): string
+    private function timestamp(float $seconds, int $perSecond, bool $relative, int $position): array
     {
-        $perSecond = $timeScale ?? 1000;
-        $units     = $this->units(max(0.0, $seconds), $timeScale);
+        $from  = $relative ? $position : 0;
+        // unitsBelowLimit() stops at the last unit below 100000 hours. A unit shorter than half a millisecond there
+        // reads as 100000 hours, so the time stops at LAST_TIME first.
+        $units = $this->units(Timecode::totalMilliseconds(min($seconds, Timecode::LAST_TIME)) - $from, $perSecond);
+        // The parser rejects a relative timestamp that takes the sum to 100000 hours. Half a unit of rounding can do that.
+        if ($units > 0 && $from + $this->readMilliseconds($units, $perSecond) >= self::LIMIT_MILLISECONDS) {
+            $units--;
+        }
         $whole     = intdiv($units, $perSecond);
-
-        return sprintf(
+        $timestamp = sprintf(
             "[%02d:%02d:%02d.%0" . max(1, strlen((string) ($perSecond - 1))) . "d]",
             intdiv($whole, 3600),
             intdiv($whole, 60) % 60,
             $whole % 60,
             $units % $perSecond
         );
+
+        return [$timestamp . LineEnding::Lf->value, $from + $this->readMilliseconds($units, $perSecond)];
+    }
+
+
+    /**
+     * Returns $milliseconds in units of the time scale, at least 0. unitsBelowLimit() multiplies the milliseconds by
+     * twice the time scale. So above about 12.8 million units per second, the time stops where that product still
+     * fits in an int. A time scale of PHP_INT_MAX writes every time as 0.
+     */
+    private function units(int $milliseconds, int $perSecond): int
+    {
+        $last = intdiv(intdiv(PHP_INT_MAX - 1000, 2), $perSecond);
+
+        return Timecode::unitsBelowLimit(min(max(0, $milliseconds), $last) / 1000, $perSecond);
+    }
+
+
+    /**
+     * Returns the milliseconds that the parser reads for a timestamp of $units.
+     */
+    private function readMilliseconds(int $units, int $perSecond): int
+    {
+        return Timecode::totalMilliseconds(QuickTimeTextParser::scaledSeconds(intdiv($units, $perSecond), $units % $perSecond, $perSecond));
     }
 
 
