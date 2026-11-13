@@ -151,11 +151,12 @@ final class SubViewerParser extends SubtitleParser
             self::endLastCue($entries, $pendingTime);
         }
 
-        $checked = [];
+        $nextStarts = self::nextStartsNotBefore($entries);
+        $checked    = [];
         foreach ($entries as $index => $entry) {
             $cue = $entry["cue"];
             if (!$entry["endedByTimeLine"]) {
-                $cue->setEnd(isset($entries[$index + 1]) ? $entries[$index + 1]["cue"]->getStart() : Timecode::lastCueEnd($cue->getStart(), $this->options->lastCueDuration));
+                $cue->setEnd($nextStarts[$index] ?? Timecode::lastCueEnd($cue->getStart(), $this->options->lastCueDuration));
                 $checked[] = $cue;
                 continue;
             }
@@ -168,6 +169,31 @@ final class SubViewerParser extends SubtitleParser
         }
 
         return $checked;
+    }
+
+
+    /**
+     * Returns, for each entry, the start of the next entry that does not start before it. An entry without such a successor has no key.
+     *
+     * @param list<array{cue: SubtitleCue, endedByTimeLine: bool, timeLineNumber: int, timeLine: string}> $entries
+     * @return array<int, float>
+     */
+    private static function nextStartsNotBefore(array $entries): array
+    {
+        $next  = [];
+        $stack = [];
+        for ($index = count($entries) - 1; $index >= 0; $index--) {
+            $start = $entries[$index]["cue"]->getStart();
+            while ($stack !== [] && $stack[array_key_last($stack)] < $start) {
+                array_pop($stack);
+            }
+            if ($stack !== []) {
+                $next[$index] = $stack[array_key_last($stack)];
+            }
+            $stack[] = $start;
+        }
+
+        return $next;
     }
 
 

@@ -130,4 +130,16 @@ class LyricsFormatterTest extends TestCase
 
         $this->assertSame("\u{feff}[00:01.00] Text\n", $subtitle->toString(Format::Lyrics));
     }
+
+
+    public function testALineFeedInsideALineBecomesASpace(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 2, ["a\nb"]))
+            ->addCue(new SubtitleCue(3, 4, ["c"]));
+        $cues = Subtitle::fromString($subtitle->toString(Format::Lyrics), Format::Lyrics)->getCues();
+
+        $this->assertSame(["a b"], $cues[0]->getLines());
+        $this->assertSame(["c"], $cues[1]->getLines());
+    }
 }

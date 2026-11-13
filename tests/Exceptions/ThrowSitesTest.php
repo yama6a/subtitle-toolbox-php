@@ -38,11 +38,13 @@ use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
+use SubtitleToolbox\Hls\HlsWebVttJoiner;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Hls\TimestampMap;
 use SubtitleToolbox\Http\CurlHttpClient;
 use SubtitleToolbox\Http\FakeHttpClient;
 use SubtitleToolbox\Http\WithoutCurl;
+use SubtitleToolbox\Http\LocalServer;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PaletteReducer;
 use SubtitleToolbox\Image\PngDecoder;
@@ -129,6 +131,7 @@ require_once __DIR__ . "/../files/mkv/generator/MkvFixtureWriter.php";
 require_once __DIR__ . "/../files/mp4/generator/Mp4FixtureWriter.php";
 require_once __DIR__ . "/../files/mpegts/generator/TsFixtures.php";
 require_once __DIR__ . "/../Http/FakeHttpClient.php";
+require_once __DIR__ . "/../Http/LocalServer.php";
 require_once __DIR__ . "/../Http/WithoutCurl.php";
 
 class ThrowSitesTest extends TestCase
@@ -452,10 +455,18 @@ class ThrowSitesTest extends TestCase
 
                 return $subtitle->toString(Format::GoogleSpeech);
             }, ...$unwritable],
+            "Formatters/Cavena890Formatter.php: subtitle number 65536" => [function (): string {
+                $subtitle = Subtitle::fromString((new Subtitle())->addCue(new SubtitleCue(1, 2, "One"))->toString(Format::Cavena890), Format::Cavena890);
+                $cue      = $subtitle->getCues()[0];
+                $block    = substr_replace(hex2bin($cue->findFormatData(Cavena890Parser::FORMAT_DATA_KEY)["blocks"][0]), "\xFF\xFF", 0, 2);
+                $cue->setFormatData(Cavena890Parser::FORMAT_DATA_KEY, ["text" => "One", "blocks" => [bin2hex($block)]]);
+
+                return $subtitle->addCue(new SubtitleCue(3, 4, "Two"))->toString(Format::Cavena890);
+            }, ...$unwritable],
             "Parsers/Cavena890Variant.php: line of 52 bytes" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 52)))
                 ->toString(Format::Cavena890), ...$unwritable],
-            "Formatters/PacFormatter.php: subtitle number 65536" => [fn () => self::subtitle()->setFormatData("pac", ["firstNumber" => 65536])
-                ->toString(Format::Pac), ...$unwritable],
+            "Formatters/PacFormatter.php: subtitle number 65536" => [fn () => TestSubtitles::fromCues([[1, 2, ["One"]], [3, 4, ["Two"]]])
+                ->setFormatData("pac", ["firstNumber" => 65535])->toString(Format::Pac), ...$unwritable],
             "Formatters/PacFormatter.php: text too long" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 70000)))
                 ->toString(Format::Pac), ...$unwritable],
             "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->toString(Format::Pgs), ...$unwritable],
@@ -483,6 +494,7 @@ class ThrowSitesTest extends TestCase
             "Hls/HlsSegmentOptions.php: segment duration 0" => [fn () => new HlsSegmentOptions(segmentDuration: 0), ...$invalid],
             "Hls/HlsSegmentOptions.php: no %d in pattern"   => [fn () => new HlsSegmentOptions(fileNamePattern: "sub.vtt"), ...$invalid],
             "Hls/HlsSegmentOptions.php: media duration 0"   => [fn () => new HlsSegmentOptions(mediaDuration: 0), ...$invalid],
+            "Hls/HlsWebVttJoiner.php: stream start above 33 bits" => [fn () => HlsWebVttJoiner::join([], TimestampMap::MPEGTS_WRAP), ...$invalid],
             "Hls/HlsWebVttSegmenter.php: no duration"       => [fn () => HlsWebVttSegmenter::segment(new Subtitle()), ...$invalid],
             "Hls/TimestampMap.php: MPEGTS above 33 bits"    => [fn () => new TimestampMap(TimestampMap::MPEGTS_WRAP), ...$invalid],
             "Hls/TimestampMap.php: negative LOCAL"          => [fn () => new TimestampMap(0, -1), ...$invalid],
@@ -699,6 +711,8 @@ class ThrowSitesTest extends TestCase
             "Parsers/VobSubParser.php: no palette"          => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions("# VobSub index file\nsize: 720x576\n")])),
                                                                 ...$parsing],
             "Parsers/VobSubParser.php: short palette"       => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(self::IDX . "palette: 000000\n")])), ...$parsing],
+            "Parsers/VobSubParser.php: time below -100000 hours" => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(
+                self::IDX . "id: en, index: 0\ndelay: -99999:00:00:000\ntimestamp: -99999:00:00:000, filepos: 0\n")])), ...$parsing],
             "Parsers/VobSubParser.php: invalid time"        => [fn () => (new VobSubParser())->parse("", new ReadOptions(formats: [new VobSubReadOptions(self::IDX . "delay: soon\n")])), ...$parsing],
             "Parsers/VobSubParser.php: no start code"       => [fn () => (new VobSubParser())->parse("text", new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])), ...$parsing],
             "Parsers/VobSubParser.php: cut off pack header" => [fn () => (new VobSubParser())->parse("\0\0\1\xBA\x44\0", new ReadOptions(formats: [new VobSubReadOptions(self::IDX_WITH_TRACK)])),
@@ -787,6 +801,9 @@ class ThrowSitesTest extends TestCase
             "Sync/SpeechReference.php: silence end first"   => [fn () => SpeechReference::fromFfmpegSilencedetect("silence_end: 1", 9),
                                                                 ...$parsing],
             "Sync/SpeechReference.php: invalid interval"    => [fn () => SpeechReference::fromIntervals([[2, 1]]), ...$invalid],
+            "Sync/SpeechReference.php: media duration past the limit" => [fn () => SpeechReference::fromFfmpegSilencedetect("", 1e12),
+                                                                ...$invalid],
+            "Sync/SpeechReference.php: interval past the limit" => [fn () => SpeechReference::fromIntervals([[0, 1e12]]), ...$invalid],
             "TextTransforms.php: empty search"              => [fn () => self::subtitle()->replaceText("", "x"), ...$invalid],
             "TextTransforms.php: invalid regex"             => [fn () => self::subtitle()->replaceText("/[/", "x", new ReplaceTextOptions(regex: true)), ...$invalid],
             "Timecode.php: drop frame at 25 fps"            => [fn () => Timecode::frameNumber(0, new FrameRate(25), true), ...$invalid],
@@ -796,9 +813,18 @@ class ThrowSitesTest extends TestCase
             "Timing/ShotChangeOptions.php: negative minimum duration" => [fn () => new ShotChangeOptions(24, minDurationFrames: -1),
                                                                 ...$invalid],
             "Timing/ShotChanges.php: line without a time"   => [fn () => ShotChanges::fromText("abc"), ...$parsing],
+            "Timing/ShotChanges.php: log time past the limit" => [fn () => ShotChanges::fromFfmpegLog("pts_time:360000000"), ...$parsing],
             "Http/CurlHttpClient.php: no curl extension"    => [fn () => throw WithoutCurl::exception("new " . CurlHttpClient::class . "();"),
                                                                 ...$invalid],
             "Http/CurlHttpClient.php: no connection"        => [fn () => (new CurlHttpClient())->post(self::closedPortUrl(), [], ""), ...$translation],
+            "Http/CurlHttpClient.php: answer too long"      => [function () {
+                $server = LocalServer::start(__DIR__ . "/../files/translation/fake-server.php");
+                try {
+                    (new CurlHttpClient())->post("$server->url/echo?pad=1100000", [], "");
+                } finally {
+                    $server->stop();
+                }
+            }, ...$translation],
             "Translation/DeepLEngine.php: HTTP 403"         => [fn () => (new DeepLEngine(new DeepLOptions("key", httpClient: new FakeHttpClient([[403, ""]]))))
                                                                 ->translate(["a"], "en", "de"), ...$translation],
             "Translation/DeepLEngine.php: no translations"  => [fn () => (new DeepLEngine(new DeepLOptions("key", httpClient: new FakeHttpClient([[200, "{}"]]))))
@@ -836,7 +862,13 @@ class ThrowSitesTest extends TestCase
                 {
                     return [];
                 }
-            }))->translate(self::subtitle(), "en", "de"), ...$invalid],
+            }))->translate(self::subtitle(), "en", "de"), ...$translation],
+            "Translation/TranslationRunner.php: empty target language" => [fn () => (new TranslationRunner(new class implements TranslationEngine {
+                public function translate(array $texts, string $sourceLanguage, string $targetLanguage): array
+                {
+                    return $texts;
+                }
+            }))->translate(self::subtitle(), "en", " "), ...$invalid],
             "Validation/ValidationRules.php: invalid character class" => [fn () => new ValidationRules(allowedCharacters: "[z-a]"),
                 ...$invalid],
             "WriteDefaults.php: MicroDVD without a frame rate" => [fn () => self::subtitle()->toString(Format::MicroDvd), ...$invalid],

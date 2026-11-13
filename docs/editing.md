@@ -26,11 +26,12 @@ $subtitle->syncByPoints([                            // 10 s becomes 12 s, 600 s
 ```
 
 - **Negative times**: a start or end time that becomes negative becomes 0. The cue stays in the subtitle.
-- **Time limit**: a cue time must stay below 100000 hours, the limit of the parsers. A `shift()`, `scale()`, `convertFrameRate()`, `syncByPoints()` or `append()` that moves a cue end to 100000 hours or more throws `InvalidArgumentException`, for example `scale(1e300)`. The subtitle then stays as it was. `shift()` and `append()` also reject an offset of NAN or INF.
+- **Time limit**: a cue time must stay below 100000 hours, the limit of the parsers. A `shift()`, `scale()`, `convertFrameRate()`, `syncByPoints()` or `append()` that moves a cue end to 100000 hours or more throws `InvalidArgumentException`, for example `scale(1e300)`. So do `extendShortCues()`, `addLeadInOut()`, `ReferenceSync::apply()` and `ShotChangeTiming::apply()`. The check uses the end rounded to milliseconds, so an end of 359999999.9996 s fails too. The subtitle then stays as it was. `shift()` and `append()` also reject an offset of NAN or INF.
 - **Shift range**: the start time of a cue decides if `shift()` moves it. So a cue that starts before `$to` and ends after it moves as a whole. A cue that starts before `$from` stays. `$to` must be after `$from`, else `shift()` throws `InvalidArgumentException`. A cue that moves before an earlier cue changes its place in the list. Its comments move with it.
 - **Sync by points**: `syncByPoints()` moves each old time to its new time. Between 2 points it corrects the times linearly. Before the first point and after the last point it continues the correction of the nearest 2 points. 1 point shifts all cues.
 - **Point order**: the old and new times must both increase from point to point. Else `syncByPoints()` throws `InvalidArgumentException`.
 - **Cue across a point**: each start, end and word timestamp moves by the segment that holds it. So a cue across a point keeps its times in step with the speech.
+- **Rounding**: each new time rounds once to whole milliseconds, half away from zero. A cue time and a word timestamp at the same time get the same result on every PHP version. Example: `shift(0.0005)` moves 1.001 s to 1.002 s, and `scale(1.5)` moves 0.009 s to 0.014 s.
 - **Word timestamps**: these 4 methods also move the word timestamps in the cue text, such as `<00:00:02.000>`. `append()` with an offset and `withSlice()` with `$moveToZero` move them too. A word timestamp that becomes negative becomes 0.
 - **Cue boundaries**: some methods move a start or end time without moving the speech. So the word timestamps keep their times. These are `fixOverlaps()`, `extendShortCues()`, `addLeadInOut()`, `limitLongCues()`, the [shot change timing](#shot-changes-and-gaps) and the snap of `DualSubtitle`.
 - **Speech-to-text format data**: the format data of Whisper, Deepgram, AssemblyAI, AWS Transcribe and Google input is a copy of the source file. It keeps the times of the source file. Read the word times from the word timestamps in the cue text.
@@ -50,11 +51,11 @@ $subtitle->mergeSameTimeCues();                 // joins cues with the same star
 - **Merge**: the metadata and the format data of `$part1` win over those of `$part2`. The comments of both files stay before their cues. At the same place, the comments of `$part1` come first.
 - **Slice**: a cue that crosses the start or end time gets cut there. The copy keeps the metadata, the format data and the comments before the kept cues. The original stays unchanged.
 - **Split and join**: the first cue keeps its identifier. A comment before a joined cue moves before the result. An index without a cue throws `CueNotFoundException`, as in `removeCue()`.
-- **Duplicates**: `removeDuplicateCues()` joins a run of adjacent cues with the same text. Two cues join when they are identical, overlap, touch, or are at most `maxGap` seconds apart. The default `maxGap` is 0. The joined cue runs from the earliest start to the latest end. Cues with other text between them stay apart. Same-text cues also stay apart when their alignment, forced flag or format data differ, such as an ASS `Glow` event on layer 0 under a `Default` event on layer 1. A negative, NAN or INF `maxGap` throws `InvalidArgumentException`.
+- **Duplicates**: `removeDuplicateCues()` joins a run of adjacent cues with the same text. Two cues join when they are identical, overlap, touch, or are at most `maxGap` seconds apart. The default `maxGap` is 0. The joined cue runs from the earliest start to the latest end. Cues with other text between them stay apart. Same-text cues also stay apart when their alignment, position, forced flag or format data differ, such as an ASS `Glow` event on layer 0 under a `Default` event on layer 1. A negative, NAN or INF `maxGap` throws `InvalidArgumentException`.
 - **Same times**: `mergeSameTimeCues()` joins a run of adjacent cues whose start and end both differ by at most `timeTolerance` seconds from the first cue of the run. The default `timeTolerance` is 0. Example: ASS gives `- Where are you going?` and `- Home.` at 1.0 to 3.0 s as 2 events, one per speaker. Many TVs show only one of them. After the join, one cue holds both lines.
   - The joined cue keeps the start, identifier and format data of the first cue. It runs to the latest end of the run.
   - The lines keep the input order. A cue text that is already in the joined cue is not added again.
-  - Cues with another alignment or forced flag stay apart, so a sign at the top keeps its place. Other format data, such as the ASS style, does not stop a join.
+  - Cues with another alignment, position or forced flag stay apart, so a sign at the top keeps its place. A cue with a [position](subtitle.md#alignment-and-format-data) and a cue without one also stay apart. Other format data, such as the ASS style, does not stop a join.
   - Image cues, such as PGS or VobSub cues, never join. A joined cue can hold only one image.
   - The method adds no dialogue dash. `CommonErrorFixer` can add them.
   - A negative, NAN or INF `timeTolerance` throws `InvalidArgumentException`.
@@ -167,7 +168,7 @@ Resegmenter::apply($subtitle, new ResegmentOptions(mode: ResegmentMode::ByWords,
 - **`minDuration`**: `ByWords` does not use it.
 - **Times**: a new cue starts at the word timestamp of its first word. Without one, the time splits in proportion to the visible characters.
 - **Text without spaces**: text such as Japanese splits after CJK punctuation and at word timestamps.
-- **Regrouping**: `ByWords` ends a cue after a sentence end and before a pause of `maxWordGap` seconds. It also ends a cue before a word that would break a limit. It never joins words of cues with different `<v>` speakers, alignments or forced flags. Cues without word timestamps stay unchanged.
+- **Regrouping**: `ByWords` ends a cue after a sentence end and before a pause of `maxWordGap` seconds. It also ends a cue before a word that would break a limit. It never joins words of cues with different `<v>` speakers, alignments, positions or forced flags. Cues without word timestamps stay unchanged.
 - **Tags**: a core markup tag can be open at a break. It then closes at the end of the first cue and opens again in the next cue.
 - **Unchanged**: image cues and cues of one word.
 - **Cue data**: a new cue keeps the alignment, forced flag and format data of its source cue. Only the cue with the first word of a source cue keeps its identifier.
@@ -203,9 +204,10 @@ An **in-time** is the start time of a cue. An **out-time** is the end time of a 
 | An in-time up to `snapWindowFrames` frames after a shot change moves to the shot change. | shot change 62.500, cue starts 62.708 | starts 62.500 |
 | An out-time up to `snapWindowFrames` frames before a shot change ends `minGapFrames` before it. | shot change 70.000, cue ends 69.750 | ends 69.917 |
 
-- **Frames**: all cue times of the result fall on frames of `frameRate`, rounded to milliseconds.
+- **Frames**: all cue times of the result fall on frames of `frameRate`, rounded to milliseconds. A time on an exact half frame goes to the later frame, as in the formatters. So 0.58 s at 25 fps is frame 15.
+- **Time limit**: a cue end that rounds up to a frame at 100000 hours or later throws `InvalidArgumentException`. The subtitle then stays as it was. Example: an end of 359999999.99 s at 25 fps.
 - **Blocked moves**: a move does not happen when it makes a cue shorter than `minDurationFrames`. It also does not happen when it brings the cue closer than `minGapFrames` to the cue before or after it. A move that makes a short cue longer still happens.
-- **Input**: `fromFfmpegLog()` reads the `pts_time:` values. `fromText()` reads one time per line, in seconds or as `hh:mm:ss.mmm`, and skips empty lines. Both return the times sorted, without duplicates.
+- **Input**: `fromFfmpegLog()` reads the `pts_time:` values. `fromText()` reads one time per line, in seconds or as `hh:mm:ss.mmm`, and skips empty lines. Both return the times sorted, without duplicates. Both throw `ParsingException` with the line for a time of 100000 hours or more.
 
 ### Closing gaps
 Example at 24 fps with the default options: cue A ends at 10.000, cue B starts at 10.292. The gap is 7 frames. After `apply()`, A ends at 10.208, 2 frames before B.

@@ -93,6 +93,35 @@ class SubtitleReaderTest extends TestCase
     }
 
 
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function binaryFilesFoundByTheirExtension(): array
+    {
+        $stl = file_get_contents(self::FILES . "stl/real/harbour_open_30fps.stl");
+
+        return [
+            "Cavena 890, ISO-8859-7"                  => ["ferry.890", file_get_contents(self::FILES . "cavena890/real/ferry_danish.890"), "ISO-8859-7"],
+            "EBU STL without a code page, ISO-8859-7" => ["show.stl", "   " . substr($stl, 3), "ISO-8859-7"],
+            "EBU STL without a code page, ISO-8859-1" => ["show.stl", "   " . substr($stl, 3), "ISO-8859-1"],
+        ];
+    }
+
+
+    #[DataProvider("binaryFilesFoundByTheirExtension")]
+    public function testABinaryFileFoundByItsExtensionKeepsItsBytesWithAnEncoding(string $name, string $content, string $encoding): void
+    {
+        file_put_contents("$this->dir/$name", $content);
+        $format = Format::tryFromPath($name);
+
+        $subtitle = SubtitleReader::load("$this->dir/$name", null, new ReadOptions(encoding: $encoding));
+
+        $this->assertNull(Format::detect($content));
+        $this->assertSame($format, $subtitle->findFormat());
+        $this->assertEquals(Subtitle::fromString($content, $format)->getCues(), $subtitle->getCues());
+    }
+
+
     public function testAnEmptyFileTakesTheFormatOfItsExtension(): void
     {
         file_put_contents("$this->dir/empty.srt", " \n");

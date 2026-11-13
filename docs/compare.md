@@ -11,7 +11,7 @@ $differences = SubtitleDiff::compare($v1, $v2);
 $differences[0]->kind;       // CueDifferenceKind::TextChanged, with the value "text changed"
 $differences[0]->oldIndex;   // 11, the key in $v1->getCues(), null for an added cue
 $differences[0]->newIndex;   // 11, the key in $v2->getCues(), null for a removed cue
-$differences[0]->oldCue;     // the SubtitleCue in $v1
+$differences[0]->oldCue;     // a copy of the SubtitleCue in $v1, as it was at the comparison
 echo SubtitleDiff::toText($differences);
 
 SubtitleDiff::compare($v1, $v2, new SubtitleDiffOptions(
@@ -33,6 +33,7 @@ text changed: old cue 12, new cue 12
   I'll be there.
 ```
 
+- **Copies**: `oldCue` and `newCue` are copies of the cues, as they were at the comparison. A later change of a cue in `$v1` does not change a difference. To change the cue in `$v1`, use `$v1->getCues()[$difference->oldIndex]`.
 - **Kinds**: `added`, `removed`, `text changed`, `timing changed` and `text and timing changed`. Pairs without a change are not in the list.
 - **Pairing**: two cues pair when their text is the same or nearly the same. They also pair when they overlap for at least half of the shorter cue. Nearly the same means that at most 30% of the longer text differs. The pairs stay in order. The idea comes from the Compare tool of [Subtitle Edit](https://github.com/SubtitleEdit/subtitleedit/blob/main/docs/features/compare.md).
 - **Split cues**: one half of a split cue pairs with the old cue as a text change. The other half is an added cue.

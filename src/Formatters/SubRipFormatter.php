@@ -20,6 +20,12 @@ final class SubRipFormatter extends SubtitleFormatter
 
     private const TIME_PATTERN = "%02d:%02d:%02d,%03d";
 
+    // The parser reads 3 hour digits, so 999:59:59,999 is the last time that it reads back.
+    private const LAST_SECONDS = 3599999.999;
+
+    // What the parser in lenient mode reads as a timing line: a time, then "-->" or a shorter or longer arrow.
+    private const TIMING_LINE = '/^\s*\d+(?::|：)\d{1,2}\S*?\s*-+>/';
+
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
@@ -62,8 +68,8 @@ final class SubRipFormatter extends SubtitleFormatter
 
     private function formatCue(SubtitleCue $cue, WriteOptions $options): string
     {
-        $time  = sprintf(self::TIME_PATTERN, ...Timecode::milliseconds($cue->getStart())) . " --> "
-                 . sprintf(self::TIME_PATTERN, ...Timecode::milliseconds($cue->getEnd()));
+        $time  = sprintf(self::TIME_PATTERN, ...Timecode::milliseconds(min($cue->getStart(), self::LAST_SECONDS))) . " --> "
+                 . sprintf(self::TIME_PATTERN, ...Timecode::milliseconds(min($cue->getEnd(), self::LAST_SECONDS)));
         $time .= $this->formatCoordinates($cue);
         $lines = Markup::rubyAsText(implode(LineEnding::Lf->value, $cue->getLines()));
 
@@ -73,12 +79,12 @@ final class SubRipFormatter extends SubtitleFormatter
         $lines = Markup::decodeEntities($lines);
 
         // A line that holds only a tag becomes empty, and an empty line ends the cue in SubRip.
-        $lines = explode(LineEnding::Lf->value, $lines);
-        $lines = implode(LineEnding::Lf->value, array_filter($lines, fn(string $line) => trim($line) !== ""));
+        $lines = array_values(array_filter(explode(LineEnding::Lf->value, $lines), fn(string $line) => trim($line) !== ""));
 
         if ($cue->getAlignment() !== Alignment::BottomCenter) {
-            $lines = "{\\an{$cue->getAlignment()->value}}" . $lines;
+            $lines[0] = "{\\an{$cue->getAlignment()->value}}" . ($lines[0] ?? "");
         }
+        $lines = implode(LineEnding::Lf->value, array_map(fn(string $line) => self::keepAsText($line, self::TIMING_LINE), $lines));
 
         return $lines === "" ? $time : $time . LineEnding::Lf->value . $lines;
     }

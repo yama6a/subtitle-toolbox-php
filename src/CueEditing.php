@@ -206,8 +206,8 @@ trait CueEditing
 
     /**
      * Joins each run of adjacent cues with the same text that are identical, overlap, touch, or are at most $maxGap
-     * seconds apart. The cues must also have the same alignment, forced flag and format data, such as an ASS style
-     * and layer. The joined cue runs from the earliest start to the latest end of the run.
+     * seconds apart. The cues must also have the same alignment, position, forced flag and format data, such as an ASS
+     * style and layer. The joined cue runs from the earliest start to the latest end of the run.
      *
      * @throws InvalidArgumentException when $maxGap is negative, NAN or INF.
      */
@@ -245,8 +245,9 @@ trait CueEditing
 
     /**
      * Joins each run of adjacent cues whose start and end both differ by at most $timeTolerance seconds from the first
-     * cue of the run. The cues must also have the same alignment and forced flag. Image cues never join. The joined cue
-     * holds the lines of the run in input order, without a repeated cue text, and runs to the latest end of the run.
+     * cue of the run. The cues must also have the same alignment, position and forced flag. Image cues never join.
+     * The joined cue holds the lines of the run in input order, without a repeated cue text, and runs to the latest end
+     * of the run.
      *
      * @throws InvalidArgumentException when $timeTolerance is negative, NAN or INF.
      */
@@ -262,7 +263,7 @@ trait CueEditing
             $first = $last === null ? null : $groups[$last][0];
             if ($first !== null && !CueImage::isImageCue($first) && !CueImage::isImageCue($cue)
                 && $first->isForced() === $cue->isForced()
-                && $first->getAlignment() === $cue->getAlignment()
+                && CueList::samePlace($first, $cue)
                 && abs(Timecode::roundToMilliseconds($cue->getStart() - $first->getStart())) <= $timeTolerance
                 && abs(Timecode::roundToMilliseconds($cue->getEnd() - $first->getEnd())) <= $timeTolerance) {
                 $groups[$last][] = $cue;
@@ -315,9 +316,27 @@ trait CueEditing
     private static function cueEditingContinuesRun(SubtitleCue $first, SubtitleCue $cue, float $runStart, float $runEnd, float $maxGap): bool
     {
         return $first->getText() === $cue->getText() && CueList::canJoin($first, $cue)
-            && $first->getAllFormatData() === $cue->getAllFormatData()
+            && self::sortedKeys($first->getAllFormatData()) === self::sortedKeys($cue->getAllFormatData())
             && Timecode::roundToMilliseconds($cue->getStart() - $runEnd) <= $maxGap
             && Timecode::roundToMilliseconds($runStart - $cue->getEnd()) <= $maxGap;
+    }
+
+
+    /**
+     * Sorts the keys of $data and of every array in it, so that two maps with the same entries in another order are equal.
+     */
+    private static function sortedKeys(array $data): array
+    {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $data[$key] = self::sortedKeys($value);
+            }
+        }
+        if (!array_is_list($data)) {
+            ksort($data);
+        }
+
+        return $data;
     }
 
 

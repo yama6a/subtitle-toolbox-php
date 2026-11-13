@@ -266,6 +266,46 @@ class DualSubtitleTest extends TestCase
     }
 
 
+    public function testStackPicksTheEarlierPrimaryCueOnEqualOverlapInFloats(): void
+    {
+        $primary   = (new Subtitle())
+            ->addCue(new SubtitleCue(0, 1, "first"))
+            ->addCue(new SubtitleCue(1.2, 2.2, "second"));
+        $secondary = (new Subtitle())->addCue(new SubtitleCue(0, 3, "between"));
+
+        $cues = DualSubtitle::fromPair($primary, $secondary)->getCues();
+
+        $this->assertSame(["first", "between"], $cues[0]->getLines());
+        $this->assertSame(["second"], $cues[1]->getLines());
+    }
+
+
+    public function testSecondaryCueKeepsItsForcedFlag(): void
+    {
+        $primary   = (new Subtitle())->addCue(new SubtitleCue(0, 1, "first"));
+        $secondary = (new Subtitle())->addCue((new SubtitleCue(5, 6, "later"))->setForced(true));
+
+        foreach ([DualSubtitleMode::Stack, DualSubtitleMode::TopBottom] as $mode) {
+            $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions(mode: $mode));
+
+            $this->assertTrue($dual->getCues()[1]->isForced(), $mode->name);
+        }
+    }
+
+
+    public function testSecondaryStyleUsesALowerCaseTagName(): void
+    {
+        $primary   = (new Subtitle())->addCue(new SubtitleCue(0, 2, "first"));
+        $secondary = (new Subtitle())->addCue(new SubtitleCue(0, 2, "erste"));
+
+        $italic = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions(secondaryStyle: "I"));
+        $font   = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions(secondaryStyle: 'FONT color="#ffff00"'));
+
+        $this->assertSame(["first", "<i>erste</i>"], $italic->getCues()[0]->getLines());
+        $this->assertSame(["first", '<font color="#ffff00">erste</font>'], $font->getCues()[0]->getLines());
+    }
+
+
     public function testStackedSecondaryCueKeepsItsPositionAndPlacedCueLosesIt(): void
     {
         $primary   = TestSubtitles::fromCues([[1, 2, "Hello"]]);

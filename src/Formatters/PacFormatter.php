@@ -42,6 +42,9 @@ final class PacFormatter extends SubtitleFormatter
         $codePage  = isset($fileData["codePage"]) ? PacCodePage::from($fileData["codePage"]) : self::newCodePage($subtitle);
         $frameRate = new FrameRate($fileData["frameRate"] ?? Pac::FRAME_RATE);
         $number    = $fileData["firstNumber"] ?? 0;
+        // PacParser rejects a file that does not start with the default header, so such a stored header counts as missing.
+        $stored    = hex2bin($fileData["header"] ?? "");
+        $header    = str_starts_with($stored, Pac::HEADER) ? $stored : Pac::HEADER;
 
         $records = "";
         foreach ($subtitle->getCues() as $cue) {
@@ -58,7 +61,7 @@ final class PacFormatter extends SubtitleFormatter
                         self::timeCode($cue->getEnd(), $frameRate) . pack("v", strlen($text) + 1) . chr($verticalPosition) . $text;
         }
 
-        return (isset($fileData["header"]) ? hex2bin($fileData["header"]) : Pac::HEADER) . $records .
+        return $header . $records .
                (isset($fileData["footer"]) ? hex2bin($fileData["footer"]) : Pac::FOOTER);
     }
 
