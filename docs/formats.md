@@ -188,7 +188,7 @@ $subtitle->toString(Format::Cavena890);
 - **Alignment**: the alignment byte 50h is left and 52h is right. Everything else is bottom center.
 - **Format data**: the subtitle keeps `variant`, the `header` bytes and `shortEnd`, which is true when the last block lacks its last 4 bytes, as Subtitle Edit writes it. Each cue keeps its text and its original blocks.
 - **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text keeps its blocks, also after retiming. New text keeps the table of the file and gets `?` for a character outside it. The formatter writes the number of blocks in the 3 count fields of the header.
-- **New files**: Latin with the English language code, the header of Subtitle Edit and subtitle numbers 16, 32, 48 and so on.
+- **New files**: Latin with the English language code, the header of Subtitle Edit and subtitle numbers 16, 32, 48 and so on up to 65520, then 65521 to 65535. So each cue gets its own number, and a new file holds up to 4110 cues. More cues throw `UnwritableContentException`.
 
 ## CSV and TSV
 Translators, reviewers and dubbing studios work in Excel or Google Sheets. `CsvParser` and `CsvFormatter` read and write subtitles as CSV and TSV tables, with RFC 4180 quoting.

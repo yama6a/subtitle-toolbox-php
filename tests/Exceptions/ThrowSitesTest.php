@@ -440,6 +440,14 @@ class ThrowSitesTest extends TestCase
 
                 return $subtitle->toString(Format::GoogleSpeech);
             }, ...$unwritable],
+            "Formatters/Cavena890Formatter.php: subtitle number 65536" => [function (): string {
+                $subtitle = Subtitle::fromString((new Subtitle())->addCue(new SubtitleCue(1, 2, "One"))->toString(Format::Cavena890), Format::Cavena890);
+                $cue      = $subtitle->getCues()[0];
+                $block    = substr_replace(hex2bin($cue->findFormatData(Cavena890Parser::FORMAT_DATA_KEY)["blocks"][0]), "\xFF\xFF", 0, 2);
+                $cue->setFormatData(Cavena890Parser::FORMAT_DATA_KEY, ["text" => "One", "blocks" => [bin2hex($block)]]);
+
+                return $subtitle->addCue(new SubtitleCue(3, 4, "Two"))->toString(Format::Cavena890);
+            }, ...$unwritable],
             "Parsers/Cavena890Variant.php: line of 52 bytes" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 52)))
                 ->toString(Format::Cavena890), ...$unwritable],
             "Formatters/PacFormatter.php: subtitle number 65536" => [fn () => self::subtitle()->setFormatData("pac", ["firstNumber" => 65536])
