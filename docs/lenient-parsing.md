@@ -86,7 +86,6 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 - **Absolute times in a timed TTML div**: the spec adds the `begin` of the `<div>` to the times of its `<p>`. Apple Music lyrics files write absolute `<p>` times. Lenient mode reads such a `<p>` as absolute only when it begins after the end of its `<div>`. In an Apple Music file, a `<p>` in the first `<div>` can stay shifted by the `begin` of that `<div>`.
 - **Strict mode without an exception**: the LRC parser drops a line with a bad time tag. The EBU STL parser reads a time code out of range as it is. In lenient mode, both record a warning, and the EBU STL parser also skips the subtitle.
 - **Stream readers**: `SubRipStreamReader` and `WebVttStreamReader` take `ReadOptions(lenient: true)` in the constructor and have `getWarnings()`. They give the same cues and warnings as a lenient `Subtitle::fromString()`.
-- **Command line tool**: `--lenient` turns on lenient mode and prints each warning to standard error.
 
 ## Cue that ends before it starts
 `00:00:05,000 --> 00:00:02,000` throws `ParsingException` in strict mode, with the line of the times. A cue that ends when it starts stays valid.

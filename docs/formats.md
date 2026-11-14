@@ -9,7 +9,7 @@ The [main README](../README.md#supported-formats) lists every format with its ex
 - Subtitle tracks in MKV, WebM, MP4 and MPEG-TS files: [mkv.md](mkv.md)
 
 ## The Format enum
-The enum `Format` names each format. Its value is the format name of the command line tool.
+The enum `Format` names each format. Its value is a short name, as in `Format::from('srt')`.
 
 ```php
 use SubtitleToolbox\Format;
@@ -185,7 +185,7 @@ $subtitle->toString(Format::Cavena890);
   | `chinese` | `90`, `91` or the font `CCKM44` | UTF-16BE |
 
 - **Times**: frame numbers at 25 fps. The file does not store the frame rate.
-- **Lines**: each block holds 2 lines of 51 bytes. A cue of 1 line uses the lower line. The parser joins the blocks with the same subtitle number into 1 cue, and the formatter writes a cue of 3 or 4 lines in 2 such blocks. A line of more than 51 bytes throws `UnwritableContentException`. Wrap long lines before the write, with `wrapLines(40)` or the CLI options `--structure-wrap --structure-max-cpl 40`.
+- **Lines**: each block holds 2 lines of 51 bytes. A cue of 1 line uses the lower line. The parser joins the blocks with the same subtitle number into 1 cue, and the formatter writes a cue of 3 or 4 lines in 2 such blocks. A line of more than 51 bytes throws `UnwritableContentException`. Wrap long lines before the write, with `wrapLines(40)`.
 - **Styles**: the codes 88h and 98h start and end italics in the Latin, Scandinavian and Chinese tables. They become `<i>` and back. The parser drops the color codes F1h to F8h and reads BEh as a dash.
 - **Alignment**: the alignment byte 50h is left and 52h is right. Everything else is bottom center.
 - **Format data**: the subtitle keeps `variant`, the `header` bytes and `shortEnd`, which is true when the last block lacks its last 4 bytes, as Subtitle Edit writes it. Each cue keeps its text and its original blocks.
@@ -254,7 +254,7 @@ $csv = $english->toString(Format::Csv, new WriteOptions(formats: [new CsvWriteOp
 - **Bilingual table**: `secondText` adds a column after `text`. Each row gets the cue of the second subtitle that overlaps the row most. When one second cue is the best match of several rows, only the first of them gets it.
 - **Output**: a UTF-8 BOM by default, because Excel needs it to read UTF-8. `WriteOptions(bom: false)` leaves it out. `lineEnding` ends the rows. A line break inside a cell stays LF, as Excel writes it.
 - **Formula injection**: `escapeFormulas: true` puts `'` before a cell that starts with `=`, `+`, `-` or `@`. Then a spreadsheet does not run the cell as a formula. It is off by default, because dialogue lines start with `-` and the option changes them.
-- **Detection**: a CSV file has no signature, so pass `Format::Csv` or `Format::Tsv`. The command line tool reads `.csv` and `.tsv` files by their extension.
+- **Detection**: a CSV file has no signature, so pass `Format::Csv` or `Format::Tsv`. `Subtitle::load()` and `Format::tryFromPath()` know them by the `.csv` and `.tsv` extensions.
 
 ## DCP subtitles
 Digital cinema packages hold subtitles as XML in 2 dialects: Interop `<DCSubtitle>`, from the [CineCanvas specification](https://cinepedia.com/interop-docs/Reference_Documents/CineCanvas(tm)_RevC.pdf), and [SMPTE ST 428-7](https://pub.smpte.org/doc/st428-7/20140211-pub/st0428-7-2014.pdf) `<SubtitleReel>` in the 2007, 2010 and 2014 namespaces. The library reads and writes both. Files use the `.xml` extension, which TTML owns, so `load()` finds them by detection. Pass `Format::Dcp` to `save()`.
@@ -310,13 +310,13 @@ $subtitle->toString(Format::EbuStl, new WriteOptions(formats: [new EbuStlWriteOp
 
 - **Times**: the disk format code `STL25.01` or `STL30.01` sets the frame rate. By default, the parser keeps the time codes of the file. The formatter reads the TCP field at the frame rate of the stored disk format code, as the parser does, also when `EbuStlWriteOptions::$frameRate` writes another rate.
 - **Start of programme**: `EbuStlReadOptions(subtractStartOfProgramme: true)` subtracts the TCP time code, for example `10:00:00:00`. A time before it becomes 0. The formatter adds TCP again.
-- **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). These tables hold Latin, Cyrillic, Arabic, Greek and Hebrew letters. The formatter writes `?` for a character outside the table, for example the em dash and the guillemets in table 01. `EbuStlFormatter::formatWithReport()` returns the output and an `EbuStlReplacedCharacter` for each such character. Its `location` is `Cue 1`, `Comment before cue 1` or `GSI field OPT`. The CLI prints one line on standard error for each, and the exit code stays 0.
+- **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). These tables hold Latin, Cyrillic, Arabic, Greek and Hebrew letters. The formatter writes `?` for a character outside the table, for example the em dash and the guillemets in table 01. `EbuStlFormatter::formatWithReport()` returns the output and an `EbuStlReplacedCharacter` for each such character. Its `location` is `Cue 1`, `Comment before cue 1` or `GSI field OPT`.
 - **Styles**: italics, underline and the 8 teletext colors become `<i>`, `<u>` and `<font color>`, and back. White gives no tag. The formatter drops other colors. A teletext row resets the styles, so the formatter repeats a style that spans rows at the start of each row. For example, `<i>` around 2 lines makes both rows italic.
 - **Blocks**: the parser joins the TTI blocks of one subtitle and skips user data blocks. A subtitle with the comment flag becomes a comment. The formatter writes new blocks for a comment whose stored block list is empty. The formatter splits text over the 112 bytes of one TTI text field into extension blocks.
 - **Alignment**: the justification code gives the column. The vertical position gives the row: the top, middle or bottom third of the rows.
 - **Metadata**: the title is the OPT field. The language is the LC field, for example `09` is `en`.
 - **Format data**: the subtitle keeps the GSI fields by name in `gsi`, for example `DSC` and `TCP`. Each cue keeps its subtitle group, cumulative status, vertical position, justification code and original blocks.
-- **Row length**: the formatter writes each line as one row and does not wrap it. It sets the GSI field MNC, the maximum characters per row, to the longest row when that row is longer than the stored MNC. A teletext decoder shows at most 40 characters per row and cuts the rest. Wrap long lines before the write, with `wrapLines(40)` or the CLI options `--structure-wrap --structure-max-cpl 40`.
+- **Row length**: the formatter writes each line as one row and does not wrap it. It sets the GSI field MNC, the maximum characters per row, to the longest row when that row is longer than the stored MNC. A teletext decoder shows at most 40 characters per row and cuts the rest. Wrap long lines before the write, with `wrapLines(40)`.
 - **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text keeps its text field bytes, also after retiming.
 - **New files**: a subtitle from another format gets these GSI values. The creation date is today.
   - Code page 850, 25 fps and level-1 teletext.
@@ -399,7 +399,7 @@ Subtitle::load('show.mcc', Format::Mcc, new ReadOptions(formats: [new MccReadOpt
 $subtitle->toString(Format::Mcc, new WriteOptions(formats: [new MccWriteOptions(frameRate: 23.976)]));
 ```
 
-- **Reads**: CEA-708 service 1 by default. Its captions win, because CEA-708 holds accented letters and other languages that the CEA-608 part lacks. `MccReadOptions(service: 2)` reads service 2. A file without captions in the service, or `MccReadOptions(service: null)`, gives the CEA-608 byte pairs of field 1. The parser decodes them as [SCC](#scc) does, so `SccReadOptions` and `--scc-roll-up` apply, and the cues get the `scc` format data. It reads version 1.0 and 2.0.
+- **Reads**: CEA-708 service 1 by default. Its captions win, because CEA-708 holds accented letters and other languages that the CEA-608 part lacks. `MccReadOptions(service: 2)` reads service 2. A file without captions in the service, or `MccReadOptions(service: null)`, gives the CEA-608 byte pairs of field 1. The parser decodes them as [SCC](#scc) does, so `SccReadOptions` apply, and the cues get the `scc` format data. It reads version 1.0 and 2.0.
 - **CEA-708**: each change of the text in the visible windows starts a new cue. Italics, underline and the pen color become `<i>`, `<u>` and `<font color>`. The window anchor gives the alignment: its anchor point gives left, center or right, and its height on the screen gives top, middle or bottom. The decoder reads the characters of G0, G1 and G2 and the music note. It skips the icons of G3, P16 characters and the commands of C2 and C3. Window colors, borders, fonts and pen sizes do not change the cues.
 - **Frame rates**: the `Time Code Rate` line holds 24, 25, 30, 30DF, 50, 60 or 60DF. The frame rate code of the caption distribution packets tells 23.976 from 24, 29.97 from 30 and 59.94 from 60. So a file with `Time Code Rate=24` and the code of 23.976 fps reads at 23.976 fps. The format data holds the frame rate as `23.976`, `24`, `25`, `29.97`, `30`, `50`, `59.94` or `60`.
 - **Times**: a CEA-708 cue starts at the frame of the packet that shows it. A CEA-608 cue starts on a CEA-608 frame of 29.97 fps, as in SCC. At other frame rates a CEA-608 time can move by up to 17 ms. The hour of a time code has 2 to 6 digits, as in SCC.
@@ -407,7 +407,7 @@ $subtitle->toString(Format::Mcc, new WriteOptions(formats: [new MccWriteOptions(
   - CEA-708 service 1 holds the cue text, the italics, the underline and the colors of CEA-608. Each cue loads into a hidden window, which shows at the cue start. Two windows take turns. The alignment sets the anchor of the window and the justification of its lines. A line longer than 42 characters wraps. A character outside G0, G1 and G2 becomes its CEA-608 replacement.
   - CEA-608 field 1 holds the pop-on captions that the [SCC](#scc) formatter writes with `SccWriteOptions(fit: true)`. So the CEA-608 part replaces characters that it lacks, wraps lines to 32 characters, and delays or drops captions that do not fit in time. Text that the fit cannot hold throws `UnwritableContentException`, as in SCC. Field 2 holds null pairs.
 - **Round trip**: the formatter keeps the version, the frame rate, the drop-frame mode and the header fields of the input, such as `UUID` and `Creation Date`. A header field name holds only letters and spaces and starts with a letter. The formatter leaves out a stored field with another name, such as `X-Encoder`, because the parser would read its line as caption data. A new file gets version 2.0, 29.97 fps with drop-frame time code, a `UUID` from a hash of its caption data and the date of today in UTC. So the same captions give the same file on one day. Version 1.0 has no 60DF, so 59.94 fps with drop-frame time code writes version 2.0.
-- **Options**: `MccWriteOptions(frameRate: 25)` or the CLI option `--output-fps 25` sets the frame rate. `MccWriteOptions(dropFrame: false)` writes non-drop time code at 29.97 and 59.94 fps.
+- **Options**: `MccWriteOptions(frameRate: 25)` sets the frame rate. `MccWriteOptions(dropFrame: false)` writes non-drop time code at 29.97 and 59.94 fps.
 - **Damaged data**: the parser ignores the checksums, as some writers leave them wrong. A line without a time code, a character outside the hex digits and the alias letters, and a packet that is shorter than its data throw `ParsingException` in strict mode. Lenient mode skips the line with a warning. A file without a `Time Code Rate` line reads as 30DF in lenient mode.
 - **Not read**: CEA-608 data of field 2 (CC3 and CC4). MCC data inside video files. An MP4 or MOV `c708` track holds the same packets and reads as MCC, see [mkv.md](mkv.md#mp4).
 
@@ -464,7 +464,7 @@ $subtitle->toString(Format::TmPlayer);                                     // 00
 - **Italics**: the MPL2 formatter writes `/` for a line whose whole text is inside `<i>`. Both formatters strip all other tags.
 - **TMPlayer end times**: a cue ends at the next entry in time order, also when that entry has the same time. For example, `00:00:07:B` before `00:00:04:A` gives A from 4 s to 7 s, and `00:00:04:A` followed by `00:00:04:C` gives A from 4 s to 4 s. A line without text only ends the cue before it. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **TMPlayer gaps**: TMPlayer counts whole seconds, so the formatter rounds each time to the second. A cue that ends before the next cue starts gets a line without text at its end. For a cue shorter than 1 s, that line comes 1 s after the start.
-- **`.txt` files**: see [cli.md](cli.md#formats-and-file-extensions).
+- **`.txt` files**: `Format::tryFromPath()` returns `Format::PlainText` for `.txt`. `Subtitle::load()` without a format finds MPL2, TMPlayer and QuickTime text by their content. It does not take the format from the extension, and throws `UnknownFormatException` when the content matches none. Pass the format to read a `.txt` file as OGM or YouTube chapters.
 - **Escapes**: neither format has an escape for `|`. The formatters write a `|` in the text as U+00A6 BROKEN BAR. A line feed inside a cue line becomes the `|` line break.
 
 ## MPSub
@@ -501,7 +501,7 @@ $subtitle->toString(Format::Pac);
 ```
 
 - **Code page**: the file does not store it. A story record with `Lang:` names it, for example `Lang:RUS` for Cyrillic. Else the parser decodes the text with each code page and checks that the text looks like the script of the code page. Strict mode throws `ParsingException` when no code page or more than one code page fits. Lenient mode then reads the first code page that fits, or Latin when none fits, and warns. Short text, such as one Greek word without an accent, can read as Latin.
-- **Encoding**: `ReadOptions::$encoding` or `--encoding` names the code page and skips detection:
+- **Encoding**: `ReadOptions::$encoding` names the code page and skips detection:
 
   | Code page | `codePage` | Encodings |
   |:--- |:--- |:--- |
@@ -617,10 +617,10 @@ $report->changes[0]->message;                                                   
 
 - **Reads**: pop-on, roll-up and paint-on captions, as the screen model of [47 CFR 15.119](https://www.govinfo.gov/content/pkg/CFR-2010-title47-vol1/xml/CFR-2010-title47-vol1-sec15-119.xml) defines them. Each change of the displayed captions starts a new cue. So a roll-up file gives one cue per screen, and a row shows in each cue until it rolls off.
 - **Video files**: an MP4 or MOV `c608` track holds the same byte pairs. `loadTrack()` reads it as SCC, see [mkv.md](mkv.md#mp4).
-- **Roll-up by row**: with `SccReadOptions(rollUp: SccRollUp::Lines)` or the CLI option `--scc-roll-up lines`, each row of roll-up captions gives one cue. The cue starts at the first character of the row. It ends when the row rolls up, or when an EDM or EOC clears the screen. A row that is still on the screen at the end of the file lasts [`ReadOptions::$lastCueDuration`](read-options.md). So a transcript of a live roll-up file holds each line once. Pop-on and paint-on captions give the same cues as without the option.
+- **Roll-up by row**: with `SccReadOptions(rollUp: SccRollUp::Lines)`, each row of roll-up captions gives one cue. The cue starts at the first character of the row. It ends when the row rolls up, or when an EDM or EOC clears the screen. A row that is still on the screen at the end of the file lasts [`ReadOptions::$lastCueDuration`](read-options.md). So a transcript of a live roll-up file holds each line once. Pop-on and paint-on captions give the same cues as without the option.
 - **Writes**: pop-on captions on data channel 1, with drop-frame time codes by default. A cue with more than 4 lines, a line longer than 32 characters or a character that CEA-608 lacks throws `UnwritableContentException`.
 - **Late captions**: each caption needs 1 frame per 2 characters, and some frames for control codes, before it shows. When the frames before the cue start are too few, the caption shows late.
-- **Fit**: `SccWriteOptions(fit: true)` or the CLI option `--scc-fit` changes what SCC cannot hold, in place of throwing. `SccFormatter::formatWithReport()` returns the output and an `SccFitChange` for each change. The CLI prints each change on standard error. Each change has one of the `SccFitAction` cases:
+- **Fit**: `SccWriteOptions(fit: true)` changes what SCC cannot hold, in place of throwing. `SccFormatter::formatWithReport()` returns the output and an `SccFitChange` for each change. Each change has one of the `SccFitAction` cases:
 
   | Action | Change |
   |:--- |:--- |
@@ -784,7 +784,7 @@ $subtitle->toString(Format::Ttml);
 - **Cues without text**: a timing line without text gives a cue with no lines. The formatter writes such a cue as its identifier and its timing line.
 - **Output**: the formatter writes the header, comments, styles, regions and cue settings back. It numbers cues without an identifier and always writes hours. It writes `REGION` blocks before `STYLE` blocks, and both before the comments that come before the first cue.
 - **Markup**: the formatter keeps `<strong>`, `<b>`, `<i>`, `<u>`, `<v>`, `<lang>`, `<c>`, `<ruby>`, `<rt>` and word timestamps. It keeps classes such as `<c.yellow>` and strips all other tags.
-- **Colors**: the formatter writes `<font color>` as a [color class](markup.md) when the color is one of the 8 WebVTT colors. `#FFFF00`, `#ff0` and `yellow` all become `<c.yellow>`. WebVTT has no class for other colors, so the formatter drops them. `WebVttFormatter::formatWithReport()` returns the output and a `WebVttDroppedColor` for each dropped color. `WebVttStreamWriter::findDroppedColors()` returns the same list for the cues it wrote. The CLI prints each one on standard error.
+- **Colors**: the formatter writes `<font color>` as a [color class](markup.md) when the color is one of the 8 WebVTT colors. `#FFFF00`, `#ff0` and `yellow` all become `<c.yellow>`. WebVTT has no class for other colors, so the formatter drops them. `WebVttFormatter::formatWithReport()` returns the output and a `WebVttDroppedColor` for each dropped color. `WebVttStreamWriter::findDroppedColors()` returns the same list for the cues it wrote.
 
   ```php
   $report = (new WebVttFormatter())->formatWithReport($subtitle);

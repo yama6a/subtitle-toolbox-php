@@ -1,6 +1,6 @@
 # Validation
 
-`validate()` checks the cues against reading and timing rules. It returns one `ValidationViolation` per broken rule. The command line tool runs the same check, see [cli.md](cli.md#validate).
+`validate()` checks the cues against reading and timing rules. It returns one `ValidationViolation` per broken rule.
 
 ```php
 use SubtitleToolbox\Validation\ValidationRule;

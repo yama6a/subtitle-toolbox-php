@@ -172,7 +172,7 @@ $subtitle = Subtitle::fromString($json, Format::PodcastTranscript, new ReadOptio
 - **HTML output**: a new paragraph starts at a speaker change or a gap. The formatter writes `<cite>` only for a paragraph with a speaker, times such as `0:09` and `1:02:03`, and the text without tags.
 - **Format data**: the JSON parser keeps the top-level fields except `segments` in `findFormatData('podcast-transcript')`, for example `version`. A cue of one segment keeps the other fields of the segment. The formatter writes them back, and `"version": "1.0.0"` when there is none.
 - **Errors**: a segment without a numeric `startTime` throws `ParsingException`. So does a `speaker`, `endTime` or `body` of the wrong type, a `<p>` without a `<time>` before it, and a bad time. A segment without `body` gives no cue.
-- **Command line tool**: the format names are `podcast-transcript` and `html`. `.json` stays the library JSON, so pass `--to podcast-transcript`.
+- **Saving**: `save()` writes a `.json` path as `Format::Json`, so pass `Format::PodcastTranscript`.
 
 ## Plain text
 `PlainTextFormatter` writes a transcript. It strips all tags and decodes the entities. A gap of 2 s or more between two cues starts a new paragraph:
