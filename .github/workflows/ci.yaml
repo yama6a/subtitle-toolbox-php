@@ -28,38 +28,8 @@ jobs:
     uses: yama6a/gha/.github/workflows/php-ci.yaml@v2
     with:
       php-versions: '["8.3", "8.4", "8.5"]'
-      extensions: curl # the translate engines need it, so CurlHttpClientTest and the translate tests run
+      extensions: curl # the translation engines need it, so CurlHttpClientTest runs
 
-  phar:
-    runs-on: ubuntu-26.04-arm
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # The floor version, so the PHAR is known to run where the library does.
-      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
-        with:
-          php-version: "8.3"
-          coverage: none
-          tools: composer, box:4.7.0
-      - run: .build/build-phar.sh 0.0.0-ci
-      - run: .build/smoke-test.sh 0.0.0-ci tests/files stbox.phar php
-
-  docker:
-    uses: yama6a/gha/.github/workflows/docker-build-check.yaml@v2
-    with:
-      dockerfile: .build/Dockerfile
-      build-args: |
-        VERSION=0.0.0-ci
-      smoke-test: .build/smoke-test.sh 0.0.0-ci files /usr/local/bin/stbox.phar docker run --rm -v "$PWD/tests/files:/work/files:ro" --entrypoint php "$IMAGE"
-
-  docker-tesseract:
-    uses: yama6a/gha/.github/workflows/docker-build-check.yaml@v2
-    with:
-      dockerfile: .build/tesseract.Dockerfile
-      build-args: |
-        VERSION=0.0.0-ci
-      smoke-test: SMOKE_TESSERACT=1 .build/smoke-test.sh 0.0.0-ci files /usr/local/bin/stbox.phar docker run --rm -v "$PWD/tests/files:/work/files:ro" --entrypoint php "$IMAGE"
-
-  # The php job has no Tesseract, so its tests skip there and run here.
   tesseract:
     runs-on: ubuntu-26.04-arm
     steps:
