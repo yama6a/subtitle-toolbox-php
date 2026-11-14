@@ -189,17 +189,6 @@ class FormatTest extends TestCase
     }
 
 
-    public function testFormatsCommandPrintsTheFormatTable(): void
-    {
-        $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
-        $code    = (new Cli\Application(...$streams))->run(["stbox", "formats"]);
-        rewind($streams[1]);
-
-        $this->assertSame(0, $code);
-        $this->assertSame(file_get_contents(self::FILES . "format/formats.txt"), stream_get_contents($streams[1]));
-    }
-
-
     public function testSubtitleHasNoMethodsOfVersion1(): void
     {
         foreach (["parse", "format", "detectParser"] as $method) {
@@ -213,7 +202,7 @@ class FormatTest extends TestCase
         $found = [];
         foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(__DIR__ . "/../src")) as $file) {
             $relative = substr($file->getPathname(), strlen(__DIR__ . "/../src/"));
-            if ($file->getExtension() !== "php" || str_starts_with($relative, "Cli/")) {
+            if ($file->getExtension() !== "php") {
                 continue;
             }
             $class = "SubtitleToolbox\\" . str_replace("/", "\\", substr($relative, 0, -4));

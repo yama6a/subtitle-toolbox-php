@@ -12,12 +12,10 @@ class NoCtypeTest extends TestCase
     {
         $root  = dirname(__DIR__);
         $calls = [];
-        foreach (["src", "bin"] as $directory) {
-            foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator("$root/$directory", \FilesystemIterator::SKIP_DOTS)) as $file) {
-                foreach (file($file->getPathname()) ?: [] as $index => $line) {
-                    if (preg_match('/\bctype_[a-z]+\s*\(/', $line) === 1) {
-                        $calls[] = substr($file->getPathname(), strlen($root) + 1) . ":" . ($index + 1);
-                    }
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator("$root/src", \FilesystemIterator::SKIP_DOTS)) as $file) {
+            foreach (file($file->getPathname()) ?: [] as $index => $line) {
+                if (preg_match('/\bctype_[a-z]+\s*\(/', $line) === 1) {
+                    $calls[] = substr($file->getPathname(), strlen($root) + 1) . ":" . ($index + 1);
                 }
             }
         }

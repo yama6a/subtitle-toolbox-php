@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Cli\Application;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
 use SubtitleToolbox\Profanity\ProfanityOptions;
@@ -137,17 +136,5 @@ class WordTimestampRetimingTest extends TestCase
             preg_match(Markup::WORD_TIMESTAMP_REGEX, $cue->getText(), $match);
             $this->assertEqualsWithDelta($cue->getStart() + 0.5 * $result->scale, Markup::wordTimestampSeconds($match[1]), 0.0015);
         }
-    }
-
-
-    public function testCliConvertMovesWordTimestamps(): void
-    {
-        $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
-        $code    = (new Application(...$streams))->run(["stbox", "convert", self::FILES . "profanity/radio.vtt", "--shift", "2"]);
-        rewind($streams[1]);
-
-        $this->assertSame(0, $code);
-        $this->assertStringContainsString("00:00:09.500 --> 00:00:11.000\n<00:00:09.500>Fine, <00:00:10.000>damnit.\n",
-                                          stream_get_contents($streams[1]));
     }
 }

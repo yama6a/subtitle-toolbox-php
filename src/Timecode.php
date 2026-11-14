@@ -22,7 +22,7 @@ final class Timecode
     private const SECONDS_PER_HOUR   = 3600;
 
     /**
-     * The parsers, the Matroska reader, parse() and the CLI time options reject a time from this many hours.
+     * The parsers, the Matroska reader and parse() reject a time from this many hours.
      * Formatters split cue times into integer milliseconds, which overflow far above this bound.
      *
      * @internal
