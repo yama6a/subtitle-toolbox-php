@@ -6,11 +6,9 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Cli\Application;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngDecoder;
 use SubtitleToolbox\Image\PngEncoder;
@@ -418,20 +416,6 @@ class PgsFormatterTest extends TestCase
         $this->assertSame(0.25, $written->getCues()[0]->getStart());
         $this->assertSame(37.25, $written->getCues()[11]->getEnd());
         $this->assertSame(CueImage::fromCue($original->getCues()[5])->png, CueImage::fromCue($written->getCues()[5])->png);
-    }
-
-
-    public function testTheCommandLineToolWritesPgs(): void
-    {
-        $this->assertSame(PgsFormatter::class, FormatRegistry::formatterClass(Format::Pgs));
-
-        $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
-        $code    = (new Application(...$streams))->run(["stbox", "convert", self::FILES . "pgs/shapes_576p.sup", "--shift", "1"]);
-        rewind($streams[1]);
-
-        $this->assertSame(0, $code);
-        $this->assertSame([1.5, 4.0, 5.0, 10.0], array_merge(...array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()],
-                                                                     (new PgsParser())->parse(stream_get_contents($streams[1]), new ReadOptions())->getCues())));
     }
 
 

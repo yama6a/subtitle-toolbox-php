@@ -1,5 +1,7 @@
 # Upgrade from 4.x to 5.0
 
+7.0 removed the command line tool from this package. The CLI parts below describe 6.x and older. The tool lives on in [subtitle-toolbox-go](https://github.com/yama6a/subtitle-toolbox-go).
+
 ```sh
 composer require yama6a/subtitle-toolbox-php:^5.0
 ```
@@ -16,7 +18,7 @@ composer require yama6a/subtitle-toolbox-php:^5.0
 
 - Only the command name changes. The Composer package stays `yama6a/subtitle-toolbox-php`. The repository and the image names stay.
 - The old name has no alias. A script that calls `subtitle-toolbox` fails with "command not found".
-- Download the PHAR as `stbox.phar`: `curl -L -o /usr/local/bin/stbox https://github.com/yama6a/subtitle-toolbox-php/releases/latest/download/stbox.phar && chmod +x /usr/local/bin/stbox`.
+- Download the PHAR as `stbox.phar`: `curl -L -o /usr/local/bin/stbox https://github.com/yama6a/subtitle-toolbox-php/releases/download/6.11.5/stbox.phar && chmod +x /usr/local/bin/stbox`.
 - Image users who run `php /usr/local/bin/subtitle-toolbox.phar` use `/usr/local/bin/stbox.phar`. The image entry point is unchanged.
 
 ## Cue order

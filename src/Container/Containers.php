@@ -31,19 +31,6 @@ final class Containers
     }
 
 
-    public static function detectFile(string $path): ?ContainerFormat
-    {
-        $file = is_file($path) ? @fopen($path, "rb") : false;
-        if ($file === false) {
-            return null;
-        }
-        $head = (string) fread($file, self::HEAD_LENGTH);
-        fclose($file);
-
-        return self::detect($head);
-    }
-
-
     /**
      * Opens the reader of the container that the first bytes show.
      *

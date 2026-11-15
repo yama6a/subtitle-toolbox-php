@@ -31,7 +31,7 @@ class JsonOutputTest extends TestCase
     public function testTextThatIsNotUtf8ThrowsTheLibraryException(Format $format): void
     {
         // Read as UTF-8, the file keeps Latin-1 bytes that are not valid UTF-8.
-        $subtitle = Subtitle::load(__DIR__ . "/../files/cli/latin1.srt", Format::SubRip, new ReadOptions(encoding: "UTF-8"));
+        $subtitle = Subtitle::load(__DIR__ . "/../files/general/latin1.srt", Format::SubRip, new ReadOptions(encoding: "UTF-8"));
 
         try {
             $subtitle->toString($format);
@@ -46,7 +46,7 @@ class JsonOutputTest extends TestCase
 
     public function testAnInfiniteValueThrowsWithoutTheEncodingAdvice(): void
     {
-        $subtitle = Subtitle::load(__DIR__ . "/../files/cli/latin1.srt", Format::SubRip, new ReadOptions(encoding: "ISO-8859-1"));
+        $subtitle = Subtitle::load(__DIR__ . "/../files/general/latin1.srt", Format::SubRip, new ReadOptions(encoding: "ISO-8859-1"));
         $subtitle->getCues()[0]->setFormatData("custom", ["value" => INF]);
 
         try {

@@ -47,8 +47,8 @@ class LoadSaveTest extends TestCase
     public static function autoDetectedFiles(): array
     {
         return [
-            "SubRip"    => ["cli/trip.srt", Format::SubRip],
-            "WebVTT"    => ["cli/shop.vtt", Format::WebVtt],
+            "SubRip"    => ["general/trip.srt", Format::SubRip],
+            "WebVTT"    => ["general/shop.vtt", Format::WebVtt],
             "PGS"       => ["pgs/text_1080p.sup", Format::Pgs],
             "SubViewer" => ["subviewer/real/subviewer2_crlf.sub", Format::SubViewer],
             "iTT"       => ["itt/real/fcp_23976_styles.itt", Format::Itt],
@@ -167,7 +167,7 @@ class LoadSaveTest extends TestCase
         $this->expectException(UnsupportedFormatException::class);
         $this->expectExceptionMessage("The file is not an MKV, WebM, MP4 or MPEG-TS file.");
 
-        $call(self::FILES . "cli/trip.srt");
+        $call(self::FILES . "general/trip.srt");
     }
 
 
@@ -303,7 +303,7 @@ class LoadSaveTest extends TestCase
 
     public function testMicroDvdWithTheFrameRateOfTheOptions(): void
     {
-        $subtitle = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
+        $subtitle = Subtitle::load(self::FILES . "general/frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
 
         $this->assertSame(Format::MicroDvd, $subtitle->findFormat());
         $this->assertSame(1.0, $subtitle->getCues()[0]->getStart());
@@ -383,7 +383,7 @@ class LoadSaveTest extends TestCase
 
     public function testSaveAndLoadUseTheYttExtensionAsYouTubeTimedText(): void
     {
-        $subtitle = Subtitle::load(self::FILES . "cli/trip.srt", Format::SubRip);
+        $subtitle = Subtitle::load(self::FILES . "general/trip.srt", Format::SubRip);
 
         $subtitle->save("$this->dir/video.ytt");
 
@@ -394,7 +394,7 @@ class LoadSaveTest extends TestCase
 
     public function testSaveTakesTheFormatArgumentOverTheExtension(): void
     {
-        $subtitle = Subtitle::load(self::FILES . "cli/trip.srt", Format::SubRip);
+        $subtitle = Subtitle::load(self::FILES . "general/trip.srt", Format::SubRip);
 
         $subtitle->save("$this->dir/out.txt", Format::WebVtt);
         $subtitle->save("$this->dir/out.vtt");
@@ -406,7 +406,7 @@ class LoadSaveTest extends TestCase
 
     public function testSaveMicroDvdTakesTheFrameRateFromTheOptionsThenFromTheFormatData(): void
     {
-        $withFrameRate = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
+        $withFrameRate = Subtitle::load(self::FILES . "general/frames.sub", Format::MicroDvd, new ReadOptions(formats: [new MicroDvdReadOptions(25)]));
         $withFrameRate->save("$this->dir/x.sub");
         $this->assertSame(
             $withFrameRate->toString(Format::MicroDvd, new WriteOptions(formats: [new MicroDvdWriteOptions(25)])),
@@ -417,7 +417,7 @@ class LoadSaveTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("MicroDvdWriteOptions::\$frameRate");
-        Subtitle::load(self::FILES . "cli/trip.srt", Format::SubRip)->save("$this->dir/z.sub");
+        Subtitle::load(self::FILES . "general/trip.srt", Format::SubRip)->save("$this->dir/z.sub");
     }
 
 
@@ -429,7 +429,7 @@ class LoadSaveTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("IttWriteOptions::\$frameRate");
-        Subtitle::load(self::FILES . "cli/trip.srt", Format::SubRip)->save("$this->dir/x.itt");
+        Subtitle::load(self::FILES . "general/trip.srt", Format::SubRip)->save("$this->dir/x.itt");
     }
 
 

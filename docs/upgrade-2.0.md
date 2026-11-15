@@ -1,5 +1,7 @@
 # Upgrade from 1.x to 2.0
 
+7.0 removed the command line tool from this package. The CLI parts below describe 6.x and older. The tool lives on in [subtitle-toolbox-go](https://github.com/yama6a/subtitle-toolbox-go).
+
 ```sh
 composer require ymakhloufi/subtitle-toolbox:^2.0
 ```
@@ -24,7 +26,7 @@ PHP errors point out each of these changes. The tables show the main cases.
 - **Names**: the library writes names in full and in US spelling. For example, `fps` becomes `frameRate`, `maxLines` becomes `maxLinesPerCue` and `colour` becomes `color`.
 - **Namespaces**: the classes of hearing-impaired removal moved to `SubtitleToolbox\HearingImpaired`, of resegmenting to `SubtitleToolbox\Resegmenting`, and of dual subtitles to `SubtitleToolbox\Dual`.
 - **Strict types**: every library file declares `strict_types`. A callback that you pass, for example to `mapText()`, must return a string. Your own files without `strict_types` call the library as before.
-- **CLI classes**: the classes in `SubtitleToolbox\Cli` are `@internal`. See [compatibility.md](compatibility.md) for the parts of the CLI that stay stable.
+- **CLI classes**: the classes in `SubtitleToolbox\Cli` are `@internal`. See [compatibility.md](https://github.com/yama6a/subtitle-toolbox-php/blob/6.11.5/docs/compatibility.md) for the parts of the CLI that stay stable.
 
 ## Load and save
 | 1.x | 2.0 |
@@ -187,7 +189,7 @@ Some failures throw another class or code. Check each `catch` of a 1.x class in 
 | Tesseract or php-glyph-ocr fails on an image | `InvalidArgumentException`, code 104 | `OcrException`, code 107. A missing engine or language still throws `InvalidArgumentException` |
 
 ## Command line tool
-See [cli.md](cli.md) for every command and option.
+See [cli.md](https://github.com/yama6a/subtitle-toolbox-php/blob/6.11.5/docs/cli.md) for every command and option.
 
 ### Output and input
 | 1.x | 2.0 |
@@ -213,7 +215,7 @@ See [cli.md](cli.md) for every command and option.
   - An output is an input.
 - **Format names**: `--from` and `--to` still take the 1.x names `ytchapter`, `podcast`, `ogm` and `ffmeta`. The output prints the new names.
 - **Second file**: `diff` reads the new file with `--from2` and `--track2`. `dual` reads its files with `--primary-from`, `--primary-track`, `--secondary-from` and `--secondary-track`. `diff` takes one old file. A directory or a glob that matches more than one file fails with exit code 2.
-- **Frame rate**: `--fps` still works and sets each frame rate that the command has. `--input-fps`, `--output-fps` and `--video-fps` set one each, see [Frame rates](cli.md#frame-rates).
+- **Frame rate**: `--fps` still works and sets each frame rate that the command has. `--input-fps`, `--output-fps` and `--video-fps` set one each, see [Frame rates](https://github.com/yama6a/subtitle-toolbox-php/blob/6.11.5/docs/cli.md#frame-rates).
 
 ### Renamed options
 | 1.x | 2.0 |
