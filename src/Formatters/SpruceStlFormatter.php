@@ -150,7 +150,7 @@ final class SpruceStlFormatter extends SubtitleFormatter
     private function timecode(float $seconds, float $frameRate): string
     {
         $whole = (int) floor(max(0.0, $seconds));
-        $frame = (int) round((max(0.0, $seconds) - $whole) * $frameRate);
+        $frame = (new FrameRate($frameRate))->secondsToFrames(max(0.0, $seconds) - $whole);
         if ($frame >= ceil($frameRate)) {
             $whole++;
             $frame = 0;

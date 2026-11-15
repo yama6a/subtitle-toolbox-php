@@ -279,6 +279,7 @@ class AssFormatterTest extends TestCase
             "text before the first"  => ["Ka<00:00:10.300>ra", "{\\k30}Ka{\\k170}ra"],
             "timestamp before start" => ["<00:00:09.000>Ka<00:00:11.000>ra", "{\\k100}Ka{\\k100}ra"],
             "timestamp after end"    => ["<00:00:10.000>Ka<00:00:13.000>ra", "{\\k300}Ka{\\k0}ra"],
+            "half a centisecond"     => ["Ka<00:00:10.075>ra", "{\\k8}Ka{\\k192}ra"],
         ];
     }
 

@@ -397,13 +397,13 @@ final class AssFormatter extends SubtitleFormatter
      */
     private function karaokeDurations(array $tokens, SubtitleCue $cue): array
     {
-        $startCs    = (int) round($cue->getStart() * 100);
+        $startCs    = Timecode::unitsBelowLimit($cue->getStart(), 100);
         $times      = [];
         $textBefore = false;
         foreach ($tokens as $index => $token) {
             $seconds = $index % 2 === 1 ? Markup::wordTimestampSeconds($token) : null;
             if ($seconds !== null) {
-                $times[] = max($startCs, (int) round($seconds * 100));
+                $times[] = max($startCs, Timecode::unitsBelowLimit($seconds, 100));
             } elseif ($times === [] && $index % 2 === 0 && trim($token) !== "") {
                 $textBefore = true;
             }
@@ -414,7 +414,7 @@ final class AssFormatter extends SubtitleFormatter
         }
 
         $durations = [];
-        $ends      = [...array_slice($times, 1), max($startCs, (int) round($cue->getEnd() * 100))];
+        $ends      = [...array_slice($times, 1), max($startCs, Timecode::unitsBelowLimit($cue->getEnd(), 100))];
         foreach ($times as $index => $time) {
             $durations[] = max(0, $ends[$index] - $time);
         }
