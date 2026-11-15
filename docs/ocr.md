@@ -76,7 +76,7 @@ $subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(formats: 
 $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);  // "de", from the id line
 ```
 
-- **Parse**: pass the `.sub` content and a `VobSubReadOptions` with the `.idx` content. Without it, the parser throws `InvalidArgumentException`. Format detection does not know VobSub, because it sees only one file. The command line tool takes the `.idx` file as input and reads the `.sub` file next to it.
+- **Parse**: pass the `.sub` content and a `VobSubReadOptions` with the `.idx` content. Without it, the parser throws `InvalidArgumentException`. Format detection does not know VobSub, because it sees only one file. `Subtitle::load('movie.sub', Format::VobSub)` reads the `.idx` file next to it. `Subtitle::load('movie.idx', Format::VobSub)` reads the `.sub` file next to it.
 - **Cues**: the image has the size and the position of the display area, on a screen of the `.idx` size. A subpicture with the forced start command sets `forced`.
 - **Times**: a cue starts at its `timestamp`, plus the `delay` lines of its track. It ends at the stop command of the subpicture. A subpicture without a stop command ends at the next one, at most [`ReadOptions::$lastCueDuration`](read-options.md) later.
 - **Colors**: the `.idx` palette and a `custom colors: ON` line apply.
@@ -236,7 +236,6 @@ $subtitle->recognizeText(new GlyphOcrEngine(new GlyphOcrOptions(database: GlyphD
 - `askAPerson()` is your own code. It shows the glyph and returns the text that a person types.
 - A new glyph wins over older glyphs that match equally well. Train a misread character the same way, from `$result->lines[$line]->chars[$index]->sample`.
 - The [php-glyph-ocr README](https://github.com/yama6a/php-glyph-ocr#databases-and-training) describes the `.nocr` files, `Recognizer::split()` and `GlyphSample::merge()`.
-- The command line tool takes a trained database with `--ocr-database`, see [cli.md](cli.md#ocr).
 
 ## Other OCR engines
 An engine is a class that implements `OcrEngine`. This example sends each image to an OCR web service:
