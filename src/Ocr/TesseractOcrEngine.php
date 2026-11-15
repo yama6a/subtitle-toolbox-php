@@ -148,19 +148,19 @@ final class TesseractOcrEngine implements OcrEngine
 
 
     /**
-     * Draws the image on black as a grey image, inverts it for dark text on white, scales it and adds a border.
+     * Draws the image on black as a gray image, inverts it for dark text on white, scales it and adds a border.
      */
     private function toPgm(CueImage $image): string
     {
         ['width' => $width, 'height' => $height, 'pixels' => $pixels] = PngDecoder::decode($image->png);
 
-        $grey = [];
+        $gray = [];
         foreach ($pixels as $pixel) {
             $alpha  = ($pixel & 0xFF) / 255;
             $luma   = self::LUMA_WEIGHTS[0] * ($pixel >> 24 & 0xFF) + self::LUMA_WEIGHTS[1] * ($pixel >> 16 & 0xFF)
                       + self::LUMA_WEIGHTS[2] * ($pixel >> 8 & 0xFF);
             $value  = $luma * $alpha;
-            $grey[] = $this->options->invert ? 255 - $value : $value;
+            $gray[] = $this->options->invert ? 255 - $value : $value;
         }
 
         $scale     = $this->options->scale ?? ($image->screenHeight < self::SD_MAX_HEIGHT ? self::SD_SCALE : 1.0);
@@ -179,8 +179,8 @@ final class TesseractOcrEngine implements OcrEngine
                 $x0      = (int)$sourceX;
                 $x1      = min($width - 1, $x0 + 1);
                 $fx      = $sourceX - $x0;
-                $value   = ($grey[$y0 * $width + $x0] * (1 - $fx) + $grey[$y0 * $width + $x1] * $fx) * (1 - $fy)
-                         + ($grey[$y1 * $width + $x0] * (1 - $fx) + $grey[$y1 * $width + $x1] * $fx) * $fy;
+                $value   = ($gray[$y0 * $width + $x0] * (1 - $fx) + $gray[$y0 * $width + $x1] * $fx) * (1 - $fy)
+                         + ($gray[$y1 * $width + $x0] * (1 - $fx) + $gray[$y1 * $width + $x1] * $fx) * $fy;
                 if ($this->options->threshold !== null) {
                     $value = $value < $this->options->threshold ? 0 : 255;
                 }

@@ -119,7 +119,7 @@ trait Retiming
 
 
     /**
-     * Returns the line between each 2 neighbouring points: a time from "from" on maps to time * factor + offset.
+     * Returns the line between each 2 neighboring points: a time from "from" on maps to time * factor + offset.
      *
      * @param list<SyncPoint> $points
      *

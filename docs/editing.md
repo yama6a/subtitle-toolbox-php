@@ -66,7 +66,7 @@ $gap = (new FrameRate(24))->framesToSeconds(2);   // about 0.083 s
 
 $subtitle->fixOverlaps($gap);                     // end each cue at least $gap before the next cue starts
 $subtitle->extendShortCues(0.833, $gap);          // show each cue for at least 0.833 s where the next cue allows it
-$subtitle->addLeadInOut(0.2, 0.3, $gap);         // start each cue 0.2 s earlier and end it 0.3 s later where the neighbours allow it
+$subtitle->addLeadInOut(0.2, 0.3, $gap);         // start each cue 0.2 s earlier and end it 0.3 s later where the neighbors allow it
 $subtitle->limitLongCues(7);                      // end each cue at most 7 s after its start
 $subtitle->wrapLines(42);                         // at most 42 characters per line, at most 2 lines
 $subtitle->unwrapLines();                         // join the lines of each dialogue turn with a space

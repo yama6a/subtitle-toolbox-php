@@ -304,7 +304,7 @@ final class SccFormatter extends SubtitleFormatter
     /**
      * Returns the row and the text column of each line.
      * Rows and columns from the scc format data win when they still fit the lines and the alignment.
-     * Otherwise the alignment sets them. The default is centred lines at the bottom.
+     * Otherwise the alignment sets them. The default is centered lines at the bottom.
      *
      * @param list<list<array>> $cells
      * @return list<array{int, int}>

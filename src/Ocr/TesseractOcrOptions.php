@@ -27,8 +27,8 @@ final readonly class TesseractOcrOptions
      * @param float|null         $scale                the factor from 1 to 8 that scales the image up before OCR.
      *                                                 Null takes 2 on screens below 720 lines and 1 on larger screens
      * @param bool               $invert               draws light text dark on white, as Tesseract expects
-     * @param int|null           $threshold            makes grey levels below this value from 1 to 255 black and the
-     *                                                 others white. Null keeps the grey levels
+     * @param int|null           $threshold            makes gray levels below this value from 1 to 255 black and the
+     *                                                 others white. Null keeps the gray levels
      */
     public function __construct(
         OcrLanguage|string $language = "eng",

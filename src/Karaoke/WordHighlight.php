@@ -185,7 +185,7 @@ final class WordHighlight
 
 
     /**
-     * Returns the first and last word number that the cue shows, centred on the active word.
+     * Returns the first and last word number that the cue shows, centered on the active word.
      *
      * @return array{int, int}
      */

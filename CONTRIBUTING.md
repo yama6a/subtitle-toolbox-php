@@ -4,7 +4,7 @@ Run the tests with `composer test`. Each pull request carries one label that set
 
 ## Credit for ported work
 
-- Copy a file from another project: add a section to [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). It holds the project URL, the licence, the pinned commit, the file list and the upstream notice copied unchanged. Add an Apache-2.0 `NOTICE` file too when the project has one.
+- Copy a file from another project: add a section to [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). It holds the project URL, the license, the pinned commit, the file list and the upstream notice copied unchanged. Add an Apache-2.0 `NOTICE` file too when the project has one.
 - Port or adapt code: add a docblock line to the class or method, even when the new code looks different. Pin the link to a commit.
 
   ```php
@@ -17,16 +17,16 @@ Run the tests with `composer test`. Each pull request carries one label that set
 - Write "Adapted from" for a re-implementation of the same logic. Write "Copied from" for verbatim code.
 - For Apache-2.0 sources, add a line "Changed: ..." that states what you changed.
 - A test with data from another project names the project in its data provider key. A ported test case cites the upstream test method in a comment.
-- A fixture folder lists every file in its `SOURCES.md` with its source and licence.
+- A fixture folder lists every file in its `SOURCES.md` with its source and license.
 - A project that re-hosts another project's data gets a credit for the original source too.
 
-## Licence rules
+## License rules
 
 - Permissive sources may be adapted, always with credit.
-- Copyleft, proprietary and unlicensed sources are behaviour references only. Read the behaviour or the spec, write your own code and tests, and copy nothing.
-- A project not in the table: check its licence at the pinned commit before you use anything. An unknown or missing licence means ideas only.
+- Copyleft, proprietary and unlicensed sources are behavior references only. Read the behavior or the spec, write your own code and tests, and copy nothing.
+- A project not in the table: check its license at the pinned commit before you use anything. An unknown or missing license means ideas only.
 
-| Project | Licence | Use allowed |
+| Project | License | Use allowed |
 |:--- |:--- |:--- |
 | mantas-done/subtitles | MIT | adapt with credit |
 | captioning/captioning | MIT | adapt with credit |
@@ -35,40 +35,40 @@ Run the tests with `composer test`. Each pull request carries one label that set
 | delphiki/SubRip-File-Parser | BSD | adapt with credit |
 | Saeven/subtitles, ismailceylan/php-subtitle-toolkit, medienbaecker/kirby-vtt, Thijs-Riezebeek/subtitles | MIT | adapt with credit |
 | benlipp/srt-parser | DBAD (permissive, attribution) | adapt with credit |
-| johnnoel/php-ass | CC-BY-SA-3.0 | behaviour only |
+| johnnoel/php-ass | CC-BY-SA-3.0 | behavior only |
 | iceman1010/srt-translation-validator | proprietary, no redistribution | ideas only, nothing copied |
 | subtitle.js, subsrt, media-captions (vidstack), osk/node-webvtt | MIT | adapt with credit |
-| shaka-project/shaka-player | Apache-2.0 | adapt with credit, keep the licence text, state changes |
+| shaka-project/shaka-player | Apache-2.0 | adapt with credit, keep the license text, state changes |
 | pysubs2, srt (cdown) | MIT | adapt with credit |
 | pycaption (PBS) | Apache-2.0 | adapt with credit + keep NOTICE |
 | sandflow/ttconv | BSD-2-Clause, the STL files in `src/test/resources/stl/irt/` Apache-2.0 with a NOTICE (checked @ 1fed6ab) | adapt with credit; the IRT files need their NOTICE |
 | go-astisub, martinlindhe/subtitles, libgosubs | MIT | adapt with credit |
 | androidx/media (Media3) | Apache-2.0 | adapt with credit + keep NOTICE, state changes |
 | JDaren/subtitleConverter | MIT (per README) | adapt with credit |
-| noophq/subtitle | LGPL-3.0 | behaviour only |
+| noophq/subtitle | LGPL-3.0 | behavior only |
 | Subtitle Edit (libse/seconv) | MIT at every commit from `771236c5` (2026-02-28) on, where the `LICENSE` file is MIT (older commits have a GPL-3.0 `LICENSE.txt`) | adapt with credit, check the `LICENSE` file at the commit you use, pin the commit |
 | AlexPoint/SubtitlesParser | MIT | adapt with credit |
-| kitsumed/SubtitlesParserV2 | LGPL-3.0 | behaviour only |
-| Aegisub | BSD-3/ISC per file header (some files differ) | adapt with credit only if the file header is BSD/ISC; otherwise behaviour only |
-| KDE Subtitle Composer | GPL-2.0-or-later | behaviour only |
-| MKVToolNix | GPL-2.0 | behaviour only |
-| FFmpeg | LGPL-2.1+ (parts GPL) | behaviour only |
+| kitsumed/SubtitlesParserV2 | LGPL-3.0 | behavior only |
+| Aegisub | BSD-3/ISC per file header (some files differ) | adapt with credit only if the file header is BSD/ISC; otherwise behavior only |
+| KDE Subtitle Composer | GPL-2.0-or-later | behavior only |
+| MKVToolNix | GPL-2.0 | behavior only |
+| FFmpeg | LGPL-2.1+ (parts GPL) | behavior only |
 | libass | ISC | adapt with credit |
-| CCExtractor | GPL-2.0 | behaviour only |
-| subparse (Rust) | MPL-2.0 (file-level copyleft) | behaviour only |
+| CCExtractor | GPL-2.0 | behavior only |
+| subparse (Rust) | MPL-2.0 (file-level copyleft) | behavior only |
 | rsubs-lib | MIT | adapt with credit |
 | xqq/libaribcaption | MIT, ISC-style notice in the source files (checked @ 37dde0f) | adapt with credit |
-| aribb24 | LGPL-3.0 | behaviour only |
+| aribb24 | LGPL-3.0 | behavior only |
 | aspasia | 0BSD | adapt (credit appreciated) |
 | chardetng (used by aspasia) | Apache-2.0 OR MIT, (c) Mozilla Foundation (checked @ 4a53a99) | adapt with credit under MIT |
-| alass | GPL-3.0 | behaviour only |
+| alass | GPL-3.0 | behavior only |
 | webvtt-ruby, srt (ruby), subtitle_it | MIT | adapt with credit |
-| SubTypo, submerger, subtitle_app_utils (Kotlin) | GPL-3.0 | behaviour only |
+| SubTypo, submerger, subtitle_app_utils (Kotlin) | GPL-3.0 | behavior only |
 | SwiftSubtitles, SwiftWebVTT | MIT | adapt with credit |
 | swift-subtitle-kit | MIT, (c) 2026 Dionysis Karatzas (checked @ 728d62d) | adapt with credit; its `sample.*` fixtures are copies of subsrt's (credit subsrt); `embedded-bom-srt-fixture.srt` is its own |
-| LibreTranslate (server) | AGPL-3.0 (checked @ 54a66e8) | behaviour only: a client for its HTTP API is our own code; never copy server code |
-| KBlixt/subcleaner | no licence found | ideas only |
-| Liberation Fonts | SIL OFL 1.1 | redistribute with the licence text (already in `tests/files/ocr/fonts/`) |
+| LibreTranslate (server) | AGPL-3.0 (checked @ 54a66e8) | behavior only: a client for its HTTP API is our own code; never copy server code |
+| KBlixt/subcleaner | no license found | ideas only |
+| Liberation Fonts | SIL OFL 1.1 | redistribute with the license text (already in `tests/files/ocr/fonts/`) |
 | Podcastindex-org/podcast-namespace examples | CC0-1.0 | free to use; credit is a courtesy |
 | W3C specs and examples | W3C Software and Document License | examples may be used with the W3C notice |
 | ISO/IEC, 3GPP, SMPTE, EBU, CEA specs, Adobe docs | specifications | implement from the spec; no code exists to copy |
