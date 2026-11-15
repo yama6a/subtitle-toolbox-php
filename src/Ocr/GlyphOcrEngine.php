@@ -29,8 +29,6 @@ final class GlyphOcrEngine implements OcrEngine
 
     private readonly Recognizer $recognizer;
 
-    private readonly GlyphDatabase $database;
-
 
     /**
      * Reads image cues with the pure PHP OCR of the package yama6a/php-glyph-ocr, with its subtitle fonts database by default.
@@ -41,9 +39,8 @@ final class GlyphOcrEngine implements OcrEngine
         Dependency::check(Recognizer::class, "Cannot create a GlyphOcrEngine: the package " . self::PACKAGE .
                                              " is missing. Install it with: " . self::INSTALL_COMMAND);
 
-        $this->database   = $options->database ?? self::subtitleFontsDatabase();
         $this->recognizer = new Recognizer(
-            $this->database,
+            $options->database ?? self::subtitleFontsDatabase(),
             inkThreshold: $options->inkThreshold,
             spaceWidth: $options->spaceWidth,
             maxWrongPixels: $options->maxWrongPixels,
@@ -112,17 +109,6 @@ final class GlyphOcrEngine implements OcrEngine
         }
 
         return new RecognizedText($lines, $result->confidence());
-    }
-
-
-    /**
-     * Returns the glyph database that the engine matches against.
-     *
-     * @internal
-     */
-    public function database(): GlyphDatabase
-    {
-        return $this->database;
     }
 
 

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Cli\Application;
 use SubtitleToolbox\Container\ContainerFormat;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -18,25 +17,6 @@ use SubtitleToolbox\Sync\ReferenceSyncOptions;
 
 class RobustnessLimitsTest extends TestCase
 {
-    private const FILES = __DIR__ . "/files/";
-
-
-    /**
-     * @param list<string> $arguments
-     *
-     * @return array{int, string, string}
-     */
-    private static function runApplication(array $arguments): array
-    {
-        $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
-        $code    = (new Application(...$streams))->run(["stbox", ...$arguments]);
-        rewind($streams[1]);
-        rewind($streams[2]);
-
-        return [$code, stream_get_contents($streams[1]), stream_get_contents($streams[2])];
-    }
-
-
     private static function pgsSegment(int $type, string $data): string
     {
         return "PG" . pack("NNCn", 0, 0, $type, strlen($data)) . $data;
@@ -67,35 +47,11 @@ class RobustnessLimitsTest extends TestCase
     }
 
 
-    public function testSyncCommandRejectsHugeLimitsAsAUsageError(): void
-    {
-        $sync = ["sync", self::FILES . "cli/trip.srt", "--reference", self::FILES . "cli/shop.vtt", "-o", "-"];
-
-        $this->assertSame([2, "", "Error: The option --max-splits needs a whole number from 0 to 10, got \"99999999999999999999\".\n" .
-                                  "Run \"stbox help sync\" for the usage.\n"],
-                          self::runApplication([...$sync, "--max-splits", "99999999999999999999"]));
-        [$code, , $error] = self::runApplication([...$sync, "--max-offset", "100000"]);
-        $this->assertSame(2, $code);
-        $this->assertStringContainsString("The maximum offset must be from -86400 to 86400 seconds", $error);
-    }
-
-
     public function testTrackNameThatIsNotUtf8KeepsItsValidCharacters(): void
     {
         $track = new SubtitleTrack(ContainerFormat::Matroska, 3, "S_TEXT/UTF8", Format::SubRip, "fr", "Fran\xE7ais", true, false);
 
         $this->assertSame("S_TEXT/UTF8, fr, \"Fran\u{FFFD}ais\", default", $track->describe());
-    }
-
-
-    public function testFixListPrintsTextThatIsNotUtf8WithReplacementCharacters(): void
-    {
-        $path = self::FILES . "fixing/latin1_unclosed_italic.srt";
-
-        [$code, , $error] = self::runApplication(["convert", $path, "--encoding", "UTF-8", "--errors-fix", "--errors-list-fixes", "--to", "srt"]);
-
-        $this->assertSame(0, $code);
-        $this->assertSame("$path: cue 1: unbalancedTags: \"<i>Caf\u{FFFD} au lait.\" -> \"<i>Caf\u{FFFD} au lait.</i>\"\n", $error);
     }
 
 

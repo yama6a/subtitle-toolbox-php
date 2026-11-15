@@ -6,12 +6,8 @@ namespace SubtitleToolbox;
 
 final class SubtitleStatistics
 {
-    /**
-     * The number of most used words that toArray() and the info command show.
-     *
-     * @internal
-     */
-    public const MOST_USED_WORDS = 10;
+    /** The number of most used words that toArray() shows. */
+    private const MOST_USED_WORDS = 10;
 
     /**
      * @param int                                            $cueCount            The number of cues, also image cues.
