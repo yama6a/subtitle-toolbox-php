@@ -177,8 +177,8 @@ final class SubtitleCue
 
 
     /**
-     * Returns the exact point of the cue that the WebVTT or TTML parser read, or null. getAlignment() says which point
-     * of the cue box sits there.
+     * Returns the exact point of the cue that the WebVTT, TTML or DCP parser read, or null. getAlignment() says which
+     * point of the cue box sits there.
      */
     public function findPosition(): ?CuePosition
     {
@@ -187,7 +187,7 @@ final class SubtitleCue
 
 
     /**
-     * The WebVTT and TTML formatters write the position. All other formatters write only the alignment.
+     * The WebVTT, TTML and DCP formatters write the position. All other formatters write only the alignment.
      * Call it after setAlignment(), which clears the position.
      */
     public function setPosition(?CuePosition $position): self
