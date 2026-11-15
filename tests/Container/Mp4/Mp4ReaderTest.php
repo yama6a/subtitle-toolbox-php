@@ -12,6 +12,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\Parsers\Mcc;
 use SubtitleToolbox\Parsers\Options\MccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccRollUp;
@@ -185,6 +186,38 @@ class Mp4ReaderTest extends TestCase
         $reader = self::oneTrack(["timescale" => 1, "samples" => [[1, Mp4FixtureWriter::textSample("Last.")], [400000000, Mp4FixtureWriter::textSample("")]]]);
 
         $this->assertSame([[0.0, 1.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $reader->extract(1)->getCues()));
+    }
+
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function captionTracksPastTheIntRange(): array
+    {
+        $anc = Mcc::writePacket(4, 0, [[Mcc::NTSC_FIELD_1, true, 0x9420], [Mcc::NTSC_FIELD_1, true, 0x942F]]);
+
+        return [
+            "c608" => [Mp4FixtureWriter::box("c608", str_repeat("\0", 6) . pack("n", 1)),
+                       Mp4FixtureWriter::captionSample([0x9420, 0x9420, 0xC2D5, 0xD320, 0x942F, 0x942F])],
+            "c708" => [Mp4FixtureWriter::box("c708", str_repeat("\0", 6) . pack("n", 1)),
+                       Mp4FixtureWriter::box("ccdp", substr($anc, 3, ord($anc[2])))],
+        ];
+    }
+
+
+    /**
+     * An edit list that starts the media 10^18 s late puts the caption frame at 29.97 fps past the largest integer.
+     */
+    #[DataProvider("captionTracksPastTheIntRange")]
+    public function testThrowsParsingExceptionForACaptionSamplePastTheIntRange(string $entry, string $sample): void
+    {
+        $reader = self::oneTrack(["entry" => $entry, "timescale" => 1, "version1" => true, "edits" => [[0, -1000000000000000000]],
+                                  "samples" => [[1, $sample]]]);
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The caption time 1.0E+18 s is not below 100000 hours.");
+
+        $reader->extract(1);
     }
 
 
