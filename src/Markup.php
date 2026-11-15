@@ -571,6 +571,7 @@ final class Markup
      * Counts the characters a reader sees, the extended grapheme clusters of UAX #29, or bytes for invalid UTF-8 such as the Latin-1 bytes that MicroDVD keeps.
      * Invisible format characters and the soft hyphen count 0.
      * PCRE2 does not join a regional indicator with a following combining mark or zero width joiner, so U+1F1E9 U+0301 counts as 2 and UAX #29 rule GB9 says 1.
+     * PCRE2 also does not join a Prepend character such as U+0600 with a following Extended_Pictographic character such as U+1F44D, so that pair counts as 2 and UAX #29 rule GB9b says 1.
      *
      * @internal
      */

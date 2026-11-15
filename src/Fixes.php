@@ -77,7 +77,7 @@ trait Fixes
 
 
     /**
-     * Shows each cue $leadIn seconds earlier and $leadOut seconds longer, but at least $minGap seconds away from its neighbours.
+     * Shows each cue $leadIn seconds earlier and $leadOut seconds longer, but at least $minGap seconds away from its neighbors.
      * The lead-out comes first, so it takes the space between two cues before the lead-in of the next cue.
      * A start or end inside another cue stays where it is.
      *
