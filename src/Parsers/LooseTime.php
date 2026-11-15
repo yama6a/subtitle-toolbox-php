@@ -29,4 +29,13 @@ final class LooseTime
 
         return Timecode::roundToMilliseconds(Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4] ?? ""));
     }
+
+
+    /**
+     * Returns true when $time and $fraction are the 2 parts of a time that a comma split, such as "0:00:01" and "50" of "0:00:01,50".
+     */
+    public static function isSplitAtFraction(string $time, string $fraction): bool
+    {
+        return preg_match('/^\s*\d+:\d{1,2}:\d{1,2}$/', $time) === 1 && preg_match('/^\d{1,4}\s*$/', $fraction) === 1;
+    }
 }

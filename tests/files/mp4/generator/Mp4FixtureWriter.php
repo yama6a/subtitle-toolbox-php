@@ -115,6 +115,7 @@ final class Mp4FixtureWriter
      *              boxes?: array<string, string>, edits?: list<array{int, int}>} $track
      *        chunks holds the file offset of each chunk and the duration and size of its samples.
      *        edits holds the segment duration and the media time of each edit list entry. A media time of -1 is an empty edit.
+     *        With version1, the edit list has 64-bit entries.
      *        boxes replaces the stsd, stts, stsc, stsz or stco box, so a test can write a broken one.
      */
     public static function trak(array $track): string
@@ -138,8 +139,10 @@ final class Mp4FixtureWriter
         $udta = isset($track["name"]) ? self::box("udta", self::box("name", $track["name"])) : "";
 
         $edts = isset($track["edits"])
-            ? self::box("edts", self::fullBox("elst", 0, 0, pack("N", count($track["edits"])) .
-                                    implode("", array_map(fn (array $edit): string => pack("NNnn", $edit[0], $edit[1] & 0xFFFFFFFF, 1, 0), $track["edits"]))))
+            ? self::box("edts", self::fullBox("elst", $version1 ? 1 : 0, 0, pack("N", count($track["edits"])) .
+                                    implode("", array_map(fn (array $edit): string => $version1
+                                        ? pack("JJnn", $edit[0], $edit[1], 1, 0)
+                                        : pack("NNnn", $edit[0], $edit[1] & 0xFFFFFFFF, 1, 0), $track["edits"]))))
             : "";
 
         return self::box("trak", $tkhd . $edts . $mdia . $udta);

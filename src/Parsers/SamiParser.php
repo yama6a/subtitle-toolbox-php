@@ -402,7 +402,7 @@ final class SamiParser extends SubtitleParser
         $markup = "";
         foreach ($node->childNodes as $child) {
             if ($child instanceof DOMText) {
-                $markup .= Markup::escapeText(preg_replace('/[ \t\n\r\f]+/', " ", $child->nodeValue));
+                $markup .= Markup::escapeText(preg_replace('/[ \t\n\r\f]+/', " ", $this->removeDecodedControlCharacters($child->nodeValue)));
                 continue;
             }
             if (!$child instanceof DOMElement) {

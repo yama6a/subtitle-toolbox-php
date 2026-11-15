@@ -54,6 +54,27 @@ class FrameRateTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testExactSecondsToFramesSkipsTheMillisecondStep(): void
+    {
+        $ntsc = new FrameRate(30000 / 1001);
+
+        // Frame 6 at 23.976 fps is 0.25025 s, so 7.5 frames at 29.97 fps. secondsToFrames() sees 0.25 s, 7.49 frames.
+        $this->assertSame(8, $ntsc->exactSecondsToFrames(6 * 1001 / 24000));
+        $this->assertSame(7, $ntsc->secondsToFrames(6 * 1001 / 24000));
+        $this->assertSame(33, $ntsc->exactSecondsToFrames(26 * 1001 / 24000));
+        $this->assertSame(8, $ntsc->exactSecondsToFrames(15 * 1001 / 60000));
+        $this->assertSame(15, (new FrameRate(25.0))->exactSecondsToFrames(0.58));
+    }
+
+
+    public function testExactSecondsToFramesThrowsForAFrameBeyondTheIntRange(): void
+    {
+        $this->expectException(UnwritableContentException::class);
+
+        (new FrameRate(1e12))->exactSecondsToFrames(359999999);
+    }
+
+
     public function testSecondsToFramesThrowsForAFrameBeyondTheIntRange(): void
     {
         $this->expectException(UnwritableContentException::class);

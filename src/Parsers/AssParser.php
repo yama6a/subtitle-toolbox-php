@@ -273,8 +273,7 @@ final class AssParser extends SubtitleParser
         $index  = 0;
         foreach (array_slice($format, 0, -1) as $fieldName) {
             if (in_array(strtolower($fieldName), ["start", "end"], true)
-                && preg_match('/^\s*\d+:\d{1,2}:\d{1,2}$/', $values[$index] ?? "")
-                && preg_match('/^\d{1,4}\s*$/', $values[$index + 1] ?? "")
+                && LooseTime::isSplitAtFraction($values[$index] ?? "", $values[$index + 1] ?? "")
                 && isset($values[$index + 2])) {
                 array_splice($values, $index, 2, [$values[$index] . "\0" . $values[$index + 1]]);
             }

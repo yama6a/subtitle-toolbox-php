@@ -52,6 +52,10 @@ class OcrReplaceListFixerTest extends TestCase
     {
         return [
             "name without a group is literal" => ["x", '[${name}]', "axc", 'a[${name}]c'],
+            "number without group is literal" => ["(a)", 'x$3', "a", 'x$3'],
+            "braced number without a group"   => ["(a)", 'x${3}', "a", 'x${3}'],
+            "number past the named group"     => ["(?<n>q)(z)", '[$3][$2]', "qz", '[$3][q]'],
+            "2 digits without such a group"   => ["(a)", '[$12]', "a", '[$12]'],
             "name of a group"                 => ["(?<n>q)(z)?", '${n}-$2', "qz", "q-q"],
             "named group numbered last"       => ["(?<n>q)(z)?", '[$1][${2}]', "qz", "[z][q]"],
             "quoted name numbered last"       => ["(?'n'q)(z)", '[$1][$2]', "qz", "[z][q]"],

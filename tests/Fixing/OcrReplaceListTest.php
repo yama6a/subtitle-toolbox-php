@@ -114,7 +114,7 @@ class OcrReplaceListTest extends TestCase
             "</RegularExpressions></ReplaceList>"
         );
 
-        $this->assertSame(["/(?<n>a)(b)\\g{2}(?(2)c)[\\1]/u" => '${2} ${1} ${1} ${n} $3',
+        $this->assertSame(["/(?<n>a)(b)\\g{2}(?(2)c)[\\1]/u" => '${2} ${1} ${1} ${n} \$3',
                            "/(a)(?<n>b)\\1/u"                => '$1 $2 $+'], $list->regularExpressions);
     }
 }

@@ -328,19 +328,20 @@ final class SubViewerParser extends SubtitleParser
 
 
     /**
-     * Reads a timing line without a fraction, with 4 fraction digits or with 1-digit fields, and warns. Returns null for another line.
+     * Reads a timing line without a fraction, with 4 fraction digits, with 1-digit fields or with ":" or "," before the fraction,
+     * and warns. Returns null for another line.
      *
      * @throws ParsingException when a time reaches MAX_HOURS after it rounds to milliseconds.
      */
     private function looseVersion2Cue(string $line, int $lineNumber, int $cueIndex): ?SubtitleCue
     {
-        $times = explode(",", $line);
+        $times = self::splitTimes($line);
         if (count($times) !== 2) {
             return null;
         }
 
-        $start = LooseTime::toSeconds($times[0], ".");
-        $end   = LooseTime::toSeconds($times[1], ".");
+        $start = LooseTime::toSeconds($times[0], ".:,");
+        $end   = LooseTime::toSeconds($times[1], ".:,");
         if ($start === null || $end === null) {
             return null;
         }
@@ -432,13 +433,40 @@ final class SubViewerParser extends SubtitleParser
 
 
     /**
-     * Returns true for a line of 2 fields split by a comma where at least one field has the shape h:m:s or h:m:s.f,
+     * Splits a timing line at the commas. In a line of more than 2 parts, a comma before a fraction, as in "00:00:01,50",
+     * stays in its time, as in the Start and End fields of ASS.
+     *
+     * @return list<string>
+     */
+    private static function splitTimes(string $line): array
+    {
+        $parts = explode(",", $line);
+        if (count($parts) <= 2) {
+            return $parts;
+        }
+
+        $times = [];
+        for ($index = 0; $index < count($parts); $index++) {
+            if (isset($parts[$index + 1]) && LooseTime::isSplitAtFraction($parts[$index], $parts[$index + 1])) {
+                $times[] = $parts[$index] . "," . $parts[++$index];
+            } else {
+                $times[] = $parts[$index];
+            }
+        }
+
+        return $times;
+    }
+
+
+    /**
+     * Returns true for a line of 2 times split by a comma where at least one time has the shape h:m:s or h:m:s.f,
      * but the line is no valid timing line. Loose times and bad times such as "00:75:06.00" have this shape.
+     * The fraction can follow ".", ":" or ",".
      */
     private function looksLikeTimingLine(string $line): bool
     {
-        $time  = '\d+:\d{1,2}:\d{1,2}(?:\.\d{1,4})?';
-        $parts = explode(",", $line);
+        $time  = '\d+:\d{1,2}:\d{1,2}(?:[.:,]\d{1,4})?';
+        $parts = self::splitTimes($line);
 
         return count($parts) === 2
             && !preg_match(self::VERSION_2_TIME_REGEX, $line)

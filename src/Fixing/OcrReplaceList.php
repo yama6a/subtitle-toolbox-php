@@ -62,7 +62,7 @@ final class OcrReplaceList
     /**
      * Reads a Subtitle Edit OCR replace list such as eng_OCRFixReplaceList_User.xml.
      * It skips the sections that need a spell checker and the regular expressions that PCRE cannot run.
-     * A replacement keeps $`, $', $+, $_ and ${name} of an existing group. ${name} without such a group is literal text.
+     * A replacement keeps $`, $', $+, $_ and ${name} of an existing group. ${name}, $n and ${n} without such a group are literal text.
      * Group numbers follow .NET, where the named groups come after the unnamed groups.
      */
     public static function fromSubtitleEditXml(string $xml): self
@@ -156,8 +156,11 @@ final class OcrReplaceList
                 }
                 if (preg_match('/^\$\{?(\d+)\}?$/', $match[0], $number) === 1) {
                     $pcre = $numbers[(int)$number[1]] ?? null;
+                    if ($pcre === null) {
+                        return "\\" . $match[0];
+                    }
 
-                    return $pcre !== null && $pcre !== (int)$number[1] ? "\${" . $pcre . "}" : $match[0];
+                    return $pcre !== (int)$number[1] ? "\${" . $pcre . "}" : $match[0];
                 }
                 if (preg_match('/^\$\{(\w*)\}$/', $match[0], $name) === 1 && !array_key_exists($name[1], $groups)) {
                     return "\\" . $match[0];

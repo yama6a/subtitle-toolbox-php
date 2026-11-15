@@ -21,6 +21,7 @@ use SubtitleToolbox\Dependency;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\Dual\DualSubtitleOptions;
 use SubtitleToolbox\Encoding\Cea608;
+use SubtitleToolbox\Encoding\Cea608Cues;
 use SubtitleToolbox\Fixing\OcrReplaceList;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\AssWriteOptions;
@@ -435,6 +436,7 @@ class ThrowSitesTest extends TestCase
                                                                 ...$invalid],
             "Dual/DualSubtitleOptions.php: unknown style"        => [fn () => new DualSubtitleOptions(secondaryStyle: "blink"), ...$invalid],
             "Encoding/Cea608.php: row 16"                   => [fn () => Cea608::encodePac(16, 0), ...$invalid],
+            "Encoding/Cea608Cues.php: caption frame past the int range" => [fn () => Cea608Cues::secondsToFrame(1e18), ...$parsing],
             "Fixes.php: maximum characters 0"               => [fn () => self::subtitle()->wrapLines(0), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid regex"      => [fn () => new OcrReplaceList(regularExpressions: ["/(/" => ""]), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid XML"        => [fn () => OcrReplaceList::fromSubtitleEditXml("<ReplaceList>"), ...$parsing],
@@ -706,6 +708,7 @@ class ThrowSitesTest extends TestCase
             "Parsers/SubtitleParser.php: JSON field of 100000 hours" => [fn () => (new JsonParser())->parse('{"version": 1, "cues": [{"start": 360000000, "end": 360000001, "lines": []}]}', new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/SubtitleParser.php: NUL in a text file" => [fn () => (new SubRipParser())->parse("1\n00:00:01,000 --> 00:00:02,000\nte\0xt\n", new ReadOptions()), ...$parsing],
+            "Parsers/SubtitleParser.php: escaped NUL" => [fn () => (new WhisperJsonParser())->parse('{"segments": [{"start": 1, "end": 2, "text": "te\u0000xt"}]}', new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: end before start" => [fn () => (new SubRipParser())->parse("1\n00:00:05,000 --> 00:00:02,000\ntext\n", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: text before XML"  => [fn () => (new TtmlParser())->parse("x\n" . sprintf(self::TTML, ""), new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: 100000 hours"      => [fn () => (new WebVttParser())->parse("WEBVTT\n\n100000:00:00.000 --> 100000:00:01.000\ntext\n", new ReadOptions()),

@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Encoding;
 
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\SubtitleCue;
@@ -68,9 +71,18 @@ final class Cea608Cues
     }
 
 
+    /**
+     * Returns the nearest frame at 29.97 fps. The time can be a frame of another rate, such as 1001/24000 s in MCC.
+     *
+     * @throws ParsingException when the frame number is larger than the largest integer, such as for an MP4 sample at 10^18 s.
+     */
     public static function secondsToFrame(float $seconds): int
     {
-        return (int) round($seconds * self::FRAME_RATE_NUMERATOR / self::FRAME_RATE_DIVISOR);
+        try {
+            return (new FrameRate(self::FRAME_RATE_NUMERATOR / self::FRAME_RATE_DIVISOR))->exactSecondsToFrames($seconds);
+        } catch (UnwritableContentException) {
+            throw new ParsingException("The caption time $seconds s is not below " . Timecode::MAX_HOURS . " hours.");
+        }
     }
 
 

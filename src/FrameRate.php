@@ -53,7 +53,28 @@ final class FrameRate
     public function secondsToFrames(float $seconds): int
     {
         $milliseconds = round(Timecode::roundToMilliseconds($seconds) * 1000);
-        $frames       = round(round($milliseconds * $this->framesPerSecond / 1000, 9));
+
+        return $this->roundFrames($milliseconds * $this->framesPerSecond / 1000, $seconds);
+    }
+
+
+    /**
+     * Rounds to the nearest frame as secondsToFrames() does, but from the exact time, without the step to whole milliseconds.
+     * Use it for a time that is no whole millisecond, such as a frame of another frame rate.
+     * So 1001/24000 s, one frame at 23.976 fps, is 1.25 frames at 29.97 fps and rounds to frame 1.
+     *
+     * @throws UnwritableContentException when the frame number is larger than the largest integer.
+     * @internal
+     */
+    public function exactSecondsToFrames(float $seconds): int
+    {
+        return $this->roundFrames($seconds * $this->framesPerSecond, $seconds);
+    }
+
+
+    private function roundFrames(float $product, float $seconds): int
+    {
+        $frames = round(round($product, 9));
         if (!(abs($frames) < PHP_INT_MAX)) {
             throw new UnwritableContentException(
                 "The time $seconds s is frame $frames at $this->framesPerSecond fps. A frame number must be below " . PHP_INT_MAX . "."
