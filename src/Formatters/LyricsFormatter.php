@@ -52,16 +52,22 @@ final class LyricsFormatter extends SubtitleFormatter
                 $tags[$tag] = $subtitle->findMetadata($metadataKey);
             }
         }
-        $tags += $subtitle->findFormatData(LyricsParser::FORMAT_DATA_KEY)["idTags"] ?? [];
 
         $output = "";
-        foreach ($tags as $tag => $value) {
-            // The parser reads a tag only with this key. It takes a numeric offset as a shift of the times, which the written times hold already.
-            if (preg_match("/^[A-Za-z][A-Za-z0-9_]*$/D", (string) $tag) !== 1
-                || (strtolower((string) $tag) === "offset" && preg_match("/^[+-]?\\d+$/D", trim((string) $value)) === 1)) {
-                continue;
+        $seen   = [];
+        foreach ([...$tags ? [$tags] : [], $subtitle->findFormatData(LyricsParser::FORMAT_DATA_KEY)["idTags"] ?? []] as $group) {
+            foreach ($group as $tag => $value) {
+                $key = strtolower((string) $tag);
+                // The parser reads a tag only with this key, and keeps one value for the key in lower case.
+                // It takes a numeric offset as a shift of the times, which the written times hold already.
+                if (preg_match("/^[A-Za-z][A-Za-z0-9_]*$/D", (string) $tag) !== 1
+                    || isset($seen[$key])
+                    || ($key === "offset" && preg_match("/^[+-]?\\d+$/D", trim((string) $value)) === 1)) {
+                    continue;
+                }
+                $seen[$key] = true;
+                $output    .= "[" . $tag . ":" . Markup::toSingleLine($value) . "]" . LineEnding::Lf->value;
             }
-            $output .= "[" . $tag . ":" . Markup::toSingleLine($value) . "]" . LineEnding::Lf->value;
         }
 
         return $output;
@@ -89,7 +95,7 @@ final class LyricsFormatter extends SubtitleFormatter
     {
         $timestamp = "[" . $this->stamp($cue->getStart()) . "]";
 
-        $parts = preg_split(Markup::WORD_TIMESTAMP_REGEX, Markup::rubyAsText(str_replace(LineEnding::Lf->value, " ", implode(" ", $cue->getLines()))), -1, PREG_SPLIT_DELIM_CAPTURE);
+        $parts = preg_split(Markup::WORD_TIMESTAMP_REGEX, str_replace(LineEnding::Lf->value, " ", Markup::newlineEntitiesToLf(Markup::rubyAsText(implode(" ", $cue->getLines())))), -1, PREG_SPLIT_DELIM_CAPTURE);
         $lines  = "";
         $latest = null;
         foreach ($parts as $index => $part) {

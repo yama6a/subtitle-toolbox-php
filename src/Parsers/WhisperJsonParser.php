@@ -33,8 +33,8 @@ final class WhisperJsonParser extends SubtitleParser
         $data = $this->decodeJsonObject($content);
 
         $segments = match (true) {
-            self::isList($data["segments"] ?? null)      => $this->readSegments($data["segments"], $data["words"] ?? null),
-            self::isList($data["transcription"] ?? null) => $this->readTranscription($data["transcription"]),
+            $this->isList($data["segments"] ?? null, "segments")           => $this->readSegments($data["segments"], $this->listOrEmpty($data["words"] ?? null, "words")),
+            $this->isList($data["transcription"] ?? null, "transcription") => $this->readTranscription($data["transcription"]),
             default                                  => throw new ParsingException("The JSON has no \"segments\" or \"transcription\" list."),
         };
 
@@ -49,15 +49,14 @@ final class WhisperJsonParser extends SubtitleParser
 
         $language = $data["language"] ?? $data["result"]["language"] ?? null;
         $language = is_string($language) ? WhisperLanguages::CODES[strtolower($language)] ?? $language : $language;
-        $fileData = ["format" => self::variant($data)] + array_diff_key($data, array_flip(["segments", "transcription", "words", "word_segments", "text"]));
+        $fileData = ["format" => $this->variant($data)] + array_diff_key($data, array_flip(["segments", "transcription", "words", "word_segments", "text"]));
 
         return $this->transcript($cues, $language, $fileData);
     }
 
 
-    private function readSegments(array $segments, mixed $topLevelWords): array
+    private function readSegments(array $segments, array $topLevelWords): array
     {
-        $topLevelWords = is_array($topLevelWords) ? array_values($topLevelWords) : [];
         $wordIndex     = 0;
         $lastIndex     = array_key_last($segments);
         $result        = [];
@@ -72,7 +71,7 @@ final class WhisperJsonParser extends SubtitleParser
                 $this->fail($exception, null, $index, [RawJson::encode($segment)]);
                 continue;
             }
-            $words     = is_array($segment["words"] ?? null) ? $segment["words"] : [];
+            $words     = $this->listOrEmpty($segment["words"] ?? null, "segments", $index, "words");
             $wordPaths = array_map(fn (int|string $key): string => "$path.words[$key]", array_keys($words));
 
             if ($topLevelWords !== []) {
@@ -182,12 +181,12 @@ final class WhisperJsonParser extends SubtitleParser
     /**
      * Returns the name of the tool whose JSON shape $data has. The formatter writes this shape again.
      */
-    private static function variant(array $data): string
+    private function variant(array $data): string
     {
         return match (true) {
-            !self::isList($data["segments"] ?? null)                     => WhisperJsonVariant::WhisperCpp->value,
+            !$this->isList($data["segments"] ?? null, "segments")          => WhisperJsonVariant::WhisperCpp->value,
             isset($data["word_segments"])                                => WhisperJsonVariant::WhisperX->value,
-            isset($data["task"]) || self::isList($data["words"] ?? null) => WhisperJsonVariant::OpenAiApi->value,
+            isset($data["task"]) || $this->isList($data["words"] ?? null, "words") => WhisperJsonVariant::OpenAiApi->value,
             default                                                      => WhisperJsonVariant::OpenAiWhisper->value,
         };
     }

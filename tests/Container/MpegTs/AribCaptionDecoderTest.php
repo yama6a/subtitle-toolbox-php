@@ -137,6 +137,24 @@ class AribCaptionDecoderTest extends TestCase
     }
 
 
+    public function testDropsTheCharactersPastTheCellLimitAndTheStatesPastTheStateLimit(): void
+    {
+        // CS, SSM 1;1 for cells of 1 by 1 dot, SHS 0 and SVS 0, LS1, 600 times RPC 0 and A, then groups of APS, B, TIME 0.
+        $body    = "\x0C\x9B1;1 \x57\x9B0 \x58\x9B0 \x59\x0E" . str_repeat("\x98\x40A", 600)
+                   . str_repeat("\x1C\x40\x40B\x9D\x20\x40\x1C\x40\x40A\x9D\x20\x40", 4000);
+        $decoder = self::decode([[0.0, W::statement(W::text($body))]]);
+
+        $this->assertLessThan(1000, count($decoder->finish()));
+        $this->assertSame(
+            [
+                "The caption screen holds more than 4096 characters. The reader dropped the characters past that.",
+                "The caption states of one PES packet are longer than 32 KiB plus 32 times the packet. The reader dropped the states past that.",
+            ],
+            array_column($decoder->warnings(), 1),
+        );
+    }
+
+
     public function testLimitsTheNumbersOfAControlSequence(): void
     {
         $body = W::CS . "\x9B99999999999999999999;540 \x56" . W::position(6, 3) . W::LS1 . "A";

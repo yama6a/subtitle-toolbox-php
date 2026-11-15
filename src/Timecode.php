@@ -114,7 +114,7 @@ final class Timecode
      */
     public static function seconds(float $seconds): array
     {
-        return array_slice(self::split((int) round($seconds), 1), 0, 3);
+        return array_slice(self::split(self::unitsBelowLimit($seconds, 1), 1), 0, 3);
     }
 
 
@@ -274,6 +274,10 @@ final class Timecode
         if ($frame >= self::labels($frameRate)) {
             $whole++;
             $frame = 0;
+        }
+        if ($whole >= self::LIMIT_SECONDS) {
+            $whole = self::LIMIT_SECONDS - 1;
+            $frame = self::labels($frameRate) - 1;
         }
 
         return [...self::seconds($whole), $frame];
