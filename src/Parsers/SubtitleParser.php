@@ -259,6 +259,26 @@ abstract class SubtitleParser
     }
 
 
+    /**
+     * Removes the control characters from text that an escape gave, such as "\u0007" in JSON or "&#7;" in HTML.
+     * The rule of parse() applies: a NUL throws in strict mode, and lenient mode warns once per file.
+     */
+    protected function removeDecodedControlCharacters(string $text): string
+    {
+        if (preg_match(self::CONTROL_CHARACTER_REGEX, $text) !== 1) {
+            return $text;
+        }
+        if (str_contains($text, "\0") && !$this->options->lenient) {
+            throw new ParsingException("The file has an escaped NUL character.");
+        }
+        if (!$this->removedControlCharacters) {
+            $this->warnControlCharacters(null);
+        }
+
+        return preg_replace(self::CONTROL_CHARACTER_REGEX, "", $text);
+    }
+
+
     // A NUL is never text. It marks UTF-16 or UTF-32 content read with the wrong encoding.
     private function rejectNul(int $lineNumber): void
     {
@@ -268,12 +288,12 @@ abstract class SubtitleParser
     }
 
 
-    private function warnControlCharacters(int $lineNumber): void
+    private function warnControlCharacters(?int $lineNumber): void
     {
         $this->removedControlCharacters = true;
         if ($this->options->lenient) {
             $this->warn(
-                "The file has control characters, the first on line $lineNumber. The parser removed them.",
+                "The file has control characters" . ($lineNumber === null ? "" : ", the first on line $lineNumber") . ". The parser removed them.",
                 $lineNumber,
                 null,
                 [],
@@ -460,10 +480,12 @@ abstract class SubtitleParser
 
     /**
      * Decodes $content as a JSON object. An invalid UTF-8 byte becomes U+FFFD, so one broken byte does not fail the file.
+     * The string values lose the control characters that escapes such as "\u0007" gave, as removeDecodedControlCharacters() says.
+     * The values under a key in $keptKeys keep them, such as format data that holds the bytes of another format.
      *
      * @return array<string, mixed>
      */
-    protected function decodeJsonObject(string $content): array
+    protected function decodeJsonObject(string $content, string ...$keptKeys): array
     {
         try {
             $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
@@ -475,6 +497,26 @@ abstract class SubtitleParser
             throw new ParsingException("The JSON root must be an object.");
         }
         $this->jsonObjects = json_decode($content, false, 512, JSON_INVALID_UTF8_SUBSTITUTE);
+
+        return $this->removeJsonControlCharacters($data, $keptKeys);
+    }
+
+
+    /**
+     * @param list<string> $keptKeys
+     */
+    private function removeJsonControlCharacters(array $data, array $keptKeys): array
+    {
+        foreach ($data as $key => $value) {
+            if (in_array($key, $keptKeys, true)) {
+                continue;
+            }
+            if (is_string($value)) {
+                $data[$key] = $this->removeDecodedControlCharacters($value);
+            } elseif (is_array($value)) {
+                $data[$key] = $this->removeJsonControlCharacters($value, $keptKeys);
+            }
+        }
 
         return $data;
     }

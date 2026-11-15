@@ -17,7 +17,7 @@ final class JsonParser extends SubtitleParser
      */
     protected function read(string $content): Subtitle
     {
-        $data = $this->decodeJsonObject($content);
+        $data = $this->decodeJsonObject($content, "formatData");
         // ArrayReader rejects a value that is not a list, so a JSON object at a list field becomes false.
         foreach (["cues", "comments"] as $field) {
             if ($this->isJsonObject($field)) {

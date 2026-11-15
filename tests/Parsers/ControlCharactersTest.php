@@ -133,6 +133,94 @@ class ControlCharactersTest extends TestCase
 
 
     /**
+     * Each case holds the format and a file with "%s" where the escaped text of the first cue goes.
+     *
+     * @return array<string, array{Format, string}>
+     */
+    public static function escapingFormats(): array
+    {
+        return [
+            "Whisper"      => [Format::Whisper, '{"segments":[{"start":1,"end":2,"text":"%s"}]}'],
+            "library JSON" => [Format::Json, '{"version":1,"cues":[{"start":1.0,"end":2.0,"lines":["%s"]}]}'],
+            "SAMI"         => [Format::Sami, "<SAMI><BODY><SYNC Start=1000><P>%s<SYNC Start=2000><P>&nbsp;</BODY></SAMI>"],
+        ];
+    }
+
+
+    #[DataProvider("escapingFormats")]
+    public function testEscapedControlCharactersGoWithOneWarningInLenientMode(Format $format, string $file): void
+    {
+        [$bell, $escape] = $format === Format::Sami ? ["&#7;", "&#x1B;"] : ["\\u0007", "\\u001b"];
+
+        $subtitle = Subtitle::fromString(sprintf($file, "The fer{$bell}ry {$escape}leaves."), $format, new ReadOptions(lenient: true));
+
+        $this->assertSame("The ferry leaves.", $subtitle->getCues()[0]->getText());
+        $this->assertEquals(
+            [new ParseWarning("The file has control characters. The parser removed them.", null, null, [], ParseWarningAction::Repaired)],
+            $subtitle->getParseWarnings()
+        );
+    }
+
+
+    #[DataProvider("escapingFormats")]
+    public function testEscapedControlCharactersGoWithoutWarningInStrictMode(Format $format, string $file): void
+    {
+        $subtitle = Subtitle::fromString(sprintf($file, $format === Format::Sami ? "The fer&#127;ry leaves." : "The fer\\u007fry leaves."), $format);
+
+        $this->assertSame("The ferry leaves.", $subtitle->getCues()[0]->getText());
+        $this->assertSame([], $subtitle->getParseWarnings());
+    }
+
+
+    public function testAnEscapedNulThrowsInStrictModeAndGoesInLenientMode(): void
+    {
+        $file = self::escapingFormats()["Whisper"][1];
+
+        $subtitle = Subtitle::fromString(sprintf($file, "The fer\\u0000ry leaves."), Format::Whisper, new ReadOptions(lenient: true));
+        $this->assertSame("The ferry leaves.", $subtitle->getCues()[0]->getText());
+        $this->assertCount(1, $subtitle->getParseWarnings());
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The file has an escaped NUL character.");
+        Subtitle::fromString(sprintf($file, "The fer\\u0000ry leaves."), Format::Whisper);
+    }
+
+
+    public function testARawAndAnEscapedControlCharacterGiveOneWarning(): void
+    {
+        $file = sprintf(self::escapingFormats()["Whisper"][1], "The fer\\u0007ry leaves.") . "\x0B";
+
+        $subtitle = Subtitle::fromString($file, Format::Whisper, new ReadOptions(lenient: true));
+
+        $this->assertSame("The ferry leaves.", $subtitle->getCues()[0]->getText());
+        $this->assertEquals(
+            [new ParseWarning("The file has control characters, the first on line 1. The parser removed them.", 1, null, [], ParseWarningAction::Repaired)],
+            $subtitle->getParseWarnings()
+        );
+    }
+
+
+    public function testLibraryJsonFormatDataKeepsEscapedControlCharacters(): void
+    {
+        $file = '{"version":1,"formatData":{"x":{"spare":"\\u0000\\u0007"}},"cues":[{"start":1.0,"end":2.0,"lines":["a\\u0007b"],"formatData":{"x":{"b":"\\u0007"}}}]}';
+
+        $subtitle = Subtitle::fromString($file, Format::Json, new ReadOptions(lenient: true));
+
+        $this->assertSame("ab", $subtitle->getCues()[0]->getText());
+        $this->assertSame(["spare" => "\0\x07"], $subtitle->findFormatData("x"));
+        $this->assertSame(["b" => "\x07"], $subtitle->getCues()[0]->findFormatData("x"));
+    }
+
+
+    public function testSubRipOutputOfAnEscapedControlCharacterReadsBack(): void
+    {
+        $subtitle = Subtitle::fromString('{"segments":[{"start":1,"end":2,"text":"ab\\u0007c"}]}', Format::Whisper);
+
+        $this->assertSame("abc", Subtitle::fromString($subtitle->toString(Format::SubRip), Format::SubRip)->getCues()[0]->getText());
+    }
+
+
+    /**
      * @return array<string, array{SubRipStreamReader|WebVttStreamReader, Format, string}>
      */
     public static function streams(): array
