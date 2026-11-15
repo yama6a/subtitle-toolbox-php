@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Container\Mp4;
 use Generator;
 use SubtitleToolbox\Container\ContainerFormat;
 use SubtitleToolbox\Container\ContainerReader;
-use SubtitleToolbox\Container\Containers;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Encoding\CaptionDataCues;
 use SubtitleToolbox\Encoding\Cea608Cues;
@@ -23,6 +22,7 @@ use SubtitleToolbox\Streaming\Streams;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * Reads the subtitle tracks of MP4 and MOV files. It reads only the samples of the wanted track and skips media data with fseek().
@@ -191,7 +191,7 @@ final class Mp4Reader implements ContainerReader
             default          => $this->textCues($trackNumber, $track->forced),
         };
 
-        Containers::checkCueTimes($trackNumber, $cues);
+        Timecode::checkCueTimes($cues, "The cue times of track $trackNumber");
         $subtitle = (new Subtitle())->addCues($cues);
         $subtitle->setFormat($track->format);
         $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $track->language);

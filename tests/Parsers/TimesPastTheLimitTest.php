@@ -314,4 +314,37 @@ class TimesPastTheLimitTest extends TestCase
         $this->expectExceptionMessage($message);
         Subtitle::fromString($content, $format);
     }
+
+
+    /**
+     * @return array<string, array{Format, string, string}>
+     */
+    public static function captionsPastTheLimit(): array
+    {
+        // The MCC file holds every packet of a written cue at one time code, so its byte pairs take the frames after that time code.
+        $mcc = (new Subtitle())->addCue(new SubtitleCue(1, 2, "HI"))->toString(Format::Mcc);
+
+        return [
+            "SCC" => [Format::Scc, SccParser::HEADER . "\n\n00:00:01;00\t9420 9420 d04f 4f4c 942f 942f\n00:00:03;00\t942c 942c\n100000:05:59;29\t9420 9420 c849 942f 942f\n",
+                      "The times of a cue reach 360000000.093 s. Times must be below 100000 hours."],
+            "MCC" => [Format::Mcc, preg_replace('/^\d\d:\d\d:\d\d[:;]\d\d(?=\t)/m', "100000:05:59;29", $mcc),
+                      "The times of a cue reach 360000000.36 s. Times must be below 100000 hours."],
+        ];
+    }
+
+
+    /**
+     * The time code of each line is below the limit, but each byte pair takes one frame. Issue #1349.
+     */
+    #[DataProvider("captionsPastTheLimit")]
+    public function testSccAndMccCheckTheTimesOfTheCuesTheyReturn(Format $format, string $content, string $message): void
+    {
+        $lenient = Subtitle::fromString($content, $format, new ReadOptions(lenient: true));
+        $this->assertSame($format === Format::Scc ? [[1.134, 3.003, "POOL"]] : [], TestSubtitles::describe($lenient));
+        $this->assertSame([[self::SKIPPED, $message]], array_map(fn ($warning): array => [$warning->action, $warning->message], $lenient->getParseWarnings()));
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage($message);
+        Subtitle::fromString($content, $format);
+    }
 }
