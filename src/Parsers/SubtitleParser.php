@@ -500,6 +500,21 @@ abstract class SubtitleParser
 
 
     /**
+     * Returns true when $value is a list and the source JSON holds an array under the keys $path, not an object.
+     */
+    protected function isList(mixed $value, string|int ...$path): bool
+    {
+        return is_array($value) && array_is_list($value) && !$this->isJsonObject(...$path);
+    }
+
+
+    protected function listOrEmpty(mixed $value, string|int ...$path): array
+    {
+        return $this->isList($value, ...$path) ? $value : [];
+    }
+
+
+    /**
      * Returns true for an int or float that is finite and 0 or more. A time in a JSON format must pass it.
      */
     protected static function isTime(mixed $value): bool

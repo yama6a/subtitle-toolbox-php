@@ -31,22 +31,24 @@ final class GoogleSpeechParser extends SubtitleParser
     {
         $data     = $this->decodeJsonObject($content);
         $fileData = [];
+        $root     = [];
         if (is_array($data["response"] ?? null)) {
             $fileData = array_diff_key($data, ["response" => true]);
             $data     = $data["response"];
+            $root     = ["response"];
         }
-        if (!self::isList($data["results"] ?? null)) {
+        if (!$this->isList($data["results"] ?? null, ...$root, ...["results"])) {
             throw new ParsingException("The JSON has no \"results\" list.");
         }
 
         $results   = $data["results"];
         $lastIndex = count($results) - 1;
-        $lastWords = self::listOrEmpty($results[$lastIndex]["alternatives"][0]["words"] ?? null);
+        $lastWords = $this->listOrEmpty($results[$lastIndex]["alternatives"][0]["words"] ?? null, ...$root, ...["results", $lastIndex, "alternatives", 0, "words"]);
         // With diarization, each result repeats the words of the results before it, so the last result holds all words.
         $diarized = array_filter($lastWords, fn (mixed $word): bool => isset($word["speakerLabel"]) || !empty($word["speakerTag"])) !== [];
         $cues     = $diarized
             ? $this->cuesFromWords($this->readWords($lastWords, "results[$lastIndex].alternatives[0].words"), "words")
-            : $this->readResults($results);
+            : $this->readResults($results, $root);
 
         $language = null;
         foreach ($results as $result) {
@@ -77,7 +79,7 @@ final class GoogleSpeechParser extends SubtitleParser
     }
 
 
-    private function readResults(array $results): array
+    private function readResults(array $results, array $root): array
     {
         $cues        = [];
         $previousEnd = 0.0;
@@ -86,7 +88,7 @@ final class GoogleSpeechParser extends SubtitleParser
             $resultEnd = is_array($result) ? self::duration($result["resultEndTime"] ?? $result["resultEndOffset"] ?? null) : null;
             try {
                 $alternative = $this->firstAlternative($result, $path);
-                $words       = $this->readWords(self::listOrEmpty($alternative["words"] ?? null), "$path.alternatives[0].words");
+                $words       = $this->readWords($this->listOrEmpty($alternative["words"] ?? null, ...$root, ...["results", $index, "alternatives", 0, "words"]), "$path.alternatives[0].words");
                 $end         = $words === [] ? $this->seconds($resultEnd, "$path.resultEndTime") : $words[count($words) - 1]["end"];
                 $start       = $words === [] ? $previousEnd : $words[0]["start"];
                 $text        = is_array($alternative) ? $this->text($alternative, "transcript", "$path.alternatives[0]") : "";
