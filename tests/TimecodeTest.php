@@ -270,6 +270,9 @@ class TimecodeTest extends TestCase
             "huge minutes"         => ["6000000:00", null, "is not below 100000 hours"],
             "huge hour digits"     => [str_repeat("9", 40) . ":00:00", null, "is not below 100000 hours"],
             "frames at 100000 h"   => ["100000:00:00:00", 25.0, "is not below 100000 hours"],
+            "rounds to 100000 h"   => ["99999:59:59.9996", null, "is not below 100000 hours"],
+            "half a millisecond"   => ["99999:59:59.9995", null, "is not below 100000 hours"],
+            "frame that rounds up" => ["99999:59:59:1999", 1999.6, "is not below 100000 hours"],
         ];
     }
 

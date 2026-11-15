@@ -198,6 +198,11 @@ class TimesPastTheLimitTest extends TestCase
                 '<p begin="99999:59:59.9999" end="99999:59:59.9999">x</p></div></body></tt>',
                 "The time \"99999:59:59.9999\" is not below 100000 hours.",
             ],
+            "CSV clock time 99999:59:59.9999, issue #1303" => [
+                CsvParser::class,
+                "start,text\n99999:59:59.9999,x\n",
+                "The time \"99999:59:59.9999\" is not below 100000 hours.",
+            ],
             "OGM chapter on the last half millisecond, issue #1318" => [
                 OgmChaptersParser::class,
                 "CHAPTER01=99999:59:59.9995\nCHAPTER01NAME=x\n",

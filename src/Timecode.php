@@ -67,7 +67,8 @@ final class Timecode
      * - h:mm:ss:ff, where ff counts frames after the last whole second. This shape needs $frameRate.
      * Minutes and seconds after a colon have 2 digits from 00 to 59. Signs, spaces and drop-frame timecodes are invalid.
      *
-     * @throws InvalidArgumentException when $timecode has another shape, reaches MAX_HOURS, or counts frames without $frameRate.
+     * @throws InvalidArgumentException when $timecode has another shape, reaches MAX_HOURS after it rounds to milliseconds,
+     *                                   or counts frames without $frameRate.
      */
     public static function parse(string $timecode, ?FrameRate $frameRate = null): float
     {
@@ -89,26 +90,23 @@ final class Timecode
     public static function parseOrReason(string $timecode, ?FrameRate $frameRate): float|string|null
     {
         if (preg_match(self::CLOCK_REGEX, $timecode, $matches)) {
-            $hours   = $matches[1] === "" ? "0" : $matches[1];
-            $minutes = $matches[1] === "" ? $matches[3] : $matches[2];
-            if ((float) $hours * self::SECONDS_PER_HOUR + (float) $minutes * self::SECONDS_PER_MINUTE < self::MAX_HOURS * self::SECONDS_PER_HOUR) {
-                return self::toSeconds((int) $hours, (int) $minutes, (int) $matches[4], $matches[5] ?? "");
-            }
-
-            return "is not below " . self::MAX_HOURS . " hours";
-        }
-        if (preg_match(self::FRAMES_REGEX, $timecode, $matches)) {
+            $hours   = $matches[1] === "" ? 0 : (int) $matches[1];
+            $minutes = (int) ($matches[1] === "" ? $matches[3] : $matches[2]);
+            $seconds = self::toSeconds($hours, $minutes, (int) $matches[4], $matches[5] ?? "");
+        } elseif (preg_match(self::FRAMES_REGEX, $timecode, $matches)) {
             $labels = $frameRate === null ? null : self::labels($frameRate);
-
-            return match (true) {
-                $labels === null                       => "counts frames and needs a frame rate",
-                (float) $matches[1] >= self::MAX_HOURS => "is not below " . self::MAX_HOURS . " hours",
-                (float) $matches[4] >= $labels         => "has a frame number that is not below $labels",
-                default                                => self::toSecondsFromFrames((int) $matches[1], (int) $matches[2], (int) $matches[3], (int) $matches[4], $frameRate),
-            };
+            if ($labels === null) {
+                return "counts frames and needs a frame rate";
+            }
+            if ((float) $matches[4] >= $labels) {
+                return "has a frame number that is not below $labels";
+            }
+            $seconds = self::toSecondsFromFrames((int) $matches[1], (int) $matches[2], (int) $matches[3], (int) $matches[4], $frameRate);
+        } else {
+            return null;
         }
 
-        return null;
+        return self::isBelowLimit($seconds) ? $seconds : "is not below " . self::MAX_HOURS . " hours";
     }
 
 
