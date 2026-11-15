@@ -450,6 +450,30 @@ abstract class SubtitleParser
 
 
     /**
+     * Returns $cues without the cues that start or end at MAX_HOURS or later. Strict mode throws for such a cue,
+     * and lenient mode skips it with a warning. The SCC and MCC parsers need it, because the byte pairs of a line below
+     * the limit can show a caption past it.
+     *
+     * @param list<SubtitleCue> $cues
+     * @return list<SubtitleCue>
+     */
+    protected function cuesBelowLimit(array $cues): array
+    {
+        $kept = [];
+        foreach ($cues as $cue) {
+            try {
+                Timecode::checkCueTimes([$cue], "The times of a cue");
+                $kept[] = $cue;
+            } catch (ParsingException $exception) {
+                $this->fail($exception, null, null, $cue->getLines());
+            }
+        }
+
+        return $kept;
+    }
+
+
+    /**
      * Returns $seconds, or throws when the time in the JSON field $path reaches MAX_HOURS.
      */
     protected static function boundedField(float $seconds, string $path): float

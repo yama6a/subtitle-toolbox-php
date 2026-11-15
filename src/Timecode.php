@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\ParsingException;
 
 /**
  * Turns timecode strings into seconds. The other members are internal helpers of the library.
@@ -221,6 +222,29 @@ final class Timecode
     public static function isBelowLimit(float $seconds): bool
     {
         return self::roundToMilliseconds($seconds) < self::LIMIT_SECONDS;
+    }
+
+
+    /**
+     * Throws when one of $cues starts or ends at MAX_HOURS or later, rounded to milliseconds as the cue holds it.
+     * $subject starts the message, for example "The cue times of track 2".
+     * The readers whose packets or byte pairs move a cue past the time of its packet check the cues: MP4, MPEG-TS, SCC and MCC.
+     * A packet that makes no cue does not count.
+     *
+     * @param list<SubtitleCue> $cues
+     * @throws ParsingException
+     * @internal
+     */
+    public static function checkCueTimes(array $cues, string $subject): void
+    {
+        foreach ($cues as $cue) {
+            $time = max($cue->getStart(), $cue->getEnd());
+            if (!self::isBelowLimit($time)) {
+                $milliseconds = self::totalMilliseconds($time);
+                $seconds      = rtrim(rtrim(sprintf("%d.%03d", intdiv($milliseconds, 1000), $milliseconds % 1000), "0"), ".");
+                throw new ParsingException("$subject reach $seconds s. Times must be below " . self::MAX_HOURS . " hours.");
+            }
+        }
     }
 
 

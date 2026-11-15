@@ -63,7 +63,7 @@ final class MccParser extends SubtitleParser
         $subtitle = new Subtitle();
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["version" => $version, "frameRate" => $frameRate, "dropFrame" => $dropFrame, "header" => $header]);
 
-        return $subtitle->addCues(CaptionDataCues::read($this->frames($packets, $frameRate, $dropFrame), $this->options));
+        return $subtitle->addCues($this->cuesBelowLimit(CaptionDataCues::read($this->frames($packets, $frameRate, $dropFrame), $this->options)));
     }
 
 

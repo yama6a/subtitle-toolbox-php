@@ -81,7 +81,7 @@ final class SccFormatter extends SubtitleFormatter
                 continue;
             }
 
-            $start       = $this->secondsToFrame($cue->getStart());
+            $start       = $this->startFrame($cue);
             [$eoc, $edm] = $this->schedule(count($loadWords), $start, $nextFree, $previousEnd);
             if ($fit && $eoc > $start && !$this->fitReport($index, $cue, $eoc)) {
                 continue;
@@ -89,7 +89,7 @@ final class SccFormatter extends SubtitleFormatter
             $this->placeCaption($timeline, $loadWords, $eoc, $edm);
 
             $nextFree    = $eoc + 2;
-            $previousEnd = $this->secondsToFrame($cue->getEnd());
+            $previousEnd = $this->endFrame($cue);
         }
         if ($previousEnd !== null) {
             $edm                                   = max($previousEnd, $nextFree);
@@ -107,7 +107,7 @@ final class SccFormatter extends SubtitleFormatter
      */
     private function fitReport(int $index, SubtitleCue $cue, int $eoc): bool
     {
-        if ($eoc >= $this->secondsToFrame($cue->getEnd())) {
+        if ($eoc >= $this->endFrame($cue)) {
             $this->change($index, SccFitAction::Dropped, "Cue #$index at {$cue->getStart()} s is left out. " .
                           "Its caption data needs the frames up to " . $this->frameToSeconds($eoc) . " s, but the cue ends at {$cue->getEnd()} s.");
 
@@ -385,6 +385,25 @@ final class SccFormatter extends SubtitleFormatter
     private function frameToSeconds(int $frame): float
     {
         return round((new FrameRate(self::FRAMES_PER_SECOND))->framesToSeconds($frame), 3);
+    }
+
+
+    /**
+     * Returns the frame of the cue start, at most 3 frames before the last frame below MAX_HOURS.
+     * So the EOC, which takes 2 frames, and the EDM after it, which takes 2 more, all land below the limit.
+     */
+    private function startFrame(SubtitleCue $cue): int
+    {
+        return min($this->secondsToFrame($cue->getStart()), $this->secondsToFrame(Timecode::LAST_TIME) - 3);
+    }
+
+
+    /**
+     * Returns the frame of the cue end, at most 1 frame before the last frame below MAX_HOURS, so both words of the EDM land below the limit.
+     */
+    private function endFrame(SubtitleCue $cue): int
+    {
+        return min($this->secondsToFrame($cue->getEnd()), $this->secondsToFrame(Timecode::LAST_TIME) - 1);
     }
 
 

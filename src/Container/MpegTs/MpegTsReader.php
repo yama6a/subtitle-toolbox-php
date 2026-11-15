@@ -8,7 +8,6 @@ use Generator;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Container\ContainerFormat;
 use SubtitleToolbox\Container\ContainerReader;
-use SubtitleToolbox\Container\Containers;
 use SubtitleToolbox\Container\DvbSubtitleDecoder;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -199,7 +198,7 @@ final class MpegTsReader implements ContainerReader
             $cues          = $this->textCues($decoder->finish(), $zero, $last, $options);
         }
 
-        Containers::checkCueTimes($trackNumber, $cues);
+        Timecode::checkCueTimes($cues, "The cue times of track $trackNumber");
         $subtitle = (new Subtitle())->addCues($cues)->setParseWarnings($warnings);
         $subtitle->setFormat($track->format);
         $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $track->language);

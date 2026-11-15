@@ -8,6 +8,7 @@ use SubtitleToolbox\Alignment;
 use SubtitleToolbox\LineWrapper;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
 
 /**
  * Encodes cues as CEA-708 service 1 pop-on captions: each cue loads into a hidden window, which shows at the cue start.
@@ -56,6 +57,8 @@ final class Cea708Encoder
     /**
      * Returns the service blocks of service 1 by frame. $frameOf turns seconds into a frame number.
      * A block holds whole commands and at most $capacity bytes. A capacity below 7 bytes counts as 7, so that every command fits.
+     * A cue starts at most 1 frame before the frame of Timecode::LAST_TIME and ends at most on it, so the show and the delete
+     * commands land below MAX_HOURS.
      *
      * @param callable(float): int $frameOf
      * @return array<int, string>
@@ -67,6 +70,7 @@ final class Cea708Encoder
         $previous       = null;
         $lastShow       = PHP_INT_MIN;
         $index          = 0;
+        $last           = $frameOf(Timecode::LAST_TIME);
         foreach ($subtitle->getCues() as $cue) {
             $lines = self::lines($cue->getLines());
             if ($lines === []) {
@@ -74,7 +78,7 @@ final class Cea708Encoder
             }
 
             $window = $index++ % 2;
-            $start  = $frameOf($cue->getStart());
+            $start  = min($frameOf($cue->getStart()), $last - 1);
             if ($previous !== null && $previous["end"] < $start) {
                 $this->place([self::command(Cea708::DLW, 1 << $previous["window"])], $previous["end"]);
                 $previous = null;
@@ -84,7 +88,7 @@ final class Cea708Encoder
             $show  = ($previous === null ? "" : self::command(Cea708::DLW, 1 << $previous["window"])) . self::command(Cea708::DSW, 1 << $window);
             $start = $this->place([$show], $start);
 
-            $previous = ["window" => $window, "end" => max($start + 1, $frameOf($cue->getEnd()))];
+            $previous = ["window" => $window, "end" => max($start + 1, min($frameOf($cue->getEnd()), $last))];
             $lastShow = $start;
         }
         if ($previous !== null) {

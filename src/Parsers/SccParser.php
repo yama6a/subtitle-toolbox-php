@@ -40,7 +40,7 @@ final class SccParser extends SubtitleParser
             $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["dropFrame" => $dropFrame]);
         }
 
-        return $subtitle->addCues(Cea608Cues::read($codeLines, $this->formatOptions(), $this->options->lastCueDuration));
+        return $subtitle->addCues($this->cuesBelowLimit(Cea608Cues::read($codeLines, $this->formatOptions(), $this->options->lastCueDuration)));
     }
 
 

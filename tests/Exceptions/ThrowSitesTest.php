@@ -353,8 +353,6 @@ class ThrowSitesTest extends TestCase
                                                                      ...$parsing],
             "Container/Containers.php: no container"        => [fn () => Containers::open(self::stream("1\n00:00:01,000 --> 00:00:02,000\nHi\n")),
                                                                 ...$unsupported],
-            "Container/Containers.php: cue time limit"      => [fn () => MpegTsReader::open(self::stream(TsFixtures::dvbSubtitlesPastTheTimeLimit()))->extract(2049),
-                                                                ...$parsing],
             "Container/Matroska/MatroskaReader.php: zlib data of a track past the limit" => [fn () => self::inflateWithALimitOf1MiB(
                 fn () => self::mkv(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 0, gzcompress(str_repeat("a", 3 << 19)), 1000)]),
                                    ["encodings" => MkvFixtureWriter::compression(0, 0)])->extract(2)), ...$parsing],
@@ -839,6 +837,8 @@ class ThrowSitesTest extends TestCase
             "TextTransforms.php: regex fails on a run"      => [fn () => TestSubtitles::fromCues([[1, 2, ["caf\xe9"]]])->replaceText("/./u", "x", new ReplaceTextOptions(regex: true)), ...$invalid],
             "Timecode.php: drop frame at 25 fps"            => [fn () => Timecode::frameNumber(0, new FrameRate(25), true), ...$invalid],
             "Timecode.php: invalid timecode"                => [fn () => Timecode::parse("1:2:3:4:5"), ...$invalid],
+            "Timecode.php: cue time limit"                  => [fn () => MpegTsReader::open(self::stream(TsFixtures::dvbSubtitlesPastTheTimeLimit()))->extract(2049),
+                                                                ...$parsing],
             "Timing/ShotChangeOptions.php: negative window" => [fn () => new ShotChangeOptions(24, snapWindowFrames: -1), ...$invalid],
             "Timing/ShotChangeOptions.php: negative gap"    => [fn () => new ShotChangeOptions(24, minGapFrames: -1), ...$invalid],
             "Timing/ShotChangeOptions.php: negative minimum duration" => [fn () => new ShotChangeOptions(24, minDurationFrames: -1),
