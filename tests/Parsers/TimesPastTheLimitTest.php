@@ -7,8 +7,11 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 /**
@@ -144,6 +147,19 @@ class TimesPastTheLimitTest extends TestCase
                 [[1, 3, "Pool."], [7, 9, "Running."]],
                 [NULL, 1],
             ],
+            "SCC with a time code past 100000 hours, issue #1315" => [
+                SccParser::class,
+                SccParser::HEADER . "\n" .
+                "\n" .
+                "00:00:00;20\t94ae 94ae 9420 9420 9476 9476 97a2 97a2 d04f 4f4c 942f 942f\n" .
+                "00:00:03;00\t942c 942c\n" .
+                "100001:00:03;19\t94ae 94ae 9420 9420 9476 9476 97a1 97a1 544f 5745 4cd3 942f 942f\n" .
+                "00:00:06;20\t94ae 94ae 9420 9420 9476 9476 52d5 cece 49ce c780 942f 942f\n" .
+                "00:00:09;00\t942c 942c\n",
+                "The time \"100001:00:03;19\" is not below 100000 hours.",
+                [[1.001, 3.003, "POOL"], [7.007, 9.009, "RUNNING"]],
+                [5, 3],
+            ],
             "TTML with a div and a p that begin at 99999 hours each" => [
                 TtmlParser::class,
                 "<tt xmlns=\"http://www.w3.org/ns/ttml\">\n" .
@@ -252,5 +268,50 @@ class TimesPastTheLimitTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("is not below 100000 hours.");
         (new MicroDvdParser())->parse("{1}{1}2000\n{719999999999}{719999999999}x\n", new ReadOptions());
+    }
+
+
+    /**
+     * Drop-frame time code runs ahead of the clock. So the writer gives a time just below the limit a label such as 100000:05:49;21.
+     * Issue #1315.
+     */
+    public function testSccAndMccReadATimeCodePast100000HoursThatIsBelowTheLimitInSeconds(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(359999990, 359999995, "HI"));
+
+        foreach ([Format::Scc, Format::Mcc] as $format) {
+            $content = $subtitle->toString($format);
+            $this->assertStringContainsString("100000:05:49", $content);
+            $this->assertSame([[359999990.016, 359999994.988, "HI"]], TestSubtitles::describe(Subtitle::fromString($content, $format)), $format->value);
+        }
+    }
+
+
+    /**
+     * @return array<string, array{Format, string, string}>
+     */
+    public static function timeCodesPastTheLimit(): array
+    {
+        return [
+            "SCC 100001 hours"                  => [Format::Scc, "100001:00:0", "The time \"100001:00:00;21\" is not below 100000 hours."],
+            "MCC 100100 hours"                  => [Format::Mcc, "100100:00:0", "The time \"100100:00:00:21\" is not below 100000 hours."],
+            "MCC 999998 hours"                  => [Format::Mcc, "999998:00:0", "The time \"999998:00:00:21\" is not below 100000 hours."],
+        ];
+    }
+
+
+    #[DataProvider("timeCodesPastTheLimit")]
+    public function testSccAndMccRejectATimeCodePast100000Hours(Format $format, string $hours, string $message): void
+    {
+        $written = (new Subtitle())->addCue(new SubtitleCue(1, 2, "HI"))->toString($format);
+        $content = preg_replace('/^00:00:0(?=\d[:;]\d\d)/m', $hours, $written);
+
+        $lenient = Subtitle::fromString($content, $format, new ReadOptions(lenient: true));
+        $this->assertSame([], $lenient->getCues());
+        $this->assertSame([self::SKIPPED, $message], [$lenient->getParseWarnings()[0]->action, $lenient->getParseWarnings()[0]->message]);
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage($message);
+        Subtitle::fromString($content, $format);
     }
 }
