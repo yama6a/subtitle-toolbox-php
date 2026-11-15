@@ -153,4 +153,32 @@ class PodcastTranscriptParserTest extends TestCase
 
         (new PodcastTranscriptParser())->parse('{"version":"1.0.0","segments":{"0":{"startTime":0,"endTime":1,"body":"a"}}}', new ReadOptions());
     }
+
+
+    public function testThrowsWhenJoinedWordsEndBeforeTheyStart(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The cue ends at 2 s, before it starts at 5 s.");
+
+        (new PodcastTranscriptParser())->parse(self::words([["A", 5, 6, "a"], ["A", 1, 2, "b"]]), new ReadOptions());
+    }
+
+
+    public function testSwapsTheTimesOfJoinedWordsInLenientMode(): void
+    {
+        $subtitle = (new PodcastTranscriptParser())->parse(self::words([["A", 5, 6, "a"], ["A", 1, 2, "b"]]), new ReadOptions(lenient: true));
+
+        $this->assertSame([[2.0, 5.0, "<v A>a b"]], TestSubtitles::describe($subtitle));
+        $this->assertCount(1, $subtitle->getParseWarnings());
+        $this->assertStringContainsString("The cue ends at 2 s, before it starts at 5 s.", $subtitle->getParseWarnings()[0]->message);
+    }
+
+
+    public function testSkipsJoinedWordsThatSwapToMoreThanTheLimitInLenientMode(): void
+    {
+        $subtitle = (new PodcastTranscriptParser())->parse(self::words([["A", 5000, 5001, "a"], ["A", 1, 2, "b"]]), new ReadOptions(lenient: true));
+
+        $this->assertSame([], $subtitle->getCues());
+        $this->assertCount(1, $subtitle->getParseWarnings());
+    }
 }

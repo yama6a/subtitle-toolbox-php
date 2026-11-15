@@ -37,14 +37,14 @@ final class DeepgramParser extends SubtitleParser
     {
         $data    = $this->decodeJsonObject($content);
         $results = $data["results"] ?? null;
-        if (!is_array($results) || !self::isList($results["channels"] ?? null)) {
+        if (!is_array($results) || !$this->isList($results["channels"] ?? null, "results", "channels")) {
             throw new ParsingException("The JSON has no \"results.channels\" list.");
         }
 
-        $utterances = self::listOrEmpty($results["utterances"] ?? null);
+        $utterances = $this->listOrEmpty($results["utterances"] ?? null, "results", "utterances");
         $cues       = $utterances === []
             ? $this->readChannels($results["channels"], self::MAX_PARAGRAPH_COPY_FACTOR * strlen($content) + self::PARAGRAPH_COPY_ALLOWANCE)
-            : $this->readUtterances($utterances, "results.utterances", "transcript", $this->readWords(...));
+            : $this->readUtterances($utterances, ["results", "utterances"], "transcript", $this->readWords(...));
 
         $results["channels"] = array_map(self::channelData(...), $results["channels"]);
 
@@ -79,8 +79,8 @@ final class DeepgramParser extends SubtitleParser
             }
 
             $path       = "results.channels[$channelIndex].alternatives[0]";
-            $words      = $this->readWords(self::listOrEmpty($alternative["words"] ?? null), "$path.words");
-            $paragraphs = self::listOrEmpty($alternative["paragraphs"]["paragraphs"] ?? null);
+            $words      = $this->readWords($this->listOrEmpty($alternative["words"] ?? null, "results", "channels", $channelIndex, "alternatives", 0, "words"), "$path.words");
+            $paragraphs = $this->listOrEmpty($alternative["paragraphs"]["paragraphs"] ?? null, "results", "channels", $channelIndex, "alternatives", 0, "paragraphs", "paragraphs");
             if ($paragraphs === []) {
                 array_push($cues, ...$this->cuesFromWords($words, "words", ["channel" => $channelIndex]));
                 continue;
@@ -105,7 +105,7 @@ final class DeepgramParser extends SubtitleParser
         $cues      = [];
         $wordIndex = 0;
         foreach ($paragraphs as $paragraphIndex => $paragraph) {
-            $sentences = self::listOrEmpty($paragraph["sentences"] ?? null);
+            $sentences = $this->listOrEmpty($paragraph["sentences"] ?? null, "results", "channels", $channelIndex, "alternatives", 0, "paragraphs", "paragraphs", $paragraphIndex, "sentences");
             if ($sentences === []) {
                 continue;
             }
