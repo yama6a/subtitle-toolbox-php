@@ -18,7 +18,7 @@ use SubtitleToolbox\WriteOptions;
 /**
  * Lists the write goldens, and writes the output that a golden file holds.
  * A round trip golden "<file>.out.<extension>" holds a real file read and written in its own format. A round trip
- * whose output equals the input after BOM and line-end normalisation has no golden file, and its test compares with
+ * whose output equals the input after BOM and line-end normalization has no golden file, and its test compares with
  * the input.
  * A conversion golden "<file>.to.<format>" holds a real file of another format written in the format.
  */

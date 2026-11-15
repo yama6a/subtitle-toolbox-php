@@ -179,7 +179,7 @@ final readonly class CuePieces
                       "length"    => LineWrapper::length(LineWrapper::measuredWords($text)),
                       "separator" => $partIndex === 0 ? $separator : ""];
 
-            // A word of tags only, such as "</i>" after a space, joins its neighbour, so that no cue holds only tags.
+            // A word of tags only, such as "</i>" after a space, joins its neighbor, so that no cue holds only tags.
             if ($piece["length"] === 0 && $pieces !== []) {
                 $pieces[count($pieces) - 1]["text"] .= $piece["separator"] . $text;
             } elseif ($piece["length"] === 0) {

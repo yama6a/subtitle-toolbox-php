@@ -6,8 +6,8 @@ The library follows semantic versioning. A 7.x minor or patch release does not b
 | Part | What stays stable in 7.x |
 |:--- |:--- |
 | PHP API | public classes, methods, properties, constants and enums that are not `@internal` |
-| Method behaviour | the behaviour that the docs describe for a method, and the default value of each method parameter, such as `maxGap` of `removeDuplicateCues()`. Only a major release changes them |
-| Defaults and output | the default value of each options constructor parameter, such as `bom` of `WriteOptions`. A call with the same options gives the same output, apart from the bug fixes and new formats below. New behaviour comes behind a new option that is off by default |
+| Method behavior | the behavior that the docs describe for a method, and the default value of each method parameter, such as `maxGap` of `removeDuplicateCues()`. Only a major release changes them |
+| Defaults and output | the default value of each options constructor parameter, such as `bom` of `WriteOptions`. A call with the same options gives the same output, apart from the bug fixes and new formats below. New behavior comes behind a new option that is off by default |
 | Parameter names | every parameter name. Call options constructors with named arguments, for example `new WriteOptions(bom: true)` |
 | Exceptions | the exception classes, their codes and the parents that [errors.md](errors.md) lists, including the SPL parents |
 | Library JSON | version 1 of the JSON that `toString(Format::Json)` and `toArray()` write, and that `Format::Json` and `fromArray()` read. See [json.md](json.md) |

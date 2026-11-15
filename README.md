@@ -240,10 +240,10 @@ See [compatibility.md](docs/compatibility.md) for the parts that semantic versio
 - [subtitle.md](docs/subtitle.md): metadata, comments, cue lookup, statistics
 
 ## Contributing
-Pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the licence rules and the credit rule. Run the tests with `composer test`. Each pull request carries one label that sets the version bump: `major`, `minor`, `patch` or `skip-release`. Every merge to `master` publishes a release.
+Pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the license rules and the credit rule. Run the tests with `composer test`. Each pull request carries one label that sets the version bump: `major`, `minor`, `patch` or `skip-release`. Every merge to `master` publishes a release.
 
 ## License
-MIT, see [LICENSE](LICENSE). Material from third parties keeps its own licence, see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT, see [LICENSE](LICENSE). Material from third parties keeps its own license, see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Credits
 The PHP libraries [mantas-done/subtitles](https://github.com/mantas-done/subtitles) and [captioning/captioning](https://github.com/captioning/captioning) shaped this library. Their formats, test files and user reports guided many decisions here. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists every file copied from other projects.

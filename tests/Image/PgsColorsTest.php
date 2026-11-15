@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 class PgsColorsTest extends TestCase
 {
     /**
-     * The 8 WebVTT colors and 3 grey values in both matrices. 6 colors have no exact code in limited range video, so
+     * The 8 WebVTT colors and 3 gray values in both matrices. 6 colors have no exact code in limited range video, so
      * they come back 1 step off in one channel.
      *
      * @return array<string, array{int, int, int}>
