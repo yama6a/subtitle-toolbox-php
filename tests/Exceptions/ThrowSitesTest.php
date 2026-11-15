@@ -352,6 +352,8 @@ class ThrowSitesTest extends TestCase
                                                                      ...$parsing],
             "Container/Containers.php: no container"        => [fn () => Containers::open(self::stream("1\n00:00:01,000 --> 00:00:02,000\nHi\n")),
                                                                 ...$unsupported],
+            "Container/Containers.php: cue time limit"      => [fn () => MpegTsReader::open(self::stream(TsFixtures::dvbSubtitlesPastTheTimeLimit()))->extract(2049),
+                                                                ...$parsing],
             "Container/Matroska/MatroskaReader.php: zlib data of a track past the limit" => [fn () => self::inflateWithALimitOf1MiB(
                 fn () => self::mkv(MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 0, gzcompress(str_repeat("a", 3 << 19)), 1000)]),
                                    ["encodings" => MkvFixtureWriter::compression(0, 0)])->extract(2)), ...$parsing],
@@ -365,8 +367,6 @@ class ThrowSitesTest extends TestCase
             "Container/MpegTs/MpegTsReader.php: stream not seekable" => [fn () => MpegTsReader::open(fopen("php://output", "wb")), ...$invalid],
             "Container/MpegTs/MpegTsReader.php: unknown track" => [fn () => MpegTsReader::open(self::FILES . "mpegts/one_page.ts")->extract(100), ...$invalid],
             "Container/MpegTs/MpegTsReader.php: not MPEG-TS" => [fn () => MpegTsReader::open(self::stream(str_repeat("\0", 400))), ...$parsing],
-            "Container/MpegTs/MpegTsReader.php: cue time limit" => [fn () => MpegTsReader::open(self::stream(TsFixtures::dvbSubtitlesPastTheTimeLimit()))->extract(2049),
-                                                                    ...$parsing],
             "Container/MpegTs/TeletextCharacters.php: Arabic set" => [fn () => TeletextCharacters::g0(10, 7, 888), ...$parsing],
             "Container/Mp4/Mp4Reader.php: stream not seekable" => [fn () => Mp4Reader::open(fopen("php://output", "wb")), ...$invalid],
             "Container/Mp4/Mp4Reader.php: encrypted track" => [fn () => Mp4Reader::open(self::FILES . "mp4/text_tracks.mp4")->extract(5), ...$parsing],
