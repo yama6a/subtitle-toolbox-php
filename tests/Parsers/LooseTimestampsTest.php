@@ -175,6 +175,17 @@ class LooseTimestampsTest extends TestCase
 
 
     /**
+     * The float of 8605847.0005 is 8605847.00049999915, just below the half millisecond. Issue #1318.
+     */
+    public function testLenientModeRoundsAHalfMillisecondAbove2330HoursUp(): void
+    {
+        $subtitle = Subtitle::fromString("1\n2390:30:47,0005 --> 2390:30:48,0005\nThe ferry leaves.\n", Format::SubRip, new ReadOptions(lenient: true));
+
+        $this->assertSame([8605847.001, 8605848.001], [$subtitle->getCues()[0]->getStart(), $subtitle->getCues()[0]->getEnd()]);
+    }
+
+
+    /**
      * @return array<string, array{Format, string}>
      */
     public static function exceededMinutesFixtures(): array

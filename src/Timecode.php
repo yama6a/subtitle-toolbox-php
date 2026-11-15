@@ -40,6 +40,10 @@ final class Timecode
 
     // The nanoseconds of a time below this many seconds fit in an int.
     private const NANOSECOND_RANGE = 9e9;
+    private const NANOSECONDS_PER_SECOND = 1000000000;
+
+    // sprintf("%H") writes a smaller float with an exponent, such as 1.0E-5.
+    private const MIN_PLAIN_DECIMAL = 0.0001;
 
     // A fraction with more digits than a float can tell apart rounds to milliseconds on its digits.
     private const MAX_FLOAT_FRACTION_DIGITS = 16;
@@ -152,8 +156,9 @@ final class Timecode
 
     /**
      * Returns $seconds in whole milliseconds, half away from zero.
-     * It rounds to whole nanoseconds first and then divides in integers. So the float error of a sum such as
-     * 2.675 + 1.0005 = 3.6754999999999995 does not decide the result, and every PHP version gives 3676.
+     * It takes the shortest decimal that reads back as the same float, so 8605847.0005 rounds up to 8605847001,
+     * though its float is 8605847.00049999915. It rounds that decimal to whole nanoseconds first and then divides in integers.
+     * So the float error of a sum such as 2.675 + 1.0005 = 3.6754999999999995 does not decide the result, and every PHP version gives 3676.
      * round() of PHP 8.4 and later rounds that float down, PHP 8.3 rounds it up.
      *
      * @internal
@@ -164,9 +169,26 @@ final class Timecode
             return (int) round($seconds * 1000);
         }
 
-        $nanoseconds = (int) round($seconds * 1e9);
+        $milliseconds = intdiv(self::nanoseconds(abs($seconds)) + 500000, 1000000);
 
-        return intdiv($nanoseconds + ($nanoseconds < 0 ? -500000 : 500000), 1000000);
+        return $seconds < 0 ? -$milliseconds : $milliseconds;
+    }
+
+
+    /**
+     * Returns the nanoseconds of the shortest decimal form of $seconds, half up. $seconds is from 0 to NANOSECOND_RANGE.
+     */
+    private static function nanoseconds(float $seconds): int
+    {
+        // So far below a half millisecond, the float product is exact enough.
+        if ($seconds < self::MIN_PLAIN_DECIMAL) {
+            return (int) round($seconds * 1e9);
+        }
+
+        // A precision of -1 gives the shortest decimal that reads back as $seconds. A cast to string would read the precision ini setting.
+        [$whole, $fraction] = explode(".", sprintf("%.*H", -1, $seconds)) + [1 => ""];
+
+        return (int) $whole * self::NANOSECONDS_PER_SECOND + intdiv((int) substr(str_pad($fraction, 10, "0"), 0, 10) + 5, 10);
     }
 
 

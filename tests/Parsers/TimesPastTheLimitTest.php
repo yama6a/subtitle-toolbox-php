@@ -198,6 +198,16 @@ class TimesPastTheLimitTest extends TestCase
                 '<p begin="99999:59:59.9999" end="99999:59:59.9999">x</p></div></body></tt>',
                 "The time \"99999:59:59.9999\" is not below 100000 hours.",
             ],
+            "OGM chapter on the last half millisecond, issue #1318" => [
+                OgmChaptersParser::class,
+                "CHAPTER01=99999:59:59.9995\nCHAPTER01NAME=x\n",
+                "The time \"CHAPTER01=99999:59:59.9995\" is not below 100000 hours.",
+            ],
+            "Podcast chapter on the last half millisecond, issue #1318" => [
+                PodcastChaptersParser::class,
+                '{"version":"1.2.0","chapters":[{"startTime":359999999.9995,"title":"x"}]}',
+                "is not below 100000 hours.",
+            ],
             "YouTube srv3 t of 359999999999.9 ms" => [
                 YouTubeTimedTextParser::class,
                 '<?xml version="1.0" encoding="utf-8"?><timedtext format="3"><body><p t="359999999999.9" d="0">x</p></body></timedtext>',
@@ -223,14 +233,19 @@ class TimesPastTheLimitTest extends TestCase
 
 
     /**
-     * 719999999999 / 2000 s is the float just below 359999999.9995, so it rounds down to the last millisecond below the limit.
+     * 719999999999 / 2000 s is 359999999.9995 s in decimal, which rounds up to 100000 hours, though its float is just below it.
+     * 7199999999989 / 20000 s is 359999999.99945 s, which rounds down to the last millisecond below the limit. Issue #1318.
      */
-    public function testATimeThatRoundsBelowTheLimitStaysBelowIt(): void
+    public function testATimeIsCheckedOnItsDecimalValueRoundedToMilliseconds(): void
     {
-        $chapters = (new FfMetadataChaptersParser())->parse(";FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/2000\nSTART=719999999999\nEND=719999999999\n", new ReadOptions());
-        $microDvd = (new MicroDvdParser())->parse("{1}{1}2000\n{719999999999}{719999999999}x\n", new ReadOptions());
+        $chapters = (new FfMetadataChaptersParser())->parse(";FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/20000\nSTART=7199999999989\nEND=7199999999989\n", new ReadOptions());
+        $microDvd = (new MicroDvdParser())->parse("{1}{1}20000\n{7199999999989}{7199999999989}x\n", new ReadOptions());
 
         $this->assertSame(359999999.999, $chapters->getCues()[0]->getStart());
         $this->assertSame(359999999.999, $microDvd->getCues()[0]->getStart());
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("is not below 100000 hours.");
+        (new MicroDvdParser())->parse("{1}{1}2000\n{719999999999}{719999999999}x\n", new ReadOptions());
     }
 }

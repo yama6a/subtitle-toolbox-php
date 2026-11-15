@@ -296,6 +296,9 @@ class TimecodeTest extends TestCase
             "a whole millisecond stays"                     => [1.001, 1.001],
             "the last millisecond below the limit stays"    => [359999999.999, 359999999.999],
             "below a half rounds down"                      => [0.0004999, 0.0],
+            "a half above 2^23 s, issue #1318"              => [8605847.0005, 8605847.001],
+            "the last half below the limit rounds up to it" => [359999999.9995, 360000000.0],
+            "a half below 1e-4 s rounds to 0"               => [0.00009, 0.0],
         ];
     }
 
@@ -305,6 +308,20 @@ class TimecodeTest extends TestCase
     {
         $this->assertSame($expected, Timecode::roundToMilliseconds($seconds));
         $this->assertSame((int) round($expected * 1000), Timecode::totalMilliseconds($seconds));
+    }
+
+
+    /**
+     * PHP casts a float to a string with the precision ini setting. With 17 digits, 8605847.0005 becomes 8605847.0004999992.
+     */
+    public function testTotalMillisecondsDoesNotReadThePrecisionSetting(): void
+    {
+        $precision = ini_set("precision", "17");
+        try {
+            $this->assertSame(8605847001, Timecode::totalMilliseconds(8605847.0005));
+        } finally {
+            ini_set("precision", (string) $precision);
+        }
     }
 
 
@@ -371,8 +388,8 @@ class TimecodeTest extends TestCase
     public function testIsBelowLimitChecksTheTimeRoundedToMilliseconds(): void
     {
         $this->assertSame(
-            [true, true, false, false, false, false],
-            array_map(Timecode::isBelowLimit(...), [-5.0, 359999999.999, 359999999.9996, 360000000.0, 1e300, NAN])
+            [true, true, false, false, false, false, false],
+            array_map(Timecode::isBelowLimit(...), [-5.0, 359999999.999, 359999999.9995, 359999999.9996, 360000000.0, 1e300, NAN])
         );
     }
 
