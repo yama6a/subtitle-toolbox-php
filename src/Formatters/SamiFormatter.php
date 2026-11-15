@@ -66,7 +66,7 @@ final class SamiFormatter extends SubtitleFormatter
 
         $lines = array_map(
             fn (string $line): string => $this->writeNbsp($stripTags ? Markup::stripAllTags($line) : Markup::keepTags(MarkupColors::webVttColorsToFont($line), Markup::STYLE_TAGS)),
-            array_map(fn (string $line): string => Markup::newlineEntitiesToLf(Markup::rubyAsText($line)), $cue->getLines())
+            array_map(fn (string $line): string => Markup::newlineEntitiesToLf(self::carriageReturnEntitiesToLf(Markup::rubyAsText($line))), $cue->getLines())
         );
 
         if ($lines === []) {
@@ -77,6 +77,15 @@ final class SamiFormatter extends SubtitleFormatter
         $html = str_replace(LineEnding::Lf->value, "<br>", implode("<br>", $lines));
 
         return $this->openParagraph($class, []) . $html . Markup::closeCoreTags(Markup::openCoreTags($html));
+    }
+
+
+    /**
+     * SAMI reads &#13; as white space like &#10;, and decodeEntities() leaves it as text, so only this formatter turns it into a line break.
+     */
+    private static function carriageReturnEntitiesToLf(string $text): string
+    {
+        return preg_replace('/&(?:#0*13|#[xX]0*[dD]);/', LineEnding::Lf->value, $text) ?? $text;
     }
 
 

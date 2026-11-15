@@ -109,6 +109,21 @@ final class FormatterRoundTripTest extends TestCase
     }
 
 
+    #[DataProvider("carriageReturnEntities")]
+    public function testSamiWritesCarriageReturnEntityAsLineBreak(string $line): void
+    {
+        $sami = Subtitle::fromString(self::subtitle([$line])->toString(Format::Sami), Format::Sami);
+
+        $this->assertSame([["a", "b"], ["z"]], self::linesOf($sami));
+    }
+
+
+    public static function carriageReturnEntities(): array
+    {
+        return ["decimal" => ["a&#13;b"], "hex" => ["a&#x0D;b"]];
+    }
+
+
     public static function newlineEntities(): array
     {
         return ["decimal" => ["a&#10;b"], "hex" => ["a&#x0A;b"], "named" => ["a&NewLine;b"]];
