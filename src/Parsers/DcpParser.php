@@ -8,6 +8,7 @@ use DOMElement;
 use DOMText;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\AlignmentGrid;
+use SubtitleToolbox\CuePosition;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\StyleRuns;
@@ -186,7 +187,7 @@ final class DcpParser extends SubtitleParser
 
         return (new SubtitleCue($start, $end, array_column($lines, "text")))
             ->setAlignment($alignment)
-            ->setPosition(AlignmentGrid::positionAt($alignment, self::onScreen(self::screenX($texts[0])), self::onScreen(self::screenY($texts[0]))))
+            ->setPosition(self::cuePosition($texts, $alignment))
             ->setFormatData(self::FORMAT_DATA_KEY, ["subtitle" => self::attributes($subtitle), "texts" => $texts]);
     }
 
@@ -312,9 +313,24 @@ final class DcpParser extends SubtitleParser
     }
 
 
-    private static function onScreen(float $percent): float
+    /**
+     * Returns the point of the <Text> elements with these attributes, top line first, or null. The row of the alignment
+     * picks the anchor: the last line for a bottom cue, the first line for a top cue, the middle of the lines for a
+     * middle cue. DcpFormatter places the lines around the position by the same rule.
+     *
+     * @param non-empty-list<array<string, string>> $texts
+     */
+    private static function cuePosition(array $texts, Alignment $alignment): ?CuePosition
     {
-        return min(max($percent, 0), 100);
+        $anchors = match (AlignmentGrid::row($alignment)) {
+            AlignmentGrid::BOTTOM_ROW => [$texts[count($texts) - 1]],
+            AlignmentGrid::TOP_ROW    => [$texts[0]],
+            default                   => $texts,
+        };
+        $x = array_sum(array_map(self::screenX(...), $anchors)) / count($anchors);
+        $y = array_sum(array_map(self::screenY(...), $anchors)) / count($anchors);
+
+        return AlignmentGrid::positionAt($alignment, min(max($x, 0), 100), min(max($y, 0), 100));
     }
 
 

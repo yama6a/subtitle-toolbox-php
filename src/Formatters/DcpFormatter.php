@@ -171,9 +171,11 @@ final class DcpFormatter extends SubtitleFormatter
 
 
     /**
-     * Returns the stored <Text> attributes when the cue keeps its alignment and line count. Else the first line gets
-     * the position of the cue when the position lies in the cell of the alignment, and the next lines follow below it.
-     * Without a position the formatter places the lines by the alignment.
+     * Returns the stored <Text> attributes when the cue keeps its alignment and line count. Else it places the lines
+     * 7 percent apart around an anchor, by the rule of DcpParser: the last line of a bottom cue, the first line of a
+     * top cue or the middle of the lines of a middle cue sits at the anchor. The anchor is the position of the cue when
+     * the position lies in the cell of the alignment, else 8 percent from the edge or the middle of the screen.
+     * A line past the screen edge gets the edge.
      *
      * @param ?list<array<string, string>> $stored
      *
@@ -200,16 +202,18 @@ final class DcpFormatter extends SubtitleFormatter
             }
         }
 
-        // The height of the first line on the screen in percent, from 0 at the top to 100 at the bottom.
-        $first = match (true) {
-            $placed                            => AlignmentGrid::roundPercent($position->y),
-            $row === AlignmentGrid::BOTTOM_ROW => 100 - self::EDGE - ($count - 1) * self::LINE_SPACING,
-            $row === AlignmentGrid::TOP_ROW    => self::EDGE,
-            default                            => 50 - ($count - 1) / 2 * self::LINE_SPACING,
+        // Heights on the screen in percent, from 0 at the top to 100 at the bottom.
+        [$anchor, $anchorIndex] = match ($row) {
+            AlignmentGrid::BOTTOM_ROW => [100 - self::EDGE, $count - 1],
+            AlignmentGrid::TOP_ROW    => [self::EDGE, 0],
+            default                   => [50, ($count - 1) / 2],
         };
+        if ($placed) {
+            $anchor = AlignmentGrid::roundPercent($position->y);
+        }
         $attributes = [];
         for ($index = 0; $index < $count; $index++) {
-            $y = $first + $index * self::LINE_SPACING;
+            $y = min(max($anchor + ($index - $anchorIndex) * self::LINE_SPACING, 0), 100);
             [$align, $value] = match ($row) {
                 AlignmentGrid::BOTTOM_ROW => ["bottom", 100 - $y],
                 AlignmentGrid::TOP_ROW    => ["top", $y],

@@ -171,14 +171,16 @@ class DcpParserTest extends TestCase
     public static function textPoints(): array
     {
         return [
-            "top left"                       => ['<Text HAlign="left" HPosition="20" VAlign="top" VPosition="5">a</Text>', Alignment::TopLeft, [20.0, 5.0]],
-            "bottom right"                   => ['<Text HAlign="right" HPosition="15" VAlign="bottom" VPosition="20">a</Text>', Alignment::BottomRight, [85.0, 80.0]],
-            "middle, up from the middle"     => ['<Text HPosition="-10" VAlign="center" VPosition="-10">a</Text>', Alignment::MiddleCenter, [40.0, 40.0]],
-            "2 lines take the top line"      => ['<Text VAlign="bottom" VPosition="8">b</Text><Text VAlign="bottom" VPosition="15">a</Text>', Alignment::BottomCenter, [50.0, 85.0]],
-            "the default place of the cell"  => ['<Text VAlign="bottom" VPosition="10">a</Text>', Alignment::BottomCenter, null],
-            "a point outside the cell"       => ['<Text VAlign="bottom" VPosition="40">a</Text><Text VAlign="bottom" VPosition="0">b</Text>', Alignment::BottomCenter, null],
-            "below the screen counts as 100" => ['<Text VAlign="bottom" VPosition="-5">a</Text>', Alignment::BottomCenter, [50.0, 100.0]],
-            "an infinite position"           => ['<Text HAlign="left" HPosition="-1e999" VAlign="top" VPosition="1e999">a</Text>', Alignment::BottomLeft, [0.0, 100.0]],
+            "top left"                         => ['<Text HAlign="left" HPosition="20" VAlign="top" VPosition="5">a</Text>', Alignment::TopLeft, [20.0, 5.0]],
+            "bottom right"                     => ['<Text HAlign="right" HPosition="15" VAlign="bottom" VPosition="20">a</Text>', Alignment::BottomRight, [85.0, 80.0]],
+            "middle, up from the middle"       => ['<Text HPosition="-10" VAlign="center" VPosition="-10">a</Text>', Alignment::MiddleCenter, [40.0, 40.0]],
+            "a bottom cue takes its last line" => ['<Text VAlign="bottom" VPosition="8">b</Text><Text VAlign="bottom" VPosition="15">a</Text>', Alignment::BottomCenter, [50.0, 92.0]],
+            "a top cue takes its first line"   => ['<Text VAlign="top" VPosition="12">b</Text><Text VAlign="top" VPosition="5">a</Text>', Alignment::TopCenter, [50.0, 5.0]],
+            "a middle cue takes the middle"    => ['<Text HPosition="10" VAlign="center" VPosition="-13.5">a</Text><Text HPosition="10" VAlign="center" VPosition="-6.5">b</Text>', Alignment::MiddleCenter, [60.0, 40.0]],
+            "the default place of the cell"    => ['<Text VAlign="bottom" VPosition="10">a</Text>', Alignment::BottomCenter, null],
+            "a point outside the cell"         => ['<Text HAlign="left" VAlign="bottom" VPosition="15">a</Text><Text HAlign="right" VAlign="bottom" VPosition="8">b</Text>', Alignment::BottomLeft, null],
+            "below the screen counts as 100"   => ['<Text VAlign="bottom" VPosition="-5">a</Text>', Alignment::BottomCenter, [50.0, 100.0]],
+            "an infinite position"             => ['<Text HAlign="left" HPosition="-1e999" VAlign="top" VPosition="1e999">a</Text>', Alignment::BottomLeft, [0.0, 100.0]],
         ];
     }
 

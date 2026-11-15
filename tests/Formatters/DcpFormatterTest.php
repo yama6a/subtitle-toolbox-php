@@ -95,7 +95,7 @@ class DcpFormatterTest extends TestCase
      * @param list<string> $texts
      */
     #[DataProvider('positions')]
-    public function testPutsTheFirstLineAtThePositionAndTheNextLinesBelowIt(Alignment $alignment, CuePosition $position, array $lines, array $texts): void
+    public function testPlacesTheLinesAroundThePositionByTheRowOfTheAlignment(Alignment $alignment, CuePosition $position, array $lines, array $texts): void
     {
         $cue      = (new SubtitleCue(1, 2, $lines))->setAlignment($alignment)->setPosition($position);
         $subtitle = (new Subtitle())->addCue($cue);
@@ -120,11 +120,12 @@ class DcpFormatterTest extends TestCase
                 "<Text Halign=\"left\" Hposition=\"20\" Valign=\"top\" Vposition=\"12\">b</Text>",
             ]],
             "bottom right"  => [Alignment::BottomRight, new CuePosition(85, 80), ["a", "b"], [
-                "<Text Halign=\"right\" Hposition=\"15\" Valign=\"bottom\" Vposition=\"20\">a</Text>",
-                "<Text Halign=\"right\" Hposition=\"15\" Valign=\"bottom\" Vposition=\"13\">b</Text>",
+                "<Text Halign=\"right\" Hposition=\"15\" Valign=\"bottom\" Vposition=\"27\">a</Text>",
+                "<Text Halign=\"right\" Hposition=\"15\" Valign=\"bottom\" Vposition=\"20\">b</Text>",
             ]],
-            "middle center" => [Alignment::MiddleCenter, new CuePosition(60, 40), ["a"], [
-                "<Text Hposition=\"10\" Valign=\"center\" Vposition=\"-10\">a</Text>",
+            "middle center" => [Alignment::MiddleCenter, new CuePosition(60, 40), ["a", "b"], [
+                "<Text Hposition=\"10\" Valign=\"center\" Vposition=\"-13.5\">a</Text>",
+                "<Text Hposition=\"10\" Valign=\"center\" Vposition=\"-6.5\">b</Text>",
             ]],
             "a fraction"    => [Alignment::BottomCenter, new CuePosition(50, 84.667), ["a"], [
                 "<Text Valign=\"bottom\" Vposition=\"15.333\">a</Text>",
@@ -139,9 +140,50 @@ class DcpFormatterTest extends TestCase
         $subtitle->getCues()[0]->setAlignment(Alignment::BottomLeft)->setPosition(new CuePosition(5, 80));
 
         $this->assertStringContainsString(
-            "<Text HAlign=\"left\" HPosition=\"5\" VAlign=\"bottom\" VPosition=\"20\">The ferry leaves at nine,</Text>",
+            "<Text HAlign=\"left\" HPosition=\"5\" VAlign=\"bottom\" VPosition=\"27\">The ferry leaves at nine,</Text>\n" .
+            "      <Text HAlign=\"left\" HPosition=\"5\" VAlign=\"bottom\" VPosition=\"20\">from the north pier.</Text>",
             $subtitle->toString(Format::Dcp)
         );
+    }
+
+
+    /**
+     * @param list<string> $texts
+     */
+    #[DataProvider('readPlaces')]
+    public function testWritesTheLinesOfAReadCueAtTheirPlacesWithoutTheStoredAttributes(array $texts): void
+    {
+        $subtitle = Subtitle::fromString("<DCSubtitle Version=\"1.0\"><Subtitle TimeIn=\"00:00:01:000\" TimeOut=\"00:00:02:000\">" . implode("", $texts) . "</Subtitle></DCSubtitle>", Format::Dcp);
+        $subtitle->getCues()[0]->setFormatData("dcp", []);
+
+        $output = $subtitle->toString(Format::Dcp);
+        foreach ($texts as $text) {
+            $this->assertStringContainsString($text, $output);
+        }
+    }
+
+
+    /**
+     * @return array<string, array{list<string>}>
+     */
+    public static function readPlaces(): array
+    {
+        return [
+            "bottom" => [["<Text VAlign=\"bottom\" VPosition=\"30\">a</Text>", "<Text VAlign=\"bottom\" VPosition=\"23\">b</Text>"]],
+            "top"    => [["<Text HAlign=\"left\" HPosition=\"5\" VAlign=\"top\" VPosition=\"20\">a</Text>", "<Text HAlign=\"left\" HPosition=\"5\" VAlign=\"top\" VPosition=\"27\">b</Text>"]],
+            "middle" => [["<Text VAlign=\"center\" VPosition=\"-13.5\">a</Text>", "<Text VAlign=\"center\" VPosition=\"-6.5\">b</Text>"]],
+        ];
+    }
+
+
+    public function testALineThatDoesNotFitOnTheScreenGetsTheEdge(): void
+    {
+        $lines    = array_map(fn (int $number): string => "line $number", range(1, 12));
+        $subtitle = (new Subtitle())->addCue((new SubtitleCue(1, 2, $lines))->setPosition(new CuePosition(50, 70)));
+
+        preg_match_all('/Vposition="([^"]*)"/', $subtitle->toString(Format::Dcp), $matches);
+
+        $this->assertSame(["100", "100", "93", "86", "79", "72", "65", "58", "51", "44", "37", "30"], $matches[1]);
     }
 
 
