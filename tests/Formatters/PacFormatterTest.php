@@ -130,22 +130,33 @@ class PacFormatterTest extends TestCase
     public static function codesWithFeh(): array
     {
         return [
-            "chinese-traditional" => ["chinese-traditional", "CP950", "全部 二月", "?部 二月"],
-            "chinese-simplified"  => ["chinese-simplified", "CP936", "二月", "?月"],
-            "korean"              => ["korean", "CP949", "딸기", "?기"],
+            "chinese-traditional" => ["chinese-traditional", "CP950", "全部 二月", "\xA5\xFE"],
+            "chinese-simplified"  => ["chinese-simplified", "CP936", "二月", "\xB6\xFE"],
+            "korean"              => ["korean", "CP949", "딸기", "\xB5\xFE"],
         ];
     }
 
 
     #[DataProvider("codesWithFeh")]
-    public function testDoubleByteCodeWithFehWritesAsAMissingCharacter(string $codePage, string $encoding, string $text, string $readBack): void
+    public function testDoubleByteCodeWithTheSecondByteFehReadsBack(string $codePage, string $encoding, string $text, string $pair): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.0, 2.0, [$text]))->setFormatData("pac", ["codePage" => $codePage]);
 
         $output = $subtitle->toString(Format::Pac);
 
-        $this->assertStringContainsString("\0?", $output);
-        $this->assertSame([$readBack], Subtitle::fromString($output, Format::Pac, new ReadOptions($encoding))->getCues()[0]->getLines());
+        $this->assertStringContainsString(Pac::DOUBLE_BYTE . $pair, $output);
+        $this->assertSame([$text], Subtitle::fromString($output, Format::Pac, new ReadOptions($encoding))->getCues()[0]->getLines());
+    }
+
+
+    public function testDoubleByteCodeWithTheFirstByteFehWritesAsAMissingCharacter(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.0, 2.0, ["\u{FA0C}月"]))->setFormatData("pac", ["codePage" => "chinese-simplified"]);
+
+        $output = $subtitle->toString(Format::Pac);
+
+        $this->assertStringContainsString(Pac::DOUBLE_BYTE . "\0?", $output);
+        $this->assertSame(["?月"], Subtitle::fromString($output, Format::Pac, new ReadOptions("CP936"))->getCues()[0]->getLines());
     }
 
 
