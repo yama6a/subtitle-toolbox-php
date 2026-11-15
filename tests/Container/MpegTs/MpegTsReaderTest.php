@@ -139,6 +139,42 @@ class MpegTsReaderTest extends TestCase
     }
 
 
+    public function testKeepsACueThatEndsBelow100000HoursWhenALaterPacketWithoutTextPassesThem(): void
+    {
+        $writer = self::writer([["eng", TsFixtureWriter::SUBTITLE_PAGE, 888]]);
+        for ($packet = 0; $packet <= 10059; $packet++) {
+            $data = match ($packet) {
+                10057   => [TsFixtureWriter::header(888, true), TsFixtureWriter::row(888, 22, "\x0B\x0BLast.")],
+                10058   => [TsFixtureWriter::header(888, true)],
+                default => [],
+            };
+            $writer->teletextPes(self::PID, $packet * (3 << 30) % (1 << 33), $data);
+        }
+
+        $this->assertSame([[359954050.799, 359989842.193, ["Last."]]], self::cues(MpegTsReader::open(self::stream($writer->bytes()))->extract(888)));
+    }
+
+
+    /**
+     * @return array<string, array{\Closure, int}>
+     */
+    public static function noTextPastTheTimeLimit(): array
+    {
+        return [
+            "teletext"      => [fn (): string => TsFixtures::teletextPastTheTimeLimit(false), 888],
+            "ARIB caption"  => [fn (): string => AribFixtures::captionsPastTheTimeLimit(false), 304],
+            "DVB subtitles" => [fn (): string => TsFixtures::dvbSubtitlesPastTheTimeLimit(false), 2049],
+        ];
+    }
+
+
+    #[DataProvider("noTextPastTheTimeLimit")]
+    public function testReadsNoCuesFromPacketsWithoutTextPast100000Hours(\Closure $file, int $track): void
+    {
+        $this->assertSame([], MpegTsReader::open(self::stream($file()))->extract($track)->getCues());
+    }
+
+
     public function testCountsTimesAcrossThePtsWrap(): void
     {
         $writer = self::writer([["eng", TsFixtureWriter::SUBTITLE_PAGE, 888]]);

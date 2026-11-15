@@ -180,6 +180,11 @@ final class WebVttFormatter extends SubtitleFormatter
             $lines = $this->dropEarlierWordTimestamps($this->keepVttTags($lines));
         }
 
+        // An empty line ends the cue, and the parser removes U+FEFF, so a line that holds only tags or U+FEFF is left out.
+        $lines = implode(LineEnding::Lf->value, array_filter(
+            explode(LineEnding::Lf->value, $lines),
+            fn (string $line): bool => trim(str_replace("\u{FEFF}", "", $line)) !== ""
+        ));
         $lines = str_replace("-->", "--&gt;", $lines);
 
         return $lines === "" ? $timeStamps : $timeStamps . LineEnding::Lf->value . $lines;

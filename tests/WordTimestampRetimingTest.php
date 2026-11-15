@@ -137,4 +137,33 @@ class WordTimestampRetimingTest extends TestCase
             $this->assertEqualsWithDelta($cue->getStart() + 0.5 * $result->scale, Markup::wordTimestampSeconds($match[1]), 0.0015);
         }
     }
+
+
+    public function testRetimingRejectsAWordTimestampBeyondTheTimeLimitAndKeepsTheCue(): void
+    {
+        $subtitle = Subtitle::fromString("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\na <00:30:00.000>b\n", Format::WebVtt);
+        $before   = $subtitle->toString(Format::WebVtt);
+
+        foreach ([fn () => $subtitle->scale(200000), fn () => $subtitle->shift(359999000)] as $retime) {
+            try {
+                $retime();
+                $this->fail("The call must throw.");
+            } catch (\InvalidArgumentException $exception) {
+                $this->assertStringContainsString("Cue times must be below 100000 hours.", $exception->getMessage());
+                $this->assertSame($before, $subtitle->toString(Format::WebVtt));
+            }
+        }
+    }
+
+
+    public function testRetimingRejectsAStoredWordEndBeyondTheTimeLimit(): void
+    {
+        $subtitle = Subtitle::fromString("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\na b\n", Format::WebVtt);
+        $cue      = $subtitle->getCues()[0];
+        $cue->setFormatData("words", ["times" => [["start" => 0.0, "end" => 300000.0 * 3600]]]);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Cue times must be below 100000 hours.");
+        $subtitle->shift(1);
+    }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Parsers\WordTimes;
 
 /**
  * @internal
@@ -73,8 +74,8 @@ final class CueList
 
 
     /**
-     * Throws when $map moves the end of a cue to MAX_HOURS or later. The formatters cast times to int milliseconds,
-     * which fails far above MAX_HOURS.
+     * Throws when $map moves the end of a cue, or one of its word timestamps or stored word times, to MAX_HOURS or later.
+     * The formatters cast times to int milliseconds, which fails far above MAX_HOURS.
      *
      * @param array<int, SubtitleCue> $cues
      * @param callable(float): float  $map increases with the time
@@ -82,7 +83,20 @@ final class CueList
      */
     public static function checkTimeLimit(array $cues, callable $map): void
     {
-        self::checkEnds(array_map(fn (SubtitleCue $cue): float => $map(max($cue->getStart(), $cue->getEnd())), $cues));
+        self::checkEnds(array_map(function (SubtitleCue $cue) use ($map): float {
+            $latest = $map(max($cue->getStart(), $cue->getEnd()));
+            $probe  = function (float $time) use ($map, &$latest): float {
+                $latest = max($latest, $map($time));
+
+                return $time;
+            };
+            foreach ($cue->getLines() as $line) {
+                Markup::mapWordTimestamps($line, $probe);
+            }
+            WordTimes::mapTimes($cue->findFormatData(WordTimes::FORMAT_DATA_KEY) ?? [], $probe);
+
+            return $latest;
+        }, $cues));
     }
 
 

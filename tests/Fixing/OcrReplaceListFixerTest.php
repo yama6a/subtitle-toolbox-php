@@ -52,11 +52,20 @@ class OcrReplaceListFixerTest extends TestCase
     {
         return [
             "name without a group is literal" => ["x", '[${name}]', "axc", 'a[${name}]c'],
-            "name of a group"                 => ["(?<n>q)(z)?", '${n}|$2', "qz", "q|z"],
+            "name of a group"                 => ["(?<n>q)(z)?", '${n}-$2', "qz", "q-q"],
+            "named group numbered last"       => ["(?<n>q)(z)?", '[$1][${2}]', "qz", "[z][q]"],
+            "quoted name numbered last"       => ["(?'n'q)(z)", '[$1][$2]', "qz", "[z][q]"],
             "text before the match"           => ["b", '[$`]', "abc", "a[a]c"],
             "text after the match"            => ["b", "[$']", "abc", "a[c]c"],
             "whole subject"                   => ["b", '[$_]', "abc", "a[abc]c"],
-            "last group"                      => ["(b)(x)?", '[$+]', "abc", "a[b]c"],
+            "last group did not match"        => ["(b)(x)?", '[$+]', "abc", "a[]c"],
+            "last group is the named group"   => ["(?<n>q)(z)?", '[$+]', "qz", "[q]"],
+            "last group without groups"       => ["b", '[$+]', "abc", "a[b]c"],
+            "non-capturing groups"            => ["(?:a)(?<n>b)(?=c)(c)", '[$1][$2]', "abc", "[c][b]"],
+            "escaped parenthesis"             => ["\\((?<n>a)\\)[(](b)", '[$1][$2]', "(a)(b", "[b][a]"],
+            "backreference to unnamed group"  => ["(?<n>a)(b)\\1", '[$+]', "abbab", "[a]ab"],
+            "backreference in a conditional"  => ["(?<n>a)(b)?(?(1)c|d)", '[$0]', "abcad", "[abc][ad]"],
+            "escapes and classes stay"        => ["(?<n>a)(b)[\\1]\\\\1", '[$1]', "ab\x01\\1", "[b]"],
             "escaped dollar and backslash"    => ["b", '[$$][\\]', "abc", 'a[$][\\]c'],
         ];
     }
@@ -69,5 +78,14 @@ class OcrReplaceListFixerTest extends TestCase
         $list = OcrReplaceList::fromSubtitleEditXml($xml);
 
         $this->assertSame([$expected], OcrReplaceListFixer::replaceList([$text], $list, false));
+    }
+
+
+    public function testDollarPlusOfAListBuiltInCodeUsesThePcreNumbers(): void
+    {
+        $list = new OcrReplaceList(regularExpressions: ["/(?<n>q)(z)?/u" => "[$+]", "/b/u" => "[$+]"]);
+
+        $this->assertSame(["[z]", "a[b]c"], OcrReplaceListFixer::replaceList(["qz", "abc"], $list, false));
+        $this->assertSame(["[]"], OcrReplaceListFixer::replaceList(["q"], $list, false));
     }
 }

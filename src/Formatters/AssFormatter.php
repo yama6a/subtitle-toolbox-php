@@ -431,7 +431,16 @@ final class AssFormatter extends SubtitleFormatter
 
     private function escapeText(string $text): string
     {
-        return str_replace([LineEnding::Lf->value, "\u{00A0}"], ["\\N", "\\h"], $text);
+        // The parser reads \N, \n and \h of the text as a line break, a soft break and a hard space. U+2060 after the backslash keeps them as text.
+        // A {...} block holds override tags, so its backslashes stay.
+        $parts = preg_split('/(\{[^}]*\})/', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+        foreach ($parts as $index => $part) {
+            if ($index % 2 === 0) {
+                $parts[$index] = str_replace([LineEnding::Lf->value, "\u{00A0}"], ["\\N", "\\h"], preg_replace('/\\\\(?=[Nnh])/', "\\\\\u{2060}", $part));
+            }
+        }
+
+        return implode("", $parts);
     }
 
 

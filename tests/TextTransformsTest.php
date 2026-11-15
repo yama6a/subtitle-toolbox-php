@@ -81,6 +81,20 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testReplaceTextChangesNoCueWhenARegexFailsOnALaterCue(): void
+    {
+        $subtitle = Subtitle::fromString("1\n00:00:01,000 --> 00:00:02,000\nGr\u{f6}\u{df}e colour\n\n2\n00:00:03,000 --> 00:00:04,000\nThe colour of caf\xe9 au lait.\n", Format::SubRip);
+        $before   = $subtitle->toString(Format::SubRip);
+
+        try {
+            $subtitle->replaceText('/colou?r/u', "color", new ReplaceTextOptions(regex: true));
+            $this->fail("The call must throw.");
+        } catch (InvalidArgumentException) {
+            $this->assertSame($before, $subtitle->toString(Format::SubRip));
+        }
+    }
+
+
     public function testRealCaptionFileCleanedUp(): void
     {
         $subtitle = $this->parseCaptions()

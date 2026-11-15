@@ -7,10 +7,14 @@ namespace SubtitleToolbox\Container;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Mp4\Mp4Reader;
 use SubtitleToolbox\Container\MpegTs\MpegTsReader;
+use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Exceptions\UnsupportedFormatException;
+use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
- * Knows a video container by its first bytes and opens the reader for it.
+ * Knows a video container by its first bytes and opens the reader for it. Holds the time check that the MP4 and MPEG-TS
+ * readers share.
  *
  * @internal
  */
@@ -65,5 +69,26 @@ final class Containers
             ContainerFormat::Mp4      => "MP4",
             ContainerFormat::MpegTs   => "MPEG-TS",
         };
+    }
+
+
+    /**
+     * Throws when one of $cues starts or ends at MAX_HOURS or later, rounded to milliseconds as the cue holds it.
+     * A packet or a sample that makes no cue does not count. So a track whose cues end below the limit reads, also when
+     * its last packets pass the limit.
+     *
+     * @param list<SubtitleCue> $cues
+     * @throws ParsingException
+     */
+    public static function checkCueTimes(int $trackNumber, array $cues): void
+    {
+        foreach ($cues as $cue) {
+            $time = max($cue->getStart(), $cue->getEnd());
+            if (!Timecode::isBelowLimit($time)) {
+                $milliseconds = Timecode::totalMilliseconds($time);
+                $seconds      = rtrim(rtrim(sprintf("%d.%03d", intdiv($milliseconds, 1000), $milliseconds % 1000), "0"), ".");
+                throw new ParsingException("The cue times of track $trackNumber reach $seconds s. Times must be below " . Timecode::MAX_HOURS . " hours.");
+            }
+        }
     }
 }

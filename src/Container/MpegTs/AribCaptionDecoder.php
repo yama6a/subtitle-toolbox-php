@@ -33,6 +33,16 @@ final class AribCaptionDecoder
     // A row of the widest writing format, 1920 dots, holds 96 cells. The limit keeps a damaged repeat count small.
     private const MAX_REPEAT = 1024;
 
+    // A screen of the widest format with cells of 1 by 1 dot holds more than 500,000 characters. A screen of ARIB TR-B14
+    // profile A, 1920 by 1080 dots, holds 864 at normal size and 3,456 at small size.
+    private const MAX_CELLS = 4096;
+
+    // The states that one PES packet adds hold text of up to STATE_TEXT_BASE plus STATE_TEXT_PER_BYTE times its size.
+    // One state is as long as the screen, so a group that repeats TIME would else grow without a limit.
+    private const STATE_TEXT_BASE = 32768;
+
+    private const STATE_TEXT_PER_BYTE = 32;
+
     // The limit of a CSI number, so that the screen coordinates stay small.
     private const MAX_PARAMETER = 1 << 20;
 
@@ -103,6 +113,10 @@ final class AribCaptionDecoder
     /** @var array<string, true> */
     private array $warned = [];
 
+    private int $groupText = 0;
+
+    private int $groupBudget = 0;
+
 
     /**
      * @param string $language the ISO 639-2 language of the stream, which picks the coding until the caption management data does
@@ -135,6 +149,7 @@ final class AribCaptionDecoder
         }
 
         $this->time = max($time, $this->time);
+        [$this->groupText, $this->groupBudget] = [0, self::STATE_TEXT_BASE + self::STATE_TEXT_PER_BYTE * strlen($data)];
         if (($id & 0x0F) === 0 && $id >> 5 !== $this->managementGroup) {
             $this->managementGroup = $id >> 5;
             $this->managementData($body);
@@ -539,14 +554,23 @@ final class AribCaptionDecoder
         $set  = ($key >> 16) - AribCharacters::DRCS_0;
         $code = sprintf($set === 0 ? "0x%04X" : "0x%02X", $key & 0xFFFF);
         $id   = $glyph["hash"] ?? "DRCS-$set $code";
-        if (!isset($this->warned[$id])) {
-            $this->warned[$id] = true;
-            $this->warnings[]  = [$this->time, $glyph === null
-                ? "The character $code of the set DRCS-$set has no glyph in the stream. The reader wrote U+3013 for it."
-                : "The glyph of the character $code of the set DRCS-$set ({$glyph['size']} dots, MD5 {$glyph['hash']}) has no known character. The reader wrote U+3013 for it."];
-        }
+        $this->skip($id, $glyph === null
+            ? "The character $code of the set DRCS-$set has no glyph in the stream. The reader wrote U+3013 for it."
+            : "The glyph of the character $code of the set DRCS-$set ({$glyph['size']} dots, MD5 {$glyph['hash']}) has no known character. The reader wrote U+3013 for it.");
 
         return "\u{3013}";
+    }
+
+
+    /**
+     * Adds the warning once for the id.
+     */
+    private function skip(string $id, string $message): void
+    {
+        if (!isset($this->warned[$id])) {
+            $this->warned[$id] = true;
+            $this->warnings[]  = [$this->time, $message];
+        }
     }
 
 
@@ -567,16 +591,21 @@ final class AribCaptionDecoder
         $ruby         = $this->encoding === self::JAPANESE
                         && (($this->scaleX === 0.5 && $this->scaleY === 0.5) || ($this->charWidth === 18 && $this->charHeight === 18));
         for ($index = 0; $index < $times; $index++) {
-            $top                             = $this->y - $this->sectionHeight();
-            $this->screen["$this->x,$top"] = [
-                "x"      => $this->x,
-                "y"      => $top,
-                "width"  => $this->sectionWidth(),
-                "height" => $this->sectionHeight(),
-                "ruby"   => $ruby,
-                "color"  => $this->color,
-                "text"   => $text,
-            ];
+            $top = $this->y - $this->sectionHeight();
+            $key = "$this->x,$top";
+            if (isset($this->screen[$key]) || count($this->screen) < self::MAX_CELLS) {
+                $this->screen[$key] = [
+                    "x"      => $this->x,
+                    "y"      => $top,
+                    "width"  => $this->sectionWidth(),
+                    "height" => $this->sectionHeight(),
+                    "ruby"   => $ruby,
+                    "color"  => $this->color,
+                    "text"   => $text,
+                ];
+            } else {
+                $this->skip("cells", "The caption screen holds more than " . self::MAX_CELLS . " characters. The reader dropped the characters past that.");
+            }
             $this->move(1, 0);
         }
     }
@@ -696,7 +725,16 @@ final class AribCaptionDecoder
 
     private function snapshot(): void
     {
+        if ($this->groupText > $this->groupBudget) {
+            return;
+        }
         $state = [$this->time, ...$this->render()];
+        $this->groupText += array_sum(array_map(strlen(...), $state[1]));
+        if ($this->groupText > $this->groupBudget) {
+            $this->skip("states", "The caption states of one PES packet are longer than 32 KiB plus 32 times the packet. The reader dropped the states past that.");
+
+            return;
+        }
         $last  = array_key_last($this->states);
         if ($last !== null && $this->states[$last][0] === $this->time) {
             $this->states[$last] = $state;
