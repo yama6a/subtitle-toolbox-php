@@ -5,9 +5,6 @@
 /phpunit.xml     export-ignore
 /renovate.json5  export-ignore
 /composer.lock   export-ignore
-/box.json        export-ignore
-/.build          export-ignore
-/.dockerignore   export-ignore
 /tests/files/encoding/** -text
 /tests/files/vobsub/** -text
 /tests/files/pgs/** -text
