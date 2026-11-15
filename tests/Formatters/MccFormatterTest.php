@@ -154,6 +154,34 @@ class MccFormatterTest extends TestCase
     }
 
 
+    /**
+     * @return array<string, array{float}>
+     */
+    public static function frameRatesAtTheLimit(): array
+    {
+        return ["23.976" => [23.976], "25" => [25.0], "29.97" => [29.97], "59.94" => [59.94], "60" => [60.0]];
+    }
+
+
+    /**
+     * A cue at the limit gets every packet below 100000 hours, so the output reads back with CEA-708 and with CEA-608. Issue #1351.
+     */
+    #[DataProvider("frameRatesAtTheLimit")]
+    public function testACueAt100000HoursReadsBackWithBothServices(float $frameRate): void
+    {
+        foreach ([[359999999.0, 359999999.999], [400000000.0, 400000001.0]] as [$start, $end]) {
+            $output = (new Subtitle())->addCue(new SubtitleCue($start, $end, "late"))
+                                      ->toString(Format::Mcc, new WriteOptions(formats: [new MccWriteOptions(frameRate: $frameRate)]));
+
+            foreach ([1, null] as $service) {
+                $cues = Subtitle::fromString($output, Format::Mcc, new ReadOptions(formats: [new MccReadOptions(service: $service)]))->getCues();
+                $this->assertSame(["late"], $cues[0]->getLines());
+                $this->assertLessThan(360000000.0, $cues[0]->getEnd());
+            }
+        }
+    }
+
+
     public static function unreadableFieldNames(): array
     {
         return [

@@ -18,6 +18,7 @@ use SubtitleToolbox\Resegmenting\Resegmenter;
 use SubtitleToolbox\Resegmenting\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\WriteOptions;
 
 class SccFormatterTest extends TestCase
@@ -241,13 +242,18 @@ class SccFormatterTest extends TestCase
     }
 
 
-    public function testKeepsACueAfter100000HoursAtTheLastFrameBeforeThem(): void
+    /**
+     * 100000:05:59;29 is the last frame below 100000 hours. The EOC shows the caption 3 frames before it, and the second word
+     * of the EDM lands on it. Issue #1351.
+     */
+    public function testKeepsACueAfter100000HoursSoItsLastWordLandsOnTheLastFrameBeforeThem(): void
     {
-        $output = $this->subtitle(new SubtitleCue(400000000.0, 400000001.0, "late"))->toString(Format::Scc);
+        foreach ([[400000000.0, 400000001.0], [359999999.999, 359999999.999]] as [$start, $end]) {
+            $output = $this->subtitle(new SubtitleCue($start, $end, "late"))->toString(Format::Scc);
 
-        $cues = Subtitle::fromString($output, Format::Scc)->getCues();
-        $this->assertSame([["late"]], array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $cues));
-        $this->assertLessThan(360000000.0, $cues[0]->getStart());
+            $this->assertStringEndsWith("\n100000:05:59;16\t94ae 94ae 9420 9420 9476 9476 97a2 97a2 ec61 f4e5 942f 942f 942c 942c\n", $output);
+            $this->assertSame([[359999999.893, 359999999.96, "late"]], TestSubtitles::describe(Subtitle::fromString($output, Format::Scc)));
+        }
     }
 
 

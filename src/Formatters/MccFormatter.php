@@ -57,13 +57,15 @@ final class MccFormatter extends SubtitleFormatter
             $version = "2.0";
         }
 
+        // The nearest frame of a CEA-608 word near the limit can be past it, so the last frame below the limit takes it.
+        $rate    = new FrameRate($numerator / $denominator);
+        $last    = $rate->framesBelowLimit(Timecode::LAST_TIME);
         $byFrame = [];
         foreach ((new SccFormatter())->captionWords($subtitle, true) as $frame608 => $word) {
-            $byFrame[(int) round($frame608 * self::CEA608_DENOMINATOR * $numerator / (self::CEA608_NUMERATOR * $denominator))][] = $word;
+            $byFrame[min((int) round($frame608 * self::CEA608_DENOMINATOR * $numerator / (self::CEA608_NUMERATOR * $denominator)), $last)][] = $word;
         }
         // A packet holds a header byte and a block header byte. A cc_data triplet holds 2 bytes.
         $capacity = 2 * ($tripletCount - 2) - 2;
-        $rate     = new FrameRate($numerator / $denominator);
         $blocks   = (new Cea708Encoder())->blocks($subtitle, $rate->framesBelowLimit(...), $capacity);
         $frames   = array_unique([...array_keys($byFrame), ...array_keys($blocks)]);
         sort($frames);
