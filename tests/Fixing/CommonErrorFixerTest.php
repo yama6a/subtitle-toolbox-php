@@ -74,6 +74,7 @@ class CommonErrorFixerTest extends TestCase
             "missing space after , ! ? and ..."  => ["missingSpaceAfterPunctuation", "es", ["Hola,Ana!¿Vienes?Sí...vale"],
                                                      ["Hola, Ana! ¿Vienes? Sí... vale"]],
             "unclosed tag"                       => ["unbalancedTags", "en", ["<i>Hello"], ["<i>Hello</i>"]],
+            "unclosed tag in invalid UTF-8"      => ["unbalancedTags", "en", ["<i>Caf\xE9 au lait."], ["<i>Caf\xE9 au lait.</i>"]],
             "tag over two lines"                 => ["unbalancedTags", "en", ["<i>Hello", "world</i>"], ["<i>Hello", "world</i>"]],
             "unclosed tags close in reverse"     => ["unbalancedTags", "en", ["<b><font color=\"#ff0000\">Hi", "you"],
                                                      ["<b><font color=\"#ff0000\">Hi", "you</font></b>"]],

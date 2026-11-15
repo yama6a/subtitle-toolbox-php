@@ -1,6 +1,6 @@
 {
   "name": "yama6a/subtitle-toolbox-php",
-  "description": "A PHP library and command line tool that reads, edits and writes subtitles, transcripts and chapter lists in more than 30 formats.",
+  "description": "A PHP library that reads, edits and writes subtitles, transcripts and chapter lists in more than 30 formats.",
   "keywords": [
     "subtitle",
     "srt",
@@ -17,7 +17,6 @@
     "whisper",
     "transcript",
     "chapters",
-    "cli",
     "parser",
     "converter"
   ],
@@ -37,9 +36,6 @@
       "SubtitleToolbox\\Tests\\": "tests/"
     }
   },
-  "bin": [
-    "bin/stbox"
-  ],
   "require": {
     "php": "^8.3",
     "ext-dom": "*",
@@ -51,7 +47,7 @@
     "yama6a/php-glyph-ocr": "^0.3"
   },
   "suggest": {
-    "ext-curl": "for DeepLEngine, GoogleTranslateEngine and the translate command",
+    "ext-curl": "for DeepLEngine, GoogleTranslateEngine and OpenAiCompatibleEngine",
     "ext-zlib": "to decode PNG images, which PgsFormatter needs, to compress PNG images and to read zlib-compressed MKV tracks",
     "yama6a/php-glyph-ocr": "^0.3, for GlyphOcrEngine, the pure PHP OCR of PGS and VobSub image cues where Tesseract is not installed"
   },
@@ -65,7 +61,6 @@
     "sort-packages": true
   },
   "scripts": {
-    "test": "phpunit",
-    "build-phar": ".build/build-phar.sh"
+    "test": "phpunit"
   }
 }

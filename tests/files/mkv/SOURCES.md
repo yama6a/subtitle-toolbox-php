@@ -2,7 +2,7 @@
 
 All files here are written for this repository. No permissively licensed MKV file with neutral subtitle text was found.
 
-`muxed/make.sh` muxes the subtitle files in `muxed/` with mkvmerge v99.0 and ffmpeg 7.0.2 (static build of johnvansickle.com) into `mkvmerge.mkv`, `ffmpeg_srt.mkv`, `ffmpeg_webvtt.webm` and `../mp4/ffmpeg_mov_text.mp4`. The video is a gray 64x36 picture at 4 frames per second for 20 s. ffmpeg writes a new Segment UID and Track UIDs on each run, so a new run changes some bytes. The read goldens in `expected/` hold each extracted track in its own format, `<file>.<track>.<ext>`. The CLI goldens hold the output of `convert <file> --track <track> --to <ext> -o -`, `<file>.<track>.to.<ext>`.
+`muxed/make.sh` muxes the subtitle files in `muxed/` with mkvmerge v99.0 and ffmpeg 7.0.2 (static build of johnvansickle.com) into `mkvmerge.mkv`, `ffmpeg_srt.mkv`, `ffmpeg_webvtt.webm` and `../mp4/ffmpeg_mov_text.mp4`. The video is a gray 64x36 picture at 4 frames per second for 20 s. ffmpeg writes a new Segment UID and Track UIDs on each run, so a new run changes some bytes. The read goldens in `expected/` hold each extracted track in its own format, `<file>.<track>.<ext>`.
 
 The other files come from a PHP script. `generator/MkvFixtures.php` builds the files with `generator/MkvFixtureWriter.php`, a small EBML writer. Run `php tests/files/mkv/generator/generate.php` to write them again. `MatroskaReaderTest` checks that the files match the generator output. ffmpeg 7.0 opens all files and lists their tracks.
 

@@ -7,9 +7,6 @@ namespace SubtitleToolbox\Exceptions;
 use Closure;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Cli\Arguments;
-use SubtitleToolbox\Cli\Command;
-use SubtitleToolbox\Cli\FileFailure;
 use SubtitleToolbox\Container\Containers;
 use SubtitleToolbox\Container\DvbSubtitleDecoder;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
@@ -154,9 +151,6 @@ class ThrowSitesTest extends TestCase
 
     // 101 belonged to InvalidFormatterException in 3.x and 103 to ImageCueWithoutTextException. Do not give them to a new class.
     private const RETIRED_CODES = [101, 103];
-
-    // The CLI catches its own exceptions, so they need no error code.
-    private const CLI_CODES = [FileFailure::class => 0];
 
     private const IDX = "# VobSub index file, v7 (do not modify this line!)\nsize: 720x576\n" .
                         "palette: 000000, f0f0f0, cccccc, 999999, 3333fa, 1111bb, fa3333, bb1111, " .
@@ -354,8 +348,6 @@ class ThrowSitesTest extends TestCase
             "ArrayReader.php: format data field type"       => [fn () => self::fromArray(["formatData" => ["scc" => ["dropFrame" => "x"]]]), ...$parsing],
             "ArrayReader.php: map no object"                => [fn () => self::fromArray(["metadata" => 5]), ...$parsing],
             "ArrayReader.php: comments no list"             => [fn () => self::fromArray(["comments" => 5]), ...$parsing],
-            "Cli/Command.php: unknown option"               => [fn () => Arguments::parse(["--nope"], []), ...$invalid],
-            "Cli/Command.php: file failure"                 => [fn () => Command::failFile("Cannot read x."), \RuntimeException::class, FileFailure::class],
             "Container/DvbSubtitleDecoder.php: region too large" => [fn () => (new DvbSubtitleDecoder())->add("\x0F\x11\0\1\0\x0A\0\0" . pack("nn", 8000, 1) . "\x0C\0\0\0", 0.0),
                                                                      ...$parsing],
             "Container/Containers.php: no container"        => [fn () => Containers::open(self::stream("1\n00:00:01,000 --> 00:00:02,000\nHi\n")),
@@ -449,7 +441,7 @@ class ThrowSitesTest extends TestCase
             "FormatDataSchema.php: field type"              => [fn () => (new Subtitle())->setFormatData("scc", ["dropFrame" => "x"]), ...$invalid],
             "FormatOptionsList.php: not a format class"     => [fn () => new ReadOptions(formats: [new CsvWriteOptions()]), ...$invalid],
             "FormatOptionsList.php: 2 objects of one class" => [fn () => new WriteOptions(formats: [new CsvWriteOptions(), new CsvWriteOptions()]), ...$invalid],
-            "Formatters/JsonOutput.php: invalid UTF-8" => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip, new ReadOptions(encoding: "UTF-8"))->toString(Format::Json),
+            "Formatters/JsonOutput.php: invalid UTF-8" => [fn () => Subtitle::load(self::FILES . "general/latin1.srt", Format::SubRip, new ReadOptions(encoding: "UTF-8"))->toString(Format::Json),
                 ...$unwritable],
             "Formatters/AssStyleOverride.php: no equals sign" => [fn () => new AssWriteOptions(style: "Fontsize"), ...$invalid],
             "Formatters/AssStyleOverride.php: unknown field" => [fn () => new AssWriteOptions(style: "Bogus=1"), ...$invalid],
@@ -511,7 +503,7 @@ class ThrowSitesTest extends TestCase
                 ->toString(Format::Scc), ...$unwritable],
             "Formatters/SpruceStlFormatter.php: 120 fps"    => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, "a"))
                 ->toString(Format::SpruceStl, new WriteOptions(formats: [new SpruceStlWriteOptions(frameRate: 120)])), ...$unwritable],
-            "Formatters/XmlOutput.php: invalid UTF-8"       => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip, new ReadOptions(encoding: "UTF-8"))->toString(Format::Ttml),
+            "Formatters/XmlOutput.php: invalid UTF-8"       => [fn () => Subtitle::load(self::FILES . "general/latin1.srt", Format::SubRip, new ReadOptions(encoding: "UTF-8"))->toString(Format::Ttml),
                                                                 ...$unwritable],
             "Formatters/XmlOutput.php: not well-formed"     => [fn () => XmlOutput::load("<p>"), ...$unwritable],
             "Formatters/TtmlHead.php: stored head"          => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT_DATA_KEY, ["head" => "<p/>"])
@@ -933,7 +925,7 @@ class ThrowSitesTest extends TestCase
         $this->assertInstanceOf($oldType, $caughtByOldType);
         $this->assertInstanceOf(SubtitleToolboxException::class, $caughtByInterface);
         $this->assertSame($class, $caughtByInterface::class);
-        $this->assertSame((self::CODES + self::CLI_CODES)[$class], $caughtByInterface->getCode());
+        $this->assertSame(self::CODES[$class], $caughtByInterface->getCode());
     }
 
 

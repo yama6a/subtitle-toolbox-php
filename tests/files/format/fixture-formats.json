@@ -71,27 +71,19 @@
         "fromPath": "txt",
         "detect": null
     },
-    "cli/broken.srt": {
-        "fromPath": "srt",
-        "detect": "srt"
-    },
-    "cli/frames.sub": {
+    "general/frames.sub": {
         "fromPath": "microdvd",
         "detect": "microdvd"
     },
-    "cli/latin1.srt": {
+    "general/latin1.srt": {
         "fromPath": "srt",
         "detect": "srt"
     },
-    "cli/notes.txt": {
-        "fromPath": "txt",
-        "detect": null
-    },
-    "cli/shop.vtt": {
+    "general/shop.vtt": {
         "fromPath": "vtt",
         "detect": "vtt"
     },
-    "cli/trip.srt": {
+    "general/trip.srt": {
         "fromPath": "srt",
         "detect": "srt"
     },
@@ -790,10 +782,6 @@
     "profanity/radio.vtt": {
         "fromPath": "vtt",
         "detect": "vtt"
-    },
-    "profanity/words.txt": {
-        "fromPath": "txt",
-        "detect": null
     },
     "quotes-in-tags/own_names_with_quotes.ass": {
         "fromPath": "ass",
