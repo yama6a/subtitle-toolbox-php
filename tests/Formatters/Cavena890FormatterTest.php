@@ -27,6 +27,17 @@ class Cavena890FormatterTest extends TestCase
     }
 
 
+    public function testTimeOnHalfAFrameRoundsUp(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.14, 2, ["ab"]));
+
+        $output = $subtitle->toString(Format::Cavena890);
+
+        $this->assertSame("00001d000032", bin2hex(substr($output, Cavena890::HEADER_SIZE + 2, 6)));
+        $this->assertSame(1.16, Subtitle::fromString($output, Format::Cavena890)->getCues()[0]->getStart());
+    }
+
+
     public function testWritesMoreThan2LinesInBlocksWithTheSameNumber(): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["One", "Two", "Three"]))->addCue(new SubtitleCue(3, 4, ["Four"]));

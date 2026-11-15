@@ -97,6 +97,15 @@ class SpruceStlFormatterTest extends TestCase
     }
 
 
+    public function testTimeOnHalfAFrameRoundsUp(): void
+    {
+        $subtitle = Subtitle::fromString("00:00:01:00 , 00:00:02:00 , One\n", Format::SpruceStl);
+        $subtitle->getCues()[0]->setStart(1.14);
+
+        $this->assertSame("00:00:01:04 , 00:00:02:00 , One\n", $subtitle->toString(Format::SpruceStl));
+    }
+
+
     public function testRejectsAFrameRateOf0(): void
     {
         $this->expectException(InvalidArgumentException::class);

@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
@@ -360,6 +361,25 @@ class ChapterFormatsTest extends TestCase
             ";FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000000000\nSTART=0\nEND=0\ngenre=x\n",
             $subtitle->toString(Format::FfMetadataChapters)
         );
+    }
+
+
+    public function testFfMetadataFormatterRoundsATimeOnHalfATickUp(): void
+    {
+        $cue = (new SubtitleCue(1.14, 2.0, "A"))->setFormatData("ffmeta-chapters", ["timeBase" => "1/25"]);
+
+        $this->assertStringContainsString("START=29\nEND=50\n", (new Subtitle())->addCue($cue)->toString(Format::FfMetadataChapters));
+    }
+
+
+    public function testFfMetadataFormatterThrowsForATickCountBeyondInt64(): void
+    {
+        $cue = (new SubtitleCue(1.0, 2.0, "A"))->setFormatData("ffmeta-chapters", ["timeBase" => "1/9223372036854775807"]);
+
+        $this->expectException(UnwritableContentException::class);
+        $this->expectExceptionMessage("A frame number must be below 9223372036854775807.");
+
+        (new Subtitle())->addCue($cue)->toString(Format::FfMetadataChapters);
     }
 
 

@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
+use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Cavena890;
 use SubtitleToolbox\Parsers\Cavena890Parser;
@@ -108,6 +109,6 @@ final class Cavena890Formatter extends SubtitleFormatter
      */
     private static function frames(float $seconds): string
     {
-        return substr(pack("N", min(self::MAX_FRAME, (int) round(max(0.0, $seconds) * Cavena890::FRAME_RATE))), 1);
+        return substr(pack("N", min(self::MAX_FRAME, (new FrameRate(Cavena890::FRAME_RATE))->framesBelowLimit($seconds))), 1);
     }
 }

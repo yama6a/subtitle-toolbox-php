@@ -76,6 +76,8 @@ final class Pac
     /**
      * Splits the text of a record into lines. Each line holds its alignment byte and runs of single-byte, double-byte
      * and Unicode bytes. Bytes before the first line start are not text.
+     * Double-byte text reads 2 bytes at a time when the first byte is 00h or from 80h, as in Subtitle Edit.
+     * So FEh starts a line only at the start of a character, and the second byte of A5h FEh stays text.
      *
      * @return list<array{alignment: int, runs: list<array{string, string}>}> each run as a mode and its bytes
      */
@@ -114,13 +116,14 @@ final class Pac
                 continue;
             }
 
+            $size = $mode === "double" && ($byte === "\0" || ord($byte) >= 0x80) ? 2 : 1;
             $runs = $lines[$line]["runs"];
             if ($runs === [] || $runs[count($runs) - 1][0] !== $mode) {
                 $runs[] = [$mode, ""];
             }
-            $runs[count($runs) - 1][1] .= $byte;
+            $runs[count($runs) - 1][1] .= substr($text, $index, $size);
             $lines[$line]["runs"] = $runs;
-            $index++;
+            $index += $size;
         }
 
         return $lines;
