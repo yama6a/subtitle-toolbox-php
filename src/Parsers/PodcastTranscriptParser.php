@@ -31,7 +31,7 @@ final class PodcastTranscriptParser extends SubtitleParser
     protected function read(string $content): Subtitle
     {
         $data = $this->decodeJsonObject($content);
-        if (!is_array($data["segments"] ?? null) || !array_is_list($data["segments"]) || $this->isJsonObject("segments")) {
+        if (!$this->isList($data["segments"] ?? null, "segments")) {
             throw new ParsingException("The JSON has no \"segments\" list.");
         }
 
@@ -39,7 +39,13 @@ final class PodcastTranscriptParser extends SubtitleParser
         $parsedCues = [];
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, array_diff_key($data, ["segments" => true]));
 
-        foreach ($this->groups($this->readSegments($data["segments"])) as $group) {
+        foreach ($this->groups($this->readSegments($data["segments"])) as $index => $group) {
+            try {
+                [$start, $end] = $this->orderedTimes($group[0]["start"], $group[count($group) - 1]["end"], null, $index, [RawJson::encode($group)]);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, null, $index, [RawJson::encode($group)]);
+                continue;
+            }
             $speaker    = $group[0]["speaker"];
             $timestamps = count($group) > 1 && $this->formatOptions()->wordTimestamps;
             $words      = [];
@@ -51,7 +57,7 @@ final class PodcastTranscriptParser extends SubtitleParser
                 $markup = Markup::voiceTag($speaker) . $markup;
             }
 
-            $cue = new SubtitleCue($group[0]["start"], $group[count($group) - 1]["end"], $markup);
+            $cue = new SubtitleCue($start, $end, $markup);
             if (count($group) === 1 && $group[0]["other"] !== []) {
                 $cue->setFormatData(self::FORMAT_DATA_KEY, $group[0]["other"]);
             }
