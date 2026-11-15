@@ -124,14 +124,17 @@ final class TsFixtures
 
     /**
      * A DVB subtitle stream with PID 0x801 whose PTS counts through 3,772 wraps of the 33-bit clock, in steps of 3 x 2^30 ticks.
-     * Its last PES packet is at 360,025,633.587 s, after the time limit of 100,000 hours. It is no file in tests/files/.
+     * Its last PES packet is at 360,025,633.587 s, after the time limit of 100,000 hours. With $page, that packet shows a page
+     * with 2 pixels, so a cue starts at that time. The other packets hold no segments. It is no file in tests/files/.
      */
-    public static function dvbSubtitlesPastTheTimeLimit(): string
+    public static function dvbSubtitlesPastTheTimeLimit(bool $page = true): string
     {
-        $writer = new TsFixtureWriter();
+        $segments = "\x0F\x10\0\1\0\x08\0\x0B\0\xFF\0\0\0\0" . "\x0F\x11\0\1\0\x10" . pack("CCnnCCCCnnn", 0, 0x0F, 2, 1, 0x68, 0, 0, 0, 1, 0, 0)
+                    . "\x0F\x13\0\1\0\x0D\0\1\0\0\5\0\0\x11\x11\x00\x00\xF0";
+        $writer   = new TsFixtureWriter();
         $writer->tables(1, self::PMT_PID, 0x0801, [[0x0801, 0x06, TsFixtureWriter::subtitlingDescriptor([["eng", 0x10, 1, 1]])]]);
         for ($packet = 0; $packet <= 10059; $packet++) {
-            $writer->subtitlePes(0x0801, $packet * (3 << 30) % (1 << 33), "");
+            $writer->subtitlePes(0x0801, $packet * (3 << 30) % (1 << 33), $page && $packet === 10059 ? $segments : "");
         }
 
         return $writer->bytes();
@@ -139,16 +142,18 @@ final class TsFixtures
 
 
     /**
-     * A teletext page 888 with PID 0x200 whose PES packets count the PTS as dvbSubtitlesPastTheTimeLimit() does. The packets hold
-     * no teletext data. It is no file in tests/files/.
+     * A teletext page 888 with PID 0x200 whose PES packets count the PTS as dvbSubtitlesPastTheTimeLimit() does. With $text,
+     * packet 10057 at 359,954,050.799 s shows the row "Last.", and no later packet erases it. So the cue ends at the last
+     * packet, after the time limit. The other packets hold no teletext data. It is no file in tests/files/.
      */
-    public static function teletextPastTheTimeLimit(): string
+    public static function teletextPastTheTimeLimit(bool $text = true): string
     {
         $writer = new TsFixtureWriter();
         $writer->tables(1, self::PMT_PID, self::TELETEXT_PID,
                         [[self::TELETEXT_PID, 0x06, TsFixtureWriter::teletextDescriptor([["eng", TsFixtureWriter::SUBTITLE_PAGE, 888]])]]);
         for ($packet = 0; $packet <= 10059; $packet++) {
-            $writer->teletextPes(self::TELETEXT_PID, $packet * (3 << 30) % (1 << 33), []);
+            $data = $text && $packet === 10057 ? [TsFixtureWriter::header(888, true), TsFixtureWriter::row(888, 22, "\x0B\x0BLast.")] : [];
+            $writer->teletextPes(self::TELETEXT_PID, $packet * (3 << 30) % (1 << 33), $data);
         }
 
         return $writer->bytes();

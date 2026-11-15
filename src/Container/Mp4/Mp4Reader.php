@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Container\Mp4;
 use Generator;
 use SubtitleToolbox\Container\ContainerFormat;
 use SubtitleToolbox\Container\ContainerReader;
+use SubtitleToolbox\Container\Containers;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Encoding\CaptionDataCues;
 use SubtitleToolbox\Encoding\Cea608Cues;
@@ -190,6 +191,7 @@ final class Mp4Reader implements ContainerReader
             default          => $this->textCues($trackNumber, $track->forced),
         };
 
+        Containers::checkCueTimes($trackNumber, $cues);
         $subtitle = (new Subtitle())->addCues($cues);
         $subtitle->setFormat($track->format);
         $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $track->language);

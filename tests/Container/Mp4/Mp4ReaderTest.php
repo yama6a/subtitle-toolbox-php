@@ -169,6 +169,50 @@ class Mp4ReaderTest extends TestCase
     }
 
 
+    public function testThrowsForATx3gCueThatEndsAt100000Hours(): void
+    {
+        $reader = self::oneTrack(["timescale" => 1, "samples" => [[359999999, Mp4FixtureWriter::textSample("")], [1, Mp4FixtureWriter::textSample("Last.")]]]);
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The cue times of track 1 reach 360000000 s. Times must be below 100000 hours.");
+
+        $reader->extract(1);
+    }
+
+
+    public function testKeepsATx3gCueBelow100000HoursWhenAnEmptySampleEndsAfterThem(): void
+    {
+        $reader = self::oneTrack(["timescale" => 1, "samples" => [[1, Mp4FixtureWriter::textSample("Last.")], [400000000, Mp4FixtureWriter::textSample("")]]]);
+
+        $this->assertSame([[0.0, 1.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $reader->extract(1)->getCues()));
+    }
+
+
+    public function testThrowsForAC608CueThatStartsAt100000HoursAfterTheStartOfItsSample(): void
+    {
+        // The sample starts at 359999999.9 s. Each word takes one frame at 29.97 fps, so the caption shows at 360000000.126 s.
+        $reader = self::oneTrack(["entry" => Mp4FixtureWriter::box("c608", str_repeat("\0", 6) . pack("n", 1)), "timescale" => 10, "samples" => [
+            [3599999999, ""],
+            [10, Mp4FixtureWriter::captionSample([0x9420, 0x9420, 0x94E0, 0x94E0, 0xC2D5, 0xD320, 0x3780, 0x942F, 0x942F])],
+        ]]);
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The cue times of track 1 reach 360000000.126 s. Times must be below 100000 hours.");
+
+        $reader->extract(1);
+    }
+
+
+    public function testKeepsAC608CueBelow100000HoursWhenItsSampleEndsAfterThem(): void
+    {
+        $reader = self::oneTrack(["entry" => Mp4FixtureWriter::box("c608", str_repeat("\0", 6) . pack("n", 1)), "timescale" => 1, "samples" => [
+            [400000000, Mp4FixtureWriter::captionSample([0x9420, 0x9420, 0x94E0, 0x94E0, 0xC2D5, 0xD320, 0x3780, 0x942F, 0x942F])],
+        ]]);
+
+        $this->assertSame([["BUS 7"]], array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $reader->extract(1)->getCues()));
+    }
+
+
     public function testThrowsForACodecThatTheReaderDoesNotExtract(): void
     {
         $reader = self::oneTrack(["entry" => Mp4FixtureWriter::box("wvtt", str_repeat("\0", 6) . pack("n", 1))]);
