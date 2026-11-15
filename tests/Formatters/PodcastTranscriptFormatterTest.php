@@ -90,8 +90,7 @@ class PodcastTranscriptFormatterTest extends TestCase
 
     public function testWritesNoEndTimeBeforeTheStartTimeOfAJoinedCue(): void
     {
-        $json     = '{"segments":[{"startTime":5,"endTime":6,"body":"a"},{"startTime":1,"endTime":2,"body":"b"}]}';
-        $subtitle = (new PodcastTranscriptParser())->parse($json, new ReadOptions());
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(5.0, 2.0, "a b")]);
         $out      = $subtitle->toString(Format::PodcastTranscript);
 
         $this->assertSame(['startTime' => 5.0, 'endTime' => 5.0, 'body' => 'a b'], json_decode($out, true)["segments"][0]);
