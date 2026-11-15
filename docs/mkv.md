@@ -86,7 +86,7 @@ Subtitle::loadTrack('/media/phone-video.mp4', 2)->save('phone-video.srt');
 - **Closed captions**: each `c608` sample holds a `cdat` box with the CEA-608 byte pairs of field 1, one pair per frame at 29.97 fps. The reader decodes them as [SCC](formats.md#scc) does, so `ffmpeg -i captions.scc -c:s copy captions.mov` gives the cues of `captions.scc`, with the `scc` format data. [`SccReadOptions`](formats.md#scc) apply. The reader ignores field 2 (`cdt2`), as SCC files hold field 1 only.
 - **CEA-708**: each `c708` sample holds a `ccdp` box with a caption distribution packet of SMPTE 334-2, as each line of an [MCC](formats.md#mcc) file does. The reader reads it as MCC: CEA-708 service 1, else the CEA-608 data of field 1. `MccReadOptions(service: 2)` reads service 2.
 - **Edit list**: the reader moves the samples by the empty edits at the start of the `elst` box, and by the media time of the first edit after them. ffmpeg writes an empty edit for a `c608` track that starts after 0 s. A sample that ends before 0 s drops. Later edits do not change the times.
-- **Format**: `findFormat()` is `Format::SubRip` for `tx3g`. The cues hold text with SubRip tags, as from an `S_TEXT/UTF8` track of an MKV file. It is `Format::Scc` for `c608`, so `toString($subtitle->findFormat())` writes SCC. It is `Format::Mcc` for `c708`.
+- **Format**: `findFormat()` is `Format::SubRip` for `tx3g`. The cues hold text with SubRip tags, as from an `S_TEXT/UTF8` track of an MKV file. It is `Format::Scc` for `c608`, so `toString(Format::Scc)` writes the cues back as SCC. It is `Format::Mcc` for `c708`.
 - **Detection**: `load()` and `fromString()` without a format know an MP4 file by the `ftyp` box at byte 4.
 - **Memory**: the reader reads the sample tables of the wanted track and its samples only. It skips the media data with `fseek()`.
 - **Fragmented files**: the reader reads only the samples that the `moov` box lists. CMAF, DASH and HLS fMP4 files keep their samples in `moof` boxes. `open()` throws `ParsingException` with the message "The MP4 file is fragmented. The reader reads only samples in the moov box." for a `moov` box with an `mvex` box and for a `moof` box before the `moov` box.
@@ -140,7 +140,7 @@ Subtitle::loadTrack('/media/recording.ts', 2050)->recognizeText(OcrEngineChooser
 |:--- |:--- |
 | `number` | the PID of the stream, for example `2050` for PID 0x802. When a teletext page has that number, or for the second and later service of the same stream, it is the PID times 1,000 plus the index of the service, for example `2050001` |
 | `codecId` | `dvb_subtitle` |
-| `format` | `Format::Pgs`, so `toString($subtitle->findFormat())` writes a `.sup` file |
+| `format` | `Format::Pgs`, so `toString(Format::Pgs)` writes a `.sup` file |
 | `language` | the language of the service in the subtitling descriptor, for example `deu` |
 | `name` | `hearing impaired` for the subtitling types 0x20 to 0x25, else null |
 | `default`, `forced` | false |
