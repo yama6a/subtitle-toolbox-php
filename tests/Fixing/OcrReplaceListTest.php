@@ -103,4 +103,18 @@ class OcrReplaceListTest extends TestCase
 
         $this->assertSame(["/x/u" => '[\\${name}] [$`] [$\'] [$+] [$_] [\\$`]'], $list->regularExpressions);
     }
+
+
+    public function testGivesTheDotNetGroupNumbersTheirPcreNumbers(): void
+    {
+        $list = OcrReplaceList::fromSubtitleEditXml(
+            "<ReplaceList><RegularExpressions>" .
+            '<RegEx find="(?&lt;n&gt;a)(b)\\1(?(1)c)[\\1]" replaceWith="$1 ${2} $+ ${n} $3" />' .
+            '<RegEx find="(a)(?&lt;n&gt;b)\\1" replaceWith="$1 $2 $+" />' .
+            "</RegularExpressions></ReplaceList>"
+        );
+
+        $this->assertSame(["/(?<n>a)(b)\\g{2}(?(2)c)[\\1]/u" => '${2} ${1} ${1} ${n} $3',
+                           "/(a)(?<n>b)\\1/u"                => '$1 $2 $+'], $list->regularExpressions);
+    }
 }

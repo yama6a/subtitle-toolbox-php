@@ -31,12 +31,12 @@ final class AwsTranscribeParser extends SubtitleParser
     {
         $data    = $this->decodeJsonObject($content);
         $results = $data["results"] ?? null;
-        if (!is_array($results) || !self::isList($results["items"] ?? null)) {
+        if (!is_array($results) || !$this->isList($results["items"] ?? null, "results", "items")) {
             throw new ParsingException("The JSON has no \"results.items\" list.");
         }
 
         $words    = $this->readItems($results["items"]);
-        $segments = self::listOrEmpty($results["audio_segments"] ?? null);
+        $segments = $this->listOrEmpty($results["audio_segments"] ?? null, "results", "audio_segments");
         $cues     = $segments === [] ? $this->cuesFromWords($words, "items") : $this->readSegments($segments, $words);
 
         if (is_array($results["speaker_labels"] ?? null)) {
@@ -131,7 +131,7 @@ final class AwsTranscribeParser extends SubtitleParser
             }
 
             $segmentWords = [];
-            foreach (self::listOrEmpty($segment["items"] ?? null) as $id) {
+            foreach ($this->listOrEmpty($segment["items"] ?? null, "results", "audio_segments", $index, "items") as $id) {
                 $wordIndex = is_int($id) || is_string($id) ? $wordsById[$id] ?? null : null;
                 if ($wordIndex !== null && !isset($claimed[$wordIndex])) {
                     $claimed[$wordIndex] = true;

@@ -101,21 +101,23 @@ trait WordGrouping
 
     /**
      * Returns one cue per utterance with the fields start, end, $textKey, speaker and words.
+     * $keys are the JSON keys that lead to the utterance list.
      *
      * @param callable(array, string): array $readWords reads the words of an utterance
      *
      * @return list<SubtitleCue>
      */
-    private function readUtterances(array $utterances, string $path, string $textKey, callable $readWords, float $unit = 1.0): array
+    private function readUtterances(array $utterances, array $keys, string $textKey, callable $readWords, float $unit = 1.0): array
     {
         $cues = [];
+        $path = implode(".", $keys);
         foreach ($utterances as $index => $utterance) {
             $itemPath = "{$path}[$index]";
             try {
                 $start = $this->seconds(is_array($utterance) ? $utterance["start"] ?? null : null, "$itemPath.start", $unit);
                 $end   = $this->seconds($utterance["end"] ?? null, "$itemPath.end", $unit);
                 $text  = $this->text($utterance, $textKey, $itemPath);
-                $words = $readWords(self::listOrEmpty($utterance["words"] ?? null), "$itemPath.words");
+                $words = $readWords($this->listOrEmpty($utterance["words"] ?? null, ...$keys, ...[$index, "words"]), "$itemPath.words");
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($utterance)]);
                 continue;
@@ -160,18 +162,6 @@ trait WordGrouping
     private static function speaker(mixed $speaker): ?string
     {
         return is_string($speaker) || is_int($speaker) ? (string) $speaker : null;
-    }
-
-
-    private static function isList(mixed $value): bool
-    {
-        return is_array($value) && array_is_list($value);
-    }
-
-
-    private static function listOrEmpty(mixed $value): array
-    {
-        return self::isList($value) ? $value : [];
     }
 
 

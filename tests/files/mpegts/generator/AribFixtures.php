@@ -86,14 +86,16 @@ final class AribFixtures
 
 
     /**
-     * A caption stream whose PES packets count the PTS as TsFixtures::dvbSubtitlesPastTheTimeLimit() does. The packets hold
-     * no caption data. It is no file in tests/files/.
+     * A caption stream whose PES packets count the PTS as TsFixtures::dvbSubtitlesPastTheTimeLimit() does. With $text, the
+     * last packet at 360,025,633.587 s shows a caption, so a cue starts after the time limit. The other packets hold no caption
+     * data. It is no file in tests/files/.
      */
-    public static function captionsPastTheTimeLimit(): string
+    public static function captionsPastTheTimeLimit(bool $text = true): string
     {
-        $writer = self::writer();
+        $writer  = self::writer();
+        $caption = W::statement(W::text(W::CS . W::setup() . W::position(7, 4) . W::latin("Last.")));
         for ($packet = 0; $packet <= 10059; $packet++) {
-            $writer->privatePes(self::CAPTION_PID, $packet * (3 << 30) % (1 << 33), "");
+            $writer->privatePes(self::CAPTION_PID, $packet * (3 << 30) % (1 << 33), $text && $packet === 10059 ? $caption : "");
         }
 
         return $writer->bytes();

@@ -8,6 +8,7 @@ use Generator;
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Container\ContainerFormat;
 use SubtitleToolbox\Container\ContainerReader;
+use SubtitleToolbox\Container\Containers;
 use SubtitleToolbox\Container\DvbSubtitleDecoder;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -182,27 +183,23 @@ final class MpegTsReader implements ContainerReader
         if ($track->codecId === self::CODEC_ARIB_CAPTION) {
             $decoder       = new AribCaptionDecoder($track->language);
             [$zero, $last] = $this->readPes($page, $decoder->add(...));
-            $cues          = $this->textCues($trackNumber, $decoder->finish(), $zero, $last, $options);
+            $cues          = $this->textCues($decoder->finish(), $zero, $last, $options);
             foreach ($decoder->warnings() as [$time, $message]) {
                 $seconds    = number_format(max(0, $time - $zero) / self::CLOCK_RATE, 3, ".", "");
                 $warnings[] = new ParseWarning("At $seconds s: $message", null, null, [], ParseWarningAction::Repaired);
             }
         } elseif ($track->codecId === self::CODEC_DVB_SUBTITLE) {
-            $decoder = new DvbSubtitleDecoder($page["page"], $page["ancillaryPage"], $options->lenient);
-            $latest  = null;
-            [$zero]  = $this->readPes($page, function (string $data, int $pts) use ($decoder, &$latest): void {
-                $latest = max($latest ?? $pts, $pts);
-                $decoder->add($data, $pts / self::CLOCK_RATE);
-            });
-            self::checkTime($trackNumber, ($latest ?? $zero) - $zero);
+            $decoder  = new DvbSubtitleDecoder($page["page"], $page["ancillaryPage"], $options->lenient);
+            [$zero]   = $this->readPes($page, fn (string $data, int $pts) => $decoder->add($data, $pts / self::CLOCK_RATE));
             $cues     = $decoder->finish($options->lastCueDuration, $zero / self::CLOCK_RATE);
             $warnings = $decoder->warnings();
         } else {
             $decoder       = new TeletextDecoder($page["page"], $trackNumber % 1000, TeletextCharacters::languageGroup($track->language));
             [$zero, $last] = $this->readPes($page, $decoder->add(...));
-            $cues          = $this->textCues($trackNumber, $decoder->finish(), $zero, $last, $options);
+            $cues          = $this->textCues($decoder->finish(), $zero, $last, $options);
         }
 
+        Containers::checkCueTimes($trackNumber, $cues);
         $subtitle = (new Subtitle())->addCues($cues)->setParseWarnings($warnings);
         $subtitle->setFormat($track->format);
         $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $track->language);
@@ -246,9 +243,8 @@ final class MpegTsReader implements ContainerReader
      *                                                                          of the teletext page or the caption screen
      * @return list<SubtitleCue>
      */
-    private function textCues(int $trackNumber, array $screenStates, int $zero, int $last, ReadOptions $options): array
+    private function textCues(array $screenStates, int $zero, int $last, ReadOptions $options): array
     {
-        self::checkTime($trackNumber, max([$last, ...array_column($screenStates, 0)]) - $zero);
         $states = [];
         foreach ($screenStates as $state) {
             if ($states === [] || array_slice($states[array_key_last($states)], 1) !== array_slice($state, 1)) {
@@ -269,19 +265,6 @@ final class MpegTsReader implements ContainerReader
         }
 
         return $cues;
-    }
-
-
-    /**
-     * Throws when $ticks of the 90 kHz clock reach MAX_HOURS. The time in the message is in whole milliseconds, half up.
-     */
-    private static function checkTime(int $trackNumber, int $ticks): void
-    {
-        $milliseconds = intdiv(max(0, $ticks) + 45, 90);
-        if ($milliseconds >= Timecode::MAX_HOURS * 3600 * 1000) {
-            $seconds = rtrim(rtrim(sprintf("%d.%03d", intdiv($milliseconds, 1000), $milliseconds % 1000), "0"), ".");
-            throw new ParsingException("The cue times of track $trackNumber reach $seconds s. Times must be below " . Timecode::MAX_HOURS . " hours.");
-        }
     }
 
 

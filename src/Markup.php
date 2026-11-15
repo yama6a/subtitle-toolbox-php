@@ -140,6 +140,19 @@ final class Markup
 
 
     /**
+     * Replaces each reference that decodes to a line feed (&#10;, &#x0A; and &NewLine;) with a line feed.
+     * A format that has its own line break needs this before it decodes the entities, so that it sees the break.
+     * The reference &#13; stays as it is, because decodeEntities() does not decode it.
+     *
+     * @internal
+     */
+    public static function newlineEntitiesToLf(string $text): string
+    {
+        return preg_replace('/&(?:#0*10|#[xX]0*[aA]|NewLine);/', LineEnding::Lf->value, $text) ?? $text;
+    }
+
+
+    /**
      * Escapes &, < and > without htmlspecialchars(), which returns "" for invalid UTF-8 such as Latin-1 text.
      */
     public static function escapeText(string $text): string

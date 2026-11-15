@@ -214,29 +214,12 @@ final class OcrReplaceListFixer
                     "`"     => $before,
                     "'"     => $after,
                     "_"     => $text,
-                    "+"     => self::lastGroup($match),
+                    "+"     => $group(max(array_filter(array_keys($match), is_int(...)))),
                     default => isset($match[$token[5] ?? ""]) ? $group($token[5]) : $token[0],
                 };
             },
             $replacement) ?? $replacement;
 
         return preg_replace_callback($pattern, $expand, $text, -1, $count, PREG_OFFSET_CAPTURE | PREG_UNMATCHED_AS_NULL) ?? $text;
-    }
-
-
-    /**
-     * The text of the numbered group with the highest number that took part in the match, as $+ does in .NET.
-     *
-     * @param array<int|string, array{0: string|null, 1: int}> $match
-     */
-    private static function lastGroup(array $match): string
-    {
-        for ($index = count(array_filter(array_keys($match), is_int(...))) - 1; $index > 0; $index--) {
-            if ($match[$index][0] !== null) {
-                return $match[$index][0];
-            }
-        }
-
-        return "";
     }
 }

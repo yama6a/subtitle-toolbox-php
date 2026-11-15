@@ -181,7 +181,7 @@ final class QuickTimeTextFormatter extends SubtitleFormatter
             }
             $text = trim($text);
             if ($text !== "") {
-                $lines[] = $text;
+                $lines[] = self::keepAsText($text, QuickTimeText::TIMESTAMP_REGEX);
             }
         }
 
