@@ -214,8 +214,8 @@ use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.csv'), Format::Csv);   // headers start, end, text, ...
 $columns  = new CsvColumns(start: 'Start TC', text: 'Text', speaker: 'Character');
-$subtitle = Subtitle::fromString(file_get_contents('dubbing-script.csv'), Format::Csv, new ReadOptions(formats: [new CsvReadOptions($columns, frameRate: 25)]));
-$subtitle = Subtitle::fromString($tsv, Format::Tsv, new ReadOptions(formats: [new CsvReadOptions(new CsvColumns(start: 0, end: 1, text: 2, header: false), "\t")]));
+$subtitle = Subtitle::fromString(file_get_contents('dubbing-script.csv'), Format::Csv, new ReadOptions(formats: [new CsvReadOptions(columns: $columns, frameRate: 25)]));
+$subtitle = Subtitle::fromString($tsv, Format::Tsv, new ReadOptions(formats: [new CsvReadOptions(columns: new CsvColumns(start: 0, end: 1, text: 2, header: false), delimiter: "\t")]));
 
 $csv = $english->toString(Format::Csv, new WriteOptions(formats: [new CsvWriteOptions(
     delimiter: ';',                  // Excel in German and French locales
@@ -643,7 +643,7 @@ $report->changes[0]->message;                                                   
 - **Markup**: styles become `<i>`, `<u>` and `<font color>` with `#ffffff`, `#00ff00`, `#0000ff`, `#00ffff`, `#ff0000`, `#ffff00` and `#ff00ff`, and back. The formatter writes other colors as white and strips all other tags. A style change inside a word adds a space. A row starts in white without styles, so the formatter repeats a style that spans lines at the start of each line.
 - **Limits**: the formatter throws `UnwritableContentException` for content that SCC cannot hold. This is more than 4 lines, more than 32 characters per line, or a character outside the CEA-608 character sets. The message names 1 of 2 fixes for too many or too long lines.
   - Wrapping the cue text at 32 characters gives 4 lines or fewer. Call `wrapLines(32, 4)` first.
-  - Wrapping the cue text at 32 characters gives more than 4 lines. Call `Resegmenter::apply()` with `ResegmentMode::SplitLong` and `new CueLimits(32, 4)`, then `wrapLines(32, 4)`.
+  - Wrapping the cue text at 32 characters gives more than 4 lines. Call `Resegmenter::apply()` with `ResegmentMode::SplitLong` and `new CueLimits(maxCharactersPerLine: 32, maxLinesPerCue: 4)`, then `wrapLines(32, 4)`.
 
 ## Spruce STL
 Spruce STL is the text subtitle file of DVD Studio Pro and Spruce DVDMaestro, from the [DVD Studio Pro 4 User Manual](https://www.spectacle.co.uk/uploads/other%20media/Manual_DVD_Studio_Pro_4.pdf), pages 456 to 460. It shares the `.stl` extension with the binary EBU STL. Detection tells them apart, see [detection.md](detection.md).

@@ -85,8 +85,8 @@ $french->save('movie.fr.srt');
 use SubtitleToolbox\Translation\OpenAiCompatibleEngine;
 use SubtitleToolbox\Translation\OpenAiCompatibleOptions;
 
-$openAi = new OpenAiCompatibleEngine(new OpenAiCompatibleOptions('https://api.openai.com/v1', 'gpt-4o-mini', apiKey: $openAiKey));
-$ollama = new OpenAiCompatibleEngine(new OpenAiCompatibleOptions('http://localhost:11434/v1', 'llama3'));
+$openAi = new OpenAiCompatibleEngine(new OpenAiCompatibleOptions(baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', apiKey: $openAiKey));
+$ollama = new OpenAiCompatibleEngine(new OpenAiCompatibleOptions(baseUrl: 'http://localhost:11434/v1', model: 'llama3'));
 ```
 
 | Option | Default | Sets |
