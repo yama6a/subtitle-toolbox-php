@@ -47,7 +47,7 @@ $subtitle->toString(Format::SubViewer, new WriteOptions(formats: [new SubViewerW
 
 ## Cue positions in WebVTT and TTML
 
-A cue now keeps the exact point that a WebVTT or TTML file gives it. The new class `CuePosition` holds the point in percent of the video. `SubtitleCue::findPosition()` returns it, and `setPosition()` sets it. The WebVTT and TTML formatters write it for a cue from the other format. All other formatters ignore it.
+A cue now keeps the exact point that a WebVTT or TTML file gives it. The new class `CuePosition` holds the point in percent of the video. `SubtitleCue::findPosition()` returns it, and `setPosition()` sets it. The WebVTT and TTML formatters write it for a cue from the other format. In 6.0 all other formatters ignore it. A 7.x minor release adds the position to the DCP parser and formatter, see [formats.md](formats.md#dcp-subtitles).
 
 Example: a TTML cue in the region `tts:origin="10% 10%" tts:extent="80% 85%" tts:displayAlign="after" tts:textAlign="center"` sits at 95 % of the height.
 

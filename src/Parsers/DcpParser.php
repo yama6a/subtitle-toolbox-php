@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use DOMElement;
 use DOMText;
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\AlignmentGrid;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\StyleRuns;
@@ -180,9 +181,13 @@ final class DcpParser extends SubtitleParser
             return null;
         }
 
+        $texts     = array_column($lines, "attributes");
+        $alignment = self::alignment($texts);
+
         return (new SubtitleCue($start, $end, array_column($lines, "text")))
-            ->setAlignment(self::alignment(array_column($lines, "attributes")))
-            ->setFormatData(self::FORMAT_DATA_KEY, ["subtitle" => self::attributes($subtitle), "texts" => array_column($lines, "attributes")]);
+            ->setAlignment($alignment)
+            ->setPosition(AlignmentGrid::positionAt($alignment, self::onScreen(self::screenX($texts[0])), self::onScreen(self::screenY($texts[0]))))
+            ->setFormatData(self::FORMAT_DATA_KEY, ["subtitle" => self::attributes($subtitle), "texts" => $texts]);
     }
 
 
@@ -288,6 +293,28 @@ final class DcpParser extends SubtitleParser
             "bottom" => 100 - $position,
             default  => 50 + $position,
         };
+    }
+
+
+    /**
+     * Returns the width of the line on the screen in percent, from 0 at the left to 100 at the right.
+     * HPosition counts from the edge that HAlign names, or right from the middle for "center", the default.
+     */
+    private static function screenX(array $attributes): float
+    {
+        $position = (float) (self::position($attributes, "hposition") ?? 0);
+
+        return match (strtolower(self::position($attributes, "halign") ?? "center")) {
+            "left"  => $position,
+            "right" => 100 - $position,
+            default => 50 + $position,
+        };
+    }
+
+
+    private static function onScreen(float $percent): float
+    {
+        return min(max($percent, 0), 100);
     }
 
 

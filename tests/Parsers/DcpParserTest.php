@@ -140,6 +140,49 @@ class DcpParserTest extends TestCase
     }
 
 
+    public function testReadsThePointOfTheTextAsTheCuePosition(): void
+    {
+        $text = '<Subtitle TimeIn="00:00:01:00" TimeOut="00:00:02:00"><Text Valign="bottom" Vposition="30" Halign="center" Hposition="10">hi</Text></Subtitle>';
+
+        $subtitle = Subtitle::fromString(sprintf(self::SMPTE, $text), Format::Dcp);
+        $cue      = $subtitle->getCues()[0];
+
+        $this->assertSame([Alignment::BottomCenter, 60.0, 70.0], [$cue->getAlignment(), $cue->findPosition()?->x, $cue->findPosition()?->y]);
+        $this->assertStringContainsString("00:00:01.000 --> 00:00:02.000 line:70%,end position:60%,center\nhi", $subtitle->toString(Format::WebVtt));
+    }
+
+
+    /**
+     * @param array{float, float} $point
+     */
+    #[DataProvider('textPoints')]
+    public function testHAlignAndVAlignSetTheEdgesThatThePositionsCountFrom(string $texts, Alignment $alignment, ?array $point): void
+    {
+        $cue = Subtitle::fromString("<DCSubtitle Version=\"1.0\"><Subtitle TimeIn=\"00:00:01:000\" TimeOut=\"00:00:02:000\">$texts</Subtitle></DCSubtitle>", Format::Dcp)->getCues()[0];
+
+        $position = $cue->findPosition();
+        $this->assertSame([$alignment, $point], [$cue->getAlignment(), $position === null ? null : [$position->x, $position->y]]);
+    }
+
+
+    /**
+     * @return array<string, array{string, Alignment, ?array{float, float}}>
+     */
+    public static function textPoints(): array
+    {
+        return [
+            "top left"                       => ['<Text HAlign="left" HPosition="20" VAlign="top" VPosition="5">a</Text>', Alignment::TopLeft, [20.0, 5.0]],
+            "bottom right"                   => ['<Text HAlign="right" HPosition="15" VAlign="bottom" VPosition="20">a</Text>', Alignment::BottomRight, [85.0, 80.0]],
+            "middle, up from the middle"     => ['<Text HPosition="-10" VAlign="center" VPosition="-10">a</Text>', Alignment::MiddleCenter, [40.0, 40.0]],
+            "2 lines take the top line"      => ['<Text VAlign="bottom" VPosition="8">b</Text><Text VAlign="bottom" VPosition="15">a</Text>', Alignment::BottomCenter, [50.0, 85.0]],
+            "the default place of the cell"  => ['<Text VAlign="bottom" VPosition="10">a</Text>', Alignment::BottomCenter, null],
+            "a point outside the cell"       => ['<Text VAlign="bottom" VPosition="40">a</Text><Text VAlign="bottom" VPosition="0">b</Text>', Alignment::BottomCenter, null],
+            "below the screen counts as 100" => ['<Text VAlign="bottom" VPosition="-5">a</Text>', Alignment::BottomCenter, [50.0, 100.0]],
+            "an infinite position"           => ['<Text HAlign="left" HPosition="-1e999" VAlign="top" VPosition="1e999">a</Text>', Alignment::BottomLeft, [0.0, 100.0]],
+        ];
+    }
+
+
     public function testStrictModeThrowsForAnImageSubtitle(): void
     {
         $this->expectException(ParsingException::class);

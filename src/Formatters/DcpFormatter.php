@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\AlignmentGrid;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\MarkupColors;
 use SubtitleToolbox\Parsers\DcpParser;
@@ -170,7 +171,9 @@ final class DcpFormatter extends SubtitleFormatter
 
 
     /**
-     * Returns the stored <Text> attributes when the cue keeps its alignment and line count, else positions from the alignment.
+     * Returns the stored <Text> attributes when the cue keeps its alignment and line count. Else the first line gets
+     * the position of the cue when the position lies in the cell of the alignment, and the next lines follow below it.
+     * Without a position the formatter places the lines by the alignment.
      *
      * @param ?list<array<string, string>> $stored
      *
@@ -178,21 +181,41 @@ final class DcpFormatter extends SubtitleFormatter
      */
     private function textAttributes(SubtitleCue $cue, ?array $stored, int $count, bool $interop): array
     {
-        if (is_array($stored) && $count > 0 && count($stored) === $count && DcpParser::alignment($stored) === $cue->getAlignment()) {
+        $alignment = $cue->getAlignment();
+        if (is_array($stored) && $count > 0 && count($stored) === $count && DcpParser::alignment($stored) === $alignment) {
             return $stored;
         }
 
-        [$vAlign, $hAlign, $vPosition] = $interop ? ["VAlign", "HAlign", "VPosition"] : ["Valign", "Halign", "Vposition"];
-        $row        = intdiv($cue->getAlignment()->value - 1, 3);
-        $horizontal = ["left", "center", "right"][($cue->getAlignment()->value - 1) % 3];
+        [$vAlign, $hAlign, $vPosition, $hPosition] = $interop ? ["VAlign", "HAlign", "VPosition", "HPosition"] : ["Valign", "Halign", "Vposition", "Hposition"];
+        $row        = AlignmentGrid::row($alignment);
+        $column     = AlignmentGrid::column($alignment);
+        $position   = $cue->findPosition();
+        $placed     = $position !== null && AlignmentGrid::contains($alignment, $position);
+        $horizontal = $column === AlignmentGrid::CENTER ? [] : [$hAlign => $column === AlignmentGrid::LEFT ? "left" : "right"];
+        if ($placed) {
+            $x      = AlignmentGrid::roundPercent($position->x);
+            $offset = [AlignmentGrid::LEFT => $x, AlignmentGrid::CENTER => $x - 50, AlignmentGrid::RIGHT => 100 - $x][$column];
+            if ($offset !== 0.0) {
+                $horizontal[$hPosition] = AlignmentGrid::formatPercent($offset);
+            }
+        }
+
+        // The height of the first line on the screen in percent, from 0 at the top to 100 at the bottom.
+        $first = match (true) {
+            $placed                            => AlignmentGrid::roundPercent($position->y),
+            $row === AlignmentGrid::BOTTOM_ROW => 100 - self::EDGE - ($count - 1) * self::LINE_SPACING,
+            $row === AlignmentGrid::TOP_ROW    => self::EDGE,
+            default                            => 50 - ($count - 1) / 2 * self::LINE_SPACING,
+        };
         $attributes = [];
         for ($index = 0; $index < $count; $index++) {
-            [$align, $position] = match ($row) {
-                0       => ["bottom", self::EDGE + ($count - 1 - $index) * self::LINE_SPACING],
-                2       => ["top", self::EDGE + $index * self::LINE_SPACING],
-                default => ["center", ($index - ($count - 1) / 2) * self::LINE_SPACING],
+            $y = $first + $index * self::LINE_SPACING;
+            [$align, $value] = match ($row) {
+                AlignmentGrid::BOTTOM_ROW => ["bottom", 100 - $y],
+                AlignmentGrid::TOP_ROW    => ["top", $y],
+                default                   => ["center", $y - 50],
             };
-            $attributes[] = ($horizontal === "center" ? [] : [$hAlign => $horizontal]) + [$vAlign => $align, $vPosition => (string) $position];
+            $attributes[] = $horizontal + [$vAlign => $align, $vPosition => AlignmentGrid::formatPercent($value)];
         }
 
         return $attributes;
