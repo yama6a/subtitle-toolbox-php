@@ -6,11 +6,6 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Cli\Application;
-use SubtitleToolbox\Cli\Command;
-use SubtitleToolbox\Cli\FileCommand;
-use SubtitleToolbox\Cli\Arguments;
-use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Exceptions\ParsingException;
 
 class JsonTypeErrorsTest extends TestCase
@@ -267,117 +262,5 @@ class JsonTypeErrorsTest extends TestCase
         $this->assertEquals([new Comment("Kept", 1)], $subtitle->getComments());
         $this->assertSame(["The field metadata.title must be a string.", "The field comments[0].text must be a string."],
                           array_map(fn (ParseWarning $warning): string => $warning->message, $subtitle->getParseWarnings()));
-    }
-
-
-    /**
-     * @param list<Cli\Command> $commands
-     *
-     * @return array{int, string}
-     */
-    private static function runWith(array $commands, array $arguments): array
-    {
-        $streams     = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
-        $application = new Application(...$streams);
-        (new \ReflectionProperty(Application::class, "commands"))->setValue($application, $commands);
-        $code = $application->run(["stbox", ...$arguments]);
-        rewind($streams[2]);
-
-        return [$code, stream_get_contents($streams[2])];
-    }
-
-
-    public function testCliReportsAWrongFormatDataTypeAsAParsingError(): void
-    {
-        $path = self::FILES . "json/own_scc_drop_frame_string.json";
-
-        [$code, $error] = self::runWith([new Cli\ConvertCommand()], ["convert", $path, "--to", "scc"]);
-
-        $this->assertSame([3, "$path: ParsingException (Error #100): The field formatData.scc.dropFrame must be a boolean.\n" . Cli\FileCommand::LENIENT_HINT . "\n"], [$code, $error]);
-    }
-
-
-    public function testCliPrintsAnErrorOfAFileRunWithItsClassAndGoesOn(): void
-    {
-        $command = new class extends FileCommand {
-            public function name(): string
-            {
-                return "info";
-            }
-
-
-            public function summary(): string
-            {
-                return "";
-            }
-
-
-            protected function usageLines(): array
-            {
-                return [];
-            }
-
-
-            protected function commandOptions(): array
-            {
-                return [];
-            }
-
-
-            protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
-            {
-                throw new \TypeError("Broken value");
-            }
-        };
-        $first  = self::FILES . "profanity/radio.vtt";
-        $second = self::FILES . "profanity/keys.srt";
-
-        [$code, $error] = self::runWith([$command], ["info", $first, $second, "--keep-going"]);
-
-        $this->assertSame(3, $code);
-        $this->assertStringStartsWith("$first: TypeError: Broken value\n$second: TypeError: Broken value\n", $error);
-    }
-
-
-    public function testCliPrintsAnErrorOutsideAFileRunWithItsClass(): void
-    {
-        $command = new class extends Command {
-            public function name(): string
-            {
-                return "formats";
-            }
-
-
-            public function summary(): string
-            {
-                return "";
-            }
-
-
-            protected function usageLines(): array
-            {
-                return [];
-            }
-
-
-            public function options(): array
-            {
-                return [];
-            }
-
-
-            public function execute(Arguments $arguments, Console $console): int
-            {
-                return 0;
-            }
-
-
-            public function run(array $arguments, Console $console): int
-            {
-                throw new \Error("Broken state");
-            }
-        };
-
-        $this->assertSame([3, "Error: Error: Broken state\n"], self::runWith([$command], ["formats"]));
     }
 }

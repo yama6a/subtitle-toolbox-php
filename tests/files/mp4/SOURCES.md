@@ -1,6 +1,6 @@
 # Sources
 
-All files here are written for this repository. `ffmpeg_mov_text.mp4` comes from ffmpeg 7.0.2, see [../mkv/SOURCES.md](../mkv/SOURCES.md). `ffmpeg_c608.mov` and `ffmpeg_c608_rollup.mov` come from the same ffmpeg 7.0.2 build, with the commands in the table. The read golden `expected/ffmpeg_mov_text.mp4.2.srt` holds the extracted track, and the CLI golden `expected/ffmpeg_mov_text.mp4.2.to.srt` the output of `convert ffmpeg_mov_text.mp4 --track 2 --to srt -o -`.
+All files here are written for this repository. `ffmpeg_mov_text.mp4` comes from ffmpeg 7.0.2, see [../mkv/SOURCES.md](../mkv/SOURCES.md). `ffmpeg_c608.mov` and `ffmpeg_c608_rollup.mov` come from the same ffmpeg 7.0.2 build, with the commands in the table. The read golden `expected/ffmpeg_mov_text.mp4.2.srt` holds the extracted track.
 
 A PHP script writes the other files. `generator/Mp4Fixtures.php` builds the files with `generator/Mp4FixtureWriter.php`, a small box writer that follows ISO/IEC 14496-12 and 3GPP TS 26.245. Run `php tests/files/mp4/generator/generate.php` to write them again. `Mp4ReaderTest` checks that the files match the generator output.
 

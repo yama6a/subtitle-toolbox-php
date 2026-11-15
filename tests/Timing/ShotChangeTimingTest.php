@@ -55,6 +55,17 @@ class ShotChangeTimingTest extends TestCase
     }
 
 
+    public function testASnapWindowOf6FramesSnapsTheRealFileToTheGoldenFile(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_garden_24fps.srt"), Format::SubRip);
+        $shots    = ShotChanges::fromText(file_get_contents(self::FILES . "own_scenes.txt"));
+
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: $shots, snapWindowFrames: 6));
+
+        $this->assertSame(file_get_contents(self::FILES . "own_garden_24fps_window_6.srt"), $subtitle->toString(Format::SubRip));
+    }
+
+
     // A scan of the whole shot list per cue takes about 4.5 s here.
     public function testRealFileRepeatedTwentyThousandTimesSnapsUnderTwoSeconds(): void
     {

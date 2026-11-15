@@ -16,5 +16,5 @@ The script has its own run-length encoder and MPEG-2 packer, separate from `VobS
 | `one-packet-pal.idx`, `one-packet-pal.sub` | Written for this repository by `generate.php` in the layout of Subtitle Edit and the ffmpeg `dvdsub` muxer: one PES packet per unit without padding packets, and an `.idx` with only the size and palette lines and no `custom colors` line. 720x576, LF, track `en`, 3 units of text drawn as in `text-pal.sub`. The second unit stores the bottom field first, so its `SET_DSPXA` command points to the second field first. `ONE_PACKET_CUES` in `generate.php` holds the text | MIT |
 | `expected/*.idx.*.json` | The pixel golden of each track: the times, position, size, forced flag, alignment and the SHA-256 of the RGBA bytes of each cue. `php tests/files/generate-image-goldens.php` writes them with the library. Review each diff before a commit | MIT |
 | `expected/*.idx.*.png` | The PNG of the first cue of each track, for a reviewer to look at | MIT |
-| `expected/*.idx.*.to.sup` | The PGS output of each track, from `PgsFormatter` and from `convert text-pal.idx --to sup` | MIT |
+| `expected/*.idx.*.to.sup` | The PGS output of each track, from `PgsFormatter` | MIT |
 | `text-pal.ocr.srt` | The text that `GlyphOcrEngine` reads from `text-pal.sub` with its default database, the subtitle fonts database of php-glyph-ocr | MIT |
