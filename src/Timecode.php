@@ -40,6 +40,10 @@ final class Timecode
 
     // The nanoseconds of a time below this many seconds fit in an int.
     private const NANOSECOND_RANGE = 9e9;
+    private const NANOSECONDS_PER_SECOND = 1000000000;
+
+    // sprintf("%H") writes a smaller float with an exponent, such as 1.0E-5.
+    private const MIN_PLAIN_DECIMAL = 0.0001;
 
     // A fraction with more digits than a float can tell apart rounds to milliseconds on its digits.
     private const MAX_FLOAT_FRACTION_DIGITS = 16;
@@ -63,7 +67,8 @@ final class Timecode
      * - h:mm:ss:ff, where ff counts frames after the last whole second. This shape needs $frameRate.
      * Minutes and seconds after a colon have 2 digits from 00 to 59. Signs, spaces and drop-frame timecodes are invalid.
      *
-     * @throws InvalidArgumentException when $timecode has another shape, reaches MAX_HOURS, or counts frames without $frameRate.
+     * @throws InvalidArgumentException when $timecode has another shape, reaches MAX_HOURS after it rounds to milliseconds,
+     *                                   or counts frames without $frameRate.
      */
     public static function parse(string $timecode, ?FrameRate $frameRate = null): float
     {
@@ -85,26 +90,23 @@ final class Timecode
     public static function parseOrReason(string $timecode, ?FrameRate $frameRate): float|string|null
     {
         if (preg_match(self::CLOCK_REGEX, $timecode, $matches)) {
-            $hours   = $matches[1] === "" ? "0" : $matches[1];
-            $minutes = $matches[1] === "" ? $matches[3] : $matches[2];
-            if ((float) $hours * self::SECONDS_PER_HOUR + (float) $minutes * self::SECONDS_PER_MINUTE < self::MAX_HOURS * self::SECONDS_PER_HOUR) {
-                return self::toSeconds((int) $hours, (int) $minutes, (int) $matches[4], $matches[5] ?? "");
-            }
-
-            return "is not below " . self::MAX_HOURS . " hours";
-        }
-        if (preg_match(self::FRAMES_REGEX, $timecode, $matches)) {
+            $hours   = $matches[1] === "" ? 0 : (int) $matches[1];
+            $minutes = (int) ($matches[1] === "" ? $matches[3] : $matches[2]);
+            $seconds = self::toSeconds($hours, $minutes, (int) $matches[4], $matches[5] ?? "");
+        } elseif (preg_match(self::FRAMES_REGEX, $timecode, $matches)) {
             $labels = $frameRate === null ? null : self::labels($frameRate);
-
-            return match (true) {
-                $labels === null                       => "counts frames and needs a frame rate",
-                (float) $matches[1] >= self::MAX_HOURS => "is not below " . self::MAX_HOURS . " hours",
-                (float) $matches[4] >= $labels         => "has a frame number that is not below $labels",
-                default                                => self::toSecondsFromFrames((int) $matches[1], (int) $matches[2], (int) $matches[3], (int) $matches[4], $frameRate),
-            };
+            if ($labels === null) {
+                return "counts frames and needs a frame rate";
+            }
+            if ((float) $matches[4] >= $labels) {
+                return "has a frame number that is not below $labels";
+            }
+            $seconds = self::toSecondsFromFrames((int) $matches[1], (int) $matches[2], (int) $matches[3], (int) $matches[4], $frameRate);
+        } else {
+            return null;
         }
 
-        return null;
+        return self::isBelowLimit($seconds) ? $seconds : "is not below " . self::MAX_HOURS . " hours";
     }
 
 
@@ -152,8 +154,9 @@ final class Timecode
 
     /**
      * Returns $seconds in whole milliseconds, half away from zero.
-     * It rounds to whole nanoseconds first and then divides in integers. So the float error of a sum such as
-     * 2.675 + 1.0005 = 3.6754999999999995 does not decide the result, and every PHP version gives 3676.
+     * It takes the shortest decimal that reads back as the same float, so 8605847.0005 rounds up to 8605847001,
+     * though its float is 8605847.00049999915. It rounds that decimal to whole nanoseconds first and then divides in integers.
+     * So the float error of a sum such as 2.675 + 1.0005 = 3.6754999999999995 does not decide the result, and every PHP version gives 3676.
      * round() of PHP 8.4 and later rounds that float down, PHP 8.3 rounds it up.
      *
      * @internal
@@ -164,9 +167,26 @@ final class Timecode
             return (int) round($seconds * 1000);
         }
 
-        $nanoseconds = (int) round($seconds * 1e9);
+        $milliseconds = intdiv(self::nanoseconds(abs($seconds)) + 500000, 1000000);
 
-        return intdiv($nanoseconds + ($nanoseconds < 0 ? -500000 : 500000), 1000000);
+        return $seconds < 0 ? -$milliseconds : $milliseconds;
+    }
+
+
+    /**
+     * Returns the nanoseconds of the shortest decimal form of $seconds, half up. $seconds is from 0 to NANOSECOND_RANGE.
+     */
+    private static function nanoseconds(float $seconds): int
+    {
+        // So far below a half millisecond, the float product is exact enough.
+        if ($seconds < self::MIN_PLAIN_DECIMAL) {
+            return (int) round($seconds * 1e9);
+        }
+
+        // A precision of -1 gives the shortest decimal that reads back as $seconds. A cast to string would read the precision ini setting.
+        [$whole, $fraction] = explode(".", sprintf("%.*H", -1, $seconds)) + [1 => ""];
+
+        return (int) $whole * self::NANOSECONDS_PER_SECOND + intdiv((int) substr(str_pad($fraction, 10, "0"), 0, 10) + 5, 10);
     }
 
 

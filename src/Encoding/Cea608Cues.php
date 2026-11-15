@@ -74,7 +74,7 @@ final class Cea608Cues
     }
 
 
-    private static function frameToSeconds(int $frame): float
+    public static function frameToSeconds(int $frame): float
     {
         return $frame * self::FRAME_RATE_DIVISOR / self::FRAME_RATE_NUMERATOR;
     }

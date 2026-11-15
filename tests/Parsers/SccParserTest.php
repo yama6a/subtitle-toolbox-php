@@ -100,7 +100,7 @@ class SccParserTest extends TestCase
             "drop-frame after one hour"        => ["01:00:00;00", 107892],
             "non-drop after one hour"          => ["01:00:00:00", 108000],
             "drop-frame with 3 hour digits"    => ["100:00:00;00", 10789200],
-            "non-drop with 6 hour digits"      => ["100000:00:00:00", 10800000000],
+            "drop-frame with 6 hour digits"    => ["100000:05:49;20", 10789210480],
         ];
     }
 

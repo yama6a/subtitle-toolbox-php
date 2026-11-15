@@ -482,7 +482,7 @@ final class WebVttParser extends SubtitleParser
         }
         $looseTimes[$timeString] = $seconds;
 
-        return $seconds;
+        return self::boundedTime($seconds, $timeString, $lineNumber);
     }
 
 

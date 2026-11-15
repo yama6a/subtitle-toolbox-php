@@ -124,9 +124,12 @@ final class SccParser extends SubtitleParser
         }
 
         $dropFrame = $matches[4] === ";";
+        $frame     = self::timecodeToFrames((int) $matches[1], (int) $matches[2], (int) $matches[3], (int) $matches[5], $dropFrame);
+        // The check uses the seconds, not the hours of the label. Drop-frame time code runs ahead of the clock.
+        // So the writer gives a time just below the limit a label such as 100000:05:49;21.
+        self::boundedTime(Cea608Cues::frameToSeconds($frame), "$matches[1]:$matches[2]:$matches[3]$matches[4]$matches[5]", $lineNumber);
 
-        return [self::timecodeToFrames((int) $matches[1], (int) $matches[2], (int) $matches[3], (int) $matches[5], $dropFrame),
-                $dropFrame, preg_split("/\s+/", $matches[6] ?? "", -1, PREG_SPLIT_NO_EMPTY)];
+        return [$frame, $dropFrame, preg_split("/\s+/", $matches[6] ?? "", -1, PREG_SPLIT_NO_EMPTY)];
     }
 
 

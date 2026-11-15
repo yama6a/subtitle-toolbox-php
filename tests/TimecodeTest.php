@@ -270,6 +270,9 @@ class TimecodeTest extends TestCase
             "huge minutes"         => ["6000000:00", null, "is not below 100000 hours"],
             "huge hour digits"     => [str_repeat("9", 40) . ":00:00", null, "is not below 100000 hours"],
             "frames at 100000 h"   => ["100000:00:00:00", 25.0, "is not below 100000 hours"],
+            "rounds to 100000 h"   => ["99999:59:59.9996", null, "is not below 100000 hours"],
+            "half a millisecond"   => ["99999:59:59.9995", null, "is not below 100000 hours"],
+            "frame that rounds up" => ["99999:59:59:1999", 1999.6, "is not below 100000 hours"],
         ];
     }
 
@@ -296,6 +299,9 @@ class TimecodeTest extends TestCase
             "a whole millisecond stays"                     => [1.001, 1.001],
             "the last millisecond below the limit stays"    => [359999999.999, 359999999.999],
             "below a half rounds down"                      => [0.0004999, 0.0],
+            "a half above 2^23 s, issue #1318"              => [8605847.0005, 8605847.001],
+            "the last half below the limit rounds up to it" => [359999999.9995, 360000000.0],
+            "a half below 1e-4 s rounds to 0"               => [0.00009, 0.0],
         ];
     }
 
@@ -305,6 +311,20 @@ class TimecodeTest extends TestCase
     {
         $this->assertSame($expected, Timecode::roundToMilliseconds($seconds));
         $this->assertSame((int) round($expected * 1000), Timecode::totalMilliseconds($seconds));
+    }
+
+
+    /**
+     * PHP casts a float to a string with the precision ini setting. With 17 digits, 8605847.0005 becomes 8605847.0004999992.
+     */
+    public function testTotalMillisecondsDoesNotReadThePrecisionSetting(): void
+    {
+        $precision = ini_set("precision", "17");
+        try {
+            $this->assertSame(8605847001, Timecode::totalMilliseconds(8605847.0005));
+        } finally {
+            ini_set("precision", (string) $precision);
+        }
     }
 
 
@@ -371,8 +391,8 @@ class TimecodeTest extends TestCase
     public function testIsBelowLimitChecksTheTimeRoundedToMilliseconds(): void
     {
         $this->assertSame(
-            [true, true, false, false, false, false],
-            array_map(Timecode::isBelowLimit(...), [-5.0, 359999999.999, 359999999.9996, 360000000.0, 1e300, NAN])
+            [true, true, false, false, false, false, false],
+            array_map(Timecode::isBelowLimit(...), [-5.0, 359999999.999, 359999999.9995, 359999999.9996, 360000000.0, 1e300, NAN])
         );
     }
 

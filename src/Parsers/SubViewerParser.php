@@ -281,7 +281,11 @@ final class SubViewerParser extends SubtitleParser
         } elseif (!$this->options->lenient) {
             throw new ParsingException("The timing line \"$line\" is not in the form hh:mm:ss.ff,hh:mm:ss.ff.", $lineNumber);
         } else {
-            $cue = $this->looseVersion2Cue($line, $lineNumber, $cueIndex);
+            try {
+                $cue = $this->looseVersion2Cue($line, $lineNumber, $cueIndex);
+            } catch (ParsingException $exception) {
+                return self::skippedCue($line, $lineNumber, $cueIndex, $exception->getRawMessage());
+            }
             if ($cue === null) {
                 return self::skippedCue($line, $lineNumber, $cueIndex, "The timing line \"$line\" has a time that is not valid.");
             }
@@ -325,6 +329,8 @@ final class SubViewerParser extends SubtitleParser
 
     /**
      * Reads a timing line without a fraction, with 4 fraction digits or with 1-digit fields, and warns. Returns null for another line.
+     *
+     * @throws ParsingException when a time reaches MAX_HOURS after it rounds to milliseconds.
      */
     private function looseVersion2Cue(string $line, int $lineNumber, int $cueIndex): ?SubtitleCue
     {
@@ -338,6 +344,8 @@ final class SubViewerParser extends SubtitleParser
         if ($start === null || $end === null) {
             return null;
         }
+        self::boundedTime($start, $times[0], $lineNumber);
+        self::boundedTime($end, $times[1], $lineNumber);
 
         $this->warn(
             "The timing line \"$line\" is not in the form hh:mm:ss.ff,hh:mm:ss.ff. The parser read it as $start s to $end s.",

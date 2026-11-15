@@ -298,7 +298,7 @@ final class SubRipParser extends SubtitleParser
         }
         $looseTimes[$timeString] = $seconds;
 
-        return $seconds;
+        return self::boundedTime($seconds, $timeString, $lineNumber);
     }
 
 

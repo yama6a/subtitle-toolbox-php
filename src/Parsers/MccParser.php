@@ -53,7 +53,7 @@ final class MccParser extends SubtitleParser
             }
             if ($packet !== null) {
                 $rateCode ??= $packet[0];
-                $packets[]  = [$timeCode, $packet[1]];
+                $packets[]  = [$timeCode, $packet[1], $lineNumber, $line];
             }
         }
 
@@ -63,7 +63,7 @@ final class MccParser extends SubtitleParser
         $subtitle = new Subtitle();
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["version" => $version, "frameRate" => $frameRate, "dropFrame" => $dropFrame, "header" => $header]);
 
-        return $subtitle->addCues(CaptionDataCues::read(self::frames($packets, $frameRate, $dropFrame), $this->options));
+        return $subtitle->addCues(CaptionDataCues::read($this->frames($packets, $frameRate, $dropFrame), $this->options));
     }
 
 
@@ -133,19 +133,27 @@ final class MccParser extends SubtitleParser
 
     /**
      * Returns the time in seconds and the triplets of each frame with caption data, in time order.
+     * A time code past MAX_HOURS throws in strict mode and skips its line in lenient mode.
      *
-     * @param list<array{int, string}> $packets the time code as HHMMSSFF digits and the triplets of each packet
+     * @param list<array{int, string, int, string}> $packets the time code as HHMMSSFF digits, the triplets, the line number and the line of each packet
      * @return list<array{float, string}>
      */
-    private static function frames(array $packets, string $frameRate, bool $dropFrame): array
+    private function frames(array $packets, string $frameRate, bool $dropFrame): array
     {
         [$labels, $numerator, $denominator] = Mcc::FRAME_RATES[$frameRate];
         $byFrame = [];
-        foreach ($packets as [$timeCode, $triplets]) {
-            if ($triplets !== "") {
-                $frame           = self::frameNumber($timeCode, $labels, $dropFrame);
-                $byFrame[$frame] = ($byFrame[$frame] ?? "") . $triplets;
+        foreach ($packets as [$timeCode, $triplets, $lineNumber, $line]) {
+            if ($triplets === "") {
+                continue;
             }
+            $frame = self::frameNumber($timeCode, $labels, $dropFrame);
+            try {
+                self::boundedTime($frame * $denominator / $numerator, preg_split("/[ \t]/", $line, 2)[0], $lineNumber);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $lineNumber, null, [$line]);
+                continue;
+            }
+            $byFrame[$frame] = ($byFrame[$frame] ?? "") . $triplets;
         }
         ksort($byFrame);
 
