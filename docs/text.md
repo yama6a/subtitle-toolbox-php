@@ -299,4 +299,6 @@ CommonErrorFixer::apply($subtitle);                                            /
 - **Rules**: the sections work as in `OcrFixReplaceList2.cs` of Subtitle Edit at commit [`e1b8546`](https://github.com/SubtitleEdit/subtitleedit/blob/e1b854665b40bf6e04271c2ec64084947060e632/src/libuilogic/Ocr/FixEngine/OcrFixReplaceList2.cs).
 - **Skipped**: `PartialWords` and `RegularExpressionsIfSpelledCorrectly` need a spell checker. `Removed...` sections change the list that Subtitle Edit ships. A regular expression that PCRE rejects is skipped.
 - **Replacements**: `$1`, `${1}`, `$&`, `$$`, `` $` ``, `$'`, `$+`, `$_` and `${name}` of a named group work as in .NET. `${name}` without such a group is literal text.
+- **Group numbers**: as in .NET, the named groups get their numbers after the unnamed groups. In `(?<n>q)(z)`, `$1` is `z` and `$2` is `n`. This applies to `$1`, `${1}` and `$+` in the replacement, and to `\1` and `(?(1)` in the pattern. A list built in code uses the PCRE numbers, where `$1` is `n`.
+- **Last group**: `$+` is the group with the highest number. It is empty when that group took no part in the match. In a pattern without groups, it is the whole match.
 - **Errors**: XML that does not parse throws `ParsingException` with the line number. An invalid PCRE pattern in the constructor throws `InvalidArgumentException`.
