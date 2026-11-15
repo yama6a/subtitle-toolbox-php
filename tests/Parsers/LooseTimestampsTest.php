@@ -175,6 +175,35 @@ class LooseTimestampsTest extends TestCase
 
 
     /**
+     * Each case holds the format, the content and the time that rounds to 100000 hours. Issue #1302.
+     *
+     * @return array<string, array{Format, string, string}>
+     */
+    public static function looseTimesThatRoundToTheLimit(): array
+    {
+        return [
+            "SubRip"      => [Format::SubRip, "1\n00:00:01,000 --> 99999:59:59,9997\nThe ferry leaves.\n\n2\n02:00:00,000 --> 02:00:02,000\nIt is late.\n", "99999:59:59,9997"],
+            "WebVTT"      => [Format::WebVtt, "WEBVTT\n\n00:00:01.000 --> 99999:59:59.9997\nThe ferry leaves.\n\n02:00:00.000 --> 02:00:02.000\nIt is late.\n", "99999:59:59.9997"],
+            "SubViewer 2" => [Format::SubViewer, "[SUBTITLE]\n99999:59:59.9996,99999:59:59.9999\nThe ferry leaves.\n\n02:00:00.00,02:00:02.00\nIt is late.\n", "99999:59:59.9996"],
+            "ASS"         => [Format::Ass, "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,99999:59:59.9997,Default,,0,0,0,,The ferry leaves.\nDialogue: 0,2:00:00.00,2:00:02.00,Default,,0,0,0,,It is late.\n", "99999:59:59.9997"],
+        ];
+    }
+
+
+    #[DataProvider("looseTimesThatRoundToTheLimit")]
+    public function testLenientModeSkipsACueWithALooseTimeThatRoundsTo100000Hours(Format $format, string $content, string $time): void
+    {
+        $subtitle = Subtitle::fromString($content, $format, new ReadOptions(lenient: true));
+
+        $this->assertSame([[7200.0, 7202.0]], array_map(fn ($cue) => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertSame(
+            [[ParseWarningAction::Skipped, "The time \"$time\" is not below 100000 hours."]],
+            array_map(fn ($warning) => [$warning->action, $warning->message], $subtitle->getParseWarnings())
+        );
+    }
+
+
+    /**
      * The float of 8605847.0005 is 8605847.00049999915, just below the half millisecond. Issue #1318.
      */
     public function testLenientModeRoundsAHalfMillisecondAbove2330HoursUp(): void
