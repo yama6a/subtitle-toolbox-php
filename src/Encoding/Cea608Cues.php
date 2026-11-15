@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Encoding;
 
 use SubtitleToolbox\Alignment;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\SubtitleCue;
@@ -68,9 +69,12 @@ final class Cea608Cues
     }
 
 
+    /**
+     * Returns the nearest frame at 29.97 fps. The time can be a frame of another rate, such as 1001/24000 s in MCC.
+     */
     public static function secondsToFrame(float $seconds): int
     {
-        return (int) round($seconds * self::FRAME_RATE_NUMERATOR / self::FRAME_RATE_DIVISOR);
+        return (new FrameRate(self::FRAME_RATE_NUMERATOR / self::FRAME_RATE_DIVISOR))->exactSecondsToFrames($seconds);
     }
 
 
