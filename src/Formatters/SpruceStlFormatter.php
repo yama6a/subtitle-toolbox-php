@@ -14,6 +14,7 @@ use SubtitleToolbox\Parsers\SpruceStl;
 use SubtitleToolbox\Parsers\SpruceStlParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
 final class SpruceStlFormatter extends SubtitleFormatter
@@ -54,9 +55,9 @@ final class SpruceStlFormatter extends SubtitleFormatter
     {
         $options ??= new WriteOptions();
         $fileData  = $subtitle->findFormatData(SpruceStlParser::FORMAT_DATA_KEY) ?? [];
-        $frameRate = (new FrameRate($this->formatOptions($options)->frameRate ?? $fileData["frameRate"] ?? self::DEFAULT_FRAME_RATE))->getFramesPerSecond();
-        if ($frameRate > self::MAX_FRAME_RATE) {
-            throw new UnwritableContentException("Spruce STL writes a frame number of 2 digits, so the frame rate must be at most " . self::MAX_FRAME_RATE . " fps, got $frameRate.");
+        $frameRate = new FrameRate($this->formatOptions($options)->frameRate ?? $fileData["frameRate"] ?? self::DEFAULT_FRAME_RATE);
+        if ($frameRate->getFramesPerSecond() > self::MAX_FRAME_RATE) {
+            throw new UnwritableContentException("Spruce STL writes a frame number of 2 digits, so the frame rate must be at most " . self::MAX_FRAME_RATE . " fps, got {$frameRate->getFramesPerSecond()}.");
         }
         $separator = preg_match('/^[ \t]*,[ \t]*$/D', $fileData["separator"] ?? "") === 1 ? $fileData["separator"] : self::DEFAULT_SEPARATOR;
         $lineBreak = preg_match('/^[ \t]*\|[ \t]*$/D', $fileData["lineBreak"] ?? "") === 1 ? $fileData["lineBreak"] : "|";
@@ -147,16 +148,9 @@ final class SpruceStlFormatter extends SubtitleFormatter
     }
 
 
-    private function timecode(float $seconds, float $frameRate): string
+    private function timecode(float $seconds, FrameRate $frameRate): string
     {
-        $whole = (int) floor(max(0.0, $seconds));
-        $frame = (int) round((max(0.0, $seconds) - $whole) * $frameRate);
-        if ($frame >= ceil($frameRate)) {
-            $whole++;
-            $frame = 0;
-        }
-
-        return sprintf("%02d:%02d:%02d:%02d", intdiv($whole, 3600), intdiv($whole, 60) % 60, $whole % 60, $frame);
+        return sprintf("%02d:%02d:%02d:%02d", ...Timecode::clockSecondsAndFrames($seconds, $frameRate));
     }
 
 
@@ -170,7 +164,7 @@ final class SpruceStlFormatter extends SubtitleFormatter
     {
         $current = ["b" => $state["b"], "i" => $state["i"], "u" => $state["u"]];
         $lines   = [];
-        foreach (Markup::carryOpenTags(array_map(Markup::rubyAsText(...), $cue->getLines())) as $line) {
+        foreach (Markup::carryOpenTags(array_map(fn (string $line): string => Markup::newlineEntitiesToLf(Markup::rubyAsText($line)), $cue->getLines())) as $line) {
             $open = ["b" => 0, "i" => 0, "u" => 0];
             $text = "";
             foreach (Markup::splitTags($line) as $index => $token) {

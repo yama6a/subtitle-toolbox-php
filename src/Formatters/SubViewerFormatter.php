@@ -93,7 +93,10 @@ final class SubViewerFormatter extends SubtitleFormatter
 
         $style = $subtitle->findFormatData(SubViewerParser::FORMAT_DATA_KEY)["style"] ?? null;
         if ($style !== null) {
-            $output .= $style . LineEnding::Lf->value;
+            $style = str_replace(["\r", "\n"], " ", $style);
+            if (self::isStyleLine($style) && self::timeFields($style) === []) {
+                $output .= $style . LineEnding::Lf->value;
+            }
         }
 
         $blocks = [];
@@ -115,25 +118,37 @@ final class SubViewerFormatter extends SubtitleFormatter
 
 
     /**
+     * Returns the indexes of the fields of a line that look like a time, when the line has 2 fields split by a comma.
+     *
+     * @return list<int>
+     */
+    private static function timeFields(string $line): array
+    {
+        $fields = explode(",", $line);
+
+        return count($fields) === 2 ? array_keys(array_filter($fields, fn(string $field) => preg_match(self::TIME_FIELD, trim($field)) === 1)) : [];
+    }
+
+
+    /**
      * Puts U+2060 in front of a text line that the parser reads as a timing line, a style line or the script line.
      * A timing line has 2 fields split by a comma, where the parser checks both. So the joiner goes before each field in the shape of a time.
      */
     private static function keepVersion2LineAsText(string $line): string
     {
         $fields = explode(",", $line);
-        if (count($fields) === 2) {
-            foreach ($fields as $index => $field) {
-                if (preg_match(self::TIME_FIELD, trim($field)) === 1) {
-                    $fields[$index] = "\u{2060}" . $field;
-                }
-            }
-            $line = implode(",", $fields);
+        foreach (self::timeFields($line) as $index) {
+            $fields[$index] = "\u{2060}" . $fields[$index];
         }
+        $line = implode(",", $fields);
 
-        $trimmed = trim($line);
-        $isStyle = str_starts_with($trimmed, "[") && array_filter(self::STYLE_TAGS, fn(string $tag) => str_contains($trimmed, $tag)) !== [];
+        return trim($line) === SubViewerParser::START_SCRIPT || self::isStyleLine(trim($line)) ? "\u{2060}" . $line : $line;
+    }
 
-        return $trimmed === SubViewerParser::START_SCRIPT || $isStyle ? "\u{2060}" . $line : $line;
+
+    private static function isStyleLine(string $line): bool
+    {
+        return str_starts_with($line, "[") && array_filter(self::STYLE_TAGS, fn(string $tag) => str_contains($line, $tag)) !== [];
     }
 
 

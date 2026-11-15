@@ -32,14 +32,14 @@ final class AssemblyAiParser extends SubtitleParser
     {
         $data       = $this->decodeJsonObject($content);
         $words      = $data["words"] ?? null;
-        $utterances = self::listOrEmpty($data["utterances"] ?? null);
-        if ($utterances === [] && !self::isList($words)) {
+        $utterances = $this->listOrEmpty($data["utterances"] ?? null, "utterances");
+        if ($utterances === [] && !$this->isList($words, "words")) {
             throw new ParsingException("The JSON has no \"words\" or \"utterances\" list.");
         }
 
         $cues = $utterances === []
             ? $this->cuesFromWords($this->readWords($words, "words"), "words")
-            : $this->readUtterances($utterances, "utterances", "text", $this->readWords(...), self::MILLISECONDS);
+            : $this->readUtterances($utterances, ["utterances"], "text", $this->readWords(...), self::MILLISECONDS);
 
         $language = $data["language_code"] ?? null;
         if (is_string($language) && $language !== "") {

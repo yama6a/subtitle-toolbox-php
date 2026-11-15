@@ -133,7 +133,13 @@ abstract class SubtitleFormatter
      */
     protected static function keepAsText(string $line, string $structure): string
     {
-        return preg_match($structure, $line) === 1 ? "\u{2060}" . $line : $line;
+        // The parsers remove the leading U+FEFF characters before they test a line.
+        $tested = $line;
+        while (str_starts_with($tested, "\u{FEFF}")) {
+            $tested = substr($tested, 3);
+        }
+
+        return preg_match($structure, $tested) === 1 ? "\u{2060}" . $line : $line;
     }
 
 

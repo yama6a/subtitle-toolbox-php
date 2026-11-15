@@ -63,6 +63,7 @@ final class OcrReplaceList
      * Reads a Subtitle Edit OCR replace list such as eng_OCRFixReplaceList_User.xml.
      * It skips the sections that need a spell checker and the regular expressions that PCRE cannot run.
      * A replacement keeps $`, $', $+, $_ and ${name} of an existing group. ${name} without such a group is literal text.
+     * Group numbers follow .NET, where the named groups come after the unnamed groups.
      */
     public static function fromSubtitleEditXml(string $xml): self
     {
@@ -117,6 +118,7 @@ final class OcrReplaceList
 
     /**
      * Turns a .NET pattern and replacement into a PCRE pattern with delimiters and a preg_replace() replacement.
+     * It gives each numbered reference to a group the PCRE number of that group.
      *
      * @return array{string, string}|null null when PCRE rejects the pattern
      */
@@ -128,12 +130,16 @@ final class OcrReplaceList
         }
         $delimiter = reset($delimiters);
         $pattern   = $delimiter . $find . $delimiter . "u";
-        if (@preg_match($pattern, "") === false) {
+        // The empty first alternative matches every subject, so $groups gets every group of the pattern.
+        if (@preg_match($pattern, "") === false
+            || @preg_match($delimiter . "|" . $find . $delimiter . "u", "", $groups, PREG_UNMATCHED_AS_NULL) !== 1) {
             return null;
         }
+        $numbers = self::pcreGroupNumbers($groups);
+        $pattern = $delimiter . self::renumberBackreferences($find, $numbers) . $delimiter . "u";
 
         $replacement = preg_replace_callback('/\\\\|\$(?:\$|&|\d+|\{\d+\}|\{\w*\}|[`\'+_])?/',
-            function (array $match) use ($find): string {
+            function (array $match) use ($groups, $numbers): string {
                 if ($match[0] === "\\") {
                     return "\\\\";
                 }
@@ -143,8 +149,17 @@ final class OcrReplaceList
                 if ($match[0] === "$&") {
                     return "\$0";
                 }
-                if (preg_match('/^\$\{(\w*)\}$/', $match[0], $name) === 1 && !self::hasNamedGroup($find, $name[1])
-                    && preg_match('/^\d+$/', $name[1]) !== 1) {
+                if ($match[0] === "$+") {
+                    $last = count($numbers) - 1;
+
+                    return $numbers[$last] !== $last ? "\${" . $numbers[$last] . "}" : $match[0];
+                }
+                if (preg_match('/^\$\{?(\d+)\}?$/', $match[0], $number) === 1) {
+                    $pcre = $numbers[(int)$number[1]] ?? null;
+
+                    return $pcre !== null && $pcre !== (int)$number[1] ? "\${" . $pcre . "}" : $match[0];
+                }
+                if (preg_match('/^\$\{(\w*)\}$/', $match[0], $name) === 1 && !array_key_exists($name[1], $groups)) {
                     return "\\" . $match[0];
                 }
 
@@ -156,8 +171,53 @@ final class OcrReplaceList
     }
 
 
-    private static function hasNamedGroup(string $find, string $name): bool
+    /**
+     * Lists the PCRE group numbers in the order of the .NET group numbers, so the .NET number is the list index.
+     * .NET numbers the unnamed groups from left to right and then the named groups. PCRE numbers all groups from
+     * left to right. See "Grouping constructs in regular expressions" in the .NET documentation.
+     *
+     * @param array<int|string, string|null> $groups a match with every group, where a name key comes before its number key
+     * @return list<int>
+     */
+    private static function pcreGroupNumbers(array $groups): array
     {
-        return $name !== "" && preg_match('/\(\?(?:P?<|\')' . preg_quote($name, "/") . '[>\']/', $find) === 1;
+        $unnamed = [];
+        $named   = [];
+        $name    = null;
+        foreach (array_keys($groups) as $key) {
+            if (is_string($key)) {
+                $name = $key;
+            } elseif ($name !== null) {
+                $named[] = $key;
+                $name    = null;
+            } else {
+                $unnamed[] = $key;
+            }
+        }
+
+        return [...$unnamed, ...$named];
+    }
+
+
+    /**
+     * Gives the numbered backreferences \n and the conditions (?(n) in $find their PCRE numbers.
+     * Other escapes, character classes and comments stay as they are.
+     *
+     * @param list<int> $numbers
+     */
+    private static function renumberBackreferences(string $find, array $numbers): string
+    {
+        return preg_replace_callback('/\\\\([1-9]\d*)|\\\\.|\[\^?\]?(?:\\\\.|[^\]\\\\])*\]|\(\?#[^)]*\)|\(\?\((\d+)\)/su',
+            function (array $token) use ($numbers): string {
+                $backreference = ($token[1] ?? "") !== "";
+                $number        = (int)($backreference ? $token[1] : ($token[2] ?? 0));
+                $pcre          = $numbers[$number] ?? $number;
+                if ($pcre === $number) {
+                    return $token[0];
+                }
+
+                return $backreference ? "\\g{" . $pcre . "}" : "(?(" . $pcre . ")";
+            },
+            $find) ?? $find;
     }
 }
