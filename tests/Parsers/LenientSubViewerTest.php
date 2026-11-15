@@ -57,9 +57,13 @@ class LenientSubViewerTest extends TestCase
     public static function looseSubViewerTimingLines(): array
     {
         return [
-            "4 fraction digits" => ["00:00:01.5000,00:00:03.0000"],
-            "no fraction"       => ["00:00:01.5,00:00:03"],
-            "1-digit fields"    => ["0:0:1.50,0:0:3.00"],
+            "4 fraction digits"         => ["00:00:01.5000,00:00:03.0000"],
+            "no fraction"               => ["00:00:01.5,00:00:03"],
+            "1-digit fields"            => ["0:0:1.50,0:0:3.00"],
+            "colon before the fraction" => ["00:00:01:50,00:00:03:00"],
+            "comma before the fraction" => ["00:00:01,50,00:00:03,00"],
+            "comma in the start only"   => ["00:00:01,50,00:00:03.00"],
+            "comma in the end only"     => ["00:00:01.50,00:00:03,0"],
         ];
     }
 
