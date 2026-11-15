@@ -23,7 +23,7 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
 ```
 
 - **Text runs**: `replaceText()`, `changeCase()` and `mapText()` work on text runs. Use `mapLines()` to change tags.
-- **Regex errors**: a regex that does not compile, or that fails on a text run, throws `InvalidArgumentException` with the PCRE message. A text run that is not valid UTF-8 fails a regex with the `u` flag, so the call throws and no cue changes silently.
+- **Regex errors**: a regex that does not compile, or that fails on a text run, throws `InvalidArgumentException` with the PCRE message. A text run that is not valid UTF-8 fails a regex with the `u` flag, so the call throws. The call computes every cue before it changes one, so a throw leaves all cues as they were.
 - **Word timestamps**: `stripFormatting()` keeps them. Pass `false` as the second argument to remove them too.
 - **Empty cues**: a transform removes a cue that had text before and has only tags or spaces after. Comments stay before the next cue.
 - **Case modes**: `CaseMode::Upper`, `CaseMode::Lower` and `CaseMode::Sentence`.

@@ -177,16 +177,19 @@ trait TextTransforms
 
 
     /**
-     * Calls $fn for each text run between tags, in order.
+     * Calls $fn for each text run between tags, in order. It calls $fn for every cue before it changes one,
+     * so that the subtitle keeps its text when $fn throws.
      *
      * @param callable(string $text, SubtitleCue $cue, bool $startsLine): string $fn
      */
     private function textTransformsMapRuns(callable $fn): self
     {
-        return $this->textTransformsMapCues(fn (SubtitleCue $cue): array => Markup::mapTextRuns(
-            $cue->getLines(),
-            fn (string $text, bool $first): string => $fn($text, $cue, $first)
-        ));
+        $lines = new \SplObjectStorage();
+        foreach ($this->getCues() as $cue) {
+            $lines[$cue] = Markup::mapTextRuns($cue->getLines(), fn (string $text, bool $first): string => $fn($text, $cue, $first));
+        }
+
+        return $this->textTransformsMapCues(fn (SubtitleCue $cue): array => $lines[$cue]);
     }
 
 
