@@ -7,6 +7,8 @@ namespace SubtitleToolbox\Parsers;
 use DOMElement;
 use DOMText;
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\AlignmentGrid;
+use SubtitleToolbox\CuePosition;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\StyleRuns;
@@ -180,9 +182,13 @@ final class DcpParser extends SubtitleParser
             return null;
         }
 
+        $texts     = array_column($lines, "attributes");
+        $alignment = self::alignment($texts);
+
         return (new SubtitleCue($start, $end, array_column($lines, "text")))
-            ->setAlignment(self::alignment(array_column($lines, "attributes")))
-            ->setFormatData(self::FORMAT_DATA_KEY, ["subtitle" => self::attributes($subtitle), "texts" => array_column($lines, "attributes")]);
+            ->setAlignment($alignment)
+            ->setPosition(self::cuePosition($texts, $alignment))
+            ->setFormatData(self::FORMAT_DATA_KEY, ["subtitle" => self::attributes($subtitle), "texts" => $texts]);
     }
 
 
@@ -288,6 +294,43 @@ final class DcpParser extends SubtitleParser
             "bottom" => 100 - $position,
             default  => 50 + $position,
         };
+    }
+
+
+    /**
+     * Returns the width of the line on the screen in percent, from 0 at the left to 100 at the right.
+     * HPosition counts from the edge that HAlign names, or right from the middle for "center", the default.
+     */
+    private static function screenX(array $attributes): float
+    {
+        $position = (float) (self::position($attributes, "hposition") ?? 0);
+
+        return match (strtolower(self::position($attributes, "halign") ?? "center")) {
+            "left"  => $position,
+            "right" => 100 - $position,
+            default => 50 + $position,
+        };
+    }
+
+
+    /**
+     * Returns the point of the <Text> elements with these attributes, top line first, or null. The row of the alignment
+     * picks the anchor: the last line for a bottom cue, the first line for a top cue, the middle of the lines for a
+     * middle cue. DcpFormatter places the lines around the position by the same rule.
+     *
+     * @param non-empty-list<array<string, string>> $texts
+     */
+    private static function cuePosition(array $texts, Alignment $alignment): ?CuePosition
+    {
+        $anchors = match (AlignmentGrid::row($alignment)) {
+            AlignmentGrid::BOTTOM_ROW => [$texts[count($texts) - 1]],
+            AlignmentGrid::TOP_ROW    => [$texts[0]],
+            default                   => $texts,
+        };
+        $x = array_sum(array_map(self::screenX(...), $anchors)) / count($anchors);
+        $y = array_sum(array_map(self::screenY(...), $anchors)) / count($anchors);
+
+        return AlignmentGrid::positionAt($alignment, min(max($x, 0), 100), min(max($y, 0), 100));
     }
 
 

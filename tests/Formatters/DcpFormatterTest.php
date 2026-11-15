@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Alignment;
+use SubtitleToolbox\CuePosition;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -77,6 +79,128 @@ class DcpFormatterTest extends TestCase
             "<Text VAlign=\"center\" VPosition=\"-3.5\">The ferry leaves at nine,</Text>\n      <Text VAlign=\"center\" VPosition=\"3.5\">from the north pier.</Text>",
             $subtitle->toString(Format::Dcp)
         );
+    }
+
+
+    public function testWritesThePositionOfACueFromAnotherFormat(): void
+    {
+        $subtitle = Subtitle::fromString("WEBVTT\n\n00:00:01.000 --> 00:00:02.000 line:80%,end\nhi\n", Format::WebVtt);
+
+        $this->assertStringContainsString("<Text Valign=\"bottom\" Vposition=\"20\">hi</Text>", $subtitle->toString(Format::Dcp));
+    }
+
+
+    /**
+     * @param list<string> $lines
+     * @param list<string> $texts
+     */
+    #[DataProvider('positions')]
+    public function testPlacesTheLinesAroundThePositionByTheRowOfTheAlignment(Alignment $alignment, CuePosition $position, array $lines, array $texts): void
+    {
+        $cue      = (new SubtitleCue(1, 2, $lines))->setAlignment($alignment)->setPosition($position);
+        $subtitle = (new Subtitle())->addCue($cue);
+
+        $output = $subtitle->toString(Format::Dcp);
+        foreach ($texts as $text) {
+            $this->assertStringContainsString($text, $output);
+        }
+        $read = Subtitle::fromString($output, Format::Dcp)->getCues()[0];
+        $this->assertSame([$alignment, $position->x, $position->y], [$read->getAlignment(), $read->findPosition()?->x, $read->findPosition()?->y]);
+    }
+
+
+    /**
+     * @return array<string, array{Alignment, CuePosition, list<string>, list<string>}>
+     */
+    public static function positions(): array
+    {
+        return [
+            "top left"      => [Alignment::TopLeft, new CuePosition(20, 5), ["a", "b"], [
+                "<Text Halign=\"left\" Hposition=\"20\" Valign=\"top\" Vposition=\"5\">a</Text>",
+                "<Text Halign=\"left\" Hposition=\"20\" Valign=\"top\" Vposition=\"12\">b</Text>",
+            ]],
+            "bottom right"  => [Alignment::BottomRight, new CuePosition(85, 80), ["a", "b"], [
+                "<Text Halign=\"right\" Hposition=\"15\" Valign=\"bottom\" Vposition=\"27\">a</Text>",
+                "<Text Halign=\"right\" Hposition=\"15\" Valign=\"bottom\" Vposition=\"20\">b</Text>",
+            ]],
+            "middle center" => [Alignment::MiddleCenter, new CuePosition(60, 40), ["a", "b"], [
+                "<Text Hposition=\"10\" Valign=\"center\" Vposition=\"-13.5\">a</Text>",
+                "<Text Hposition=\"10\" Valign=\"center\" Vposition=\"-6.5\">b</Text>",
+            ]],
+            "a fraction"    => [Alignment::BottomCenter, new CuePosition(50, 84.667), ["a"], [
+                "<Text Valign=\"bottom\" Vposition=\"15.333\">a</Text>",
+            ]],
+        ];
+    }
+
+
+    public function testWritesInteropNamesForThePosition(): void
+    {
+        $subtitle = Subtitle::load(self::FILES . "dcpomatic_interop_shape.xml");
+        $subtitle->getCues()[0]->setAlignment(Alignment::BottomLeft)->setPosition(new CuePosition(5, 80));
+
+        $this->assertStringContainsString(
+            "<Text HAlign=\"left\" HPosition=\"5\" VAlign=\"bottom\" VPosition=\"27\">The ferry leaves at nine,</Text>\n" .
+            "      <Text HAlign=\"left\" HPosition=\"5\" VAlign=\"bottom\" VPosition=\"20\">from the north pier.</Text>",
+            $subtitle->toString(Format::Dcp)
+        );
+    }
+
+
+    /**
+     * @param list<string> $texts
+     */
+    #[DataProvider('readPlaces')]
+    public function testWritesTheLinesOfAReadCueAtTheirPlacesWithoutTheStoredAttributes(array $texts): void
+    {
+        $subtitle = Subtitle::fromString("<DCSubtitle Version=\"1.0\"><Subtitle TimeIn=\"00:00:01:000\" TimeOut=\"00:00:02:000\">" . implode("", $texts) . "</Subtitle></DCSubtitle>", Format::Dcp);
+        $subtitle->getCues()[0]->setFormatData("dcp", []);
+
+        $output = $subtitle->toString(Format::Dcp);
+        foreach ($texts as $text) {
+            $this->assertStringContainsString($text, $output);
+        }
+    }
+
+
+    /**
+     * @return array<string, array{list<string>}>
+     */
+    public static function readPlaces(): array
+    {
+        return [
+            "bottom" => [["<Text VAlign=\"bottom\" VPosition=\"30\">a</Text>", "<Text VAlign=\"bottom\" VPosition=\"23\">b</Text>"]],
+            "top"    => [["<Text HAlign=\"left\" HPosition=\"5\" VAlign=\"top\" VPosition=\"20\">a</Text>", "<Text HAlign=\"left\" HPosition=\"5\" VAlign=\"top\" VPosition=\"27\">b</Text>"]],
+            "middle" => [["<Text VAlign=\"center\" VPosition=\"-13.5\">a</Text>", "<Text VAlign=\"center\" VPosition=\"-6.5\">b</Text>"]],
+        ];
+    }
+
+
+    public function testALineThatDoesNotFitOnTheScreenGetsTheEdge(): void
+    {
+        $lines    = array_map(fn (int $number): string => "line $number", range(1, 12));
+        $subtitle = (new Subtitle())->addCue((new SubtitleCue(1, 2, $lines))->setPosition(new CuePosition(50, 70)));
+
+        preg_match_all('/Vposition="([^"]*)"/', $subtitle->toString(Format::Dcp), $matches);
+
+        $this->assertSame(["100", "100", "93", "86", "79", "72", "65", "58", "51", "44", "37", "30"], $matches[1]);
+    }
+
+
+    public function testIgnoresAPositionOutsideTheCellOfTheAlignment(): void
+    {
+        $subtitle = (new Subtitle())->addCue((new SubtitleCue(1, 2, "a"))->setPosition(new CuePosition(50, 10)));
+
+        $this->assertStringContainsString("<Text Valign=\"bottom\" Vposition=\"8\">a</Text>", $subtitle->toString(Format::Dcp));
+    }
+
+
+    public function testStoredTextAttributesWinOverThePosition(): void
+    {
+        $subtitle = Subtitle::load(self::FILES . "monal_interop_shape.xml");
+        $subtitle->getCues()[0]->setPosition(new CuePosition(50, 70));
+
+        $this->assertStringContainsString("<Text HAlign=\"center\" HPosition=\"0.0\" VAlign=\"bottom\" VPosition=\"7\">", $subtitle->toString(Format::Dcp));
     }
 
 
