@@ -13,18 +13,13 @@ class StrictTypesTest extends TestCase
         $root = dirname(__DIR__);
         $checked = 0;
         $missing = [];
-        foreach (["src", "tests", "bin", ".build"] as $directory) {
-            if (!is_dir("$root/$directory")) {
-                continue;
-            }
+        foreach (["src", "tests"] as $directory) {
             foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator("$root/$directory", \FilesystemIterator::SKIP_DOTS)) as $file) {
-                $content = file_get_contents($file->getPathname());
-                // bin/stbox has no .php extension, so a PHP shebang or opening tag also marks a PHP file.
-                if ($file->getExtension() !== "php" && preg_match('/\A(?:#!.*php.*\n)?<\?php\b/', $content) !== 1) {
+                if ($file->getExtension() !== "php") {
                     continue;
                 }
                 $checked++;
-                if (preg_match('/\A(?:#!.*\n)?<\?php\n\ndeclare\(strict_types=1\);\n/', $content) !== 1) {
+                if (preg_match('/\A<\?php\n\ndeclare\(strict_types=1\);\n/', file_get_contents($file->getPathname())) !== 1) {
                     $missing[] = substr($file->getPathname(), strlen($root) + 1);
                 }
             }

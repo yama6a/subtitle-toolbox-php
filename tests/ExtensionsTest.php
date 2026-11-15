@@ -11,8 +11,7 @@ class ExtensionsTest extends TestCase
     private const ALWAYS_ENABLED = ["Core", "date", "hash", "json", "pcre", "Reflection", "SPL", "standard"];
 
     // ext-dom needs libxml. Dependency::check() guards the zlib and curl calls.
-    // FileCommand calls the pcntl functions only after function_exists("pcntl_signal").
-    private const OTHER_ALLOWED = ["libxml", "zlib", "curl", "pcntl"];
+    private const OTHER_ALLOWED = ["libxml", "zlib", "curl"];
 
 
     public function testEveryFunctionThatSrcCallsComesFromARequiredOrGuardedExtension(): void

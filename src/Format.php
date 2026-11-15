@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 /**
- * A subtitle, transcript or chapter format. The value is the format name of the command line tool.
+ * A subtitle, transcript or chapter format. The value is the short name of the format, as in `Format::from('srt')`.
  */
 enum Format: string
 {

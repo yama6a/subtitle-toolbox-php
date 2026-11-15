@@ -13,14 +13,13 @@ class UnusedImportsTest extends TestCase
         $root = dirname(__DIR__);
         $checked = 0;
         $unused = [];
-        foreach (["src", "tests", "bin"] as $directory) {
+        foreach (["src", "tests"] as $directory) {
             foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator("$root/$directory", \FilesystemIterator::SKIP_DOTS)) as $file) {
-                $content = file_get_contents($file->getPathname());
-                if ($file->getExtension() !== "php" && preg_match('/\A(?:#!.*php.*\n)?<\?php\b/', $content) !== 1) {
+                if ($file->getExtension() !== "php") {
                     continue;
                 }
                 $checked++;
-                foreach (self::unusedImports($content) as $import) {
+                foreach (self::unusedImports(file_get_contents($file->getPathname())) as $import) {
                     $unused[] = substr($file->getPathname(), strlen($root) + 1) . ": $import";
                 }
             }

@@ -122,10 +122,8 @@ final class TesseractOcrEngine implements OcrEngine
     /**
      * Throws when the program or the language data of $language is missing.
      * A null $language checks the language of the options.
-     *
-     * @internal
      */
-    public function requireLanguages(?string $language = null): void
+    private function requireLanguages(?string $language = null): void
     {
         $language ??= $this->options->language;
         $program = $this->options->program;
