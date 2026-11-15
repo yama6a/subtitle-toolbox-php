@@ -55,7 +55,7 @@ final class MicroDvdFormatter extends SubtitleFormatter
         // MicroDVD has no speaker codes, so a <v> tag must not hide the style inside it.
         $lines       = array_map(
             fn (string $line): array => $this->readLine(Markup::keepTags($line . Markup::closeCoreTags(Markup::openCoreTags($line)), Markup::STYLE_TAGS)),
-            Markup::carryOpenTags(array_map(Markup::rubyAsText(...), $cue->getLines()))
+            Markup::carryOpenTags(array_map(fn (string $line): string => Markup::newlineEntitiesToLf(Markup::rubyAsText($line)), $cue->getLines()))
         );
 
         $keepStoredCodes = !$stripTags && count($storedLines) === count($lines);
