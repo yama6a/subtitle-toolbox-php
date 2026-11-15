@@ -157,6 +157,14 @@ class PacParserTest extends TestCase
     }
 
 
+    public function testDoubleByteTextReadsInPairsSoOnlyAnFehAtThePairStartStartsALine(): void
+    {
+        $subtitle = (new PacParser())->parse(self::pac("\x1FW16.\xA5\xFE\xB3\xA1\0 \xA4\x47\xA4\xEB\xFE\x02\x03\x1FW16.\xA4\x54"), new ReadOptions("CP950"));
+
+        $this->assertSame(["全部 二月", "三"], $subtitle->getCues()[0]->getLines());
+    }
+
+
     public function testItalicsCodeTakesThePlaceOfASpace(): void
     {
         $subtitle = (new PacParser())->parse(self::pac("Go<now>, he said<quietly"), new ReadOptions());

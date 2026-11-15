@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Subtitle;
@@ -72,6 +73,6 @@ final class FfMetadataChaptersFormatter extends SubtitleFormatter
 
     private function ticks(float $seconds, int $numerator, int $denominator): int
     {
-        return (int) round(max(0.0, $seconds) * $denominator / $numerator);
+        return (new FrameRate($denominator / $numerator))->framesBelowLimit($seconds);
     }
 }
