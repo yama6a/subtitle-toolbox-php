@@ -3,13 +3,19 @@
 [![CI](https://github.com/yama6a/subtitle-toolbox-php/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/yama6a/subtitle-toolbox-php/actions/workflows/ci.yaml)
 [![License](https://img.shields.io/packagist/l/yama6a/subtitle-toolbox-php)](LICENSE)
 
-A PHP library and command line tool that reads, edits and writes subtitles, transcripts and chapter lists in more than 30 formats.
+A PHP library that reads, edits and writes subtitles, transcripts and chapter lists in more than 30 formats.
+
+Looking for the `stbox` command? It moved to [subtitle-toolbox-go](https://github.com/yama6a/subtitle-toolbox-go) in 7.0, with the same commands and options.
 
 Upgrading from 2.x? The package has a new name. See the [upgrade guide](docs/upgrade-3.0.md).
 
 Upgrading from 3.x? See the [4.0 upgrade guide](docs/upgrade-4.0.md).
 
+Upgrading from 4.x? See the [5.0 upgrade guide](docs/upgrade-5.0.md).
+
 Upgrading from 5.x? See the [6.0 upgrade guide](docs/upgrade-6.0.md).
+
+Upgrading from 6.x? See the [7.0 upgrade guide](docs/upgrade-7.0.md).
 
 ## Install
 ```sh
@@ -26,11 +32,9 @@ The library needs PHP 8.3 or later with `ext-dom`, `ext-iconv` and `ext-mbstring
 - `ext-zlib` for PGS output and compressed MKV tracks
 - `ext-curl` for the translation engines
 
-The command line tool also comes as a PHAR file and as two container images. The `-tesseract` image includes Tesseract for OCR. See [Install without Composer](docs/cli.md#install-without-composer) for the commands.
-
 ## Supported formats
 
-**Case** is the case of the enum `Format`, for example `Format::SubRip`. **Name** is the format name for `--from` and `--to`. An **image cue** holds a bitmap in place of text.
+**Case** is the case of the enum `Format`, for example `Format::SubRip`. **Name** is the value of the case, as in `Format::from('srt')`. An **image cue** holds a bitmap in place of text.
 
 ### Text subtitles
 
@@ -96,31 +100,6 @@ The command line tool also comes as a PHAR file and as two container images. The
 | [MPEG-TS ARIB captions](https://www.arib.or.jp/english/std_tr/broadcasting/std-b24.html) | | | `.ts`, `.m2ts` | ✅ | ❌ | Japanese ISDB and Brazilian ISDB-Tb captions with furigana and gaiji |
 | [MPEG-TS DVB subtitles](https://www.etsi.org/deliver/etsi_en/300700_300799/300743/01.06.01_60/en_300743v010601p.pdf) | | | `.ts` | ✅ | ❌ | DVB bitmap subtitles as image cues |
 | [MPEG-TS teletext](https://www.etsi.org/deliver/etsi_en/300400_300499/300472/01.04.01_60/en_300472v010401p.pdf) | | | `.ts` | ✅ | ❌ | DVB teletext subtitle pages, see [ETS 300 706](https://www.etsi.org/deliver/etsi_i_ets/300700_300799/300706/01_60/ets_300706e01p.pdf) |
-
-## Command line tool
-Composer installs `vendor/bin/stbox`. Optional parts are in brackets.
-
-```sh
-stbox convert movie.srt --to vtt [--timing-fix-overlaps] [-o movie.vtt]
-stbox convert movie.mkv --to srt --track 3 [-o movie.srt]
-stbox convert movie.sup --to srt --ocr [--ocr-language deu] [-o movie.srt]
-stbox convert movie.sub --input-fps 25 --from-fps 25 --to-fps 23.976 [-o movie.fixed.sub]
-stbox info movie.srt [--json]
-stbox validate movie.srt --preset netflix-en [--video-fps 23.976]
-stbox sync movie.de.srt --reference movie.en.srt [-o movie.de.synced.srt]
-stbox diff movie.v1.srt movie.v2.srt [--text-only]
-stbox translate movie.de.srt --engine deepl --target-language en-US [-o movie.en.srt]
-stbox dual --primary movie.en.srt --secondary movie.de.srt --to ass [--mode stack] [-o movie.en-de.ass]
-stbox hls movie.vtt --output-dir hls/ [--segment 6]
-stbox formats
-```
-
-- Without `-o`, the output goes to standard output.
-- Several inputs need `--output-dir`, for example `convert season1/ --shift 2 --output-dir fixed/`.
-- No command overwrites a file.
-- When detection fails, pass `--from`.
-
-`stbox convert --help` lists the option groups of `convert`. See [cli.md](docs/cli.md) for all commands and options.
 
 ## Library
 ### Load and write
@@ -253,7 +232,6 @@ See [compatibility.md](docs/compatibility.md) for the parts that semantic versio
 ## Documentation
 [docs/README.md](docs/README.md) lists every page. The most used pages:
 
-- [cli.md](docs/cli.md): all commands and options
 - [formats.md](docs/formats.md): what each parser reads and each formatter writes
 - [editing.md](docs/editing.md): retiming, cutting, joining and splitting cues
 - [text.md](docs/text.md): text changes, hearing-impaired removal, common error fixes

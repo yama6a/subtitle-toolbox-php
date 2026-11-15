@@ -1,5 +1,7 @@
 # Upgrade from 2.x to 3.0
 
+7.0 removed the command line tool from this package. The CLI parts below describe 6.x and older. The tool lives on in [subtitle-toolbox-go](https://github.com/yama6a/subtitle-toolbox-go).
+
 ```sh
 composer remove ymakhloufi/subtitle-toolbox
 composer require yama6a/subtitle-toolbox-php:^3.0
