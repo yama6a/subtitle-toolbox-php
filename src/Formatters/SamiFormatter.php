@@ -66,7 +66,7 @@ final class SamiFormatter extends SubtitleFormatter
 
         $lines = array_map(
             fn (string $line): string => $this->writeNbsp($stripTags ? Markup::stripAllTags($line) : Markup::keepTags(MarkupColors::webVttColorsToFont($line), Markup::STYLE_TAGS)),
-            array_map(Markup::rubyAsText(...), $cue->getLines())
+            array_map(fn (string $line): string => Markup::newlineEntitiesToLf(Markup::rubyAsText($line)), $cue->getLines())
         );
 
         if ($lines === []) {
