@@ -96,6 +96,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | CSV, TSV | skips the row. A row that a comma in a time split, or a cut-off last row, gives such an end, and a swap would give wrong times |
 
 - **Why 30 s**: a swapped typo gives a normal cue length. A cue of more than 30 s comes from a broken time, so a swap would invent a cue.
+- **Podcasting 2.0 joined words**: the check runs on the cue after the parser joins one-word segments. A segment at 5 s to 6 s and a joined word at 1 s to 2 s give a cue from 5 s to 2 s, so it throws in strict mode and swaps in lenient mode. The `blockIndex` of the warning is the 0-based index of the cue, and the `block` is the JSON of its segments.
 - **Grouped words**: Amazon Transcribe, Deepgram, AssemblyAI and Google group words into cues when the file has no segments or utterances. The warning of such a cue has the 0-based index of the group as `blockIndex`, and the JSON of its words as `block`.
 
 ## ParseWarning fields

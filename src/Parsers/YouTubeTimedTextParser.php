@@ -78,11 +78,11 @@ final class YouTubeTimedTextParser extends SubtitleParser
     private function readJson(string $content): array
     {
         $data = $this->decodeJsonObject($content);
-        if (!is_array($data["events"] ?? null) || !array_is_list($data["events"]) || $this->isJsonObject("events")) {
+        if (!$this->isList($data["events"] ?? null, "events")) {
             throw new ParsingException("The JSON has no \"events\" list.");
         }
 
-        $pens      = is_array($data["pens"] ?? null) ? $data["pens"] : [];
+        $pens      = $this->listOrEmpty($data["pens"] ?? null, "pens");
         $positions = is_array($data["wpWinPositions"] ?? null) ? $data["wpWinPositions"] : [];
         $fileData  = ["format" => "json3"] + array_diff_key($data, ["events" => true]);
         $captions  = [];
@@ -96,7 +96,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
             try {
                 $start               = self::boundedField($this->milliseconds($event, "tStartMs", $path) / 1000, "$path.tStartMs");
                 $end                 = self::boundedField($start + $this->milliseconds($event, "dDurationMs", $path, 0) / 1000, "$path.dDurationMs");
-                [$segments, $extras] = $this->jsonSegments($event, $pens, $path, $start);
+                [$segments, $extras] = $this->jsonSegments($event, $pens, $path, $start, $index);
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($event)]);
                 continue;
@@ -128,11 +128,11 @@ final class YouTubeTimedTextParser extends SubtitleParser
      *
      * @return array{list<array{string, ?float, array}>, list<array>}
      */
-    private function jsonSegments(array $event, array $pens, string $path, float $start): array
+    private function jsonSegments(array $event, array $pens, string $path, float $start, int|string $eventIndex): array
     {
         $segments = [];
         $extras   = [];
-        foreach (is_array($event["segs"] ?? null) ? $event["segs"] : [] as $segIndex => $seg) {
+        foreach ($this->listOrEmpty($event["segs"] ?? null, "events", $eventIndex, "segs") as $segIndex => $seg) {
             $offset     = isset($seg["tOffsetMs"]) ? $this->milliseconds($seg, "tOffsetMs", "$path.segs[$segIndex]") / 1000 : null;
             if ($offset !== null) {
                 self::boundedField($start + $offset, "$path.segs[$segIndex].tOffsetMs");
