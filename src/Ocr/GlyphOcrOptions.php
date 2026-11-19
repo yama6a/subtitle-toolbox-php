@@ -10,7 +10,7 @@ use SubtitleToolbox\OptionChecks;
 
 /**
  * The settings of GlyphOcrEngine. docs/ocr.md#php-glyph-ocr lists the allowed values.
- * Each field except $database matches the GlyphOcr\Recognizer parameter of the same name in php-glyph-ocr 0.3.
+ * Each field except $database matches the GlyphOcr\Recognizer parameter of the same name in php-glyph-ocr 1.0.
  */
 final readonly class GlyphOcrOptions
 {
