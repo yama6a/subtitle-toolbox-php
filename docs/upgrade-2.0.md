@@ -6,7 +6,7 @@
 composer require ymakhloufi/subtitle-toolbox:^2.0
 ```
 
-2.0 needs the same PHP version and extensions as 1.x. OCR without Tesseract needs version 0.3 of `yama6a/php-glyph-ocr`. [compatibility.md](compatibility.md) says what semantic versioning covers in 2.x.
+2.0 needs the same PHP version and extensions as 1.x. OCR without Tesseract needs version 1.0 or later of `yama6a/php-glyph-ocr`. [compatibility.md](compatibility.md) says what semantic versioning covers in 2.x.
 
 Each table puts a 1.x call next to the 2.0 call that does the same. In the examples, `$subtitle`, `$german` and `$english` are `Subtitle` objects. `$content` is the text of an SRT file. Each other variable holds the object that its name says, such as `$runner` for a `TranslationRunner`. [Behavior changes](#behavior-changes) lists the code that runs in both versions but gives another result.
 

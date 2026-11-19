@@ -159,7 +159,7 @@ $subtitle->recognizeText(new TesseractOcrEngine(new TesseractOcrOptions(program:
 `GlyphOcrEngine` reads the bitmaps of PGS and VobSub cues in pure PHP. It uses the optional package [yama6a/php-glyph-ocr](https://github.com/yama6a/php-glyph-ocr), a port of the nOCR engine of Subtitle Edit.
 
 ```sh
-composer require yama6a/php-glyph-ocr:^0.3
+composer require yama6a/php-glyph-ocr
 ```
 
 ```php
@@ -173,10 +173,10 @@ file_put_contents('movie.srt', $subtitle->toString(Format::SubRip));
 ```
 
 - **Package**: without php-glyph-ocr, `new GlyphOcrEngine()` throws `InvalidArgumentException` with the `composer require` command.
-- **Version**: the library works with php-glyph-ocr 0.3. The `conflict` entry of `composer.json` stops Composer from installing an older or a 0.4 or later version next to it.
+- **Version**: the library works with php-glyph-ocr 1.0 and later. The `conflict` entry of `composer.json` stops Composer from installing an older version next to it.
 - **Database**: `GlyphOcrOptions::$database` is a `GlyphOcr\GlyphDatabase`. `GlyphDatabase::subtitleFonts()` holds upright and italic glyphs of DejaVu Sans, Liberation Sans and Noto Sans. For other fonts, it adds the Latin database of Subtitle Edit. Liberation Sans has the metrics of Arial. The database takes about 76 MB of memory, so engines that exist at the same time share one copy.
 - **Subtitle Edit output**: `new GlyphOcrEngine(new GlyphOcrOptions(database: GlyphDatabase::latin(), lineContext: false))` reads the text as the nOCR engine of Subtitle Edit does.
-- **Options**: the constructor takes a `GlyphOcrOptions`. Each field except `database` sets the parameter of the same name of `GlyphOcr\Recognizer` in php-glyph-ocr 0.3, with the same default. An invalid value throws `InvalidArgumentException` in the `GlyphOcrOptions` constructor. A recognizer error on an image throws `OcrException`.
+- **Options**: the constructor takes a `GlyphOcrOptions`. Each field except `database` sets the parameter of the same name of `GlyphOcr\Recognizer` in php-glyph-ocr 1.0, with the same default. An invalid value throws `InvalidArgumentException` in the `GlyphOcrOptions` constructor. A recognizer error on an image throws `OcrException`.
 
 | Field | Default | Allowed values | Effect |
 |:--- |:--- |:--- |:--- |

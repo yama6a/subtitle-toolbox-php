@@ -21,8 +21,8 @@ Upgrading from 6.x? See the [7.0 upgrade guide](docs/upgrade-7.0.md).
 ```sh
 composer require yama6a/subtitle-toolbox-php
 # Optional, for OCR of PGS, VobSub and DVB image subtitles:
-composer require yama6a/php-glyph-ocr:^0.3   # php-glyph-ocr, the pure PHP OCR engine
-apt install tesseract-ocr                    # or Tesseract on Debian and Ubuntu, for more than 100 languages
+composer require yama6a/php-glyph-ocr   # php-glyph-ocr, the pure PHP OCR engine
+apt install tesseract-ocr              # or Tesseract on Debian and Ubuntu, for more than 100 languages
 ```
 
 The core package needs neither OCR engine. See [ocr.md](docs/ocr.md) for the install commands of other systems and languages.
