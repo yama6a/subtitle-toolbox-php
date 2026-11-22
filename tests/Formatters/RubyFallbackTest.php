@@ -120,7 +120,7 @@ class RubyFallbackTest extends TestCase
 
         $this->assertEqualsCanonicalizing(
             array_map(fn (Format $format): string => $format->value, array_values($writable)),
-            array_map(fn (Format $format): string => $format->value, $covered)
+            array_map(fn (Format $format): string => $format->value, array_values($covered))
         );
     }
 }
