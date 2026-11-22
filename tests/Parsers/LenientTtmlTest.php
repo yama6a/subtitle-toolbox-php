@@ -138,7 +138,13 @@ class LenientTtmlTest extends TestCase
     }
 
 
-    #[DataProvider("looseTtmlTimes")]
+    public static function looseTtmlTimeExpressions(): array
+    {
+        return array_map(fn (array $time): array => [$time[0]], self::looseTtmlTimes());
+    }
+
+
+    #[DataProvider("looseTtmlTimeExpressions")]
     public function testStrictModeRejectsLooseTtmlTimeExpressions(string $begin): void
     {
         $this->expectException(ParsingException::class);

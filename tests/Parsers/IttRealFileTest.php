@@ -49,14 +49,20 @@ class IttRealFileTest extends TestCase
     }
 
 
-    #[DataProvider("realFileProvider")]
+    public static function realFileNameProvider(): array
+    {
+        return array_map(fn (array $file): array => [$file[0]], self::realFileProvider());
+    }
+
+
+    #[DataProvider("realFileNameProvider")]
     public function testRealFileDetectsAsTtml(string $file): void
     {
         $this->assertSame(Format::Ttml, Format::detect(file_get_contents(self::DIR . $file)));
     }
 
 
-    #[DataProvider("realFileProvider")]
+    #[DataProvider("realFileNameProvider")]
     public function testRealFileRoundTripKeepsCues(string $file): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::Itt);

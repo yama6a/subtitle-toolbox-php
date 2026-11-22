@@ -97,7 +97,13 @@ class SccRealFileTest extends TestCase
     }
 
 
-    #[DataProvider("realFileProvider")]
+    public static function realFileNameProvider(): array
+    {
+        return array_map(fn (array $file): array => [$file[0]], self::realFileProvider());
+    }
+
+
+    #[DataProvider("realFileNameProvider")]
     public function testRealFileDetectsAsScc(string $file): void
     {
         $this->assertSame(Format::Scc, Format::detect(file_get_contents(self::DIR . $file)));
@@ -132,7 +138,7 @@ class SccRealFileTest extends TestCase
     /**
      * The formatter writes pop-on captions. A pop-on caption needs time to load, so a caption can show later than in the file.
      */
-    #[DataProvider("realFileProvider")]
+    #[DataProvider("realFileNameProvider")]
     public function testRealFileRoundTripKeepsTextAndEndTimes(string $file): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::Scc);

@@ -113,7 +113,13 @@ class StartAfterEndTest extends TestCase
     }
 
 
-    #[DataProvider("brokenFiles")]
+    public static function brokenFilesInStrictMode(): array
+    {
+        return array_map(fn (array $file): array => array_slice($file, 0, 3), self::brokenFiles());
+    }
+
+
+    #[DataProvider("brokenFilesInStrictMode")]
     public function testStrictModeThrowsWithTheLineNumber(Format $format, string $content, ?int $line): void
     {
         try {

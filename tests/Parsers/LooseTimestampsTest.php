@@ -75,7 +75,13 @@ class LooseTimestampsTest extends TestCase
     }
 
 
-    #[DataProvider("looseTimes")]
+    public static function looseTimeInputs(): array
+    {
+        return array_map(fn (array $time): array => array_slice($time, 0, 3), self::looseTimes());
+    }
+
+
+    #[DataProvider("looseTimeInputs")]
     public function testStreamReaderReadsTheSameCuesAndWarnings(Format $format, string $start, string $end): void
     {
         $content  = $this->content($format, $start, $end);
@@ -87,7 +93,7 @@ class LooseTimestampsTest extends TestCase
     }
 
 
-    #[DataProvider("looseTimes")]
+    #[DataProvider("looseTimeInputs")]
     public function testFormattersWriteCanonicalTimes(Format $format, string $start, string $end): void
     {
         $subtitle = Subtitle::fromString($this->content($format, $start, $end), $format, new ReadOptions(lenient: true));

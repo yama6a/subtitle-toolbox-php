@@ -79,7 +79,13 @@ class SubViewerRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFilesWithTheirCues(): array
+    {
+        return array_map(fn (array $file): array => array_slice($file, 0, 4), self::realFiles());
+    }
+
+
+    #[DataProvider("realFilesWithTheirCues")]
     public function testRealFileParses(string $fileName, int $cueCount, array $firstCue, array $lastCue): void
     {
         $subtitle = $this->parseFile($fileName);
@@ -93,7 +99,13 @@ class SubViewerRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFileNames(): array
+    {
+        return array_map(fn (array $file): array => [$file[0]], self::realFiles());
+    }
+
+
+    #[DataProvider("realFileNames")]
     public function testRealFileSurvivesARoundTrip(string $fileName): void
     {
         $subtitle  = $this->parseFile($fileName);
@@ -112,7 +124,9 @@ class SubViewerRealFilesTest extends TestCase
     public static function filesWithFormatterShape(): array
     {
         // The formatter adds a header block to a file without one, and end lines to cues without them.
-        return array_filter(self::realFiles(), fn (array $file): bool => $file[4]);
+        $files = array_filter(self::realFiles(), fn (array $file): bool => $file[4]);
+
+        return array_map(fn (array $file): array => [$file[0]], $files);
     }
 
 

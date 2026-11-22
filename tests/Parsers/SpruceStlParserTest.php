@@ -66,7 +66,13 @@ class SpruceStlParserTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFilesWithTheirCues(): array
+    {
+        return array_map(fn (array $file): array => array_slice($file, 0, 4), self::realFiles());
+    }
+
+
+    #[DataProvider("realFilesWithTheirCues")]
     public function testRealFileParses(string $file, int $cueCount, array $firstCue, array $lastCue): void
     {
         $cues = $this->parseFile($file)->getCues();

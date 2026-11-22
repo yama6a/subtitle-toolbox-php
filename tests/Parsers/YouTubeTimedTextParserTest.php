@@ -32,7 +32,13 @@ class YouTubeTimedTextParserTest extends TestCase
     }
 
 
-    #[DataProvider("shapes")]
+    public static function shapeContents(): array
+    {
+        return array_map(fn (array $shape): array => [$shape[0]], self::shapes());
+    }
+
+
+    #[DataProvider("shapeContents")]
     public function testEveryShapeGivesTheSameCue(string $content): void
     {
         $cues = Subtitle::fromString($content)->getCues();

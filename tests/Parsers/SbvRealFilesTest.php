@@ -64,7 +64,13 @@ class SbvRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFileNames(): array
+    {
+        return array_map(fn (array $file): array => [$file[0]], self::realFiles());
+    }
+
+
+    #[DataProvider("realFileNames")]
     public function testRealFileSurvivesARoundTrip(string $fileName): void
     {
         $subtitle  = $this->parseFile($fileName);
@@ -88,7 +94,7 @@ class SbvRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    #[DataProvider("realFileNames")]
     public function testRealFileFormatsToItsOwnTextWithLfEndings(string $fileName): void
     {
         $expected = rtrim(str_replace("\r\n", "\n", file_get_contents(__DIR__ . "/../files/sbv/real/" . $fileName)), "\n") . "\n";

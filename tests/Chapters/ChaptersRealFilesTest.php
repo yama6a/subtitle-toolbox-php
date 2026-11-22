@@ -73,7 +73,13 @@ class ChaptersRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFilesWithTheirCues(): array
+    {
+        return array_map(fn (array $file): array => array_slice($file, 0, 5), self::realFiles());
+    }
+
+
+    #[DataProvider("realFilesWithTheirCues")]
     public function testRealFileParses(string $file, Format $format, int $count, array $first, array $last): void
     {
         $cues = $this->parse($file, $format)->getCues();
@@ -84,7 +90,13 @@ class ChaptersRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFileFormats(): array
+    {
+        return array_map(fn (array $file): array => array_slice($file, 0, 2), self::realFiles());
+    }
+
+
+    #[DataProvider("realFileFormats")]
     public function testRealFileSurvivesARoundTrip(string $file, Format $format): void
     {
         $subtitle = $this->parse($file, $format);

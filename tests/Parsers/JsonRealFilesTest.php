@@ -55,7 +55,13 @@ class JsonRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFileNames(): array
+    {
+        return array_map(fn (array $file): array => [$file[0]], self::realFiles());
+    }
+
+
+    #[DataProvider("realFileNames")]
     public function testRealFileSurvivesAByteForByteRoundTrip(string $fileName): void
     {
         $json = file_get_contents(self::DIR . $fileName);
