@@ -76,7 +76,7 @@ class JsonParserTest extends TestCase
     public static function badJson(): array
     {
         return [
-            "not JSON"         => ["{\"version\": 1,", "The content is not valid JSON: Syntax error."],
+            "not JSON"         => ["{\"version\": 1,", "The content is not valid JSON: Syntax error"],
             "list root"        => ["[1, 2]", "The JSON root must be an object."],
             "string root"      => ["\"cues\"", "The JSON root must be an object."],
             "bad start"        => ['{"version": 1, "cues": [{"start": 0, "end": 1, "lines": []}, {"start": null, "end": 1, "lines": []}]}',
