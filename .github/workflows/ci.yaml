@@ -27,7 +27,7 @@ jobs:
   php:
     uses: yama6a/gha/.github/workflows/php-ci.yaml@v2
     with:
-      php-versions: '["8.3", "8.4", "8.5"]'
+      php-versions: '["8.3", "8.4", "8.5", "8.6"]'
       extensions: curl # the translation engines need it, so CurlHttpClientTest runs
 
   tesseract:

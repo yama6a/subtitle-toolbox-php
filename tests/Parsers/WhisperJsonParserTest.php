@@ -136,7 +136,7 @@ class WhisperJsonParserTest extends TestCase
     public static function invalidFiles(): array
     {
         return [
-            "no JSON"             => ["{", "The content is not valid JSON: Syntax error."],
+            "no JSON"             => ["{", "The content is not valid JSON: Syntax error"],
             "root list"           => ["[1]", "The JSON root must be an object."],
             "only text"           => ['{"text": "Hello"}', 'The JSON has no "segments" or "transcription" list.'],
             "only words"          => ['{"words": [{"word": "Hi", "start": 0, "end": 1}]}', 'The JSON has no "segments" or "transcription" list.'],
