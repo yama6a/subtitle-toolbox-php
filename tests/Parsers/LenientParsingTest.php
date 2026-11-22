@@ -926,7 +926,13 @@ class LenientParsingTest extends TestCase
     }
 
 
-    #[DataProvider("damagedFiles")]
+    public static function damagedFilesInStrictMode(): array
+    {
+        return array_map(fn (array $file): array => array_slice($file, 0, 3), self::damagedFiles());
+    }
+
+
+    #[DataProvider("damagedFilesInStrictMode")]
     public function testStrictModeKeepsItsResult(
         string $file,
         string $parserClass,

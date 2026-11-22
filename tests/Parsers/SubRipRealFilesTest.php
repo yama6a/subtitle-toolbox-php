@@ -133,7 +133,13 @@ class SubRipRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFileNames(): array
+    {
+        return array_map(fn (array $file): array => [$file[0]], self::realFiles());
+    }
+
+
+    #[DataProvider("realFileNames")]
     public function testRealFileSurvivesARoundTrip(string $fileName): void
     {
         $subtitle  = $this->parseFile($fileName);

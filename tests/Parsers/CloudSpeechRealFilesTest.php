@@ -117,7 +117,13 @@ class CloudSpeechRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFileParsers(): array
+    {
+        return array_map(fn (array $file): array => array_slice($file, 0, 2), self::realFiles());
+    }
+
+
+    #[DataProvider("realFileParsers")]
     public function testRealFileKeepsItsWordTimestampsAndSpeakersThroughWebVtt(string $parserClass, string $file): void
     {
         $subtitle = self::parse($parserClass, $file, true);

@@ -323,7 +323,13 @@ class SubRipParserTest extends TestCase
     }
 
 
-    #[DataProvider("arrowVariants")]
+    public static function arrowVariantsInStrictMode(): array
+    {
+        return array_map(fn (array $variant): array => array_slice($variant, 0, 2), self::arrowVariants());
+    }
+
+
+    #[DataProvider("arrowVariantsInStrictMode")]
     public function testStrictModeReadsOnlyTheArrowWithTwoDashes(string $timingLine, bool $strictReads): void
     {
         $content = "1\n$timingLine\nText\n\n2\n00:00:03,000 --> 00:00:04,000\nMore\n";

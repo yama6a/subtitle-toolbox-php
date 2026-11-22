@@ -86,7 +86,13 @@ class EbuStlRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFileProvider")]
+    public static function realFileNameProvider(): array
+    {
+        return array_map(fn (array $file): array => [$file[0]], self::realFileProvider());
+    }
+
+
+    #[DataProvider("realFileNameProvider")]
     public function testRealFileRoundTripsByteForByte(string $file): void
     {
         $raw = file_get_contents(self::DIR . $file);
@@ -95,7 +101,7 @@ class EbuStlRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFileProvider")]
+    #[DataProvider("realFileNameProvider")]
     public function testRealFileKeepsCuesWhenTheFormatterEncodesTheTextAgain(string $file): void
     {
         $subtitle = $this->parseFile($file);

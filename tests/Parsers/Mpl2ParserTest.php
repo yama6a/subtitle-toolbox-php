@@ -72,7 +72,13 @@ class Mpl2ParserTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFilesWithTheirCues(): array
+    {
+        return array_map(fn (array $file): array => array_slice($file, 0, 5), self::realFiles());
+    }
+
+
+    #[DataProvider("realFilesWithTheirCues")]
     public function testRealFileParses(string $file, ?string $encoding, int $cueCount, array $firstCue, array $lastCue): void
     {
         $cues = $this->parseFile($file, new ReadOptions(encoding: $encoding))->getCues();

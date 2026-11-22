@@ -72,7 +72,13 @@ class EncodingTest extends TestCase
     }
 
 
-    #[DataProvider("legacyFiles")]
+    public static function legacyFileEncodings(): array
+    {
+        return array_map(fn (array $file): array => array_slice($file, 0, 3), self::legacyFiles());
+    }
+
+
+    #[DataProvider("legacyFileEncodings")]
     public function testFormatDetectionWorksOnTheConvertedContent(string $file, string $encoding, Format $format): void
     {
         $detected = Subtitle::fromString(file_get_contents(self::DIR . $file), options: new ReadOptions(encoding: $encoding));

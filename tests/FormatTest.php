@@ -162,7 +162,13 @@ class FormatTest extends TestCase
     }
 
 
-    #[DataProvider("fixtures")]
+    public static function fixturePaths(): array
+    {
+        return array_map(fn (array $fixture): array => array_slice($fixture, 0, 2), self::fixtures());
+    }
+
+
+    #[DataProvider("fixturePaths")]
     public function testFromPathGivesTheFormatOfVersion1(string $path, ?string $byPath): void
     {
         $this->assertSame($byPath, Format::tryFromPath($path)?->value);

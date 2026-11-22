@@ -468,7 +468,13 @@ class LyricsParserTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFileNames(): array
+    {
+        return array_map(fn (array $file): array => [$file[0]], self::realFiles());
+    }
+
+
+    #[DataProvider("realFileNames")]
     public function testRealFileSurvivesRoundTrip(string $file): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/lrc/real/" . $file), Format::Lyrics);

@@ -81,7 +81,13 @@ class CsvRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFilesWithTheirCues(): array
+    {
+        return array_map(fn (array $file): array => array_slice($file, 0, 5), self::realFiles());
+    }
+
+
+    #[DataProvider("realFilesWithTheirCues")]
     public function testRealFileParses(string $fileName, CsvReadOptions $csvOptions, int $cueCount, array $firstCue, array $lastCue): void
     {
         $cues = $this->parseFile($fileName, new ReadOptions(formats: [$csvOptions]))->getCues();
@@ -105,7 +111,13 @@ class CsvRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFileReadOptions(): array
+    {
+        return array_map(fn (array $file): array => array_slice($file, 0, 2), self::realFiles());
+    }
+
+
+    #[DataProvider("realFileReadOptions")]
     public function testRealFileSurvivesARoundTripInTheDefaultLayout(string $fileName, CsvReadOptions $csvOptions): void
     {
         $subtitle = $this->parseFile($fileName, new ReadOptions(formats: [$csvOptions]))->setFormatData("csv", []);

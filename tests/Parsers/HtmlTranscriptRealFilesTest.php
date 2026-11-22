@@ -52,7 +52,13 @@ class HtmlTranscriptRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFiles")]
+    public static function realFileNames(): array
+    {
+        return array_map(fn (array $file): array => [$file[0]], self::realFiles());
+    }
+
+
+    #[DataProvider("realFileNames")]
     public function testFormatterOutputRoundTripsByteForByte(string $fileName): void
     {
         $html = self::parse($fileName)->toString(Format::HtmlTranscript);

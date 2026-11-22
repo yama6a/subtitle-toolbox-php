@@ -66,7 +66,13 @@ class WebVttRealFileTest extends TestCase
     }
 
 
-    #[DataProvider("realFileProvider")]
+    public static function realFileNameProvider(): array
+    {
+        return array_map(fn (array $file): array => [$file[0]], self::realFileProvider());
+    }
+
+
+    #[DataProvider("realFileNameProvider")]
     public function testRealFileRoundTripKeepsAllData(string $file): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::WebVtt);

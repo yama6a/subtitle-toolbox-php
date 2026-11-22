@@ -89,7 +89,13 @@ class PacRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFileProvider")]
+    public static function realFileNameProvider(): array
+    {
+        return array_map(fn (array $file): array => [$file[0]], self::realFileProvider());
+    }
+
+
+    #[DataProvider("realFileNameProvider")]
     public function testRealFileIsDetectedAndRoundTripsByteForByte(string $file): void
     {
         $raw = file_get_contents(self::DIR . $file);
@@ -99,7 +105,7 @@ class PacRealFilesTest extends TestCase
     }
 
 
-    #[DataProvider("realFileProvider")]
+    #[DataProvider("realFileNameProvider")]
     public function testRealFileComesOutTheSameWhenTheFormatterEncodesTheTextAgain(string $file): void
     {
         $raw      = file_get_contents(self::DIR . $file);
