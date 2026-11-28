@@ -1751,16 +1751,16 @@
         },
         {
             "name": "yama6a/php-glyph-ocr",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/yama6a/php-glyph-ocr.git",
-                "reference": "96f3db5bc16487ed954ddd07a796069fa6099077"
+                "reference": "c50bd656512abf1989585e137ad81b48d654c9a0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/yama6a/php-glyph-ocr/zipball/96f3db5bc16487ed954ddd07a796069fa6099077",
-                "reference": "96f3db5bc16487ed954ddd07a796069fa6099077",
+                "url": "https://api.github.com/repos/yama6a/php-glyph-ocr/zipball/c50bd656512abf1989585e137ad81b48d654c9a0",
+                "reference": "c50bd656512abf1989585e137ad81b48d654c9a0",
                 "shasum": ""
             },
             "require": {
@@ -1798,8 +1798,8 @@
                 "issues": "https://github.com/yama6a/php-glyph-ocr/issues",
                 "source": "https://github.com/yama6a/php-glyph-ocr"
             },
-            "time": "2026-11-19T19:29:50+00:00",
-            "published-time": "2026-11-19T19:30:08+00:00"
+            "time": "2026-11-27T05:21:45+00:00",
+            "published-time": "2026-11-27T05:22:27+00:00"
         }
     ],
     "aliases": [],
